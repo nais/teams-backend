@@ -1,0 +1,35 @@
+apiVersion: nais.io/v1alpha1
+kind: Application
+metadata:
+  labels:
+    team: aura
+  name: console
+  namespace: aura
+spec:
+  image: {{ image }}
+  gcp:
+    sqlInstances:
+    - cascadingDelete: false
+      databases:
+      - envVarPrefix: DATABASE
+        name: console
+      diskAutoresize: true
+      diskSize: 10
+      diskType: SSD
+      highAvailability: false
+      name: console
+      tier: db-n1-standard-1
+      type: POSTGRES_14
+  ingresses:
+  - https://console.nais.io
+  port: 3000
+  replicas:
+    max: 1
+    min: 1
+  resources:
+    limits:
+      cpu: 10m
+      memory: 16Mi
+    requests:
+      cpu: 10m
+      memory: 16Mi
