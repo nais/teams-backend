@@ -18,7 +18,7 @@ spec:
       diskType: SSD
       highAvailability: false
       name: console
-      tier: db-n1-standard-1
+      tier: db-custom-2-3840
       type: POSTGRES_14
   ingresses:
   - https://console.nais.io

@@ -2,6 +2,8 @@
 
 Console is an API server for team creation and propagation to external systems.
 
+ADR: https://github.com/navikt/pig/blob/master/kubeops/adr/010-console-nais-io.md
+
 ## TODO
 
 * Determine which API documentation framework to use; candidates are
