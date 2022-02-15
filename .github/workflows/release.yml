@@ -1,0 +1,42 @@
+name: console.nais.io build and release
+
+on:
+  push: {}
+
+env:
+  image: ghcr.io/${{ github.repository }}
+
+jobs:
+
+  build:
+    name: Build Docker container
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Generate version tag
+      run: echo "version=$(./version.sh)" >> $GITHUB_ENV
+    - name: Build Docker image
+      run: docker build --tag ${image}:${version} --tag ${image}:latest .
+    - name: Push versioned Docker image to GitHub
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        docker login ghcr.io -u ${GITHUB_REPOSITORY} -p ${GITHUB_TOKEN}
+        docker push ${image}:${version}
+        docker push ${image}:latest
+
+  deploy:
+    name: Deploy to NAIS
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Generate version tag
+        run: echo "version=$(./version.sh)" >> $GITHUB_ENV
+      - uses: nais/deploy/actions/deploy@v1
+        env:
+          APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
+          CLUSTER: prod-gcp
+          RESOURCE: nais.yaml
+          VAR: image=${{ env.image }}:${{ env.version }}
