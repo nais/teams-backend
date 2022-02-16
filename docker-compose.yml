@@ -1,9 +1,7 @@
 version: "3.9"
 services:
   postgres:
-    image: postgres:12-alpine
-    volumes:
-      - "./doc/schema.sql:/docker-entrypoint-initdb.d/0001-schema.sql:ro"
+    image: postgres:14-alpine
     ports:
       - "5432:5432"
     environment:

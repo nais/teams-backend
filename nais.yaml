@@ -11,7 +11,7 @@ spec:
     sqlInstances:
     - cascadingDelete: false
       databases:
-      - envVarPrefix: DATABASE
+      - envVarPrefix: CONSOLE_DATABASE
         name: console
       diskAutoresize: true
       diskSize: 10
@@ -22,6 +22,9 @@ spec:
       type: POSTGRES_14
   ingresses:
   - https://console.nais.io
+  env:
+    - name: LISTEN_ADDRESS
+      value: 0.0.0.0:3000
   port: 3000
   replicas:
     max: 1
@@ -29,7 +32,7 @@ spec:
   resources:
     limits:
       cpu: 10m
-      memory: 16Mi
+      memory: 32Mi
     requests:
       cpu: 10m
-      memory: 16Mi
+      memory: 32Mi
