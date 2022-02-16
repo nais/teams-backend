@@ -24,7 +24,7 @@ spec:
   - https://console.nais.io
   - https://console.prod-gcp.nais.io
   env:
-    - name: LISTEN_ADDRESS
+    - name: CONSOLE_LISTEN_ADDRESS
       value: 0.0.0.0:3000
     - name: GIN_MODE
       value: release
