@@ -22,9 +22,12 @@ spec:
       type: POSTGRES_14
   ingresses:
   - https://console.nais.io
+  - https://console.prod-gcp.nais.io
   env:
     - name: LISTEN_ADDRESS
       value: 0.0.0.0:3000
+    - name: GIN_MODE
+      value: release
   port: 3000
   replicas:
     max: 1
