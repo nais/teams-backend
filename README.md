@@ -11,8 +11,6 @@ ADR: https://github.com/navikt/pig/blob/master/kubeops/adr/010-console-nais-io.m
   * [RAML](https://raml.org/)
   * [API Blueprint](https://apiblueprint.org/)
 
-* Build walking skeleton (hello world, CI, deploy to production)
-
 * Build minimal API that can be replicated across components without duplicating too much
 
 * Build synchronization core
@@ -22,3 +20,11 @@ ADR: https://github.com/navikt/pig/blob/master/kubeops/adr/010-console-nais-io.m
   * GitHub
   * NAIS deploy
   * Kubernetes
+
+Finne en vei å gå for å sørge for at vi gjør mest mulig av følgende samtidig som vi integrerer med dokumentasjon:
+
+- Routing (med URL, osv)
+- Middleware (authn, authz?)
+- Deserialisering av request-objekt
+- Funksjonalitet (authz, CRUD, DB)
+- Serialisering av riktig response-objekt
