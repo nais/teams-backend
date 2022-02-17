@@ -10,14 +10,14 @@ import (
 type Model struct {
 	ID          *uuid.UUID     `json:"id" gorm:"primaryKey; type:uuid; default:uuid_generate_v4()"`
 	CreatedAt   time.Time      `json:"created_at" gorm:"<-:create; autoCreateTime; index; not null"`
-	CreatedBy   *User          `json:"-"`
-	UpdatedBy   *User          `json:"-"`
-	DeletedBy   *User          `json:"-"`
+	CreatedBy   *User          `json:"-" binding:"-"`
+	UpdatedBy   *User          `json:"-" binding:"-"`
+	DeletedBy   *User          `json:"-" binding:"-"`
 	CreatedByID *uuid.UUID     `json:"created_by_id" gorm:"type:uuid"`
 	UpdatedByID *uuid.UUID     `json:"updated_by_id" gorm:"type:uuid"`
 	DeletedByID *uuid.UUID     `json:"deleted_by_id" gorm:"type:uuid"`
 	UpdatedAt   time.Time      `json:"updated_at" gorm:"autoUpdateTime; not null"`
-	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
+	DeletedAt   gorm.DeletedAt `json:"-" binding:"-" gorm:"index"`
 }
 
 type Team struct {
@@ -25,9 +25,9 @@ type Team struct {
 	Slug     string          `json:"slug" gorm:"<-:create; unique; not null"`
 	Name     string          `json:"name" gorm:"unique; not null"`
 	Purpose  *string         `json:"purpose"`
-	Metadata []*TeamMetadata `json:"-"`
-	Users    []*User         `json:"-" gorm:"many2many:users_teams"`
-	Roles    []*Role         `json:"-" gorm:"many2many:teams_roles"`
+	Metadata []*TeamMetadata `json:"-" binding:"-"`
+	Users    []*User         `json:"-" binding:"-" gorm:"many2many:users_teams"`
+	Roles    []*Role         `json:"-" binding:"-" gorm:"many2many:teams_roles"`
 }
 
 type User struct {
