@@ -1,8 +1,13 @@
 package main
 
 import (
+	"github.com/google/uuid"
+	"github.com/loopfz/gadgeto/tonic"
+	"github.com/wI2L/fizz"
+	"github.com/wI2L/fizz/openapi"
 	"net"
 	"os"
+	"reflect"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -120,12 +125,25 @@ func run() error {
 	router := gin.New()
 	router.Use(gin.Recovery())
 
-	v1 := router.Group("/api/v1")
-	v1.POST("/teams", srv.PostTeam)
-	v1.GET("/teams", srv.GetTeams)
-	v1.GET("/teams/:id", srv.GetTeam)
-	v1.PUT("/teams/:id", srv.PutTeam)
-	v1.DELETE("/teams/:id", srv.DeleteTeam)
+	f := fizz.NewFromEngine(router)
+	err = f.Generator().OverrideDataType(reflect.TypeOf(&uuid.UUID{}), "string", "uuid")
+	if err != nil {
+		return err
+	}
+
+	infos := &openapi.Info{
+		Title:       "NAIS Console",
+		Description: `NAIS Console`,
+		Version:     "1.0.0",
+	}
+	f.GET("/openapi.yaml", nil, f.OpenAPI(infos, "yaml"))
+
+	v1 := f.Group("/api/v1", "Version 1", "Version 1 of the API")
+	v1.POST("/teams", nil, tonic.Handler(srv.PostTeam, 201))
+	v1.GET("/teams", nil, tonic.Handler(srv.GetTeams, 200))
+	v1.GET("/teams/:id", nil, tonic.Handler(srv.GetTeam, 200))
+	v1.PUT("/teams/:id", nil, srv.PutTeam)
+	v1.DELETE("/teams/:id", nil, srv.DeleteTeam)
 
 	return router.RunListener(sock)
 }

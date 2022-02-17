@@ -40,38 +40,31 @@ func abort(ctx *gin.Context, err error) bool {
 	return true
 }
 
-func (h *Handler) GetTeam(ctx *gin.Context) {
+func (h *Handler) GetTeam(ctx *gin.Context, id *ID) (*models.Team, error) {
 	team := &models.Team{}
-	tx := h.db.First(team, "id = ?", ctx.Param("id"))
+	tx := h.db.First(team, "id = ?", id.ID)
 	if abort(ctx, tx.Error) {
-		return
+		return nil, tx.Error
 	}
-	ctx.JSON(http.StatusOK, team)
+	return team, nil
 }
 
-func (h *Handler) GetTeams(ctx *gin.Context) {
+func (h *Handler) GetTeams(ctx *gin.Context) ([]*models.Team, error) {
 	teams := make([]*models.Team, 0)
 	tx := h.db.Find(&teams)
 	if abort(ctx, tx.Error) {
-		return
+		return nil, tx.Error
 	}
-	ctx.JSON(http.StatusOK, teams)
+	return teams, nil
 }
 
-func (h *Handler) PostTeam(ctx *gin.Context) {
-	team := &models.Team{}
-
-	err := ctx.BindJSON(team)
-	if abort(ctx, err) {
-		return
-	}
-
+func (h *Handler) PostTeam(ctx *gin.Context, team *models.Team) (*models.Team, error) {
 	tx := h.db.Create(team)
 	if abort(ctx, tx.Error) {
-		return
+		return nil, tx.Error
 	}
 
-	ctx.Redirect(http.StatusCreated, "/api/v1/teams/"+team.ID.String())
+	return team, nil
 }
 
 func (h *Handler) PutTeam(ctx *gin.Context) {
