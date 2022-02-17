@@ -35,44 +35,32 @@ func main() {
 	}
 }
 
-func run() error {
-	cfg := defaultconfig()
-
+func setupLogging() {
 	log.SetFormatter(&log.JSONFormatter{
 		TimestampFormat: time.RFC3339Nano,
 	})
 	log.SetLevel(log.DebugLevel)
+}
 
-	bt, _ := version.BuildTime()
-	log.Infof("console.nais.io version %s built on %s", version.Version(), bt)
+func configure() (*config, error) {
+	cfg := defaultconfig()
 
 	err := envconfig.Process("", cfg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	log.Infof("Connecting to database...")
-	db, err := gorm.Open(postgres.New(postgres.Config{
-		DSN:                  cfg.DatabaseURL,
-		PreferSimpleProtocol: true, // disables implicit prepared statement usage
-	}), &gorm.Config{})
+	return cfg, nil
+}
 
-	if err != nil {
-		return err
-	}
-
-	log.Infof("Successfully connected to database.")
-
-	var tx *gorm.DB
-
-	log.Infof("Migrating database schema...")
-
-	tx = db.Exec(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`)
+func migrate(db *gorm.DB) error {
+	// uuid-ossp is needed for PostgreSQL to generate UUIDs as primary keys
+	tx := db.Exec(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`)
 	if tx.Error != nil {
 		return tx.Error
 	}
 
-	err = db.AutoMigrate(
+	return db.AutoMigrate(
 		&models.AuditLog{},
 		&models.Role{},
 		&models.Synchronization{},
@@ -81,10 +69,39 @@ func run() error {
 		&models.Team{},
 		&models.User{},
 	)
+}
+
+func run() error {
+	setupLogging()
+
+	bt, _ := version.BuildTime()
+	log.Infof("console.nais.io version %s built on %s", version.Version(), bt)
+
+	cfg, err := configure()
 	if err != nil {
 		return err
 	}
 
+	log.Infof("Connecting to database...")
+	db, err := gorm.Open(
+		postgres.New(
+			postgres.Config{
+				DSN:                  cfg.DatabaseURL,
+				PreferSimpleProtocol: true, // disables implicit prepared statement usage
+			},
+		),
+		&gorm.Config{},
+	)
+	if err != nil {
+		return err
+	}
+	log.Infof("Successfully connected to database.")
+
+	log.Infof("Migrating database schema...")
+	err = migrate(db)
+	if err != nil {
+		return err
+	}
 	log.Infof("Successfully migrated database schema.")
 
 	sock, err := net.Listen("tcp", cfg.ListenAddress)
