@@ -2,12 +2,12 @@ package main
 
 import (
 	"net"
-	"net/http"
 	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/nais/console/pkg/apiserver"
 	"github.com/nais/console/pkg/models"
 	"github.com/nais/console/pkg/version"
 	log "github.com/sirupsen/logrus"
@@ -39,7 +39,12 @@ func setupLogging() {
 	log.SetFormatter(&log.JSONFormatter{
 		TimestampFormat: time.RFC3339Nano,
 	})
+
 	log.SetLevel(log.DebugLevel)
+
+	gin.DefaultWriter = log.StandardLogger().WriterLevel(log.DebugLevel)
+	gin.DefaultErrorWriter = log.StandardLogger().WriterLevel(log.ErrorLevel)
+
 }
 
 func configure() (*config, error) {
@@ -110,12 +115,17 @@ func run() error {
 	}
 	defer sock.Close()
 
+	srv := apiserver.New(db)
+
 	router := gin.New()
-	router.GET("/ping", handler)
+	router.Use(gin.Recovery())
+
+	v1 := router.Group("/api/v1")
+	v1.POST("/teams", srv.PostTeam)
+	v1.GET("/teams", srv.GetTeams)
+	v1.GET("/teams/:id", srv.GetTeam)
+	v1.PUT("/teams/:id", srv.PutTeam)
+	v1.DELETE("/teams/:id", srv.DeleteTeam)
 
 	return router.RunListener(sock)
-}
-
-func handler(ctx *gin.Context) {
-	ctx.JSON(http.StatusOK, nil)
 }
