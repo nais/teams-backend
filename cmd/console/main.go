@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/google/uuid"
 	"github.com/loopfz/gadgeto/tonic"
+	"github.com/mvrilo/go-redoc"
 	"github.com/wI2L/fizz"
 	"github.com/wI2L/fizz/openapi"
 	"net"
@@ -136,7 +137,9 @@ func run() error {
 		Description: `NAIS Console`,
 		Version:     "1.0.0",
 	}
-	f.GET("/openapi.yaml", nil, f.OpenAPI(infos, "yaml"))
+	f.GET("/doc/openapi.yaml", nil, f.OpenAPI(infos, "yaml"))
+
+	setupRedoc(f)
 
 	v1 := f.Group("/api/v1", "Version 1", "Version 1 of the API")
 	v1.POST("/teams", nil, tonic.Handler(srv.PostTeam, 201))
@@ -146,4 +149,22 @@ func run() error {
 	v1.DELETE("/teams/:id", nil, srv.DeleteTeam)
 
 	return router.RunListener(sock)
+}
+
+// TODO: Remove before production release
+func setupRedoc(f *fizz.Fizz) {
+	doc := redoc.Redoc{
+		SpecPath: "/doc/openapi.yaml",
+	}
+	f.GET("/doc", nil, func(context *gin.Context) {
+		body, err := doc.Body()
+		if err != nil {
+			context.AbortWithError(500, err)
+		}
+		context.Status(200)
+		context.Header("Content-Type", "text/html; charset=utf-8")
+		if _, err = context.Writer.Write(body); err != nil {
+			context.AbortWithError(500, err)
+		}
+	})
 }
