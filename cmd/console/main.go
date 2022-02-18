@@ -3,14 +3,7 @@ package main
 import (
 	"net"
 	"os"
-	"reflect"
 	"time"
-
-	"github.com/google/uuid"
-	"github.com/loopfz/gadgeto/tonic"
-	"github.com/mvrilo/go-redoc"
-	"github.com/wI2L/fizz"
-	"github.com/wI2L/fizz/openapi"
 
 	"github.com/gin-gonic/gin"
 	"github.com/kelseyhightower/envconfig"
@@ -123,49 +116,11 @@ func run() error {
 	defer sock.Close()
 
 	srv := apiserver.New(db)
-
-	router := gin.New()
-	router.Use(gin.Recovery())
-
-	f := fizz.NewFromEngine(router)
-	err = f.Generator().OverrideDataType(reflect.TypeOf(&uuid.UUID{}), "string", "uuid")
+	router, err := srv.Router()
 	if err != nil {
 		return err
 	}
 
-	infos := &openapi.Info{
-		Title:       "NAIS Console",
-		Description: `NAIS Console`,
-		Version:     "1.0.0",
-	}
-	f.GET("/doc/openapi.yaml", nil, f.OpenAPI(infos, "yaml"))
-
-	setupRedoc(f)
-
-	v1 := f.Group("/api/v1", "Version 1", "Version 1 of the API")
-	v1.POST("/teams", nil, tonic.Handler(srv.PostTeam, 201))
-	v1.GET("/teams", nil, tonic.Handler(srv.GetTeams, 200))
-	v1.GET("/teams/:id", nil, tonic.Handler(srv.GetTeam, 200))
-	v1.PUT("/teams/:id", nil, tonic.Handler(srv.PutTeam, 200))
-	v1.DELETE("/teams/:id", nil, tonic.Handler(srv.DeleteTeam, 200))
-
-	return router.RunListener(sock)
-}
-
-// TODO: Remove before production release
-func setupRedoc(f *fizz.Fizz) {
-	doc := redoc.Redoc{
-		SpecPath: "/doc/openapi.yaml",
-	}
-	f.GET("/doc", nil, func(context *gin.Context) {
-		body, err := doc.Body()
-		if err != nil {
-			context.AbortWithError(500, err)
-		}
-		context.Status(200)
-		context.Header("Content-Type", "text/html; charset=utf-8")
-		if _, err = context.Writer.Write(body); err != nil {
-			context.AbortWithError(500, err)
-		}
-	})
+	log.Infof("Ready to accept requests.")
+	return router.Engine().RunListener(sock)
 }
