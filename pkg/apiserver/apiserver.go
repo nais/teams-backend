@@ -1,9 +1,8 @@
 package apiserver
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/models"
 	"gorm.io/gorm"
 )
@@ -18,95 +17,41 @@ func New(db *gorm.DB) *Handler {
 	}
 }
 
-// In case err is not nil, write a suitable error code and error message, and returns true.
-// Otherwise, does nothing and returns false.
-func abort(ctx *gin.Context, err error) bool {
-	// FIXME: incorrectly formatting the UUID will result in a 500 error.
-	// This should be handled as a bad request instead.
-	// SQLSTATE 22P02
-
-	// var perr *pgconn.PgError
-	// errors.As(err, &perr)
-	// fmt.Println(perr.Code) // 23505
-
-	switch err {
-	case gorm.ErrRecordNotFound:
-		ctx.AbortWithError(http.StatusNotFound, err)
-	default:
-		ctx.AbortWithError(http.StatusInternalServerError, err)
-	case nil:
-		return false
-	}
-	return true
-}
-
-func (h *Handler) GetTeam(ctx *gin.Context, id *ID) (*models.Team, error) {
+func (h *Handler) GetTeam(_ *gin.Context, req *GenericRequest) (*models.Team, error) {
 	team := &models.Team{}
-	tx := h.db.First(team, "id = ?", id.ID)
-	if abort(ctx, tx.Error) {
-		return nil, tx.Error
-	}
-	return team, nil
+	tx := h.db.First(team, "id = ?", req.ID)
+	return team, tx.Error
 }
 
-func (h *Handler) GetTeams(ctx *gin.Context) ([]*models.Team, error) {
+func (h *Handler) GetTeams(_ *gin.Context) ([]*models.Team, error) {
 	teams := make([]*models.Team, 0)
 	tx := h.db.Find(&teams)
-	if abort(ctx, tx.Error) {
-		return nil, tx.Error
-	}
-	return teams, nil
+	return teams, tx.Error
 }
 
-func (h *Handler) PostTeam(ctx *gin.Context, team *models.Team) (*models.Team, error) {
+func (h *Handler) PostTeam(_ *gin.Context, team *models.Team) (*models.Team, error) {
 	tx := h.db.Create(team)
-	if abort(ctx, tx.Error) {
+	return team, tx.Error
+}
+
+func (h *Handler) PutTeam(_ *gin.Context, req *TeamRequest) (*models.Team, error) {
+	u, _ := uuid.Parse(req.ID)
+	team := &req.Team
+	team.ID = &u
+	tx := h.db.Updates(team)
+	if tx.Error != nil {
 		return nil, tx.Error
 	}
-
-	return team, nil
+	tx = h.db.First(team)
+	return team, tx.Error
 }
 
-func (h *Handler) PutTeam(ctx *gin.Context) {
+func (h *Handler) DeleteTeam(_ *gin.Context, req *GenericRequest) error {
 	team := &models.Team{}
-
-	// load from db
-	tx := h.db.First(team, "id = ?", ctx.Param("id"))
-	if abort(ctx, tx.Error) {
-		return
+	tx := h.db.First(team, "id = ?", req.ID)
+	if tx.Error != nil {
+		return tx.Error
 	}
-
-	// overwrite data
-	err := ctx.BindJSON(team)
-	if abort(ctx, err) {
-		return
-	}
-
-	// persist to database
-	tx = h.db.Save(team)
-	if abort(ctx, tx.Error) {
-		return
-	}
-
-	// read back object
-	tx = h.db.First(team, "id = ?", ctx.Param("id"))
-	if abort(ctx, tx.Error) {
-		return
-	}
-
-	ctx.JSON(http.StatusOK, team)
-}
-
-func (h *Handler) DeleteTeam(ctx *gin.Context) {
-	team := &models.Team{}
-
-	// load from db
-	tx := h.db.First(team, "id = ?", ctx.Param("id"))
-	if abort(ctx, tx.Error) {
-		return
-	}
-
-	// if found, try deleting
-	tx = h.db.Delete(team, "id = ?", ctx.Param("id"))
-	abort(ctx, tx.Error)
+	tx = h.db.Delete(team)
+	return tx.Error
 }

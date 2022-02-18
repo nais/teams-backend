@@ -8,15 +8,15 @@ import (
 )
 
 type Model struct {
-	ID          *uuid.UUID     `json:"id" gorm:"primaryKey; type:uuid; default:uuid_generate_v4()"`
-	CreatedAt   time.Time      `json:"created_at" gorm:"<-:create; autoCreateTime; index; not null"`
+	ID          *uuid.UUID     `json:"id" binding:"-" gorm:"primaryKey; type:uuid; default:uuid_generate_v4()"`
+	CreatedAt   time.Time      `json:"created_at" binding:"-" gorm:"<-:create; autoCreateTime; index; not null"`
 	CreatedBy   *User          `json:"-" binding:"-"`
 	UpdatedBy   *User          `json:"-" binding:"-"`
 	DeletedBy   *User          `json:"-" binding:"-"`
-	CreatedByID *uuid.UUID     `json:"created_by_id" gorm:"type:uuid"`
-	UpdatedByID *uuid.UUID     `json:"updated_by_id" gorm:"type:uuid"`
-	DeletedByID *uuid.UUID     `json:"deleted_by_id" gorm:"type:uuid"`
-	UpdatedAt   time.Time      `json:"updated_at" gorm:"autoUpdateTime; not null"`
+	CreatedByID *uuid.UUID     `json:"created_by_id" binding:"-" gorm:"type:uuid"`
+	UpdatedByID *uuid.UUID     `json:"updated_by_id" binding:"-" gorm:"type:uuid"`
+	DeletedByID *uuid.UUID     `json:"deleted_by_id" binding:"-" gorm:"type:uuid"`
+	UpdatedAt   time.Time      `json:"updated_at" binding:"-" gorm:"autoUpdateTime; not null"`
 	DeletedAt   gorm.DeletedAt `json:"-" binding:"-" gorm:"index"`
 }
 

@@ -1,15 +1,16 @@
 package main
 
 import (
+	"net"
+	"os"
+	"reflect"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/loopfz/gadgeto/tonic"
 	"github.com/mvrilo/go-redoc"
 	"github.com/wI2L/fizz"
 	"github.com/wI2L/fizz/openapi"
-	"net"
-	"os"
-	"reflect"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/kelseyhightower/envconfig"
@@ -145,8 +146,8 @@ func run() error {
 	v1.POST("/teams", nil, tonic.Handler(srv.PostTeam, 201))
 	v1.GET("/teams", nil, tonic.Handler(srv.GetTeams, 200))
 	v1.GET("/teams/:id", nil, tonic.Handler(srv.GetTeam, 200))
-	v1.PUT("/teams/:id", nil, srv.PutTeam)
-	v1.DELETE("/teams/:id", nil, srv.DeleteTeam)
+	v1.PUT("/teams/:id", nil, tonic.Handler(srv.PutTeam, 200))
+	v1.DELETE("/teams/:id", nil, tonic.Handler(srv.DeleteTeam, 200))
 
 	return router.RunListener(sock)
 }
