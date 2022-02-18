@@ -1,14 +1,19 @@
 package apiserver
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	"github.com/nais/console/pkg/models"
+	"strconv"
+
+	"github.com/wI2L/fizz"
 	"gorm.io/gorm"
 )
 
 type Handler struct {
 	db *gorm.DB
+}
+
+type CrudHandler interface {
+	CrudSpec() crudspec
+	RouterGroup(parent *fizz.RouterGroup) *fizz.RouterGroup
 }
 
 func New(db *gorm.DB) *Handler {
@@ -17,41 +22,15 @@ func New(db *gorm.DB) *Handler {
 	}
 }
 
-func (h *Handler) GetTeam(_ *gin.Context, req *GenericRequest) (*models.Team, error) {
-	team := &models.Team{}
-	tx := h.db.First(team, "id = ?", req.ID)
-	return team, tx.Error
+const rootPath = "/"
+const rootPathWithID = "/:id"
+
+func genericResponse(code int) fizz.OperationOption {
+	return fizz.Response(strconv.Itoa(code), "", nil, nil, nil)
 }
 
-func (h *Handler) GetTeams(_ *gin.Context) ([]*models.Team, error) {
-	teams := make([]*models.Team, 0)
-	tx := h.db.Find(&teams)
-	return teams, tx.Error
-}
-
-func (h *Handler) PostTeam(_ *gin.Context, team *models.Team) (*models.Team, error) {
-	tx := h.db.Create(team)
-	return team, tx.Error
-}
-
-func (h *Handler) PutTeam(_ *gin.Context, req *TeamRequest) (*models.Team, error) {
-	u, _ := uuid.Parse(req.ID)
-	team := &req.Team
-	team.ID = &u
-	tx := h.db.Updates(team)
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-	tx = h.db.First(team)
-	return team, tx.Error
-}
-
-func (h *Handler) DeleteTeam(_ *gin.Context, req *GenericRequest) error {
-	team := &models.Team{}
-	tx := h.db.First(team, "id = ?", req.ID)
-	if tx.Error != nil {
-		return tx.Error
-	}
-	tx = h.db.Delete(team)
-	return tx.Error
+func (h *Handler) Add(parent *fizz.RouterGroup, handler CrudHandler) {
+	spec := handler.CrudSpec()
+	r := handler.RouterGroup(parent)
+	spec.routes(r)
 }

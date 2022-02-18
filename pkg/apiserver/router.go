@@ -5,7 +5,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/loopfz/gadgeto/tonic"
 	"github.com/mvrilo/go-redoc"
 	"github.com/nais/console/pkg/version"
 	"github.com/wI2L/fizz"
@@ -30,11 +29,8 @@ func (h *Handler) Router() (*fizz.Fizz, error) {
 	//binding.EnableDecoderDisallowUnknownFields = true
 
 	v1 := f.Group("/api/v1", "Version 1", "Version 1 of the API")
-	v1.POST("/teams", nil, tonic.Handler(h.PostTeam, 201))
-	v1.GET("/teams", nil, tonic.Handler(h.GetTeams, 200))
-	v1.GET("/teams/:id", nil, tonic.Handler(h.GetTeam, 200))
-	v1.PUT("/teams/:id", nil, tonic.Handler(h.PutTeam, 200))
-	v1.DELETE("/teams/:id", nil, tonic.Handler(h.DeleteTeam, 200))
+	teamsv1 := &TeamsHandler{}
+	h.Add(v1, teamsv1)
 
 	// setupRedoc() reads routes and generates documentation based on them,
 	// so this function must be run after all other handlers have been set up.
