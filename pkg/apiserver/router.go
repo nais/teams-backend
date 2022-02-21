@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/loopfz/gadgeto/tonic"
 	"github.com/mvrilo/go-redoc"
 	"github.com/nais/console/pkg/version"
 	"github.com/wI2L/fizz"
@@ -12,26 +13,23 @@ import (
 )
 
 func (h *Handler) Router() (*fizz.Fizz, error) {
+	tonic.SetErrorHook(ErrorHandler)
+
 	router := gin.New()
-	router.Use(gin.Recovery())
 
 	f := fizz.NewFromEngine(router)
 	err := f.Generator().OverrideDataType(reflect.TypeOf(&uuid.UUID{}), "string", "uuid")
 	if err != nil {
 		return nil, err
 	}
-	f.Description = "foo"
-	f.Name = "bar"
 
 	// FIXME
 	// Enable this to disallow fields that are not specified.
 	// However, it doesn't affect fields that have binding:"-".
 	// Figure out a better solution in order to return 400 Bad Request.
-
 	//binding.EnableDecoderDisallowUnknownFields = true
 
 	v1 := f.Group("/api/v1", "", "")
-
 	h.Add(v1, &TeamsHandler{db: h.db})
 	h.Add(v1, &UsersHandler{db: h.db})
 	h.Add(v1, &ApiKeysHandler{db: h.db})
