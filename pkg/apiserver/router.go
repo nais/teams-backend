@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/loopfz/gadgeto/tonic"
 	"github.com/mvrilo/go-redoc"
+	"github.com/nais/console/pkg/middleware"
 	"github.com/nais/console/pkg/version"
 	"github.com/wI2L/fizz"
 	"github.com/wI2L/fizz/openapi"
@@ -30,6 +31,8 @@ func (h *Handler) Router() (*fizz.Fizz, error) {
 	//binding.EnableDecoderDisallowUnknownFields = true
 
 	v1 := f.Group("/api/v1", "", "")
+	v1.Use(middleware.ApiKeyAuthentication(h.db))
+
 	h.Add(v1, &TeamsHandler{db: h.db})
 	h.Add(v1, &UsersHandler{db: h.db})
 	h.Add(v1, &ApiKeysHandler{db: h.db})

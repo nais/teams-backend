@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/nais/console/pkg/models"
+	"github.com/nais/console/pkg/requests"
 	"github.com/wI2L/fizz"
 	"gorm.io/gorm"
 )
@@ -52,12 +53,12 @@ func (h *ApiKeysHandler) Create(_ *gin.Context, key *models.ApiKey) (*models.Api
 	return key, tx
 }
 
-func (h *ApiKeysHandler) Delete(_ *gin.Context, req *DeleteApiKeyRequest) error {
-	key := &models.ApiKey{}
-	tx := h.db.First(key, "user_id = ?", req.UserID)
+func (h *ApiKeysHandler) Delete(_ *gin.Context, req *requests.DeleteApiKeyRequest) error {
+	keys := make([]*models.ApiKey, 0)
+	tx := h.db.Find(&keys, "user_id = ?", req.UserID)
 	if tx.Error != nil {
 		return tx.Error
 	}
-	tx = h.db.Delete(key)
+	tx = h.db.Delete(keys)
 	return tx.Error
 }
