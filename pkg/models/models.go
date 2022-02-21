@@ -32,11 +32,17 @@ type Team struct {
 
 type User struct {
 	Model
-	Email  *string `gorm:"unique"`
-	APIKey *string `gorm:"unique"`
-	Name   string  `gorm:"not null"`
-	Teams  []*Team `gorm:"many2many:users_teams"`
-	Roles  []*Role `gorm:"many2many:users_roles"`
+	Email *string `json:"email" gorm:"unique"`
+	Name  string  `json:"name" gorm:"not null" example:"plain english"`
+	Teams []*Team `json:"-" binding:"-" gorm:"many2many:users_teams"`
+	Roles []*Role `json:"-" binding:"-" gorm:"many2many:users_roles"`
+}
+
+type ApiKey struct {
+	Model
+	APIKey *string    `json:"apikey" gorm:"unique; not null"`
+	User   *User      `json:"-" binding:"-"`
+	UserID *uuid.UUID `json:"user_id" binding:"-" gorm:"type:uuid"`
 }
 
 type TeamMetadata struct {

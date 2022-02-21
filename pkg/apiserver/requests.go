@@ -16,3 +16,8 @@ type TeamRequest struct {
 	GenericRequest
 	models.Team
 }
+
+type UserRequest struct {
+	GenericRequest
+	models.User
+}

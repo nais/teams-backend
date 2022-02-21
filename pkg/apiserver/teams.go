@@ -20,36 +20,36 @@ func (h *TeamsHandler) RouterGroup(parent *fizz.RouterGroup) *fizz.RouterGroup {
 	)
 }
 
-func (h *TeamsHandler) CrudSpec() crudspec {
-	return crudspec{
-		create:   h.PostTeam,
-		read:     h.GetTeam,
-		list:     h.GetTeams,
-		update:   h.PutTeam,
-		delete:   h.DeleteTeam,
+func (h *TeamsHandler) CrudSpec() CrudRoute {
+	return CrudRoute{
+		create:   h.Create,
+		read:     h.Read,
+		list:     h.List,
+		update:   h.Update,
+		delete:   h.Delete,
 		singular: "team",
 		plural:   "teams",
 	}
 }
 
-func (h *TeamsHandler) GetTeam(_ *gin.Context, req *GenericRequest) (*models.Team, error) {
+func (h *TeamsHandler) Read(_ *gin.Context, req *GenericRequest) (*models.Team, error) {
 	team := &models.Team{}
 	tx := h.db.First(team, "id = ?", req.ID)
 	return team, tx.Error
 }
 
-func (h *TeamsHandler) GetTeams(_ *gin.Context) ([]*models.Team, error) {
+func (h *TeamsHandler) List(_ *gin.Context) ([]*models.Team, error) {
 	teams := make([]*models.Team, 0)
 	tx := h.db.Find(&teams)
 	return teams, tx.Error
 }
 
-func (h *TeamsHandler) PostTeam(_ *gin.Context, team *models.Team) (*models.Team, error) {
+func (h *TeamsHandler) Create(_ *gin.Context, team *models.Team) (*models.Team, error) {
 	tx := h.db.Create(team)
 	return team, tx.Error
 }
 
-func (h *TeamsHandler) PutTeam(_ *gin.Context, req *TeamRequest) (*models.Team, error) {
+func (h *TeamsHandler) Update(_ *gin.Context, req *TeamRequest) (*models.Team, error) {
 	u, _ := uuid.Parse(req.ID)
 	team := &req.Team
 	team.ID = &u
@@ -61,7 +61,7 @@ func (h *TeamsHandler) PutTeam(_ *gin.Context, req *TeamRequest) (*models.Team, 
 	return team, tx.Error
 }
 
-func (h *TeamsHandler) DeleteTeam(_ *gin.Context, req *GenericRequest) error {
+func (h *TeamsHandler) Delete(_ *gin.Context, req *GenericRequest) error {
 	team := &models.Team{}
 	tx := h.db.First(team, "id = ?", req.ID)
 	if tx.Error != nil {

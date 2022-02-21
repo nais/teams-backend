@@ -12,7 +12,7 @@ type Handler struct {
 }
 
 type CrudHandler interface {
-	CrudSpec() crudspec
+	CrudSpec() CrudRoute
 	RouterGroup(parent *fizz.RouterGroup) *fizz.RouterGroup
 }
 

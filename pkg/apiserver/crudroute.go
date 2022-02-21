@@ -1,13 +1,14 @@
 package apiserver
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/loopfz/gadgeto/tonic"
 	"github.com/wI2L/fizz"
 )
 
-type crudspec struct {
+type CrudRoute struct {
 	create   interface{}
 	read     interface{}
 	list     interface{}
@@ -17,10 +18,12 @@ type crudspec struct {
 	plural   string
 }
 
-func (crud *crudspec) routes(r *fizz.RouterGroup) {
+// Returns CRUD handlers with common responses documented.
+func (crud *CrudRoute) routes(r *fizz.RouterGroup) {
 	r.POST(
 		rootPath,
 		[]fizz.OperationOption{
+			fizz.ID(fmt.Sprintf("%s-%s", crud.singular, "create")),
 			fizz.Summary("Create a " + crud.singular),
 			genericResponse(http.StatusBadRequest),
 			genericResponse(http.StatusUnauthorized),
@@ -33,7 +36,8 @@ func (crud *crudspec) routes(r *fizz.RouterGroup) {
 	r.GET(
 		rootPath,
 		[]fizz.OperationOption{
-			fizz.Summary("Get all " + crud.plural),
+			fizz.ID(fmt.Sprintf("%s-%s", crud.singular, "list")),
+			fizz.Summary("List " + crud.plural),
 			genericResponse(http.StatusUnauthorized),
 			genericResponse(http.StatusForbidden),
 			genericResponse(http.StatusInternalServerError),
@@ -44,6 +48,7 @@ func (crud *crudspec) routes(r *fizz.RouterGroup) {
 	r.GET(
 		rootPathWithID,
 		[]fizz.OperationOption{
+			fizz.ID(fmt.Sprintf("%s-%s", crud.singular, "get")),
 			fizz.Summary("Get " + crud.singular),
 			genericResponse(http.StatusNotFound),
 			genericResponse(http.StatusUnauthorized),
@@ -56,6 +61,7 @@ func (crud *crudspec) routes(r *fizz.RouterGroup) {
 	r.PUT(
 		rootPathWithID,
 		[]fizz.OperationOption{
+			fizz.ID(fmt.Sprintf("%s-%s", crud.singular, "update")),
 			fizz.Summary("Update " + crud.singular),
 			genericResponse(http.StatusNotFound),
 			genericResponse(http.StatusBadRequest),
@@ -69,6 +75,7 @@ func (crud *crudspec) routes(r *fizz.RouterGroup) {
 	r.DELETE(
 		rootPathWithID,
 		[]fizz.OperationOption{
+			fizz.ID(fmt.Sprintf("%s-%s", crud.singular, "delete")),
 			fizz.Summary("Delete " + crud.singular),
 			genericResponse(http.StatusNotFound),
 			genericResponse(http.StatusUnauthorized),

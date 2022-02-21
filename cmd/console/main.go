@@ -73,6 +73,7 @@ func migrate(db *gorm.DB) error {
 		&models.TeamMetadata{},
 		&models.Team{},
 		&models.User{},
+		&models.ApiKey{},
 	)
 }
 

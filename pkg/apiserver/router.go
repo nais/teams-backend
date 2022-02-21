@@ -20,6 +20,8 @@ func (h *Handler) Router() (*fizz.Fizz, error) {
 	if err != nil {
 		return nil, err
 	}
+	f.Description = "foo"
+	f.Name = "bar"
 
 	// FIXME
 	// Enable this to disallow fields that are not specified.
@@ -28,9 +30,10 @@ func (h *Handler) Router() (*fizz.Fizz, error) {
 
 	//binding.EnableDecoderDisallowUnknownFields = true
 
-	v1 := f.Group("/api/v1", "Version 1", "Version 1 of the API")
-	teamsv1 := &TeamsHandler{}
-	h.Add(v1, teamsv1)
+	v1 := f.Group("/api/v1", "", "")
+
+	h.Add(v1, &TeamsHandler{db: h.db})
+	h.Add(v1, &UsersHandler{db: h.db})
 
 	// setupRedoc() reads routes and generates documentation based on them,
 	// so this function must be run after all other handlers have been set up.
