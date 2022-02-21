@@ -34,6 +34,7 @@ func (h *Handler) Router() (*fizz.Fizz, error) {
 
 	h.Add(v1, &TeamsHandler{db: h.db})
 	h.Add(v1, &UsersHandler{db: h.db})
+	h.Add(v1, &ApiKeysHandler{db: h.db})
 
 	// setupRedoc() reads routes and generates documentation based on them,
 	// so this function must be run after all other handlers have been set up.

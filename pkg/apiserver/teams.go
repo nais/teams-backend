@@ -12,16 +12,14 @@ type TeamsHandler struct {
 	db *gorm.DB
 }
 
-func (h *TeamsHandler) RouterGroup(parent *fizz.RouterGroup) *fizz.RouterGroup {
-	return parent.Group(
+func (h *TeamsHandler) SetupRoutes(parent *fizz.RouterGroup) {
+	r := parent.Group(
 		"/teams",
 		"Teams",
 		"manage teams, how to work with teams",
 	)
-}
 
-func (h *TeamsHandler) CrudSpec() CrudRoute {
-	return CrudRoute{
+	cruds := &CrudRoute{
 		create:   h.Create,
 		read:     h.Read,
 		list:     h.List,
@@ -30,6 +28,8 @@ func (h *TeamsHandler) CrudSpec() CrudRoute {
 		singular: "team",
 		plural:   "teams",
 	}
+
+	cruds.Setup(r)
 }
 
 func (h *TeamsHandler) Read(_ *gin.Context, req *GenericRequest) (*models.Team, error) {

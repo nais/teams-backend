@@ -12,16 +12,14 @@ type UsersHandler struct {
 	db *gorm.DB
 }
 
-func (h *UsersHandler) RouterGroup(parent *fizz.RouterGroup) *fizz.RouterGroup {
-	return parent.Group(
+func (h *UsersHandler) SetupRoutes(parent *fizz.RouterGroup) {
+	r := parent.Group(
 		"/users",
 		"Users",
 		"manage users, how to work with users",
 	)
-}
 
-func (h *UsersHandler) CrudSpec() CrudRoute {
-	return CrudRoute{
+	cruds := &CrudRoute{
 		create:   h.Create,
 		read:     h.Read,
 		list:     h.List,
@@ -30,6 +28,8 @@ func (h *UsersHandler) CrudSpec() CrudRoute {
 		singular: "user",
 		plural:   "users",
 	}
+
+	cruds.Setup(r)
 }
 
 func (h *UsersHandler) Read(_ *gin.Context, req *GenericRequest) (*models.User, error) {

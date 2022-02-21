@@ -21,3 +21,7 @@ type UserRequest struct {
 	GenericRequest
 	models.User
 }
+
+type DeleteApiKeyRequest struct {
+	UserID string `json:"user_id" path:"user_id" format:"uuid"`
+}

@@ -40,9 +40,9 @@ type User struct {
 
 type ApiKey struct {
 	Model
-	APIKey *string    `json:"apikey" gorm:"unique; not null"`
-	User   *User      `json:"-" binding:"-"`
-	UserID *uuid.UUID `json:"user_id" binding:"-" gorm:"type:uuid"`
+	APIKey string    `json:"apikey" binding:"-" gorm:"unique; not null"`
+	User   *User     `json:"-" binding:"-"`
+	UserID uuid.UUID `json:"user_id" gorm:"type:uuid; not null"`
 }
 
 type TeamMetadata struct {

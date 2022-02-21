@@ -11,9 +11,8 @@ type Handler struct {
 	db *gorm.DB
 }
 
-type CrudHandler interface {
-	CrudSpec() CrudRoute
-	RouterGroup(parent *fizz.RouterGroup) *fizz.RouterGroup
+type ApiHandler interface {
+	SetupRoutes(parent *fizz.RouterGroup)
 }
 
 func New(db *gorm.DB) *Handler {
@@ -29,8 +28,6 @@ func genericResponse(code int) fizz.OperationOption {
 	return fizz.Response(strconv.Itoa(code), "", nil, nil, nil)
 }
 
-func (h *Handler) Add(parent *fizz.RouterGroup, handler CrudHandler) {
-	spec := handler.CrudSpec()
-	r := handler.RouterGroup(parent)
-	spec.routes(r)
+func (h *Handler) Add(parent *fizz.RouterGroup, handler ApiHandler) {
+	handler.SetupRoutes(parent)
 }
