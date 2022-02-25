@@ -33,7 +33,7 @@ type Team struct {
 type User struct {
 	Model
 	Email *string `json:"email" gorm:"unique"`
-	Name  string  `json:"name" gorm:"not null" example:"plain english"`
+	Name  *string `json:"name" gorm:"not null" example:"plain english"`
 	Teams []*Team `json:"-" binding:"-" gorm:"many2many:users_teams"`
 	Roles []*Role `json:"-" binding:"-" gorm:"many2many:users_roles"`
 }

@@ -8,6 +8,22 @@ type Query {
     users(id: UUID, email: String): [User!]!
 }
 
+type Mutation {
+    createUser(input: CreateUserInput!): User!
+    updateUser(input: UpdateUserInput!): User!
+}
+
+input CreateUserInput {
+    email: String
+    name: String!
+}
+
+input UpdateUserInput {
+    id: UUID!
+    email: String
+    name: String
+}
+
 type User {
     # This is the identifier!!!!
     id: UUID!
