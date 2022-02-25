@@ -1,0 +1,101 @@
+# console.nais.io
+# https://gqlgen.com/getting-started/
+
+scalar UUID
+scalar Time
+
+type Query {
+    users(id: UUID, email: String): [User!]!
+}
+
+type User {
+    # This is the identifier!!!!
+    id: UUID!
+    email: String
+    name: String!
+    teams: [Team!]!
+    roles: [Role!]!
+    created_at: Time
+}
+
+type Team {
+    id: UUID!
+    slug: String!
+    name: String!
+    purpose: String
+    roles: [Role!]!
+    users: [User!]!
+    metadata: [TeamMetadata!]!
+}
+
+type Role {
+    id: UUID!
+}
+
+type TeamMetadata {
+    id: UUID!
+}
+
+#type Mutation {
+#  createTodo(input: NewTodo!): Todo!
+#}
+
+#package models
+#
+#import (
+#"time"
+#
+#"github.com/google/uuid"
+#"gorm.io/gorm"
+#)
+#
+#
+#type ApiKey struct {
+#Model
+#APIKey string    `json:"apikey" binding:"-" gorm:"unique; not null"`
+#User   *User     `json:"-" binding:"-"`
+#UserID uuid.UUID `json:"user_id" gorm:"type:uuid; not null"`
+#}
+#
+#type TeamMetadata struct {
+#Model
+#Team   *Team
+#TeamID *uuid.UUID `gorm:"uniqueIndex:team_key"`
+#Key    string     `gorm:"uniqueIndex:team_key; not null"`
+#Value  *string
+#}
+#
+#type System struct {
+#Model
+#Name string `gorm:"uniqueIndex; not null"`
+#}
+#
+#type Role struct {
+#Model
+#System      *System
+#SystemID    *uuid.UUID
+#Resource    string  `gorm:"not null"` // sub-resource at system (maybe not needed if systems are namespaced, e.g. gcp:buckets)
+#AccessLevel string  `gorm:"not null"` // read, write, R/W, other combinations per system
+#Permission  string  `gorm:"not null"` // allow/deny
+#Users       []*User `gorm:"many2many:users_roles"`
+#Teams       []*Team `gorm:"many2many:teams_roles"`
+#}
+#
+#type Synchronization struct {
+#Model
+#}
+#
+#type AuditLog struct {
+#Model
+#System            *System          `gorm:"not null"`
+#Synchronization   *Synchronization `gorm:"not null"`
+#User              *User
+#Team              *Team
+#SystemID          *uuid.UUID
+#SynchronizationID *uuid.UUID
+#UserID            *uuid.UUID
+#TeamID            *uuid.UUID
+#Action            string `gorm:"not null; index"` // CRUD action
+#Status            int    `gorm:"not null; index"` // Exit code of operation
+#Message           string `gorm:"not null"`        // User readable success or error message (log line)
+#}

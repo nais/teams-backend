@@ -5,9 +5,12 @@ import (
 	"os"
 	"time"
 
+	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/gin-gonic/gin"
 	"github.com/kelseyhightower/envconfig"
-	"github.com/nais/console/pkg/apiserver"
+	"github.com/nais/console/pkg/graph"
+	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/models"
 	"github.com/nais/console/pkg/version"
 	log "github.com/sirupsen/logrus"
@@ -110,18 +113,26 @@ func run() error {
 	}
 	log.Infof("Successfully migrated database schema.")
 
+	resolver := graph.NewResolver(db)
+	handler := graphql_handler.NewDefaultServer(
+		generated.NewExecutableSchema(
+			generated.Config{
+				Resolvers: resolver,
+			},
+		),
+	)
+
 	sock, err := net.Listen("tcp", cfg.ListenAddress)
 	if err != nil {
 		return err
 	}
 	defer sock.Close()
 
-	srv := apiserver.New(db)
-	router, err := srv.Router()
-	if err != nil {
-		return err
-	}
+	router := gin.New()
+	router.GET("/", gin.WrapH(playground.Handler("GraphQL playground", "/query")))
+	router.POST("/query", gin.WrapH(handler))
 
 	log.Infof("Ready to accept requests.")
-	return router.Engine().RunListener(sock)
+
+	return router.RunListener(sock)
 }
