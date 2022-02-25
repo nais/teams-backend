@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"net"
 	"os"
 	"time"
 
+	"github.com/99designs/gqlgen/graphql"
 	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/gin-gonic/gin"
@@ -114,11 +116,17 @@ func run() error {
 	log.Infof("Successfully migrated database schema.")
 
 	resolver := graph.NewResolver(db)
+	gc := generated.Config{}
+	gc.Resolvers = resolver
+	gc.Directives.Authentication = func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error) {
+		// FIXME: implement authentication
+		ctx = context.WithValue(ctx, "authenticated", true)
+		return next(ctx)
+	}
+
 	handler := graphql_handler.NewDefaultServer(
 		generated.NewExecutableSchema(
-			generated.Config{
-				Resolvers: resolver,
-			},
+			gc,
 		),
 	)
 

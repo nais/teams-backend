@@ -4,6 +4,9 @@
 scalar UUID
 scalar Time
 
+"directive 22"
+directive @authentication on FIELD_DEFINITION
+
 type Query {
     "Search for users."
     users(input: QueryUserInput): [User!]!
@@ -13,7 +16,7 @@ type Query {
 
 type Mutation {
     "Create a user, then return the created user."
-    createUser(input: CreateUserInput!): User!
+    createUser(input: CreateUserInput!): User! @authentication
 
     "Update user information, then return the updated user."
     updateUser(input: UpdateUserInput!): User!
