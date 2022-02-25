@@ -5,21 +5,36 @@ scalar UUID
 scalar Time
 
 type Query {
+    "Search for users."
     users(input: QueryUserInput): [User!]!
+    "Search for teams."
     teams: [Team!]!
 }
 
-# /api/v1/teams/<UUID>/users
 type Mutation {
+    "Create a user, then return the created user."
     createUser(input: CreateUserInput!): User!
+
+    "Update user information, then return the updated user."
     updateUser(input: UpdateUserInput!): User!
+
+    "Create a team, then return the created team."
     createTeam(input: CreateTeamInput!): Team!
+
+    "Add one or more users to a team, then return the team in question."
     addUsersToTeam(input: AddUsersToTeamInput!): Team!
 }
 
+"""
+hello
+queryuserinput
+"""
 input QueryUserInput {
+    "hello id"
     id: UUID
+    "hello email"
     email: String
+    "hello name"
     name: String
 }
 
@@ -45,7 +60,9 @@ type User {
 }
 
 input AddUsersToTeamInput {
+    "List of user IDs that should be added as members to the team."
     userID: [UUID!]!
+    "Team ID that should receive new users."
     teamID: UUID!
 }
 

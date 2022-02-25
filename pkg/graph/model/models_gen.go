@@ -7,8 +7,10 @@ import (
 )
 
 type AddUsersToTeamInput struct {
+	// List of user IDs that should be added as members to the team.
 	UserID []*uuid.UUID `json:"userID"`
-	TeamID *uuid.UUID   `json:"teamID"`
+	// Team ID that should receive new users.
+	TeamID *uuid.UUID `json:"teamID"`
 }
 
 type CreateTeamInput struct {
@@ -22,10 +24,15 @@ type CreateUserInput struct {
 	Name  string  `json:"name"`
 }
 
+// hello
+// queryuserinput
 type QueryUserInput struct {
-	ID    *uuid.UUID `json:"id"`
-	Email *string    `json:"email"`
-	Name  *string    `json:"name"`
+	// hello id
+	ID *uuid.UUID `json:"id"`
+	// hello email
+	Email *string `json:"email"`
+	// hello name
+	Name *string `json:"name"`
 }
 
 type UpdateUserInput struct {
