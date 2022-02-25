@@ -5,12 +5,22 @@ scalar UUID
 scalar Time
 
 type Query {
-    users(id: UUID, email: String): [User!]!
+    users(input: QueryUserInput): [User!]!
+    teams: [Team!]!
 }
 
+# /api/v1/teams/<UUID>/users
 type Mutation {
     createUser(input: CreateUserInput!): User!
     updateUser(input: UpdateUserInput!): User!
+    createTeam(input: CreateTeamInput!): Team!
+    addUsersToTeam(input: AddUsersToTeamInput!): Team!
+}
+
+input QueryUserInput {
+    id: UUID
+    email: String
+    name: String
 }
 
 input CreateUserInput {
@@ -32,6 +42,17 @@ type User {
     teams: [Team!]!
     roles: [Role!]!
     created_at: Time
+}
+
+input AddUsersToTeamInput {
+    userID: [UUID!]!
+    teamID: UUID!
+}
+
+input CreateTeamInput {
+    slug: String!
+    name: String!
+    purpose: String
 }
 
 type Team {

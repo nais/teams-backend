@@ -22,8 +22,8 @@ type Model struct {
 
 type Team struct {
 	Model
-	Slug     string          `json:"slug" gorm:"<-:create; unique; not null"`
-	Name     string          `json:"name" gorm:"unique; not null"`
+	Slug     *string         `json:"slug" gorm:"<-:create; unique; not null"`
+	Name     *string         `json:"name" gorm:"unique; not null"`
 	Purpose  *string         `json:"purpose"`
 	Metadata []*TeamMetadata `json:"-" binding:"-"`
 	Users    []*User         `json:"-" binding:"-" gorm:"many2many:users_teams"`

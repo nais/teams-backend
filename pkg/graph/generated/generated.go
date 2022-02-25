@@ -47,12 +47,15 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	Mutation struct {
-		CreateUser func(childComplexity int, input model.CreateUserInput) int
-		UpdateUser func(childComplexity int, input model.UpdateUserInput) int
+		AddUsersToTeam func(childComplexity int, input model.AddUsersToTeamInput) int
+		CreateTeam     func(childComplexity int, input model.CreateTeamInput) int
+		CreateUser     func(childComplexity int, input model.CreateUserInput) int
+		UpdateUser     func(childComplexity int, input model.UpdateUserInput) int
 	}
 
 	Query struct {
-		Users func(childComplexity int, id *uuid.UUID, email *string) int
+		Teams func(childComplexity int) int
+		Users func(childComplexity int, input *model.QueryUserInput) int
 	}
 
 	Role struct {
@@ -86,9 +89,12 @@ type ComplexityRoot struct {
 type MutationResolver interface {
 	CreateUser(ctx context.Context, input model.CreateUserInput) (*models.User, error)
 	UpdateUser(ctx context.Context, input model.UpdateUserInput) (*models.User, error)
+	CreateTeam(ctx context.Context, input model.CreateTeamInput) (*models.Team, error)
+	AddUsersToTeam(ctx context.Context, input model.AddUsersToTeamInput) (*models.Team, error)
 }
 type QueryResolver interface {
-	Users(ctx context.Context, id *uuid.UUID, email *string) ([]*models.User, error)
+	Users(ctx context.Context, input *model.QueryUserInput) ([]*models.User, error)
+	Teams(ctx context.Context) ([]*models.Team, error)
 }
 
 type executableSchema struct {
@@ -105,6 +111,30 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	ec := executionContext{nil, e}
 	_ = ec
 	switch typeName + "." + field {
+
+	case "Mutation.addUsersToTeam":
+		if e.complexity.Mutation.AddUsersToTeam == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_addUsersToTeam_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.AddUsersToTeam(childComplexity, args["input"].(model.AddUsersToTeamInput)), true
+
+	case "Mutation.createTeam":
+		if e.complexity.Mutation.CreateTeam == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createTeam_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreateTeam(childComplexity, args["input"].(model.CreateTeamInput)), true
 
 	case "Mutation.createUser":
 		if e.complexity.Mutation.CreateUser == nil {
@@ -130,6 +160,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.UpdateUser(childComplexity, args["input"].(model.UpdateUserInput)), true
 
+	case "Query.teams":
+		if e.complexity.Query.Teams == nil {
+			break
+		}
+
+		return e.complexity.Query.Teams(childComplexity), true
+
 	case "Query.users":
 		if e.complexity.Query.Users == nil {
 			break
@@ -140,7 +177,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Users(childComplexity, args["id"].(*uuid.UUID), args["email"].(*string)), true
+		return e.complexity.Query.Users(childComplexity, args["input"].(*model.QueryUserInput)), true
 
 	case "Role.id":
 		if e.complexity.Role.ID == nil {
@@ -318,12 +355,22 @@ scalar UUID
 scalar Time
 
 type Query {
-    users(id: UUID, email: String): [User!]!
+    users(input: QueryUserInput): [User!]!
+    teams: [Team!]!
 }
 
+# /api/v1/teams/<UUID>/users
 type Mutation {
     createUser(input: CreateUserInput!): User!
     updateUser(input: UpdateUserInput!): User!
+    createTeam(input: CreateTeamInput!): Team!
+    addUsersToTeam(input: AddUsersToTeamInput!): Team!
+}
+
+input QueryUserInput {
+    id: UUID
+    email: String
+    name: String
 }
 
 input CreateUserInput {
@@ -345,6 +392,17 @@ type User {
     teams: [Team!]!
     roles: [Role!]!
     created_at: Time
+}
+
+input AddUsersToTeamInput {
+    userID: [UUID!]!
+    teamID: UUID!
+}
+
+input CreateTeamInput {
+    slug: String!
+    name: String!
+    purpose: String
 }
 
 type Team {
@@ -436,6 +494,36 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 
 // region    ***************************** args.gotpl *****************************
 
+func (ec *executionContext) field_Mutation_addUsersToTeam_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.AddUsersToTeamInput
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNAddUsersToTeamInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAddUsersToTeamInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_createTeam_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.CreateTeamInput
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNCreateTeamInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐCreateTeamInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_createUser_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -484,24 +572,15 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 func (ec *executionContext) field_Query_users_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *uuid.UUID
-	if tmp, ok := rawArgs["id"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
+	var arg0 *model.QueryUserInput
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalOQueryUserInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryUserInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["id"] = arg0
-	var arg1 *string
-	if tmp, ok := rawArgs["email"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("email"))
-		arg1, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["email"] = arg1
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -627,6 +706,90 @@ func (ec *executionContext) _Mutation_updateUser(ctx context.Context, field grap
 	return ec.marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐUser(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Mutation_createTeam(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_createTeam_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().CreateTeam(rctx, args["input"].(model.CreateTeamInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.Team)
+	fc.Result = res
+	return ec.marshalNTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐTeam(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_addUsersToTeam(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_addUsersToTeam_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().AddUsersToTeam(rctx, args["input"].(model.AddUsersToTeamInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.Team)
+	fc.Result = res
+	return ec.marshalNTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐTeam(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Query_users(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -652,7 +815,7 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Users(rctx, args["id"].(*uuid.UUID), args["email"].(*string))
+		return ec.resolvers.Query().Users(rctx, args["input"].(*model.QueryUserInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -667,6 +830,41 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 	res := resTmp.([]*models.User)
 	fc.Result = res
 	return ec.marshalNUser2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐUserᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_teams(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Teams(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*models.Team)
+	fc.Result = res
+	return ec.marshalNTeam2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐTeamᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -840,9 +1038,9 @@ func (ec *executionContext) _Team_slug(ctx context.Context, field graphql.Collec
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(*string)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNString2ᚖstring(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Team_name(ctx context.Context, field graphql.CollectedField, obj *models.Team) (ret graphql.Marshaler) {
@@ -875,9 +1073,9 @@ func (ec *executionContext) _Team_name(ctx context.Context, field graphql.Collec
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(*string)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNString2ᚖstring(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Team_purpose(ctx context.Context, field graphql.CollectedField, obj *models.Team) (ret graphql.Marshaler) {
@@ -2378,6 +2576,76 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputAddUsersToTeamInput(ctx context.Context, obj interface{}) (model.AddUsersToTeamInput, error) {
+	var it model.AddUsersToTeamInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	for k, v := range asMap {
+		switch k {
+		case "userID":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userID"))
+			it.UserID, err = ec.unmarshalNUUID2ᚕᚖgithubᚗcomᚋgoogleᚋuuidᚐUUIDᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "teamID":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamID"))
+			it.TeamID, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputCreateTeamInput(ctx context.Context, obj interface{}) (model.CreateTeamInput, error) {
+	var it model.CreateTeamInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	for k, v := range asMap {
+		switch k {
+		case "slug":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
+			it.Slug, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "name":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			it.Name, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "purpose":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("purpose"))
+			it.Purpose, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputCreateUserInput(ctx context.Context, obj interface{}) (model.CreateUserInput, error) {
 	var it model.CreateUserInput
 	asMap := map[string]interface{}{}
@@ -2400,6 +2668,45 @@ func (ec *executionContext) unmarshalInputCreateUserInput(ctx context.Context, o
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
 			it.Name, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputQueryUserInput(ctx context.Context, obj interface{}) (model.QueryUserInput, error) {
+	var it model.QueryUserInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	for k, v := range asMap {
+		switch k {
+		case "id":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			it.ID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "email":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("email"))
+			it.Email, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "name":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			it.Name, err = ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -2495,6 +2802,26 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "createTeam":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createTeam(ctx, field)
+			}
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, innerFunc)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "addUsersToTeam":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_addUsersToTeam(ctx, field)
+			}
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, innerFunc)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -2535,6 +2862,29 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_users(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "teams":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_teams(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -3207,6 +3557,11 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 
 // region    ***************************** type.gotpl *****************************
 
+func (ec *executionContext) unmarshalNAddUsersToTeamInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAddUsersToTeamInput(ctx context.Context, v interface{}) (model.AddUsersToTeamInput, error) {
+	res, err := ec.unmarshalInputAddUsersToTeamInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
 	res, err := graphql.UnmarshalBoolean(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -3220,6 +3575,11 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNCreateTeamInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐCreateTeamInput(ctx context.Context, v interface{}) (model.CreateTeamInput, error) {
+	res, err := ec.unmarshalInputCreateTeamInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNCreateUserInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐCreateUserInput(ctx context.Context, v interface{}) (model.CreateUserInput, error) {
@@ -3315,6 +3675,10 @@ func (ec *executionContext) marshalNString2ᚖstring(ctx context.Context, sel as
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNTeam2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐTeam(ctx context.Context, sel ast.SelectionSet, v models.Team) graphql.Marshaler {
+	return ec._Team(ctx, sel, &v)
 }
 
 func (ec *executionContext) marshalNTeam2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐTeamᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.Team) graphql.Marshaler {
@@ -3423,6 +3787,38 @@ func (ec *executionContext) marshalNTeamMetadata2ᚖgithubᚗcomᚋnaisᚋconsol
 		return graphql.Null
 	}
 	return ec._TeamMetadata(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNUUID2ᚕᚖgithubᚗcomᚋgoogleᚋuuidᚐUUIDᚄ(ctx context.Context, v interface{}) ([]*uuid.UUID, error) {
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]*uuid.UUID, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNUUID2ᚕᚖgithubᚗcomᚋgoogleᚋuuidᚐUUIDᚄ(ctx context.Context, sel ast.SelectionSet, v []*uuid.UUID) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx context.Context, v interface{}) (*uuid.UUID, error) {
@@ -3786,6 +4182,14 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	}
 	res := graphql.MarshalBoolean(*v)
 	return res
+}
+
+func (ec *executionContext) unmarshalOQueryUserInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryUserInput(ctx context.Context, v interface{}) (*model.QueryUserInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputQueryUserInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {

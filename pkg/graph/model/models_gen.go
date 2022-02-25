@@ -6,9 +6,26 @@ import (
 	"github.com/google/uuid"
 )
 
+type AddUsersToTeamInput struct {
+	UserID []*uuid.UUID `json:"userID"`
+	TeamID *uuid.UUID   `json:"teamID"`
+}
+
+type CreateTeamInput struct {
+	Slug    string  `json:"slug"`
+	Name    string  `json:"name"`
+	Purpose *string `json:"purpose"`
+}
+
 type CreateUserInput struct {
 	Email *string `json:"email"`
 	Name  string  `json:"name"`
+}
+
+type QueryUserInput struct {
+	ID    *uuid.UUID `json:"id"`
+	Email *string    `json:"email"`
+	Name  *string    `json:"name"`
 }
 
 type UpdateUserInput struct {
