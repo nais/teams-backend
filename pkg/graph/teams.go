@@ -50,11 +50,16 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 	return team, nil
 }
 
-func (r *queryResolver) Teams(ctx context.Context) ([]*models.Team, error) {
+func (r *queryResolver) Teams(ctx context.Context) (*model.Teams, error) {
 	teams := make([]*models.Team, 0)
 	tx := r.db.WithContext(ctx).Find(&teams)
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
-	return teams, nil
+	return &model.Teams{
+		Meta: &model.Meta{
+			NumResults: len(teams),
+		},
+		Nodes: teams,
+	}, nil
 }

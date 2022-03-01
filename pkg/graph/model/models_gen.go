@@ -4,6 +4,7 @@ package model
 
 import (
 	"github.com/google/uuid"
+	"github.com/nais/console/pkg/models"
 )
 
 type AddUsersToTeamInput struct {
@@ -24,14 +25,31 @@ type CreateUserInput struct {
 	Name  string  `json:"name"`
 }
 
+// Metadata describing the response data.
+type Meta struct {
+	NumResults int `json:"num_results"`
+}
+
 type QueryUserInput struct {
 	ID    *uuid.UUID `json:"id"`
 	Email *string    `json:"email"`
 	Name  *string    `json:"name"`
 }
 
+// Query results for teams.
+type Teams struct {
+	Meta  *Meta          `json:"meta"`
+	Nodes []*models.Team `json:"nodes"`
+}
+
 type UpdateUserInput struct {
 	ID    *uuid.UUID `json:"id"`
 	Email *string    `json:"email"`
 	Name  *string    `json:"name"`
+}
+
+// Query results for users.
+type Users struct {
+	Meta  *Meta          `json:"meta"`
+	Nodes []*models.User `json:"nodes"`
 }

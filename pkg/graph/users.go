@@ -34,18 +34,17 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, input model.UpdateUse
 	return u, err
 }
 
-func (r *queryResolver) Users(ctx context.Context, input *model.QueryUserInput) ([]*models.User, error) {
-	query := &models.User{
-		Model: models.Model{
-			ID: input.ID,
-		},
-		Email: input.Email,
-		Name:  input.Name,
-	}
+func (r *queryResolver) Users(ctx context.Context, input *model.QueryUserInput) (*model.Users, error) {
+	query := input.Query()
 	users := make([]*models.User, 0)
 	tx := r.db.WithContext(ctx).Where(query).Find(&users)
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
-	return users, nil
+	return &model.Users{
+		Meta: &model.Meta{
+			NumResults: len(users),
+		},
+		Nodes: users,
+	}, nil
 }

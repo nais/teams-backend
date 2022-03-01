@@ -1,6 +1,6 @@
 extend type Query {
     "Search for users."
-    users(input: QueryUserInput): [User!]!
+    users(input: QueryUserInput): Users!
 }
 
 extend type Mutation {
@@ -9,6 +9,12 @@ extend type Mutation {
 
     "Update user information, then return the updated user."
     updateUser(input: UpdateUserInput!): User!
+}
+
+"Query results for users."
+type Users {
+    meta: Meta!
+    nodes: [User!]!
 }
 
 input QueryUserInput {

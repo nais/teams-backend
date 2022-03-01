@@ -1,6 +1,6 @@
 extend type Query {
     "Search for teams."
-    teams: [Team!]!
+    teams: Teams
 }
 
 extend type Mutation {
@@ -9,6 +9,12 @@ extend type Mutation {
 
     "Add one or more users to a team, then return the team in question."
     addUsersToTeam(input: AddUsersToTeamInput!): Team!
+}
+
+"Query results for teams."
+type Teams {
+    meta: Meta!
+    nodes: [Team!]!
 }
 
 input CreateTeamInput {
