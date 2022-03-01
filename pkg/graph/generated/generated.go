@@ -368,43 +368,6 @@ type Query
 
 type Mutation
 
-"""
-hello
-queryuserinput
-"""
-input QueryUserInput {
-    "hello id"
-    id: UUID
-    "hello email"
-    email: String
-    "hello name"
-    name: String
-}
-
-input CreateUserInput {
-    email: String
-    name: String!
-}
-
-input UpdateUserInput {
-    id: UUID!
-    email: String
-    name: String
-}
-
-input AddUsersToTeamInput {
-    "List of user IDs that should be added as members to the team."
-    userID: [UUID!]!
-    "Team ID that should receive new users."
-    teamID: UUID!
-}
-
-input CreateTeamInput {
-    slug: String!
-    name: String!
-    purpose: String
-}
-
 #type ApiKey struct {
 #Model
 #APIKey string    ` + "`" + `json:"apikey" binding:"-" gorm:"unique; not null"` + "`" + `
@@ -464,6 +427,20 @@ extend type Mutation {
     "Add one or more users to a team, then return the team in question."
     addUsersToTeam(input: AddUsersToTeamInput!): Team!
 }
+
+input CreateTeamInput {
+    slug: String!
+    name: String!
+    purpose: String
+}
+
+input AddUsersToTeamInput {
+    "List of user IDs that should be added as members to the team."
+    userID: [UUID!]!
+    "Team ID that should receive new users."
+    teamID: UUID!
+}
+
 `, BuiltIn: false},
 	{Name: "graphql/types.graphqls", Input: `type User {
     id: UUID!
@@ -507,6 +484,24 @@ extend type Mutation {
     "Create a team, then return the created team."
     createTeam(input: CreateTeamInput!): Team!
 }
+
+input QueryUserInput {
+    id: UUID
+    email: String
+    name: String
+}
+
+input CreateUserInput {
+    email: String
+    name: String!
+}
+
+input UpdateUserInput {
+    id: UUID!
+    email: String
+    name: String
+}
+
 `, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)

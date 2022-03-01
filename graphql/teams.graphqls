@@ -7,3 +7,17 @@ extend type Mutation {
     "Add one or more users to a team, then return the team in question."
     addUsersToTeam(input: AddUsersToTeamInput!): Team!
 }
+
+input CreateTeamInput {
+    slug: String!
+    name: String!
+    purpose: String
+}
+
+input AddUsersToTeamInput {
+    "List of user IDs that should be added as members to the team."
+    userID: [UUID!]!
+    "Team ID that should receive new users."
+    teamID: UUID!
+}
+

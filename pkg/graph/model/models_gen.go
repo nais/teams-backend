@@ -24,15 +24,10 @@ type CreateUserInput struct {
 	Name  string  `json:"name"`
 }
 
-// hello
-// queryuserinput
 type QueryUserInput struct {
-	// hello id
-	ID *uuid.UUID `json:"id"`
-	// hello email
-	Email *string `json:"email"`
-	// hello name
-	Name *string `json:"name"`
+	ID    *uuid.UUID `json:"id"`
+	Email *string    `json:"email"`
+	Name  *string    `json:"name"`
 }
 
 type UpdateUserInput struct {

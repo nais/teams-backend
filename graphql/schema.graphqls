@@ -16,43 +16,6 @@ type Query
 
 type Mutation
 
-"""
-hello
-queryuserinput
-"""
-input QueryUserInput {
-    "hello id"
-    id: UUID
-    "hello email"
-    email: String
-    "hello name"
-    name: String
-}
-
-input CreateUserInput {
-    email: String
-    name: String!
-}
-
-input UpdateUserInput {
-    id: UUID!
-    email: String
-    name: String
-}
-
-input AddUsersToTeamInput {
-    "List of user IDs that should be added as members to the team."
-    userID: [UUID!]!
-    "Team ID that should receive new users."
-    teamID: UUID!
-}
-
-input CreateTeamInput {
-    slug: String!
-    name: String!
-    purpose: String
-}
-
 #type ApiKey struct {
 #Model
 #APIKey string    `json:"apikey" binding:"-" gorm:"unique; not null"`

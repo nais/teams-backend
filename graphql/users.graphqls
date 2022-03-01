@@ -13,3 +13,21 @@ extend type Mutation {
     "Create a team, then return the created team."
     createTeam(input: CreateTeamInput!): Team!
 }
+
+input QueryUserInput {
+    id: UUID
+    email: String
+    name: String
+}
+
+input CreateUserInput {
+    email: String
+    name: String!
+}
+
+input UpdateUserInput {
+    id: UUID!
+    email: String
+    name: String
+}
+
