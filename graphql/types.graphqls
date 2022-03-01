@@ -9,7 +9,7 @@ type User {
     id: UUID!
     email: String
     name: String!
-    teams: [Team!]!
+    teams: Teams!
     roles: [Role!]!
     created_at: Time
 }
@@ -20,7 +20,7 @@ type Team {
     name: String!
     purpose: String
     roles: [Role!]!
-    users: [User!]!
+    users: Users!
     metadata: [TeamMetadata!]!
 }
 
