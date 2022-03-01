@@ -16,3 +16,17 @@ func (in *QueryUserInput) Query() *models.User {
 		Name:  in.Name,
 	}
 }
+
+type PaginatedQuery interface {
+	GetPagination() *PaginationInput
+}
+
+func (in *QueryUserInput) GetPagination() *PaginationInput {
+	if in == nil {
+		return &PaginationInput{
+			Offset: 0,
+			Limit:  10,
+		}
+	}
+	return in.Pagination
+}

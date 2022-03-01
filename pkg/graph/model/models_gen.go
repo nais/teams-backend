@@ -25,21 +25,32 @@ type CreateUserInput struct {
 	Name  string  `json:"name"`
 }
 
-// Metadata describing the response data.
-type Meta struct {
-	NumResults int `json:"num_results"`
+// Pagination metadata attached to all queries.
+type Pagination struct {
+	// Total number of results that matches the query.
+	Results int `json:"results"`
+	// Which record number the returned dataset starts at.
+	Offset int `json:"offset"`
+	// Maximum number of records included in the dataset.
+	Limit int `json:"limit"`
+}
+
+type PaginationInput struct {
+	Offset int `json:"offset"`
+	Limit  int `json:"limit"`
 }
 
 type QueryUserInput struct {
-	ID    *uuid.UUID `json:"id"`
-	Email *string    `json:"email"`
-	Name  *string    `json:"name"`
+	Pagination *PaginationInput `json:"pagination"`
+	ID         *uuid.UUID       `json:"id"`
+	Email      *string          `json:"email"`
+	Name       *string          `json:"name"`
 }
 
 // Query results for teams.
 type Teams struct {
-	Meta  *Meta          `json:"meta"`
-	Nodes []*models.Team `json:"nodes"`
+	Pagination *Pagination    `json:"pagination"`
+	Nodes      []*models.Team `json:"nodes"`
 }
 
 type UpdateUserInput struct {
@@ -50,6 +61,6 @@ type UpdateUserInput struct {
 
 // Query results for users.
 type Users struct {
-	Meta  *Meta          `json:"meta"`
-	Nodes []*models.User `json:"nodes"`
+	Pagination *Pagination    `json:"pagination"`
+	Nodes      []*models.User `json:"nodes"`
 }

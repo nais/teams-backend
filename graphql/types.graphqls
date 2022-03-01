@@ -1,8 +1,13 @@
 """
-Metadata describing the response data.
+Pagination metadata attached to all queries.
 """
-type Meta {
-    num_results: Int!
+type Pagination {
+    "Total number of results that matches the query."
+    results: Int!
+    "Which record number the returned dataset starts at."
+    offset: Int!
+    "Maximum number of records included in the dataset."
+    limit: Int!
 }
 
 type User {

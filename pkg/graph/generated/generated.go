@@ -64,15 +64,17 @@ type ComplexityRoot struct {
 		User            func(childComplexity int) int
 	}
 
-	Meta struct {
-		NumResults func(childComplexity int) int
-	}
-
 	Mutation struct {
 		AddUsersToTeam func(childComplexity int, input model.AddUsersToTeamInput) int
 		CreateTeam     func(childComplexity int, input model.CreateTeamInput) int
 		CreateUser     func(childComplexity int, input model.CreateUserInput) int
 		UpdateUser     func(childComplexity int, input model.UpdateUserInput) int
+	}
+
+	Pagination struct {
+		Limit   func(childComplexity int) int
+		Offset  func(childComplexity int) int
+		Results func(childComplexity int) int
 	}
 
 	Query struct {
@@ -115,8 +117,8 @@ type ComplexityRoot struct {
 	}
 
 	Teams struct {
-		Meta  func(childComplexity int) int
-		Nodes func(childComplexity int) int
+		Nodes      func(childComplexity int) int
+		Pagination func(childComplexity int) int
 	}
 
 	User struct {
@@ -129,8 +131,8 @@ type ComplexityRoot struct {
 	}
 
 	Users struct {
-		Meta  func(childComplexity int) int
-		Nodes func(childComplexity int) int
+		Nodes      func(childComplexity int) int
+		Pagination func(childComplexity int) int
 	}
 }
 
@@ -222,13 +224,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.AuditLog.User(childComplexity), true
 
-	case "Meta.num_results":
-		if e.complexity.Meta.NumResults == nil {
-			break
-		}
-
-		return e.complexity.Meta.NumResults(childComplexity), true
-
 	case "Mutation.addUsersToTeam":
 		if e.complexity.Mutation.AddUsersToTeam == nil {
 			break
@@ -276,6 +271,27 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.UpdateUser(childComplexity, args["input"].(model.UpdateUserInput)), true
+
+	case "Pagination.limit":
+		if e.complexity.Pagination.Limit == nil {
+			break
+		}
+
+		return e.complexity.Pagination.Limit(childComplexity), true
+
+	case "Pagination.offset":
+		if e.complexity.Pagination.Offset == nil {
+			break
+		}
+
+		return e.complexity.Pagination.Offset(childComplexity), true
+
+	case "Pagination.results":
+		if e.complexity.Pagination.Results == nil {
+			break
+		}
+
+		return e.complexity.Pagination.Results(childComplexity), true
 
 	case "Query.teams":
 		if e.complexity.Query.Teams == nil {
@@ -429,19 +445,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.TeamMetadata.Value(childComplexity), true
 
-	case "Teams.meta":
-		if e.complexity.Teams.Meta == nil {
-			break
-		}
-
-		return e.complexity.Teams.Meta(childComplexity), true
-
 	case "Teams.nodes":
 		if e.complexity.Teams.Nodes == nil {
 			break
 		}
 
 		return e.complexity.Teams.Nodes(childComplexity), true
+
+	case "Teams.pagination":
+		if e.complexity.Teams.Pagination == nil {
+			break
+		}
+
+		return e.complexity.Teams.Pagination(childComplexity), true
 
 	case "User.created_at":
 		if e.complexity.User.CreatedAt == nil {
@@ -485,19 +501,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.User.Teams(childComplexity), true
 
-	case "Users.meta":
-		if e.complexity.Users.Meta == nil {
-			break
-		}
-
-		return e.complexity.Users.Meta(childComplexity), true
-
 	case "Users.nodes":
 		if e.complexity.Users.Nodes == nil {
 			break
 		}
 
 		return e.complexity.Users.Nodes(childComplexity), true
+
+	case "Users.pagination":
+		if e.complexity.Users.Pagination == nil {
+			break
+		}
+
+		return e.complexity.Users.Pagination(childComplexity), true
 
 	}
 	return 0, false
@@ -574,7 +590,14 @@ directive @authentication on FIELD_DEFINITION
 
 type Query
 
-type Mutation`, BuiltIn: false},
+type Mutation
+
+input PaginationInput {
+    offset: Int! = 0
+    limit: Int! = 10
+}
+
+`, BuiltIn: false},
 	{Name: "graphql/teams.graphqls", Input: `extend type Query {
     "Search for teams."
     teams: Teams
@@ -590,7 +613,7 @@ extend type Mutation {
 
 "Query results for teams."
 type Teams {
-    meta: Meta!
+    pagination: Pagination!
     nodes: [Team!]!
 }
 
@@ -609,10 +632,15 @@ input AddUsersToTeamInput {
 
 `, BuiltIn: false},
 	{Name: "graphql/types.graphqls", Input: `"""
-Metadata describing the response data.
+Pagination metadata attached to all queries.
 """
-type Meta {
-    num_results: Int!
+type Pagination {
+    "Total number of results that matches the query."
+    results: Int!
+    "Which record number the returned dataset starts at."
+    offset: Int!
+    "Maximum number of records included in the dataset."
+    limit: Int!
 }
 
 type User {
@@ -693,11 +721,12 @@ extend type Mutation {
 
 "Query results for users."
 type Users {
-    meta: Meta!
+    pagination: Pagination!
     nodes: [User!]!
 }
 
 input QueryUserInput {
+    pagination: PaginationInput = new
     id: UUID
     email: String
     name: String
@@ -1124,41 +1153,6 @@ func (ec *executionContext) _AuditLog_message(ctx context.Context, field graphql
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Meta_num_results(ctx context.Context, field graphql.CollectedField, obj *model.Meta) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:     "Meta",
-		Field:      field,
-		Args:       nil,
-		IsMethod:   false,
-		IsResolver: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.NumResults, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(int)
-	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
-}
-
 func (ec *executionContext) _Mutation_createTeam(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -1345,6 +1339,111 @@ func (ec *executionContext) _Mutation_updateUser(ctx context.Context, field grap
 	res := resTmp.(*models.User)
 	fc.Result = res
 	return ec.marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐUser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Pagination_results(ctx context.Context, field graphql.CollectedField, obj *model.Pagination) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Pagination",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Results, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Pagination_offset(ctx context.Context, field graphql.CollectedField, obj *model.Pagination) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Pagination",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Offset, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Pagination_limit(ctx context.Context, field graphql.CollectedField, obj *model.Pagination) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Pagination",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Limit, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_teams(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2148,7 +2247,7 @@ func (ec *executionContext) _TeamMetadata_value(ctx context.Context, field graph
 	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Teams_meta(ctx context.Context, field graphql.CollectedField, obj *model.Teams) (ret graphql.Marshaler) {
+func (ec *executionContext) _Teams_pagination(ctx context.Context, field graphql.CollectedField, obj *model.Teams) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2166,7 +2265,7 @@ func (ec *executionContext) _Teams_meta(ctx context.Context, field graphql.Colle
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Meta, nil
+		return obj.Pagination, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2178,9 +2277,9 @@ func (ec *executionContext) _Teams_meta(ctx context.Context, field graphql.Colle
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Meta)
+	res := resTmp.(*model.Pagination)
 	fc.Result = res
-	return ec.marshalNMeta2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐMeta(ctx, field.Selections, res)
+	return ec.marshalNPagination2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPagination(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Teams_nodes(ctx context.Context, field graphql.CollectedField, obj *model.Teams) (ret graphql.Marshaler) {
@@ -2422,7 +2521,7 @@ func (ec *executionContext) _User_created_at(ctx context.Context, field graphql.
 	return ec.marshalOTime2timeᚐTime(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Users_meta(ctx context.Context, field graphql.CollectedField, obj *model.Users) (ret graphql.Marshaler) {
+func (ec *executionContext) _Users_pagination(ctx context.Context, field graphql.CollectedField, obj *model.Users) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2440,7 +2539,7 @@ func (ec *executionContext) _Users_meta(ctx context.Context, field graphql.Colle
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Meta, nil
+		return obj.Pagination, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2452,9 +2551,9 @@ func (ec *executionContext) _Users_meta(ctx context.Context, field graphql.Colle
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Meta)
+	res := resTmp.(*model.Pagination)
 	fc.Result = res
-	return ec.marshalNMeta2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐMeta(ctx, field.Selections, res)
+	return ec.marshalNPagination2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPagination(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Users_nodes(ctx context.Context, field graphql.CollectedField, obj *model.Users) (ret graphql.Marshaler) {
@@ -3715,6 +3814,44 @@ func (ec *executionContext) unmarshalInputCreateUserInput(ctx context.Context, o
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputPaginationInput(ctx context.Context, obj interface{}) (model.PaginationInput, error) {
+	var it model.PaginationInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	if _, present := asMap["offset"]; !present {
+		asMap["offset"] = 0
+	}
+	if _, present := asMap["limit"]; !present {
+		asMap["limit"] = 10
+	}
+
+	for k, v := range asMap {
+		switch k {
+		case "offset":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("offset"))
+			it.Offset, err = ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "limit":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
+			it.Limit, err = ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputQueryUserInput(ctx context.Context, obj interface{}) (model.QueryUserInput, error) {
 	var it model.QueryUserInput
 	asMap := map[string]interface{}{}
@@ -3722,8 +3859,20 @@ func (ec *executionContext) unmarshalInputQueryUserInput(ctx context.Context, ob
 		asMap[k] = v
 	}
 
+	if _, present := asMap["pagination"]; !present {
+		asMap["pagination"] = "new"
+	}
+
 	for k, v := range asMap {
 		switch k {
+		case "pagination":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pagination"))
+			it.Pagination, err = ec.unmarshalOPaginationInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPaginationInput(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		case "id":
 			var err error
 
@@ -3917,37 +4066,6 @@ func (ec *executionContext) _AuditLog(ctx context.Context, sel ast.SelectionSet,
 	return out
 }
 
-var metaImplementors = []string{"Meta"}
-
-func (ec *executionContext) _Meta(ctx context.Context, sel ast.SelectionSet, obj *model.Meta) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, metaImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("Meta")
-		case "num_results":
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Meta_num_results(ctx, field, obj)
-			}
-
-			out.Values[i] = innerFunc(ctx)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
 var mutationImplementors = []string{"Mutation"}
 
 func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -4003,6 +4121,57 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			}
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, innerFunc)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var paginationImplementors = []string{"Pagination"}
+
+func (ec *executionContext) _Pagination(ctx context.Context, sel ast.SelectionSet, obj *model.Pagination) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, paginationImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Pagination")
+		case "results":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Pagination_results(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "offset":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Pagination_offset(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "limit":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Pagination_limit(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -4411,9 +4580,9 @@ func (ec *executionContext) _Teams(ctx context.Context, sel ast.SelectionSet, ob
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Teams")
-		case "meta":
+		case "pagination":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Teams_meta(ctx, field, obj)
+				return ec._Teams_pagination(ctx, field, obj)
 			}
 
 			out.Values[i] = innerFunc(ctx)
@@ -4537,9 +4706,9 @@ func (ec *executionContext) _Users(ctx context.Context, sel ast.SelectionSet, ob
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Users")
-		case "meta":
+		case "pagination":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Users_meta(ctx, field, obj)
+				return ec._Users_pagination(ctx, field, obj)
 			}
 
 			out.Values[i] = innerFunc(ctx)
@@ -5022,14 +5191,14 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 	return res
 }
 
-func (ec *executionContext) marshalNMeta2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐMeta(ctx context.Context, sel ast.SelectionSet, v *model.Meta) graphql.Marshaler {
+func (ec *executionContext) marshalNPagination2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPagination(ctx context.Context, sel ast.SelectionSet, v *model.Pagination) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
 		}
 		return graphql.Null
 	}
-	return ec._Meta(ctx, sel, v)
+	return ec._Pagination(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐRoleᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.Role) graphql.Marshaler {
@@ -5675,6 +5844,14 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	}
 	res := graphql.MarshalBoolean(*v)
 	return res
+}
+
+func (ec *executionContext) unmarshalOPaginationInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPaginationInput(ctx context.Context, v interface{}) (*model.PaginationInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputPaginationInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalOQueryUserInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryUserInput(ctx context.Context, v interface{}) (*model.QueryUserInput, error) {

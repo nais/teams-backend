@@ -13,7 +13,7 @@ extend type Mutation {
 
 "Query results for teams."
 type Teams {
-    meta: Meta!
+    pagination: Pagination!
     nodes: [Team!]!
 }
 

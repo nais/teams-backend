@@ -13,11 +13,12 @@ extend type Mutation {
 
 "Query results for users."
 type Users {
-    meta: Meta!
+    pagination: Pagination!
     nodes: [User!]!
 }
 
 input QueryUserInput {
+    pagination: PaginationInput = new
     id: UUID
     email: String
     name: String

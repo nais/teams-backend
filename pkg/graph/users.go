@@ -8,6 +8,7 @@ import (
 
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/models"
+	"gorm.io/gorm"
 )
 
 func (r *mutationResolver) CreateUser(ctx context.Context, input model.CreateUserInput) (*models.User, error) {
@@ -37,14 +38,28 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, input model.UpdateUse
 func (r *queryResolver) Users(ctx context.Context, input *model.QueryUserInput) (*model.Users, error) {
 	query := input.Query()
 	users := make([]*models.User, 0)
-	tx := r.db.WithContext(ctx).Where(query).Find(&users)
+	tx := r.db.WithContext(ctx).Model(&models.User{}).Where(query)
+	pagination := r.withPagination(input, tx)
+	tx.Find(&users)
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
 	return &model.Users{
-		Meta: &model.Meta{
-			NumResults: len(users),
-		},
-		Nodes: users,
+		Pagination: pagination,
+		Nodes:      users,
 	}, nil
+}
+
+// Limit a query by its pagination parameters, count number of rows in dataset, and return pagination metadata.
+func (r *Resolver) withPagination(input model.PaginatedQuery, tx *gorm.DB) *model.Pagination {
+	var count int64
+	in := input.GetPagination()
+	tx.Count(&count)
+	tx.Limit(in.Limit)
+	tx.Offset(in.Offset)
+	return &model.Pagination{
+		Results: int(count),
+		Offset:  in.Offset,
+		Limit:   in.Limit,
+	}
 }

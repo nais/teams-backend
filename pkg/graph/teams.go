@@ -51,14 +51,16 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 }
 
 func (r *queryResolver) Teams(ctx context.Context) (*model.Teams, error) {
+	var count int64
 	teams := make([]*models.Team, 0)
 	tx := r.db.WithContext(ctx).Find(&teams)
+	tx.Count(&count)
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
 	return &model.Teams{
-		Meta: &model.Meta{
-			NumResults: len(teams),
+		Pagination: &model.Pagination{
+			Results: int(count),
 		},
 		Nodes: teams,
 	}, nil

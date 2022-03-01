@@ -10,3 +10,9 @@ directive @authentication on FIELD_DEFINITION
 type Query
 
 type Mutation
+
+input PaginationInput {
+    offset: Int! = 0
+    limit: Int! = 10
+}
+

@@ -18,9 +18,6 @@ func (r *teamResolver) Users(ctx context.Context, obj *models.Team) (*model.User
 		return nil, err
 	}
 	return &model.Users{
-		Meta: &model.Meta{
-			NumResults: len(users),
-		},
 		Nodes: users,
 	}, nil
 }
@@ -32,9 +29,6 @@ func (r *userResolver) Teams(ctx context.Context, obj *models.User) (*model.Team
 		return nil, err
 	}
 	return &model.Teams{
-		Meta: &model.Meta{
-			NumResults: len(teams),
-		},
 		Nodes: teams,
 	}, nil
 }
