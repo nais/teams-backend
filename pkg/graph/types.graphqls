@@ -1,0 +1,26 @@
+type User {
+    id: UUID!
+    email: String
+    name: String!
+    teams: [Team!]!
+    roles: [Role!]!
+    created_at: Time
+}
+
+type Team {
+    id: UUID!
+    slug: String!
+    name: String!
+    purpose: String
+    roles: [Role!]!
+    users: [User!]!
+    metadata: [TeamMetadata!]!
+}
+
+type Role {
+    id: UUID!
+}
+
+type TeamMetadata {
+    id: UUID!
+}

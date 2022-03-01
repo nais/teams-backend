@@ -1,0 +1,15 @@
+extend type Query {
+    "Search for users."
+    users(input: QueryUserInput): [User!]!
+}
+
+extend type Mutation {
+    "Create a user, then return the created user."
+    createUser(input: CreateUserInput!): User! @authentication
+
+    "Update user information, then return the updated user."
+    updateUser(input: UpdateUserInput!): User!
+
+    "Create a team, then return the created team."
+    createTeam(input: CreateTeamInput!): Team!
+}

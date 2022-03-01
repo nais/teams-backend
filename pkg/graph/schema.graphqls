@@ -12,26 +12,9 @@ directive @authentication on FIELD_DEFINITION
 #   "users": [ ... ]
 # }
 
-type Query {
-    "Search for users."
-    users(input: QueryUserInput): [User!]!
-    "Search for teams."
-    teams: [Team!]!
-}
+type Query
 
-type Mutation {
-    "Create a user, then return the created user."
-    createUser(input: CreateUserInput!): User! @authentication
-
-    "Update user information, then return the updated user."
-    updateUser(input: UpdateUserInput!): User!
-
-    "Create a team, then return the created team."
-    createTeam(input: CreateTeamInput!): Team!
-
-    "Add one or more users to a team, then return the team in question."
-    addUsersToTeam(input: AddUsersToTeamInput!): Team!
-}
+type Mutation
 
 """
 hello
@@ -57,16 +40,6 @@ input UpdateUserInput {
     name: String
 }
 
-type User {
-    # This is the identifier!!!!
-    id: UUID!
-    email: String
-    name: String!
-    teams: [Team!]!
-    roles: [Role!]!
-    created_at: Time
-}
-
 input AddUsersToTeamInput {
     "List of user IDs that should be added as members to the team."
     userID: [UUID!]!
@@ -80,38 +53,6 @@ input CreateTeamInput {
     purpose: String
 }
 
-type Team {
-    id: UUID!
-    slug: String!
-    name: String!
-    purpose: String
-    roles: [Role!]!
-    users: [User!]!
-    metadata: [TeamMetadata!]!
-}
-
-type Role {
-    id: UUID!
-}
-
-type TeamMetadata {
-    id: UUID!
-}
-
-#type Mutation {
-#  createTodo(input: NewTodo!): Todo!
-#}
-
-#package models
-#
-#import (
-#"time"
-#
-#"github.com/google/uuid"
-#"gorm.io/gorm"
-#)
-#
-#
 #type ApiKey struct {
 #Model
 #APIKey string    `json:"apikey" binding:"-" gorm:"unique; not null"`

@@ -89,14 +89,14 @@ type ComplexityRoot struct {
 }
 
 type MutationResolver interface {
+	AddUsersToTeam(ctx context.Context, input model.AddUsersToTeamInput) (*models.Team, error)
 	CreateUser(ctx context.Context, input model.CreateUserInput) (*models.User, error)
 	UpdateUser(ctx context.Context, input model.UpdateUserInput) (*models.User, error)
 	CreateTeam(ctx context.Context, input model.CreateTeamInput) (*models.Team, error)
-	AddUsersToTeam(ctx context.Context, input model.AddUsersToTeamInput) (*models.Team, error)
 }
 type QueryResolver interface {
-	Users(ctx context.Context, input *model.QueryUserInput) ([]*models.User, error)
 	Teams(ctx context.Context) ([]*models.Team, error)
+	Users(ctx context.Context, input *model.QueryUserInput) ([]*models.User, error)
 }
 
 type executableSchema struct {
@@ -359,26 +359,14 @@ scalar Time
 "directive 22"
 directive @authentication on FIELD_DEFINITION
 
-type Query {
-    "Search for users."
-    users(input: QueryUserInput): [User!]!
-    "Search for teams."
-    teams: [Team!]!
-}
+# FIXME: wrap all output types with pagination metadata
+# { "metadata": { "limit": ... },
+#   "users": [ ... ]
+# }
 
-type Mutation {
-    "Create a user, then return the created user."
-    createUser(input: CreateUserInput!): User! @authentication
+type Query
 
-    "Update user information, then return the updated user."
-    updateUser(input: UpdateUserInput!): User!
-
-    "Create a team, then return the created team."
-    createTeam(input: CreateTeamInput!): Team!
-
-    "Add one or more users to a team, then return the team in question."
-    addUsersToTeam(input: AddUsersToTeamInput!): Team!
-}
+type Mutation
 
 """
 hello
@@ -404,16 +392,6 @@ input UpdateUserInput {
     name: String
 }
 
-type User {
-    # This is the identifier!!!!
-    id: UUID!
-    email: String
-    name: String!
-    teams: [Team!]!
-    roles: [Role!]!
-    created_at: Time
-}
-
 input AddUsersToTeamInput {
     "List of user IDs that should be added as members to the team."
     userID: [UUID!]!
@@ -427,38 +405,6 @@ input CreateTeamInput {
     purpose: String
 }
 
-type Team {
-    id: UUID!
-    slug: String!
-    name: String!
-    purpose: String
-    roles: [Role!]!
-    users: [User!]!
-    metadata: [TeamMetadata!]!
-}
-
-type Role {
-    id: UUID!
-}
-
-type TeamMetadata {
-    id: UUID!
-}
-
-#type Mutation {
-#  createTodo(input: NewTodo!): Todo!
-#}
-
-#package models
-#
-#import (
-#"time"
-#
-#"github.com/google/uuid"
-#"gorm.io/gorm"
-#)
-#
-#
 #type ApiKey struct {
 #Model
 #APIKey string    ` + "`" + `json:"apikey" binding:"-" gorm:"unique; not null"` + "`" + `
@@ -508,6 +454,59 @@ type TeamMetadata {
 #Status            int    ` + "`" + `gorm:"not null; index"` + "`" + ` // Exit code of operation
 #Message           string ` + "`" + `gorm:"not null"` + "`" + `        // User readable success or error message (log line)
 #}
+`, BuiltIn: false},
+	{Name: "pkg/graph/teams.graphqls", Input: `extend type Query {
+    "Search for teams."
+    teams: [Team!]!
+}
+
+extend type Mutation {
+    "Add one or more users to a team, then return the team in question."
+    addUsersToTeam(input: AddUsersToTeamInput!): Team!
+}
+`, BuiltIn: false},
+	{Name: "pkg/graph/types.graphqls", Input: `type User {
+    id: UUID!
+    email: String
+    name: String!
+    teams: [Team!]!
+    roles: [Role!]!
+    created_at: Time
+}
+
+type Team {
+    id: UUID!
+    slug: String!
+    name: String!
+    purpose: String
+    roles: [Role!]!
+    users: [User!]!
+    metadata: [TeamMetadata!]!
+}
+
+type Role {
+    id: UUID!
+}
+
+type TeamMetadata {
+    id: UUID!
+}
+`, BuiltIn: false},
+	{Name: "pkg/graph/users.graphqls", Input: `extend type Query {
+    "Search for users."
+    users(input: QueryUserInput): [User!]!
+}
+
+extend type Mutation {
+    "Create a user, then return the created user."
+    createUser(input: CreateUserInput!): User! @authentication
+
+    "Update user information, then return the updated user."
+    updateUser(input: UpdateUserInput!): User!
+
+    "Create a team, then return the created team."
+    createTeam(input: CreateTeamInput!): Team!
+}
 `, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
@@ -643,6 +642,48 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 // endregion ************************** directives.gotpl **************************
 
 // region    **************************** field.gotpl *****************************
+
+func (ec *executionContext) _Mutation_addUsersToTeam(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_addUsersToTeam_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().AddUsersToTeam(rctx, args["input"].(model.AddUsersToTeamInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.Team)
+	fc.Result = res
+	return ec.marshalNTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐTeam(ctx, field.Selections, res)
+}
 
 func (ec *executionContext) _Mutation_createUser(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
@@ -790,7 +831,7 @@ func (ec *executionContext) _Mutation_createTeam(ctx context.Context, field grap
 	return ec.marshalNTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐTeam(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Mutation_addUsersToTeam(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+func (ec *executionContext) _Query_teams(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -798,7 +839,7 @@ func (ec *executionContext) _Mutation_addUsersToTeam(ctx context.Context, field 
 		}
 	}()
 	fc := &graphql.FieldContext{
-		Object:     "Mutation",
+		Object:     "Query",
 		Field:      field,
 		Args:       nil,
 		IsMethod:   true,
@@ -806,16 +847,9 @@ func (ec *executionContext) _Mutation_addUsersToTeam(ctx context.Context, field 
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
-	rawArgs := field.ArgumentMap(ec.Variables)
-	args, err := ec.field_Mutation_addUsersToTeam_args(ctx, rawArgs)
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().AddUsersToTeam(rctx, args["input"].(model.AddUsersToTeamInput))
+		return ec.resolvers.Query().Teams(rctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -827,9 +861,9 @@ func (ec *executionContext) _Mutation_addUsersToTeam(ctx context.Context, field 
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*models.Team)
+	res := resTmp.([]*models.Team)
 	fc.Result = res
-	return ec.marshalNTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐTeam(ctx, field.Selections, res)
+	return ec.marshalNTeam2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐTeamᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_users(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -872,41 +906,6 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 	res := resTmp.([]*models.User)
 	fc.Result = res
 	return ec.marshalNUser2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐUserᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _Query_teams(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		Args:       nil,
-		IsMethod:   true,
-		IsResolver: true,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Teams(rctx)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*models.Team)
-	fc.Result = res
-	return ec.marshalNTeam2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐTeamᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2824,6 +2823,16 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Mutation")
+		case "addUsersToTeam":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_addUsersToTeam(ctx, field)
+			}
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, innerFunc)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "createUser":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createUser(ctx, field)
@@ -2847,16 +2856,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "createTeam":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createTeam(ctx, field)
-			}
-
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, innerFunc)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "addUsersToTeam":
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_addUsersToTeam(ctx, field)
 			}
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, innerFunc)
@@ -2894,7 +2893,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Query")
-		case "users":
+		case "teams":
 			field := field
 
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
@@ -2903,7 +2902,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query_users(ctx, field)
+				res = ec._Query_teams(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -2917,7 +2916,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			out.Concurrently(i, func() graphql.Marshaler {
 				return rrm(innerCtx)
 			})
-		case "teams":
+		case "users":
 			field := field
 
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
@@ -2926,7 +2925,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query_teams(ctx, field)
+				res = ec._Query_users(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
