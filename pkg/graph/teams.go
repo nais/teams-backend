@@ -11,6 +11,19 @@ import (
 	"github.com/nais/console/pkg/models"
 )
 
+func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*models.Team, error) {
+	u := &models.Team{
+		Slug:    &input.Slug,
+		Name:    &input.Name,
+		Purpose: input.Purpose,
+	}
+	tx := r.db.WithContext(ctx).Create(u)
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+	return u, nil
+}
+
 func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUsersToTeamInput) (*models.Team, error) {
 	users := make([]*models.User, 0)
 	team := &models.Team{}

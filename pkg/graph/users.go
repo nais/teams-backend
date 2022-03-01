@@ -34,19 +34,6 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, input model.UpdateUse
 	return u, err
 }
 
-func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*models.Team, error) {
-	u := &models.Team{
-		Slug:    &input.Slug,
-		Name:    &input.Name,
-		Purpose: input.Purpose,
-	}
-	tx := r.db.WithContext(ctx).Create(u)
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-	return u, nil
-}
-
 func (r *queryResolver) Users(ctx context.Context, input *model.QueryUserInput) ([]*models.User, error) {
 	query := &models.User{
 		Model: models.Model{

@@ -9,9 +9,6 @@ extend type Mutation {
 
     "Update user information, then return the updated user."
     updateUser(input: UpdateUserInput!): User!
-
-    "Create a team, then return the created team."
-    createTeam(input: CreateTeamInput!): Team!
 }
 
 input QueryUserInput {

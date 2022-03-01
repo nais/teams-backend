@@ -4,6 +4,9 @@ extend type Query {
 }
 
 extend type Mutation {
+    "Create a team, then return the created team."
+    createTeam(input: CreateTeamInput!): Team!
+
     "Add one or more users to a team, then return the team in question."
     addUsersToTeam(input: AddUsersToTeamInput!): Team!
 }
