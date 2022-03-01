@@ -350,7 +350,7 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
-	{Name: "pkg/graph/schema.graphqls", Input: `# console.nais.io
+	{Name: "graphql/schema.graphqls", Input: `# console.nais.io
 # https://gqlgen.com/getting-started/
 
 scalar UUID
@@ -455,7 +455,7 @@ input CreateTeamInput {
 #Message           string ` + "`" + `gorm:"not null"` + "`" + `        // User readable success or error message (log line)
 #}
 `, BuiltIn: false},
-	{Name: "pkg/graph/teams.graphqls", Input: `extend type Query {
+	{Name: "graphql/teams.graphqls", Input: `extend type Query {
     "Search for teams."
     teams: [Team!]!
 }
@@ -465,7 +465,7 @@ extend type Mutation {
     addUsersToTeam(input: AddUsersToTeamInput!): Team!
 }
 `, BuiltIn: false},
-	{Name: "pkg/graph/types.graphqls", Input: `type User {
+	{Name: "graphql/types.graphqls", Input: `type User {
     id: UUID!
     email: String
     name: String!
@@ -492,7 +492,7 @@ type TeamMetadata {
     id: UUID!
 }
 `, BuiltIn: false},
-	{Name: "pkg/graph/users.graphqls", Input: `extend type Query {
+	{Name: "graphql/users.graphqls", Input: `extend type Query {
     "Search for users."
     users(input: QueryUserInput): [User!]!
 }
