@@ -48,6 +48,20 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
+	ApiKey struct {
+		APIKey func(childComplexity int) int
+	}
+
+	AuditLog struct {
+		Action          func(childComplexity int) int
+		Message         func(childComplexity int) int
+		Status          func(childComplexity int) int
+		Synchronization func(childComplexity int) int
+		System          func(childComplexity int) int
+		Team            func(childComplexity int) int
+		User            func(childComplexity int) int
+	}
+
 	Meta struct {
 		NumResults func(childComplexity int) int
 	}
@@ -65,7 +79,22 @@ type ComplexityRoot struct {
 	}
 
 	Role struct {
+		AccessLevel func(childComplexity int) int
+		ID          func(childComplexity int) int
+		Permission  func(childComplexity int) int
+		Resource    func(childComplexity int) int
+		System      func(childComplexity int) int
+		Teams       func(childComplexity int) int
+		Users       func(childComplexity int) int
+	}
+
+	Synchronization struct {
 		ID func(childComplexity int) int
+	}
+
+	System struct {
+		ID   func(childComplexity int) int
+		Name func(childComplexity int) int
 	}
 
 	Team struct {
@@ -79,7 +108,8 @@ type ComplexityRoot struct {
 	}
 
 	TeamMetadata struct {
-		ID func(childComplexity int) int
+		Key   func(childComplexity int) int
+		Value func(childComplexity int) int
 	}
 
 	Teams struct {
@@ -127,6 +157,62 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	ec := executionContext{nil, e}
 	_ = ec
 	switch typeName + "." + field {
+
+	case "ApiKey.apikey":
+		if e.complexity.ApiKey.APIKey == nil {
+			break
+		}
+
+		return e.complexity.ApiKey.APIKey(childComplexity), true
+
+	case "AuditLog.action":
+		if e.complexity.AuditLog.Action == nil {
+			break
+		}
+
+		return e.complexity.AuditLog.Action(childComplexity), true
+
+	case "AuditLog.message":
+		if e.complexity.AuditLog.Message == nil {
+			break
+		}
+
+		return e.complexity.AuditLog.Message(childComplexity), true
+
+	case "AuditLog.status":
+		if e.complexity.AuditLog.Status == nil {
+			break
+		}
+
+		return e.complexity.AuditLog.Status(childComplexity), true
+
+	case "AuditLog.synchronization":
+		if e.complexity.AuditLog.Synchronization == nil {
+			break
+		}
+
+		return e.complexity.AuditLog.Synchronization(childComplexity), true
+
+	case "AuditLog.system":
+		if e.complexity.AuditLog.System == nil {
+			break
+		}
+
+		return e.complexity.AuditLog.System(childComplexity), true
+
+	case "AuditLog.team":
+		if e.complexity.AuditLog.Team == nil {
+			break
+		}
+
+		return e.complexity.AuditLog.Team(childComplexity), true
+
+	case "AuditLog.user":
+		if e.complexity.AuditLog.User == nil {
+			break
+		}
+
+		return e.complexity.AuditLog.User(childComplexity), true
 
 	case "Meta.num_results":
 		if e.complexity.Meta.NumResults == nil {
@@ -202,12 +288,75 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Users(childComplexity, args["input"].(*model.QueryUserInput)), true
 
+	case "Role.access_level":
+		if e.complexity.Role.AccessLevel == nil {
+			break
+		}
+
+		return e.complexity.Role.AccessLevel(childComplexity), true
+
 	case "Role.id":
 		if e.complexity.Role.ID == nil {
 			break
 		}
 
 		return e.complexity.Role.ID(childComplexity), true
+
+	case "Role.permission":
+		if e.complexity.Role.Permission == nil {
+			break
+		}
+
+		return e.complexity.Role.Permission(childComplexity), true
+
+	case "Role.resource":
+		if e.complexity.Role.Resource == nil {
+			break
+		}
+
+		return e.complexity.Role.Resource(childComplexity), true
+
+	case "Role.system":
+		if e.complexity.Role.System == nil {
+			break
+		}
+
+		return e.complexity.Role.System(childComplexity), true
+
+	case "Role.teams":
+		if e.complexity.Role.Teams == nil {
+			break
+		}
+
+		return e.complexity.Role.Teams(childComplexity), true
+
+	case "Role.users":
+		if e.complexity.Role.Users == nil {
+			break
+		}
+
+		return e.complexity.Role.Users(childComplexity), true
+
+	case "Synchronization.id":
+		if e.complexity.Synchronization.ID == nil {
+			break
+		}
+
+		return e.complexity.Synchronization.ID(childComplexity), true
+
+	case "System.id":
+		if e.complexity.System.ID == nil {
+			break
+		}
+
+		return e.complexity.System.ID(childComplexity), true
+
+	case "System.name":
+		if e.complexity.System.Name == nil {
+			break
+		}
+
+		return e.complexity.System.Name(childComplexity), true
 
 	case "Team.id":
 		if e.complexity.Team.ID == nil {
@@ -258,12 +407,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Team.Users(childComplexity), true
 
-	case "TeamMetadata.id":
-		if e.complexity.TeamMetadata.ID == nil {
+	case "TeamMetadata.key":
+		if e.complexity.TeamMetadata.Key == nil {
 			break
 		}
 
-		return e.complexity.TeamMetadata.ID(childComplexity), true
+		return e.complexity.TeamMetadata.Key(childComplexity), true
+
+	case "TeamMetadata.value":
+		if e.complexity.TeamMetadata.Value == nil {
+			break
+		}
+
+		return e.complexity.TeamMetadata.Value(childComplexity), true
 
 	case "Teams.meta":
 		if e.complexity.Teams.Meta == nil {
@@ -405,68 +561,12 @@ var sources = []*ast.Source{
 scalar UUID
 scalar Time
 
-"directive 22"
+"Require authentication for all requests with this definition."
 directive @authentication on FIELD_DEFINITION
-
-# FIXME: wrap all output types with pagination metadata
-# { "metadata": { "limit": ... },
-#   "users": [ ... ]
-# }
 
 type Query
 
-type Mutation
-
-#type ApiKey struct {
-#Model
-#APIKey string    ` + "`" + `json:"apikey" binding:"-" gorm:"unique; not null"` + "`" + `
-#User   *User     ` + "`" + `json:"-" binding:"-"` + "`" + `
-#UserID uuid.UUID ` + "`" + `json:"user_id" gorm:"type:uuid; not null"` + "`" + `
-#}
-#
-#type TeamMetadata struct {
-#Model
-#Team   *Team
-#TeamID *uuid.UUID ` + "`" + `gorm:"uniqueIndex:team_key"` + "`" + `
-#Key    string     ` + "`" + `gorm:"uniqueIndex:team_key; not null"` + "`" + `
-#Value  *string
-#}
-#
-#type System struct {
-#Model
-#Name string ` + "`" + `gorm:"uniqueIndex; not null"` + "`" + `
-#}
-#
-#type Role struct {
-#Model
-#System      *System
-#SystemID    *uuid.UUID
-#Resource    string  ` + "`" + `gorm:"not null"` + "`" + ` // sub-resource at system (maybe not needed if systems are namespaced, e.g. gcp:buckets)
-#AccessLevel string  ` + "`" + `gorm:"not null"` + "`" + ` // read, write, R/W, other combinations per system
-#Permission  string  ` + "`" + `gorm:"not null"` + "`" + ` // allow/deny
-#Users       []*User ` + "`" + `gorm:"many2many:users_roles"` + "`" + `
-#Teams       []*Team ` + "`" + `gorm:"many2many:teams_roles"` + "`" + `
-#}
-#
-#type Synchronization struct {
-#Model
-#}
-#
-#type AuditLog struct {
-#Model
-#System            *System          ` + "`" + `gorm:"not null"` + "`" + `
-#Synchronization   *Synchronization ` + "`" + `gorm:"not null"` + "`" + `
-#User              *User
-#Team              *Team
-#SystemID          *uuid.UUID
-#SynchronizationID *uuid.UUID
-#UserID            *uuid.UUID
-#TeamID            *uuid.UUID
-#Action            string ` + "`" + `gorm:"not null; index"` + "`" + ` // CRUD action
-#Status            int    ` + "`" + `gorm:"not null; index"` + "`" + ` // Exit code of operation
-#Message           string ` + "`" + `gorm:"not null"` + "`" + `        // User readable success or error message (log line)
-#}
-`, BuiltIn: false},
+type Mutation`, BuiltIn: false},
 	{Name: "graphql/teams.graphqls", Input: `extend type Query {
     "Search for teams."
     teams: Teams
@@ -526,12 +626,48 @@ type Team {
     metadata: [TeamMetadata!]!
 }
 
+# TODO
 type Role {
+    id: UUID!
+    system: System
+    resource: String!
+    access_level: String!
+    permission: String!
+    users: [User!]!
+    teams: [Team!]!
+}
+
+# TODO
+type TeamMetadata {
+    key: String!
+    value: String
+}
+
+# TODO
+type ApiKey {
+    apikey: String!
+}
+
+# TODO
+type System {
+    id: UUID!
+    name: String!
+}
+
+# TODO
+type Synchronization {
     id: UUID!
 }
 
-type TeamMetadata {
-    id: UUID!
+# TODO
+type AuditLog {
+    system: System!
+    synchronization: Synchronization!
+    user: User
+    team: Team
+    action: String!
+    status: Int!
+    message: String!
 }
 `, BuiltIn: false},
 	{Name: "graphql/users.graphqls", Input: `extend type Query {
@@ -705,6 +841,280 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 // endregion ************************** directives.gotpl **************************
 
 // region    **************************** field.gotpl *****************************
+
+func (ec *executionContext) _ApiKey_apikey(ctx context.Context, field graphql.CollectedField, obj *models.ApiKey) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "ApiKey",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.APIKey, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuditLog_system(ctx context.Context, field graphql.CollectedField, obj *models.AuditLog) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "AuditLog",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.System, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.System)
+	fc.Result = res
+	return ec.marshalNSystem2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐSystem(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuditLog_synchronization(ctx context.Context, field graphql.CollectedField, obj *models.AuditLog) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "AuditLog",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Synchronization, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.Synchronization)
+	fc.Result = res
+	return ec.marshalNSynchronization2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐSynchronization(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuditLog_user(ctx context.Context, field graphql.CollectedField, obj *models.AuditLog) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "AuditLog",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.User, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*models.User)
+	fc.Result = res
+	return ec.marshalOUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐUser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuditLog_team(ctx context.Context, field graphql.CollectedField, obj *models.AuditLog) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "AuditLog",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Team, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*models.Team)
+	fc.Result = res
+	return ec.marshalOTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐTeam(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuditLog_action(ctx context.Context, field graphql.CollectedField, obj *models.AuditLog) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "AuditLog",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Action, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuditLog_status(ctx context.Context, field graphql.CollectedField, obj *models.AuditLog) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "AuditLog",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Status, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuditLog_message(ctx context.Context, field graphql.CollectedField, obj *models.AuditLog) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "AuditLog",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Message, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
 
 func (ec *executionContext) _Meta_num_results(ctx context.Context, field graphql.CollectedField, obj *model.Meta) (ret graphql.Marshaler) {
 	defer func() {
@@ -1109,6 +1519,318 @@ func (ec *executionContext) _Role_id(ctx context.Context, field graphql.Collecte
 	return ec.marshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Role_system(ctx context.Context, field graphql.CollectedField, obj *models.Role) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Role",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.System, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*models.System)
+	fc.Result = res
+	return ec.marshalOSystem2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐSystem(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Role_resource(ctx context.Context, field graphql.CollectedField, obj *models.Role) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Role",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Resource, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Role_access_level(ctx context.Context, field graphql.CollectedField, obj *models.Role) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Role",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AccessLevel, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Role_permission(ctx context.Context, field graphql.CollectedField, obj *models.Role) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Role",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Permission, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Role_users(ctx context.Context, field graphql.CollectedField, obj *models.Role) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Role",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Users, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*models.User)
+	fc.Result = res
+	return ec.marshalNUser2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐUserᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Role_teams(ctx context.Context, field graphql.CollectedField, obj *models.Role) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Role",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Teams, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*models.Team)
+	fc.Result = res
+	return ec.marshalNTeam2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐTeamᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Synchronization_id(ctx context.Context, field graphql.CollectedField, obj *models.Synchronization) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Synchronization",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*uuid.UUID)
+	fc.Result = res
+	return ec.marshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _System_id(ctx context.Context, field graphql.CollectedField, obj *models.System) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "System",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*uuid.UUID)
+	fc.Result = res
+	return ec.marshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _System_name(ctx context.Context, field graphql.CollectedField, obj *models.System) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "System",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Team_id(ctx context.Context, field graphql.CollectedField, obj *models.Team) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -1351,7 +2073,7 @@ func (ec *executionContext) _Team_metadata(ctx context.Context, field graphql.Co
 	return ec.marshalNTeamMetadata2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐTeamMetadataᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _TeamMetadata_id(ctx context.Context, field graphql.CollectedField, obj *models.TeamMetadata) (ret graphql.Marshaler) {
+func (ec *executionContext) _TeamMetadata_key(ctx context.Context, field graphql.CollectedField, obj *models.TeamMetadata) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1369,7 +2091,7 @@ func (ec *executionContext) _TeamMetadata_id(ctx context.Context, field graphql.
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.ID, nil
+		return obj.Key, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1381,9 +2103,41 @@ func (ec *executionContext) _TeamMetadata_id(ctx context.Context, field graphql.
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*uuid.UUID)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _TeamMetadata_value(ctx context.Context, field graphql.CollectedField, obj *models.TeamMetadata) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "TeamMetadata",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Value, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Teams_meta(ctx context.Context, field graphql.CollectedField, obj *model.Teams) (ret graphql.Marshaler) {
@@ -3039,6 +3793,122 @@ func (ec *executionContext) unmarshalInputUpdateUserInput(ctx context.Context, o
 
 // region    **************************** object.gotpl ****************************
 
+var apiKeyImplementors = []string{"ApiKey"}
+
+func (ec *executionContext) _ApiKey(ctx context.Context, sel ast.SelectionSet, obj *models.ApiKey) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, apiKeyImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ApiKey")
+		case "apikey":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._ApiKey_apikey(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var auditLogImplementors = []string{"AuditLog"}
+
+func (ec *executionContext) _AuditLog(ctx context.Context, sel ast.SelectionSet, obj *models.AuditLog) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, auditLogImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("AuditLog")
+		case "system":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._AuditLog_system(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "synchronization":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._AuditLog_synchronization(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "user":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._AuditLog_user(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+		case "team":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._AuditLog_team(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+		case "action":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._AuditLog_action(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "status":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._AuditLog_status(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "message":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._AuditLog_message(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var metaImplementors = []string{"Meta"}
 
 func (ec *executionContext) _Meta(ctx context.Context, sel ast.SelectionSet, obj *model.Meta) graphql.Marshaler {
@@ -3247,6 +4117,135 @@ func (ec *executionContext) _Role(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "system":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Role_system(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+		case "resource":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Role_resource(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "access_level":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Role_access_level(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "permission":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Role_permission(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "users":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Role_users(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "teams":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Role_teams(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var synchronizationImplementors = []string{"Synchronization"}
+
+func (ec *executionContext) _Synchronization(ctx context.Context, sel ast.SelectionSet, obj *models.Synchronization) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, synchronizationImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Synchronization")
+		case "id":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Synchronization_id(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var systemImplementors = []string{"System"}
+
+func (ec *executionContext) _System(ctx context.Context, sel ast.SelectionSet, obj *models.System) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, systemImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("System")
+		case "id":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._System_id(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "name":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._System_name(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3356,9 +4355,9 @@ func (ec *executionContext) _TeamMetadata(ctx context.Context, sel ast.Selection
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("TeamMetadata")
-		case "id":
+		case "key":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._TeamMetadata_id(ctx, field, obj)
+				return ec._TeamMetadata_key(ctx, field, obj)
 			}
 
 			out.Values[i] = innerFunc(ctx)
@@ -3366,6 +4365,13 @@ func (ec *executionContext) _TeamMetadata(ctx context.Context, sel ast.Selection
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "value":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._TeamMetadata_value(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -4088,6 +5094,26 @@ func (ec *executionContext) marshalNString2ᚖstring(ctx context.Context, sel as
 	return res
 }
 
+func (ec *executionContext) marshalNSynchronization2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐSynchronization(ctx context.Context, sel ast.SelectionSet, v *models.Synchronization) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._Synchronization(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNSystem2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐSystem(ctx context.Context, sel ast.SelectionSet, v *models.System) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._System(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNTeam2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐTeam(ctx context.Context, sel ast.SelectionSet, v models.Team) graphql.Marshaler {
 	return ec._Team(ctx, sel, &v)
 }
@@ -4643,6 +5669,20 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 	return res
 }
 
+func (ec *executionContext) marshalOSystem2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐSystem(ctx context.Context, sel ast.SelectionSet, v *models.System) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._System(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐTeam(ctx context.Context, sel ast.SelectionSet, v *models.Team) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Team(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalOTeams2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeams(ctx context.Context, sel ast.SelectionSet, v *model.Teams) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -4674,6 +5714,13 @@ func (ec *executionContext) marshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(
 	}
 	res := models.MarshalUUID(v)
 	return res
+}
+
+func (ec *executionContext) marshalOUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋmodelsᚐUser(ctx context.Context, sel ast.SelectionSet, v *models.User) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._User(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {

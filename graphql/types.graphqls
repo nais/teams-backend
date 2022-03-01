@@ -24,10 +24,46 @@ type Team {
     metadata: [TeamMetadata!]!
 }
 
+# TODO
 type Role {
+    id: UUID!
+    system: System
+    resource: String!
+    access_level: String!
+    permission: String!
+    users: [User!]!
+    teams: [Team!]!
+}
+
+# TODO
+type TeamMetadata {
+    key: String!
+    value: String
+}
+
+# TODO
+type ApiKey {
+    apikey: String!
+}
+
+# TODO
+type System {
+    id: UUID!
+    name: String!
+}
+
+# TODO
+type Synchronization {
     id: UUID!
 }
 
-type TeamMetadata {
-    id: UUID!
+# TODO
+type AuditLog {
+    system: System!
+    synchronization: Synchronization!
+    user: User
+    team: Team
+    action: String!
+    status: Int!
+    message: String!
 }
