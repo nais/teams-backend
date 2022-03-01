@@ -7,35 +7,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/nais/console/pkg/models"
 	"github.com/nais/console/pkg/requests"
-	"github.com/wI2L/fizz"
 	"gorm.io/gorm"
 )
 
 type ApiKeysHandler struct {
 	db *gorm.DB
-}
-
-func (h *ApiKeysHandler) SetupRoutes(parent *fizz.RouterGroup) {
-	r := parent.Group(
-		"/apikeys",
-		"API keys",
-		"API keys are used to authenticate users to use the NAIS console without logging on through an identity provider.",
-	)
-
-	cruds := &CrudRoute{
-		create:   h.Create,
-		delete:   h.Delete,
-		singular: "API key",
-		plural:   "API keys",
-		path: map[string]string{
-			CrudDelete: "/:user_id",
-		},
-		description: map[string]string{
-			CrudCreate: "Create or rotate a user's API key. Posting to this endpoint will invalidate all other API keys for the given user.",
-		},
-	}
-
-	cruds.Setup(r)
 }
 
 func (h *ApiKeysHandler) Create(_ *gin.Context, key *models.ApiKey) (*models.ApiKey, error) {

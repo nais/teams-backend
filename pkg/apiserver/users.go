@@ -5,32 +5,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/models"
 	"github.com/nais/console/pkg/requests"
-	"github.com/wI2L/fizz"
 	"gorm.io/gorm"
 )
 
 type UsersHandler struct {
 	db *gorm.DB
-}
-
-func (h *UsersHandler) SetupRoutes(parent *fizz.RouterGroup) {
-	r := parent.Group(
-		"/users",
-		"Users",
-		"manage users, how to work with users",
-	)
-
-	cruds := &CrudRoute{
-		create:   h.Create,
-		read:     h.Read,
-		list:     h.List,
-		update:   h.Update,
-		delete:   h.Delete,
-		singular: "user",
-		plural:   "users",
-	}
-
-	cruds.Setup(r)
 }
 
 func (h *UsersHandler) Read(_ *gin.Context, req *requests.GenericRequest) (*models.User, error) {

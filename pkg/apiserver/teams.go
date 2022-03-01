@@ -5,32 +5,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/models"
 	"github.com/nais/console/pkg/requests"
-	"github.com/wI2L/fizz"
 	"gorm.io/gorm"
 )
 
 type TeamsHandler struct {
 	db *gorm.DB
-}
-
-func (h *TeamsHandler) SetupRoutes(parent *fizz.RouterGroup) {
-	r := parent.Group(
-		"/teams",
-		"Teams",
-		"manage teams, how to work with teams",
-	)
-
-	cruds := &CrudRoute{
-		create:   h.Create,
-		read:     h.Read,
-		list:     h.List,
-		update:   h.Update,
-		delete:   h.Delete,
-		singular: "team",
-		plural:   "teams",
-	}
-
-	cruds.Setup(r)
 }
 
 func (h *TeamsHandler) Read(_ *gin.Context, req *requests.GenericRequest) (*models.Team, error) {
