@@ -3,7 +3,9 @@ DATE = $(shell date "+%Y-%m-%d")
 LAST_COMMIT = $(shell git rev-parse --short HEAD)
 LDFLAGS := -X github.com/nais/console/pkg/version.Revision=$(LAST_COMMIT) -X github.com/nais/console/pkg/version.Date=$(DATE) -X github.com/nais/console/pkg/version.BuildUnixTime=$(BUILDTIME)
 
-.PHONY: alpine console test migration
+.PHONY: alpine console test generate
+
+all: generate console
 
 console:
 	go build -o bin/console -ldflags "-s $(LDFLAGS)" cmd/console/*.go
@@ -11,8 +13,8 @@ console:
 test:
 	go test ./...
 
-migration:
-	go generate ./...
+generate:
+	go run github.com/99designs/gqlgen generate --verbose
 
 alpine:
 	go build -a -installsuffix cgo -o bin/console -ldflags "-s $(LDFLAGS)" cmd/console/main.go
