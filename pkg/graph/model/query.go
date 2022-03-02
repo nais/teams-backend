@@ -1,15 +1,15 @@
 package model
 
 import (
-	"github.com/nais/console/pkg/models"
+	"github.com/nais/console/pkg/dbmodels"
 )
 
-func (in *QueryUserInput) Query() *models.User {
+func (in *QueryUserInput) Query() *dbmodels.User {
 	if in == nil {
-		return &models.User{}
+		return &dbmodels.User{}
 	}
-	return &models.User{
-		Model: models.Model{
+	return &dbmodels.User{
+		Model: dbmodels.Model{
 			ID: in.ID,
 		},
 		Email: in.Email,

@@ -4,7 +4,7 @@ package model
 
 import (
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/models"
+	"github.com/nais/console/pkg/dbmodels"
 )
 
 type AddUsersToTeamInput struct {
@@ -49,8 +49,8 @@ type QueryUserInput struct {
 
 // Query results for teams.
 type Teams struct {
-	Pagination *Pagination    `json:"pagination"`
-	Nodes      []*models.Team `json:"nodes"`
+	Pagination *Pagination      `json:"pagination"`
+	Nodes      []*dbmodels.Team `json:"nodes"`
 }
 
 type UpdateUserInput struct {
@@ -61,6 +61,6 @@ type UpdateUserInput struct {
 
 // Query results for users.
 type Users struct {
-	Pagination *Pagination    `json:"pagination"`
-	Nodes      []*models.User `json:"nodes"`
+	Pagination *Pagination      `json:"pagination"`
+	Nodes      []*dbmodels.User `json:"nodes"`
 }

@@ -36,7 +36,7 @@ resolver:
 # gqlgen will search for any type names in the schema in these go packages
 # if they match it will use them, otherwise it will generate them.
 autobind:
-  - "github.com/nais/console/pkg/models"
+  - "github.com/nais/console/pkg/dbmodels"
 
 # This section declares type mapping between the GraphQL and go type systems
 #
@@ -46,7 +46,7 @@ autobind:
 models:
   UUID:
     model:
-      - github.com/nais/console/pkg/models.UUID
+      - github.com/nais/console/pkg/dbmodels.UUID
   ID:
     model:
       - github.com/99designs/gqlgen/graphql.ID

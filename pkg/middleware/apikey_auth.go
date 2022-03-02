@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nais/console/pkg/models"
+	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/requests"
 	"gorm.io/gorm"
 )
@@ -24,7 +24,7 @@ func ApiKeyAuthentication(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		key := &models.ApiKey{
+		key := &dbmodels.ApiKey{
 			APIKey: req.Authorization[7:],
 		}
 

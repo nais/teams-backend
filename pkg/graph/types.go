@@ -6,13 +6,13 @@ package graph
 import (
 	"context"
 
+	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
-	"github.com/nais/console/pkg/models"
 )
 
-func (r *teamResolver) Users(ctx context.Context, obj *models.Team) (*model.Users, error) {
-	users := make([]*models.User, 0)
+func (r *teamResolver) Users(ctx context.Context, obj *dbmodels.Team) (*model.Users, error) {
+	users := make([]*dbmodels.User, 0)
 	err := r.db.WithContext(ctx).Model(obj).Association("Users").Find(&users)
 	if err != nil {
 		return nil, err
@@ -22,8 +22,8 @@ func (r *teamResolver) Users(ctx context.Context, obj *models.Team) (*model.User
 	}, nil
 }
 
-func (r *userResolver) Teams(ctx context.Context, obj *models.User) (*model.Teams, error) {
-	teams := make([]*models.Team, 0)
+func (r *userResolver) Teams(ctx context.Context, obj *dbmodels.User) (*model.Teams, error) {
+	teams := make([]*dbmodels.Team, 0)
 	err := r.db.WithContext(ctx).Model(obj).Association("Teams").Find(&teams)
 	if err != nil {
 		return nil, err

@@ -11,9 +11,9 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/gin-gonic/gin"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/graph/generated"
-	"github.com/nais/console/pkg/models"
 	"github.com/nais/console/pkg/version"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/postgres"
@@ -71,14 +71,14 @@ func migrate(db *gorm.DB) error {
 	}
 
 	return db.AutoMigrate(
-		&models.AuditLog{},
-		&models.Role{},
-		&models.Synchronization{},
-		&models.System{},
-		&models.TeamMetadata{},
-		&models.Team{},
-		&models.User{},
-		&models.ApiKey{},
+		&dbmodels.AuditLog{},
+		&dbmodels.Role{},
+		&dbmodels.Synchronization{},
+		&dbmodels.System{},
+		&dbmodels.TeamMetadata{},
+		&dbmodels.Team{},
+		&dbmodels.User{},
+		&dbmodels.ApiKey{},
 	)
 }
 

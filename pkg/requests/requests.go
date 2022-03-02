@@ -1,7 +1,7 @@
 package requests
 
 import (
-	"github.com/nais/console/pkg/models"
+	"github.com/nais/console/pkg/dbmodels"
 )
 
 type GenericRequest struct {
@@ -13,24 +13,24 @@ type AuthenticatedRequest struct {
 }
 
 // This class is used to read both "id" from the URL and the team object from JSON.
-// Could have used models.Team, if not for the fact that "ID" (from URL)
+// Could have used dbmodels.Team, if not for the fact that "ID" (from URL)
 // must be read in through GenericRequest, since having the "path" annotation
-// in models.Team generates bad documentation.
+// in dbmodels.Team generates bad documentation.
 type TeamIDRequest struct {
 	GenericRequest
 	AuthenticatedRequest
-	models.Team
+	dbmodels.Team
 }
 
 type UserRequest struct {
 	AuthenticatedRequest
-	models.User
+	dbmodels.User
 }
 
 type UserIDRequest struct {
 	GenericRequest
 	AuthenticatedRequest
-	models.User
+	dbmodels.User
 }
 
 type DeleteApiKeyRequest struct {

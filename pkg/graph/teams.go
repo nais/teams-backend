@@ -7,12 +7,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/model"
-	"github.com/nais/console/pkg/models"
 )
 
-func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*models.Team, error) {
-	u := &models.Team{
+func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*dbmodels.Team, error) {
+	u := &dbmodels.Team{
 		Slug:    &input.Slug,
 		Name:    &input.Name,
 		Purpose: input.Purpose,
@@ -24,9 +24,9 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 	return u, nil
 }
 
-func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUsersToTeamInput) (*models.Team, error) {
-	users := make([]*models.User, 0)
-	team := &models.Team{}
+func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUsersToTeamInput) (*dbmodels.Team, error) {
+	users := make([]*dbmodels.User, 0)
+	team := &dbmodels.Team{}
 	tx := r.db.WithContext(ctx)
 
 	tx.Find(&users, input.UserID)
@@ -52,7 +52,7 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 
 func (r *queryResolver) Teams(ctx context.Context) (*model.Teams, error) {
 	var count int64
-	teams := make([]*models.Team, 0)
+	teams := make([]*dbmodels.Team, 0)
 	tx := r.db.WithContext(ctx).Find(&teams)
 	tx.Count(&count)
 	if tx.Error != nil {
