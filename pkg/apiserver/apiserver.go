@@ -12,9 +12,3 @@ type Handler struct {
 type ApiHandler interface {
 	SetupRoutes(parent *fizz.RouterGroup)
 }
-
-func New(db *gorm.DB) *Handler {
-	return &Handler{
-		db: db,
-	}
-}
