@@ -50,8 +50,8 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
-	ApiKey struct {
-		APIKey func(childComplexity int) int
+	APIKey struct {
+		Apikey func(childComplexity int) int
 	}
 
 	AuditLog struct {
@@ -66,8 +66,10 @@ type ComplexityRoot struct {
 
 	Mutation struct {
 		AddUsersToTeam func(childComplexity int, input model.AddUsersToTeamInput) int
+		CreateAPIKey   func(childComplexity int, input model.APIKeyInput) int
 		CreateTeam     func(childComplexity int, input model.CreateTeamInput) int
 		CreateUser     func(childComplexity int, input model.CreateUserInput) int
+		DeleteAPIKey   func(childComplexity int, input model.APIKeyInput) int
 		UpdateUser     func(childComplexity int, input model.UpdateUserInput) int
 	}
 
@@ -137,6 +139,8 @@ type ComplexityRoot struct {
 }
 
 type MutationResolver interface {
+	CreateAPIKey(ctx context.Context, input model.APIKeyInput) (*model.APIKey, error)
+	DeleteAPIKey(ctx context.Context, input model.APIKeyInput) (bool, error)
 	CreateTeam(ctx context.Context, input model.CreateTeamInput) (*dbmodels.Team, error)
 	AddUsersToTeam(ctx context.Context, input model.AddUsersToTeamInput) (*dbmodels.Team, error)
 	CreateUser(ctx context.Context, input model.CreateUserInput) (*dbmodels.User, error)
@@ -168,12 +172,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	_ = ec
 	switch typeName + "." + field {
 
-	case "ApiKey.apikey":
-		if e.complexity.ApiKey.APIKey == nil {
+	case "APIKey.apikey":
+		if e.complexity.APIKey.Apikey == nil {
 			break
 		}
 
-		return e.complexity.ApiKey.APIKey(childComplexity), true
+		return e.complexity.APIKey.Apikey(childComplexity), true
 
 	case "AuditLog.action":
 		if e.complexity.AuditLog.Action == nil {
@@ -236,6 +240,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.AddUsersToTeam(childComplexity, args["input"].(model.AddUsersToTeamInput)), true
 
+	case "Mutation.createAPIKey":
+		if e.complexity.Mutation.CreateAPIKey == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createAPIKey_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreateAPIKey(childComplexity, args["input"].(model.APIKeyInput)), true
+
 	case "Mutation.createTeam":
 		if e.complexity.Mutation.CreateTeam == nil {
 			break
@@ -259,6 +275,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.CreateUser(childComplexity, args["input"].(model.CreateUserInput)), true
+
+	case "Mutation.deleteAPIKey":
+		if e.complexity.Mutation.DeleteAPIKey == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteAPIKey_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteAPIKey(childComplexity, args["input"].(model.APIKeyInput)), true
 
 	case "Mutation.updateUser":
 		if e.complexity.Mutation.UpdateUser == nil {
@@ -579,6 +607,26 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
+	{Name: "graphql/apikeys.graphqls", Input: `extend type Mutation {
+    """
+    Create an API key for a user, then return the created API key.
+
+    Any existing API keys for this user will be invalidated.
+
+    The API key value can only be retrieved through this call, so be sure to save the return value.
+    """
+    createAPIKey(input: APIKeyInput!): APIKey! @authentication
+
+    """
+    Delete any API keys associated with a user.
+    """
+    deleteAPIKey(input: APIKeyInput!): Boolean!
+}
+
+input APIKeyInput {
+    user_id: UUID!
+}
+`, BuiltIn: false},
 	{Name: "graphql/schema.graphqls", Input: `# console.nais.io
 # https://gqlgen.com/getting-started/
 
@@ -592,6 +640,7 @@ type Query
 
 type Mutation
 
+"Specify pagination options."
 input PaginationInput {
     offset: Int! = 0
     limit: Int! = 10
@@ -680,7 +729,7 @@ type TeamMetadata {
 }
 
 # TODO
-type ApiKey {
+type APIKey {
     apikey: String!
 }
 
@@ -726,7 +775,7 @@ type Users {
 }
 
 input QueryUserInput {
-    pagination: PaginationInput = new
+    pagination: PaginationInput
     id: UUID
     email: String
     name: String
@@ -766,6 +815,21 @@ func (ec *executionContext) field_Mutation_addUsersToTeam_args(ctx context.Conte
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_createAPIKey_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.APIKeyInput
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNAPIKeyInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAPIKeyInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_createTeam_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -788,6 +852,21 @@ func (ec *executionContext) field_Mutation_createUser_args(ctx context.Context, 
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
 		arg0, err = ec.unmarshalNCreateUserInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐCreateUserInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteAPIKey_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.APIKeyInput
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNAPIKeyInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAPIKeyInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -879,7 +958,7 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 
 // region    **************************** field.gotpl *****************************
 
-func (ec *executionContext) _ApiKey_apikey(ctx context.Context, field graphql.CollectedField, obj *dbmodels.ApiKey) (ret graphql.Marshaler) {
+func (ec *executionContext) _APIKey_apikey(ctx context.Context, field graphql.CollectedField, obj *model.APIKey) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -887,7 +966,7 @@ func (ec *executionContext) _ApiKey_apikey(ctx context.Context, field graphql.Co
 		}
 	}()
 	fc := &graphql.FieldContext{
-		Object:     "ApiKey",
+		Object:     "APIKey",
 		Field:      field,
 		Args:       nil,
 		IsMethod:   false,
@@ -897,7 +976,7 @@ func (ec *executionContext) _ApiKey_apikey(ctx context.Context, field graphql.Co
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.APIKey, nil
+		return obj.Apikey, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1151,6 +1230,110 @@ func (ec *executionContext) _AuditLog_message(ctx context.Context, field graphql
 	res := resTmp.(string)
 	fc.Result = res
 	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_createAPIKey(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_createAPIKey_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().CreateAPIKey(rctx, args["input"].(model.APIKeyInput))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Authentication == nil {
+				return nil, errors.New("directive authentication is not implemented")
+			}
+			return ec.directives.Authentication(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.APIKey); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/graph/model.APIKey`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.APIKey)
+	fc.Result = res
+	return ec.marshalNAPIKey2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAPIKey(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_deleteAPIKey(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_deleteAPIKey_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeleteAPIKey(rctx, args["input"].(model.APIKeyInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_createTeam(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -3713,6 +3896,29 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputAPIKeyInput(ctx context.Context, obj interface{}) (model.APIKeyInput, error) {
+	var it model.APIKeyInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	for k, v := range asMap {
+		switch k {
+		case "user_id":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("user_id"))
+			it.UserID, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputAddUsersToTeamInput(ctx context.Context, obj interface{}) (model.AddUsersToTeamInput, error) {
 	var it model.AddUsersToTeamInput
 	asMap := map[string]interface{}{}
@@ -3859,10 +4065,6 @@ func (ec *executionContext) unmarshalInputQueryUserInput(ctx context.Context, ob
 		asMap[k] = v
 	}
 
-	if _, present := asMap["pagination"]; !present {
-		asMap["pagination"] = "new"
-	}
-
 	for k, v := range asMap {
 		switch k {
 		case "pagination":
@@ -3950,19 +4152,19 @@ func (ec *executionContext) unmarshalInputUpdateUserInput(ctx context.Context, o
 
 // region    **************************** object.gotpl ****************************
 
-var apiKeyImplementors = []string{"ApiKey"}
+var aPIKeyImplementors = []string{"APIKey"}
 
-func (ec *executionContext) _ApiKey(ctx context.Context, sel ast.SelectionSet, obj *dbmodels.ApiKey) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, apiKeyImplementors)
+func (ec *executionContext) _APIKey(ctx context.Context, sel ast.SelectionSet, obj *model.APIKey) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, aPIKeyImplementors)
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
 	for i, field := range fields {
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("ApiKey")
+			out.Values[i] = graphql.MarshalString("APIKey")
 		case "apikey":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._ApiKey_apikey(ctx, field, obj)
+				return ec._APIKey_apikey(ctx, field, obj)
 			}
 
 			out.Values[i] = innerFunc(ctx)
@@ -4085,6 +4287,26 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Mutation")
+		case "createAPIKey":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createAPIKey(ctx, field)
+			}
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, innerFunc)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "deleteAPIKey":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteAPIKey(ctx, field)
+			}
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, innerFunc)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "createTeam":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createTeam(ctx, field)
@@ -5145,6 +5367,25 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 // endregion **************************** object.gotpl ****************************
 
 // region    ***************************** type.gotpl *****************************
+
+func (ec *executionContext) marshalNAPIKey2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAPIKey(ctx context.Context, sel ast.SelectionSet, v model.APIKey) graphql.Marshaler {
+	return ec._APIKey(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNAPIKey2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAPIKey(ctx context.Context, sel ast.SelectionSet, v *model.APIKey) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._APIKey(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNAPIKeyInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAPIKeyInput(ctx context.Context, v interface{}) (model.APIKeyInput, error) {
+	res, err := ec.unmarshalInputAPIKeyInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
 
 func (ec *executionContext) unmarshalNAddUsersToTeamInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAddUsersToTeamInput(ctx context.Context, v interface{}) (model.AddUsersToTeamInput, error) {
 	res, err := ec.unmarshalInputAddUsersToTeamInput(ctx, v)

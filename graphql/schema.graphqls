@@ -11,6 +11,7 @@ type Query
 
 type Mutation
 
+"Specify pagination options."
 input PaginationInput {
     offset: Int! = 0
     limit: Int! = 10

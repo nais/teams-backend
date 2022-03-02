@@ -47,7 +47,7 @@ type TeamMetadata {
 }
 
 # TODO
-type ApiKey {
+type APIKey {
     apikey: String!
 }
 

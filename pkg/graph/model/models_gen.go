@@ -7,6 +7,14 @@ import (
 	"github.com/nais/console/pkg/dbmodels"
 )
 
+type APIKey struct {
+	Apikey string `json:"apikey"`
+}
+
+type APIKeyInput struct {
+	UserID *uuid.UUID `json:"user_id"`
+}
+
 type AddUsersToTeamInput struct {
 	// List of user IDs that should be added as members to the team.
 	UserID []*uuid.UUID `json:"userID"`
@@ -35,6 +43,7 @@ type Pagination struct {
 	Limit int `json:"limit"`
 }
 
+// Specify pagination options.
 type PaginationInput struct {
 	Offset int `json:"offset"`
 	Limit  int `json:"limit"`

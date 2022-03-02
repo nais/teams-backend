@@ -18,7 +18,7 @@ type Users {
 }
 
 input QueryUserInput {
-    pagination: PaginationInput = new
+    pagination: PaginationInput
     id: UUID
     email: String
     name: String
