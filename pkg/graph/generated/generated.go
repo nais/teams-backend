@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -46,7 +45,6 @@ type ResolverRoot interface {
 }
 
 type DirectiveRoot struct {
-	Authentication func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
 }
 
 type ComplexityRoot struct {
@@ -615,7 +613,7 @@ var sources = []*ast.Source{
 
     The API key value can only be retrieved through this call, so be sure to save the return value.
     """
-    createAPIKey(input: APIKeyInput!): APIKey! @authentication
+    createAPIKey(input: APIKeyInput!): APIKey!
 
     """
     Delete any API keys associated with a user.
@@ -632,9 +630,6 @@ input APIKeyInput {
 
 scalar UUID
 scalar Time
-
-"Require authentication for all requests with this definition."
-directive @authentication on FIELD_DEFINITION
 
 type Query
 
@@ -762,7 +757,7 @@ type AuditLog {
 
 extend type Mutation {
     "Create a user, then return the created user."
-    createUser(input: CreateUserInput!): User! @authentication
+    createUser(input: CreateUserInput!): User!
 
     "Update user information, then return the updated user."
     updateUser(input: UpdateUserInput!): User!
@@ -1256,28 +1251,8 @@ func (ec *executionContext) _Mutation_createAPIKey(ctx context.Context, field gr
 	}
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		directive0 := func(rctx context.Context) (interface{}, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().CreateAPIKey(rctx, args["input"].(model.APIKeyInput))
-		}
-		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Authentication == nil {
-				return nil, errors.New("directive authentication is not implemented")
-			}
-			return ec.directives.Authentication(ctx, nil, directive0)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*model.APIKey); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/graph/model.APIKey`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().CreateAPIKey(rctx, args["input"].(model.APIKeyInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1444,28 +1419,8 @@ func (ec *executionContext) _Mutation_createUser(ctx context.Context, field grap
 	}
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		directive0 := func(rctx context.Context) (interface{}, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().CreateUser(rctx, args["input"].(model.CreateUserInput))
-		}
-		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Authentication == nil {
-				return nil, errors.New("directive authentication is not implemented")
-			}
-			return ec.directives.Authentication(ctx, nil, directive0)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*dbmodels.User); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/dbmodels.User`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().CreateUser(rctx, args["input"].(model.CreateUserInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)

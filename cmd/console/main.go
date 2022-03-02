@@ -1,12 +1,10 @@
 package main
 
 import (
-	"context"
 	"net"
 	"os"
 	"time"
 
-	"github.com/99designs/gqlgen/graphql"
 	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/gin-gonic/gin"
@@ -14,6 +12,7 @@ import (
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/graph/generated"
+	"github.com/nais/console/pkg/middleware"
 	"github.com/nais/console/pkg/version"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/postgres"
@@ -118,11 +117,6 @@ func run() error {
 	resolver := graph.NewResolver(db)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
-	gc.Directives.Authentication = func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error) {
-		// FIXME: implement authentication
-		ctx = context.WithValue(ctx, "authenticated", true)
-		return next(ctx)
-	}
 
 	handler := graphql_handler.NewDefaultServer(
 		generated.NewExecutableSchema(
@@ -138,7 +132,10 @@ func run() error {
 
 	router := gin.New()
 	router.GET("/", gin.WrapH(playground.Handler("GraphQL playground", "/query")))
-	router.POST("/query", gin.WrapH(handler))
+
+	query := router.Group("/query")
+	query.Use(middleware.ApiKeyAuthentication(db))
+	query.POST("/", gin.WrapH(handler))
 
 	log.Infof("Ready to accept requests.")
 

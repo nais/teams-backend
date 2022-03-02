@@ -6,7 +6,7 @@ extend type Mutation {
 
     The API key value can only be retrieved through this call, so be sure to save the return value.
     """
-    createAPIKey(input: APIKeyInput!): APIKey! @authentication
+    createAPIKey(input: APIKeyInput!): APIKey!
 
     """
     Delete any API keys associated with a user.

@@ -4,9 +4,6 @@
 scalar UUID
 scalar Time
 
-"Require authentication for all requests with this definition."
-directive @authentication on FIELD_DEFINITION
-
 type Query
 
 type Mutation

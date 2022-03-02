@@ -5,7 +5,7 @@ extend type Query {
 
 extend type Mutation {
     "Create a user, then return the created user."
-    createUser(input: CreateUserInput!): User! @authentication
+    createUser(input: CreateUserInput!): User!
 
     "Update user information, then return the updated user."
     updateUser(input: UpdateUserInput!): User!
