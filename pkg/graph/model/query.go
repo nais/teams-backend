@@ -4,7 +4,13 @@ import (
 	"github.com/nais/console/pkg/dbmodels"
 )
 
-func (in *QueryUserInput) Query() *dbmodels.User {
+// All queries must implement this interface.
+type Query interface {
+	GetQuery() interface{}
+	GetPagination() *PaginationInput
+}
+
+func (in *QueryUserInput) GetQuery() interface{} {
 	if in == nil {
 		return &dbmodels.User{}
 	}
@@ -15,10 +21,6 @@ func (in *QueryUserInput) Query() *dbmodels.User {
 		Email: in.Email,
 		Name:  in.Name,
 	}
-}
-
-type PaginatedQuery interface {
-	GetPagination() *PaginationInput
 }
 
 func (in *QueryUserInput) GetPagination() *PaginationInput {

@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// Base model that all database tables inherit.
 type Model struct {
 	ID          *uuid.UUID     `json:"id" binding:"-" gorm:"primaryKey; type:uuid; default:uuid_generate_v4()"`
 	CreatedAt   time.Time      `json:"created_at" binding:"-" gorm:"<-:create; autoCreateTime; index; not null"`
@@ -18,6 +19,12 @@ type Model struct {
 	DeletedByID *uuid.UUID     `json:"deleted_by_id" binding:"-" gorm:"type:uuid"`
 	UpdatedAt   time.Time      `json:"updated_at" binding:"-" gorm:"autoUpdateTime; not null"`
 	DeletedAt   gorm.DeletedAt `json:"-" binding:"-" gorm:"index"`
+}
+
+// Enable callers to access the base model through an interface.
+// This means that setting common metadata like 'created by' or 'updated by' can be abstracted.
+func (m *Model) GetModel() *Model {
+	return m
 }
 
 type Team struct {

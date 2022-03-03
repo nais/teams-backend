@@ -15,11 +15,8 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.CreateUse
 		Email: input.Email,
 		Name:  &input.Name,
 	}
-	tx := r.db.WithContext(ctx).Create(u)
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-	return u, nil
+	err := r.createDB(ctx, u)
+	return u, err
 }
 
 func (r *mutationResolver) UpdateUser(ctx context.Context, input model.UpdateUserInput) (*dbmodels.User, error) {
@@ -30,26 +27,15 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, input model.UpdateUse
 		Email: input.Email,
 		Name:  input.Name,
 	}
-	actor, err := r.user(ctx)
-	if err != nil {
-		return nil, err
-	}
-	u.UpdatedBy = actor
-	err = r.updateOrBust(ctx, u)
+	err := r.updateDB(ctx, u)
 	return u, err
 }
 
 func (r *queryResolver) Users(ctx context.Context, input *model.QueryUserInput) (*model.Users, error) {
-	query := input.Query()
 	users := make([]*dbmodels.User, 0)
-	tx := r.db.WithContext(ctx).Model(&dbmodels.User{}).Where(query)
-	pagination := r.withPagination(input, tx)
-	tx.Find(&users)
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
+	pagination, err := r.paginatedQuery(ctx, input, &dbmodels.User{}, &users)
 	return &model.Users{
 		Pagination: pagination,
 		Nodes:      users,
-	}, nil
+	}, err
 }
