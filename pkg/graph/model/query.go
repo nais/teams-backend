@@ -10,6 +10,11 @@ type Query interface {
 	GetPagination() *PaginationInput
 }
 
+var fallbackPagination = &PaginationInput{
+	Offset: 0,
+	Limit:  10,
+}
+
 func (in *QueryUserInput) GetQuery() interface{} {
 	if in == nil {
 		return &dbmodels.User{}
@@ -24,11 +29,27 @@ func (in *QueryUserInput) GetQuery() interface{} {
 }
 
 func (in *QueryUserInput) GetPagination() *PaginationInput {
+	if in == nil || in.Pagination == nil {
+		return fallbackPagination
+	}
+	return in.Pagination
+}
+
+func (in *QueryRoleInput) GetQuery() interface{} {
 	if in == nil {
-		return &PaginationInput{
-			Offset: 0,
-			Limit:  10,
-		}
+		return &dbmodels.Role{}
+	}
+	// FIXME: query based on foreign keys
+	return &dbmodels.User{
+		Model: dbmodels.Model{
+			ID: in.ID,
+		},
+	}
+}
+
+func (in *QueryRoleInput) GetPagination() *PaginationInput {
+	if in == nil || in.Pagination == nil {
+		return fallbackPagination
 	}
 	return in.Pagination
 }
