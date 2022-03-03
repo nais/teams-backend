@@ -6,29 +6,16 @@ ADR: https://github.com/navikt/pig/blob/master/kubeops/adr/010-console-nais-io.m
 
 ## TODO
 
-* console.nais.io kan gjøre JITA access for kunde-clustere
-
-* RBAC sync på GCP: legg brukere inn i partner gke-security-groups@kunde.tld
-
-* Determine which API documentation framework to use; candidates are
-  * [OpenAPI (with re-doc)](https://redocly.github.io)
-  * [RAML](https://raml.org/)
-  * [API Blueprint](https://apiblueprint.org/)
-
-* Build minimal API that can be replicated across components without duplicating too much
-
 * Build synchronization core
 
 * Build synchronization modules
   * GCP
+    * JITA access for GCP super admin (nais admins customers' clusters)
+    * RBAC sync: create groups and add them to gke-security-groups@<domain>
   * GitHub
   * NAIS deploy
   * Kubernetes
 
-Finne en vei å gå for å sørge for at vi gjør mest mulig av følgende samtidig som vi integrerer med dokumentasjon:
+* Implement ACLs
 
-- Routing (med URL, osv)
-- Middleware (authn, authz?)
-- Deserialisering av request-objekt
-- Funksjonalitet (authz, CRUD, DB)
-- Serialisering av riktig response-objekt
+* Implement remainder of GraphQL API
