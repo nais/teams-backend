@@ -2,12 +2,13 @@ package main
 
 import (
 	"net"
+	"net/http"
 	"os"
 	"time"
 
 	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph"
@@ -45,10 +46,6 @@ func setupLogging() {
 	})
 
 	log.SetLevel(log.DebugLevel)
-
-	gin.DefaultWriter = log.StandardLogger().WriterLevel(log.DebugLevel)
-	gin.DefaultErrorWriter = log.StandardLogger().WriterLevel(log.ErrorLevel)
-
 }
 
 func configure() (*config, error) {
@@ -117,7 +114,7 @@ func run() error {
 	resolver := graph.NewResolver(db)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
-	gc.Directives.Auth = middleware.ApiKeyAuthentication(db)
+	gc.Directives.Auth = middleware.ApiKeyDirective()
 
 	handler := graphql_handler.NewDefaultServer(
 		generated.NewExecutableSchema(
@@ -131,14 +128,17 @@ func run() error {
 	}
 	defer sock.Close()
 
-	router := gin.New()
-	router.GET("/", gin.WrapH(playground.Handler("GraphQL playground", "/query")))
-
-	query := router.Group("/query")
-	query.Use(middleware.GinApiKeyAuthentication(db))
-	query.POST("/", gin.WrapH(handler))
+	r := chi.NewRouter()
+	r.Get("/", playground.Handler("GraphQL playground", "/query"))
+	r.Route("/query", func(r chi.Router) {
+		r.Use(middleware.ApiKeyAuthentication(db))
+		r.Post("/", handler.ServeHTTP)
+	})
 
 	log.Infof("Ready to accept requests.")
 
-	return router.RunListener(sock)
+	srv := &http.Server{
+		Handler: r,
+	}
+	return srv.Serve(sock)
 }
