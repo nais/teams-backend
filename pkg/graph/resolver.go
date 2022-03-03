@@ -1,6 +1,10 @@
 package graph
 
 import (
+	"context"
+	"fmt"
+
+	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/model"
 	"gorm.io/gorm"
 )
@@ -16,6 +20,16 @@ type Resolver struct {
 func NewResolver(db *gorm.DB) *Resolver {
 	return &Resolver{
 		db: db,
+	}
+}
+
+func (r *Resolver) user(ctx context.Context) (*dbmodels.User, error) {
+	user := ctx.Value("user")
+	switch t := user.(type) {
+	case *dbmodels.User:
+		return t, nil
+	default:
+		return nil, fmt.Errorf("not authenticated")
 	}
 }
 

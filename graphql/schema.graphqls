@@ -8,6 +8,9 @@ type Query
 
 type Mutation
 
+"Require authentication for all requests with this definition."
+directive @auth on FIELD_DEFINITION
+
 "Specify pagination options."
 input PaginationInput {
     offset: Int! = 0

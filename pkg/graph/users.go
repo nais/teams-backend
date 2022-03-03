@@ -30,7 +30,12 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, input model.UpdateUse
 		Email: input.Email,
 		Name:  input.Name,
 	}
-	err := r.updateOrBust(ctx, u)
+	actor, err := r.user(ctx)
+	if err != nil {
+		return nil, err
+	}
+	u.UpdatedBy = actor
+	err = r.updateOrBust(ctx, u)
 	return u, err
 }
 

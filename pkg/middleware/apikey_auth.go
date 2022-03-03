@@ -1,29 +1,49 @@
 package middleware
 
 import (
-	"net/http"
+	"context"
+	"fmt"
 	"strings"
 
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/gin-gonic/gin"
 	"github.com/nais/console/pkg/dbmodels"
 	"gorm.io/gorm"
 )
 
+type Directive func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
+
 type AuthenticatedRequest struct {
 	Authorization string `header:"authorization"`
 }
 
-func ApiKeyAuthentication(db *gorm.DB) gin.HandlerFunc {
+var userCtxKey = &contextKey{"user"}
+
+type contextKey struct {
+	name string
+}
+
+func ApiKeyAuthentication(db *gorm.DB) Directive {
+	return func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error) {
+		user := ctx.Value("user")
+		if user == nil {
+			return nil, fmt.Errorf("not authenticated")
+		}
+		return next(ctx)
+	}
+}
+
+func GinApiKeyAuthentication(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		req := &AuthenticatedRequest{}
 		err := c.BindHeader(req)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusBadRequest, Errorf(err.Error()))
+			c.Next()
 			return
 		}
 
 		if !strings.HasPrefix(req.Authorization, "Bearer ") || len(req.Authorization) < 8 {
-			c.AbortWithStatusJSON(http.StatusBadRequest, Errorf("authorization header must have 'Bearer' prefix"))
+			c.Next()
 			return
 		}
 
@@ -33,11 +53,11 @@ func ApiKeyAuthentication(db *gorm.DB) gin.HandlerFunc {
 
 		tx := db.Preload("User").First(key, "api_key = ?", key.APIKey)
 		if tx.Error != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, Errorf("invalid API key"))
+			c.Next()
 			return
 		}
 
-		c.Set("authorized_user", key.User)
+		c.Set("user", key.User)
 
 		c.Next()
 	}

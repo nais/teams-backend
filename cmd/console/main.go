@@ -117,6 +117,7 @@ func run() error {
 	resolver := graph.NewResolver(db)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
+	gc.Directives.Auth = middleware.ApiKeyAuthentication(db)
 
 	handler := graphql_handler.NewDefaultServer(
 		generated.NewExecutableSchema(
@@ -134,7 +135,7 @@ func run() error {
 	router.GET("/", gin.WrapH(playground.Handler("GraphQL playground", "/query")))
 
 	query := router.Group("/query")
-	query.Use(middleware.ApiKeyAuthentication(db))
+	query.Use(middleware.GinApiKeyAuthentication(db))
 	query.POST("/", gin.WrapH(handler))
 
 	log.Infof("Ready to accept requests.")

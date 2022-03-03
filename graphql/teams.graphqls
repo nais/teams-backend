@@ -1,14 +1,14 @@
 extend type Query {
     "Search for teams."
-    teams: Teams
+    teams: Teams! @auth
 }
 
 extend type Mutation {
     "Create a team, then return the created team."
-    createTeam(input: CreateTeamInput!): Team!
+    createTeam(input: CreateTeamInput!): Team! @auth
 
     "Add one or more users to a team, then return the team in question."
-    addUsersToTeam(input: AddUsersToTeamInput!): Team!
+    addUsersToTeam(input: AddUsersToTeamInput!): Team! @auth
 }
 
 "Query results for teams."
