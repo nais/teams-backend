@@ -115,6 +115,7 @@ func run() error {
 	gc := generated.Config{}
 	gc.Resolvers = resolver
 	gc.Directives.Auth = middleware.ApiKeyDirective()
+	gc.Directives.Acl = middleware.ACLDirective(db)
 
 	handler := graphql_handler.NewDefaultServer(
 		generated.NewExecutableSchema(

@@ -46,6 +46,7 @@ type ResolverRoot interface {
 }
 
 type DirectiveRoot struct {
+	Acl  func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
 	Auth func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
 }
 
@@ -637,8 +638,16 @@ type Query
 
 type Mutation
 
-"Require authentication for all requests with this definition."
+"Require authentication for all requests with this directive."
 directive @auth on FIELD_DEFINITION
+
+"Require ACL authorization for all requests with this directive."
+directive @acl on FIELD_DEFINITION
+# directive @acl(
+    # system: String!
+    # resource: String!
+    # accessLevel: String!
+# ) on FIELD_DEFINITION
 
 "Specify pagination options."
 input PaginationInput {
@@ -714,7 +723,7 @@ type Team {
 # TODO
 type Role {
     id: UUID!
-    system: System
+    system: System!
     resource: String!
     access_level: String!
     permission: String!
@@ -757,12 +766,12 @@ type AuditLog {
 `, BuiltIn: false},
 	{Name: "graphql/users.graphqls", Input: `extend type Query {
     "Search for users."
-    users(input: QueryUserInput): Users! @auth
+    users(input: QueryUserInput): Users! @auth @acl
 }
 
 extend type Mutation {
     "Create a user, then return the created user."
-    createUser(input: CreateUserInput!): User! @auth
+    createUser(input: CreateUserInput!): User! @auth @acl
 
     "Update user information, then return the updated user."
     updateUser(input: UpdateUserInput!): User! @auth
@@ -1514,8 +1523,14 @@ func (ec *executionContext) _Mutation_createUser(ctx context.Context, field grap
 			}
 			return ec.directives.Auth(ctx, nil, directive0)
 		}
+		directive2 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Acl == nil {
+				return nil, errors.New("directive acl is not implemented")
+			}
+			return ec.directives.Acl(ctx, nil, directive1)
+		}
 
-		tmp, err := directive1(rctx)
+		tmp, err := directive2(rctx)
 		if err != nil {
 			return nil, graphql.ErrorOnPath(ctx, err)
 		}
@@ -1798,8 +1813,14 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 			}
 			return ec.directives.Auth(ctx, nil, directive0)
 		}
+		directive2 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Acl == nil {
+				return nil, errors.New("directive acl is not implemented")
+			}
+			return ec.directives.Acl(ctx, nil, directive1)
+		}
 
-		tmp, err := directive1(rctx)
+		tmp, err := directive2(rctx)
 		if err != nil {
 			return nil, graphql.ErrorOnPath(ctx, err)
 		}
@@ -1957,11 +1978,14 @@ func (ec *executionContext) _Role_system(ctx context.Context, field graphql.Coll
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
 	res := resTmp.(*dbmodels.System)
 	fc.Result = res
-	return ec.marshalOSystem2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSystem(ctx, field.Selections, res)
+	return ec.marshalNSystem2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSystem(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Role_resource(ctx context.Context, field graphql.CollectedField, obj *dbmodels.Role) (ret graphql.Marshaler) {
@@ -4649,6 +4673,9 @@ func (ec *executionContext) _Role(ctx context.Context, sel ast.SelectionSet, obj
 
 			out.Values[i] = innerFunc(ctx)
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "resource":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Role_resource(ctx, field, obj)
@@ -6253,13 +6280,6 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 	}
 	res := graphql.MarshalString(*v)
 	return res
-}
-
-func (ec *executionContext) marshalOSystem2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSystem(ctx context.Context, sel ast.SelectionSet, v *dbmodels.System) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._System(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐTeam(ctx context.Context, sel ast.SelectionSet, v *dbmodels.Team) graphql.Marshaler {

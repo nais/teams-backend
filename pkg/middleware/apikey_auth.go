@@ -24,6 +24,18 @@ func ApiKeyDirective() Directive {
 	}
 }
 
+func ACLDirective(db *gorm.DB) Directive {
+	return func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error) {
+		user := auth.UserFromContext(ctx)
+		tx := db.Preload("Roles").Preload("Teams.Roles").Find(user)
+		if tx.Error != nil {
+			return nil, err
+		}
+		// TODO: check ACL against endpoint
+		return next(ctx)
+	}
+}
+
 func ApiKeyAuthentication(db *gorm.DB) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {

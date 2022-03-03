@@ -32,7 +32,7 @@ type Team {
 # TODO
 type Role {
     id: UUID!
-    system: System
+    system: System!
     resource: String!
     access_level: String!
     permission: String!

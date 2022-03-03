@@ -67,7 +67,7 @@ type System struct {
 
 type Role struct {
 	Model
-	System      *System
+	System      *System `gorm:"not null"`
 	SystemID    *uuid.UUID
 	Resource    string  `gorm:"not null"` // sub-resource at system (maybe not needed if systems are namespaced, e.g. gcp:buckets)
 	AccessLevel string  `gorm:"not null"` // read, write, R/W, other combinations per system

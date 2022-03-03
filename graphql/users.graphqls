@@ -1,11 +1,11 @@
 extend type Query {
     "Search for users."
-    users(input: QueryUserInput): Users! @auth
+    users(input: QueryUserInput): Users! @auth @acl
 }
 
 extend type Mutation {
     "Create a user, then return the created user."
-    createUser(input: CreateUserInput!): User! @auth
+    createUser(input: CreateUserInput!): User! @auth @acl
 
     "Update user information, then return the updated user."
     updateUser(input: UpdateUserInput!): User! @auth
