@@ -111,6 +111,11 @@ func run() error {
 	}
 	log.Infof("Successfully migrated database schema.")
 
+	// fixme: Register systems, root user, etc?
+	db.Save(&dbmodels.System{
+		Name: "console",
+	})
+
 	resolver := graph.NewResolver(db)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
