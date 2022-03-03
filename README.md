@@ -6,6 +6,10 @@ ADR: https://github.com/navikt/pig/blob/master/kubeops/adr/010-console-nais-io.m
 
 ## TODO
 
+* console.nais.io kan gjøre JITA access for kunde-clustere
+
+* RBAC sync på GCP: legg brukere inn i partner gke-security-groups@kunde.tld
+
 * Determine which API documentation framework to use; candidates are
   * [OpenAPI (with re-doc)](https://redocly.github.io)
   * [RAML](https://raml.org/)

@@ -6,13 +6,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/nais/console/pkg/dbmodels"
-	"github.com/nais/console/pkg/requests"
 	"gorm.io/gorm"
 )
 
+type AuthenticatedRequest struct {
+	Authorization string `header:"authorization"`
+}
+
 func ApiKeyAuthentication(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		req := &requests.AuthenticatedRequest{}
+		req := &AuthenticatedRequest{}
 		err := c.BindHeader(req)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -20,6 +23,7 @@ func ApiKeyAuthentication(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		if !strings.HasPrefix(req.Authorization, "Bearer ") || len(req.Authorization) < 8 {
+			c.AbortWithStatus(http.StatusBadRequest)
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "authorization header must have 'Bearer' prefix"})
 			return
 		}
