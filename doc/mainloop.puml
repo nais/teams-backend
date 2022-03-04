@@ -13,11 +13,11 @@ mainloop -> mainloop: reset timer
 
 ==When timer is zero and state changed==
 mainloop -> db: loop through systems
-note right: GCP: JITA access\nGCP: RBAC sync\nGitHub teams\nNAIS deploy API-key\n\nAzure: o365 team sync\nOn-prem k8s: team RBAC
+note right: Kubernetes namespace\nGCP: JITA access\nGCP: RBAC sync\nGitHub teams\nNAIS deploy API-key\n\nAzure: o365 team sync\nOn-prem k8s: team RBAC
 
-==Process a system (thread)==
+==Process each system/team combination (thread)==
 mainloop -> module: send data
-note right: teams, teams.users, users.roles, teams.roles, acl
+note right: team, team.users, users.roles, team.roles, acl
 module -> module: translate between console and\ndestination data models;\nfind difference
 module -> external: reconcile state
 module --> mainloop: report state

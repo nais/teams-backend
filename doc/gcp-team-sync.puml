@@ -1,0 +1,15 @@
+@startuml
+'!theme materia
+
+control mainloop
+boundary module
+entity external
+
+==Synchronize GCP team==
+mainloop -> module: send data
+note right: teams, teams.users, users.roles, teams.roles, acl
+module -> module: translate between console and\ndestination data models;\nfind difference
+module -> external: reconcile state
+module --> mainloop: report state
+
+@enduml
