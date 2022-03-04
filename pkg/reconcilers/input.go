@@ -7,9 +7,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// All synchronizers must implement the Synchronizer interface.
-type Synchronizer interface {
-	Synchronize(ctx context.Context, s Input) error
+// All synchronizers must implement the Reconciler interface.
+type Reconciler interface {
+	Name() string
+	Reconcile(ctx context.Context, s Input) error
 }
 
 // Input data for all synchronizers.
@@ -37,7 +38,7 @@ func (s *Input) AuditLog(user *dbmodels.User, status int, action, message string
 
 // Helper method to create a log entry with synchronization and system metadata.
 func (s *Input) Logger() *log.Entry {
-	return log.New().WithFields(log.Fields{
+	return log.StandardLogger().WithFields(log.Fields{
 		"correlation_id": s.Synchronization.ID.String(),
 		"system":         s.System.Name,
 	})

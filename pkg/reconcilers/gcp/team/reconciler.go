@@ -17,8 +17,12 @@ func New(logs chan<- *dbmodels.AuditLog) *gcpSynchronizer {
 	}
 }
 
+func (s *gcpSynchronizer) Name() string {
+	return "gcp:team"
+}
+
 // error -> requeue?
-func (s *gcpSynchronizer) Synchronize(ctx context.Context, in reconcilers.Input) error {
+func (s *gcpSynchronizer) Reconcile(ctx context.Context, in reconcilers.Input) error {
 	s.logs <- in.AuditLog(nil, 200, "api.create", "successfully synchronized")
 	in.Logger().Infof("we did it!")
 	return nil
