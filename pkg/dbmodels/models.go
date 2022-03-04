@@ -84,7 +84,7 @@ type AuditLog struct {
 	Model
 	System            *System          `gorm:"not null"`
 	Synchronization   *Synchronization `gorm:"not null"`
-	User              *User
+	User              *User            // User object, not subject, i.e. which user was affected by the operation.
 	Team              *Team
 	SystemID          *uuid.UUID
 	SynchronizationID *uuid.UUID

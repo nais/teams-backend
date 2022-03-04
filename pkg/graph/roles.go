@@ -41,7 +41,6 @@ func (r *mutationResolver) UpdateRole(ctx context.Context, input model.UpdateRol
 	return u, err
 }
 
-// todo: DRY?
 func (r *mutationResolver) AssignRoleToUser(ctx context.Context, input model.AssignRoleInput) (*dbmodels.User, error) {
 	user := &dbmodels.User{}
 	tx := r.db.WithContext(ctx).First(user, "id = ?", input.TargetID)
@@ -63,7 +62,6 @@ func (r *mutationResolver) AssignRoleToUser(ctx context.Context, input model.Ass
 	return user, nil
 }
 
-// todo: DRY?
 func (r *mutationResolver) AssignRoleToTeam(ctx context.Context, input model.AssignRoleInput) (*dbmodels.Team, error) {
 	team := &dbmodels.Team{}
 	tx := r.db.WithContext(ctx).First(team, "id = ?", input.TargetID)
