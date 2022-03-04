@@ -1,0 +1,27 @@
+@startuml
+'!theme materia
+
+control apiserver
+database db
+control mainloop
+boundary module
+entity external
+
+==Waiting for data==
+apiserver -> mainloop: state changed
+mainloop -> mainloop: reset timer
+
+==When timer is zero and state changed==
+mainloop -> db: loop through systems
+note right: GCP: JITA access\nGCP: RBAC sync\nGitHub teams\nNAIS deploy API-key\n\nAzure: o365 team sync\nOn-prem k8s: team RBAC
+
+==Process a system (thread)==
+mainloop -> module: send data
+note right: teams, teams.users, users.roles, teams.roles, acl
+module -> module: translate between console and\ndestination data models;\nfind difference
+module -> external: reconcile state
+module --> mainloop: report state
+mainloop -> db: write log entries
+mainloop -> mainloop: reset timer
+
+@enduml
