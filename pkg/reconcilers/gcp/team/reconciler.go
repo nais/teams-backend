@@ -7,22 +7,22 @@ import (
 	"github.com/nais/console/pkg/reconcilers"
 )
 
-type gcpSynchronizer struct {
+type gcpReconciler struct {
 	logs chan<- *dbmodels.AuditLog
 }
 
-func New(logs chan<- *dbmodels.AuditLog) *gcpSynchronizer {
-	return &gcpSynchronizer{
+func New(logs chan<- *dbmodels.AuditLog) *gcpReconciler {
+	return &gcpReconciler{
 		logs: logs,
 	}
 }
 
-func (s *gcpSynchronizer) Name() string {
+func (s *gcpReconciler) Name() string {
 	return "gcp:team"
 }
 
 // error -> requeue?
-func (s *gcpSynchronizer) Reconcile(ctx context.Context, in reconcilers.Input) error {
+func (s *gcpReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {
 	s.logs <- in.AuditLog(nil, 200, "api.create", "successfully synchronized")
 	in.Logger().Infof("we did it!")
 	return nil
