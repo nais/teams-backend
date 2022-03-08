@@ -43,9 +43,14 @@ func (s *gcpReconciler) Reconcile(ctx context.Context, in reconcilers.Input) err
 		return in.AuditLog(nil, false, s.Op("create"), "retrieve directory client: %s", err)
 	}
 
-	_, err = s.getOrCreateGroup(srv, in)
+	grp, err := s.getOrCreateGroup(srv, in)
 	if err != nil {
 		return in.AuditLog(nil, false, s.Op("create"), "ensure group exists: %s", err)
+	}
+
+	err = s.connectUsers(srv, grp, in)
+	if err != nil {
+		return in.AuditLog(nil, false, s.Op("connect-users"), "connect users: %s", err)
 	}
 
 	return nil
@@ -80,6 +85,80 @@ func (s *gcpReconciler) getOrCreateGroup(srv *admin_directory_v1.Service, in rec
 	s.logs <- in.AuditLog(nil, true, s.Op("create"), "successfully created team")
 
 	return grp, nil
+}
+
+func (s *gcpReconciler) connectUsers(srv *admin_directory_v1.Service, grp *admin_directory_v1.Group, in reconcilers.Input) error {
+	members, err := srv.Members.List(grp.Id).Do()
+	if err != nil {
+		return fmt.Errorf("list members: %w", err)
+	}
+
+	deleteMembers := extraMembers(members.Members, in.Team.Users)
+	createUsers := missingUsers(members.Members, in.Team.Users)
+
+	for _, member := range deleteMembers {
+		err = srv.Members.Delete(grp.Id, member.Id).Do()
+		if err != nil {
+			return fmt.Errorf("delete user %s from group %s: %w", member.Email, grp.Email, err)
+		}
+		s.logs <- in.AuditLog(nil, true, s.Op("delete-member"), "deleted %s from gcp group %s", member.Email, grp.Email)
+	}
+
+	for _, user := range createUsers {
+		if user.Email == nil {
+			continue
+		}
+		member := &admin_directory_v1.Member{
+			Email: *user.Email,
+		}
+		_, err = srv.Members.Insert(grp.Id, member).Do()
+		if err != nil {
+			return fmt.Errorf("add user %s to group %s: %w", *user.Email, grp.Email, err)
+		}
+		s.logs <- in.AuditLog(nil, true, s.Op("add-member"), "added %s to gcp group %s", member.Email, grp.Email)
+	}
+
+	return nil
+}
+
+// Given a list of Google group members and a list of users,
+// return users not present in members directory.
+func missingUsers(members []*admin_directory_v1.Member, users []*dbmodels.User) []*dbmodels.User {
+	userMap := make(map[string]*dbmodels.User)
+	for _, user := range users {
+		if user.Email == nil {
+			continue
+		}
+		userMap[*user.Email] = user
+	}
+	for _, member := range members {
+		delete(userMap, member.Email)
+	}
+	users = make([]*dbmodels.User, 0, len(userMap))
+	for _, user := range userMap {
+		users = append(users, user)
+	}
+	return users
+}
+
+// Given a list of Google group members and a list of users,
+// return members not present in user list.
+func extraMembers(members []*admin_directory_v1.Member, users []*dbmodels.User) []*admin_directory_v1.Member {
+	memberMap := make(map[string]*admin_directory_v1.Member)
+	for _, member := range members {
+		memberMap[member.Email] = member
+	}
+	for _, user := range users {
+		if user.Email == nil {
+			continue
+		}
+		delete(memberMap, *user.Email)
+	}
+	members = make([]*admin_directory_v1.Member, 0, len(memberMap))
+	for _, member := range memberMap {
+		members = append(members, member)
+	}
+	return members
 }
 
 func stringWithFallback(strp *string, fallback string) string {

@@ -42,5 +42,6 @@ func (s *Input) Logger() *log.Entry {
 	return log.StandardLogger().WithFields(log.Fields{
 		"correlation_id": s.Synchronization.ID.String(),
 		"system":         s.System.Name,
+		"team":           *s.Team.Slug,
 	})
 }

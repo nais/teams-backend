@@ -107,7 +107,7 @@ func run() error {
 
 	// Synchronize every team on startup
 	allTeams := make([]*dbmodels.Team, 0)
-	db.Find(&allTeams)
+	db.Preload("Users").Find(&allTeams)
 	for _, team := range allTeams {
 		trigger <- team
 	}
@@ -122,7 +122,7 @@ func run() error {
 			if tx.Error != nil {
 				log.Errorf("store audit log line in database: %s", tx.Error)
 			}
-			logLine.Log()
+			logLine.Log().Infof(logLine.Message)
 
 		case team := <-trigger:
 			if nextRun.Before(time.Now()) {
