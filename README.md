@@ -4,9 +4,26 @@ Console is an API server for team creation and propagation to external systems.
 
 ADR: https://github.com/navikt/pig/blob/master/kubeops/adr/010-console-nais-io.md
 
-## TODO
 
-* Build synchronization core
+## Local development
+
+Console needs Go 1.17, and depends on a PostgreSQL database.
+For convenience, a Docker Compose configuration is provided.
+
+Running the compiled binary without any arguments will start an instance that
+does not touch any external systems. The API server runs GraphQL at http://localhost:3000.
+
+In order to make any request to the API server, your requests must be authenticated
+with a `Authorization: Bearer <APIKEY>` header. This API key lives in the database table `api_keys`.
+Future work involves setting these credentials up automatically.
+
+```sh
+docker-compose up
+make
+bin/console
+```
+
+## TODO
 
 * Build synchronization modules
   * GCP
