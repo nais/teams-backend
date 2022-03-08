@@ -66,7 +66,12 @@ func run() error {
 	logs := make(chan *dbmodels.AuditLog, maxQueueSize)
 	trigger := make(chan *dbmodels.Team, maxQueueSize)
 
-	systems, err := initSystems(ctx, cfg, db, logs)
+	recs := initReconcilers(cfg, logs)
+	for _, rec := range recs {
+		log.Infof("Reconciler initialized: %s", rec.Name())
+	}
+
+	systems, err := initSystems(ctx, recs, db)
 	if err != nil {
 		return err
 	}
@@ -257,17 +262,24 @@ func initGCP(cfg *config) (*jwt.Config, error) {
 	return cf, nil
 }
 
-func initSystems(ctx context.Context, cfg *config, db *gorm.DB, logs chan *dbmodels.AuditLog) (map[string]systemReconcilerPivot, error) {
+func initReconcilers(cfg *config, logs chan *dbmodels.AuditLog) []reconcilers.Reconciler {
+	recs := make([]reconcilers.Reconciler, 0)
+
+	// Internal system
+	recs = append(recs, console_reconciler.New(logs))
+
+	// GCP
 	googleJWT, err := initGCP(cfg)
-	if err != nil {
-		return nil, err
+	if err == nil {
+		recs = append(recs, gcp_team_reconciler.New(logs, cfg.GoogleDomain, googleJWT))
+	} else {
+		log.Warnf("GCP reconciler not configured: %s", err)
 	}
 
-	recs := []reconcilers.Reconciler{
-		console_reconciler.New(logs),
-		gcp_team_reconciler.New(logs, cfg.GoogleDomain, googleJWT),
-	}
+	return recs
+}
 
+func initSystems(ctx context.Context, recs []reconcilers.Reconciler, db *gorm.DB) (map[string]systemReconcilerPivot, error) {
 	systems := make(map[string]systemReconcilerPivot)
 	for _, reconciler := range recs {
 		systemName := reconciler.Name()
