@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -90,7 +91,22 @@ type AuditLog struct {
 	SynchronizationID *uuid.UUID
 	UserID            *uuid.UUID
 	TeamID            *uuid.UUID
+	Success           bool   `gorm:"not null; index"` // True if operation succeeded
 	Action            string `gorm:"not null; index"` // CRUD action
-	Status            int    `gorm:"not null; index"` // Exit code of operation
 	Message           string `gorm:"not null"`        // User readable success or error message (log line)
+}
+
+func (m *AuditLog) Error() string {
+	return m.Message
+}
+
+func (m *AuditLog) Log() *log.Entry {
+	return log.StandardLogger().WithFields(log.Fields{
+		"system":         m.System.Name,
+		"correlation_id": m.SynchronizationID,
+		"user":           m.UserID,
+		"team":           m.TeamID,
+		"action":         m.Action,
+		"success":        m.Success,
+	})
 }

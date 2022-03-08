@@ -15,12 +15,14 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	db *gorm.DB
+	db      *gorm.DB
+	trigger chan<- *dbmodels.Team
 }
 
-func NewResolver(db *gorm.DB) *Resolver {
+func NewResolver(db *gorm.DB, trigger chan<- *dbmodels.Team) *Resolver {
 	return &Resolver{
-		db: db,
+		db:      db,
+		trigger: trigger,
 	}
 }
 

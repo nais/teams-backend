@@ -58,7 +58,7 @@ type ComplexityRoot struct {
 	AuditLog struct {
 		Action          func(childComplexity int) int
 		Message         func(childComplexity int) int
-		Status          func(childComplexity int) int
+		Success         func(childComplexity int) int
 		Synchronization func(childComplexity int) int
 		System          func(childComplexity int) int
 		Team            func(childComplexity int) int
@@ -209,12 +209,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.AuditLog.Message(childComplexity), true
 
-	case "AuditLog.status":
-		if e.complexity.AuditLog.Status == nil {
+	case "AuditLog.success":
+		if e.complexity.AuditLog.Success == nil {
 			break
 		}
 
-		return e.complexity.AuditLog.Status(childComplexity), true
+		return e.complexity.AuditLog.Success(childComplexity), true
 
 	case "AuditLog.synchronization":
 		if e.complexity.AuditLog.Synchronization == nil {
@@ -900,7 +900,7 @@ type AuditLog {
     user: User
     team: Team
     action: String!
-    status: Int!
+    success: Boolean!
     message: String!
 }
 `, BuiltIn: false},
@@ -1386,7 +1386,7 @@ func (ec *executionContext) _AuditLog_action(ctx context.Context, field graphql.
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _AuditLog_status(ctx context.Context, field graphql.CollectedField, obj *dbmodels.AuditLog) (ret graphql.Marshaler) {
+func (ec *executionContext) _AuditLog_success(ctx context.Context, field graphql.CollectedField, obj *dbmodels.AuditLog) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1404,7 +1404,7 @@ func (ec *executionContext) _AuditLog_status(ctx context.Context, field graphql.
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Status, nil
+		return obj.Success, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1416,9 +1416,9 @@ func (ec *executionContext) _AuditLog_status(ctx context.Context, field graphql.
 		}
 		return graphql.Null
 	}
-	res := resTmp.(int)
+	res := resTmp.(bool)
 	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AuditLog_message(ctx context.Context, field graphql.CollectedField, obj *dbmodels.AuditLog) (ret graphql.Marshaler) {
@@ -5191,9 +5191,9 @@ func (ec *executionContext) _AuditLog(ctx context.Context, sel ast.SelectionSet,
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "status":
+		case "success":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._AuditLog_status(ctx, field, obj)
+				return ec._AuditLog_success(ctx, field, obj)
 			}
 
 			out.Values[i] = innerFunc(ctx)

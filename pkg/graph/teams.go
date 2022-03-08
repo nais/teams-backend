@@ -12,16 +12,17 @@ import (
 )
 
 func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*dbmodels.Team, error) {
-	u := &dbmodels.Team{
+	team := &dbmodels.Team{
 		Slug:    &input.Slug,
 		Name:    &input.Name,
 		Purpose: input.Purpose,
 	}
-	tx := r.db.WithContext(ctx).Create(u)
+	tx := r.db.WithContext(ctx).Create(team)
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
-	return u, nil
+	r.trigger <- team
+	return team, nil
 }
 
 func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUsersToTeamInput) (*dbmodels.Team, error) {
@@ -47,6 +48,7 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 		return nil, err
 	}
 	tx.Preload("Users").First(team)
+	r.trigger <- team
 	return team, nil
 }
 

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,7 +13,6 @@ import (
 	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/go-chi/chi"
-	"github.com/kelseyhightower/envconfig"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/graph/generated"
@@ -22,6 +22,9 @@ import (
 	gcp_team_reconciler "github.com/nais/console/pkg/reconcilers/gcp/team"
 	"github.com/nais/console/pkg/version"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/oauth2/google"
+	"golang.org/x/oauth2/jwt"
+	admin "google.golang.org/api/admin/directory/v1"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -29,18 +32,6 @@ import (
 type systemReconcilerPivot struct {
 	system     *dbmodels.System
 	reconciler reconcilers.Reconciler
-}
-
-type config struct {
-	DatabaseURL   string `envconfig:"CONSOLE_DATABASE_URL"`
-	ListenAddress string `envconfig:"CONSOLE_LISTEN_ADDRESS"`
-}
-
-func defaultconfig() *config {
-	return &config{
-		DatabaseURL:   "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable",
-		ListenAddress: "127.0.0.1:3000",
-	}
 }
 
 func main() {
@@ -80,7 +71,7 @@ func run() error {
 		return err
 	}
 
-	handler := setupGraphAPI(db)
+	handler := setupGraphAPI(db, trigger)
 	srv, err := setupHTTPServer(cfg, db, handler)
 	if err != nil {
 		return err
@@ -106,26 +97,58 @@ func run() error {
 	}()
 
 	const nextRunGracePeriod = 15 * time.Second
+	const immediateRun = 1 * time.Second
+	const syncTimeout = 15 * time.Minute
 
 	nextRun := time.Time{}
 	runTimer := time.NewTimer(1 * time.Second)
+	runTimer.Stop()
+	pendingTeams := make(map[string]*dbmodels.Team)
+
+	// Synchronize every team on startup
+	allTeams := make([]*dbmodels.Team, 0)
+	db.Find(&allTeams)
+	for _, team := range allTeams {
+		trigger <- team
+	}
 
 	for ctx.Err() == nil {
 		select {
 		case <-ctx.Done():
 			break
-		case <-trigger:
-			if nextRun.Before(time.Now()) {
-				runTimer.Reset(nextRunGracePeriod)
+
+		case logLine := <-logs:
+			tx := db.Save(logLine)
+			if tx.Error != nil {
+				log.Errorf("store audit log line in database: %s", tx.Error)
 			}
+			logLine.Log()
+
+		case team := <-trigger:
+			if nextRun.Before(time.Now()) {
+				nextRun = time.Now().Add(immediateRun)
+				runTimer.Reset(immediateRun)
+			}
+			if pendingTeams[*team.Slug] == nil {
+				log.Infof("Scheduling team '%s' for reconciliation in %s", *team.Slug, nextRun.Sub(time.Now()))
+				pendingTeams[*team.Slug] = team
+			}
+
 		case <-runTimer.C:
-			// run sync
-			// fixme: only for specific team
-			err = syncAll(ctx, 5*time.Minute, db, systems)
+			log.Infof("Running reconcile of %d teams...", len(pendingTeams))
+
+			err = syncAll(ctx, syncTimeout, db, systems, &pendingTeams)
+
 			if err != nil {
 				log.Error(err)
 				runTimer.Reset(nextRunGracePeriod)
 			}
+
+			if len(pendingTeams) > 0 {
+				log.Warnf("%d teams are not fully reconciled.", len(pendingTeams))
+			}
+
+			log.Infof("Reconciliation complete.")
 		}
 	}
 
@@ -134,7 +157,9 @@ func run() error {
 	return nil
 }
 
-func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems map[string]systemReconcilerPivot) error {
+func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems map[string]systemReconcilerPivot, teams *map[string]*dbmodels.Team) error {
+	errors := 0
+
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
@@ -144,19 +169,39 @@ func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems ma
 		return fmt.Errorf("cannot create synchronization reference: %w", tx.Error)
 	}
 
-	for _, system := range systems {
-		input := reconcilers.Input{
-			System:          system.system,
-			Synchronization: synchronization,
-			Team:            nil,
+	for key, team := range *teams {
+		teamErrors := 0
+
+		for _, system := range systems {
+			input := reconcilers.Input{
+				System:          system.system,
+				Synchronization: synchronization,
+				Team:            team,
+			}
+
+			input.Logger().Infof("Starting reconcile")
+			err := system.reconciler.Reconcile(ctx, input)
+
+			switch er := err.(type) {
+			case nil:
+				input.Logger().Infof("Successfully reconciled")
+			case *dbmodels.AuditLog:
+				er.Log().Error(er.Message)
+				teamErrors++
+			case error:
+				input.Logger().Error(er)
+				teamErrors++
+			}
 		}
 
-		input.Logger().Infof("Starting reconcile")
-		err := system.reconciler.Reconcile(ctx, input)
-		if err != nil {
-			return err
+		if teamErrors == 0 {
+			delete(*teams, key)
 		}
-		input.Logger().Infof("Finished reconcile")
+		errors += teamErrors
+	}
+
+	if errors > 0 {
+		return fmt.Errorf("%d systems returned errors during reconcile", errors)
 	}
 
 	return nil
@@ -166,19 +211,11 @@ func setupLogging() {
 	log.SetFormatter(&log.JSONFormatter{
 		TimestampFormat: time.RFC3339Nano,
 	})
+	log.SetFormatter(&log.TextFormatter{
+		TimestampFormat: time.RFC3339Nano,
+	})
 
 	log.SetLevel(log.DebugLevel)
-}
-
-func configure() (*config, error) {
-	cfg := defaultconfig()
-
-	err := envconfig.Process("", cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	return cfg, nil
 }
 
 func migrate(db *gorm.DB) error {
@@ -200,10 +237,35 @@ func migrate(db *gorm.DB) error {
 	)
 }
 
+func initGCP(cfg *config) (*jwt.Config, error) {
+	b, err := ioutil.ReadFile(cfg.GoogleCredentialsFile)
+	if err != nil {
+		return nil, fmt.Errorf("read google credentials file: %w", err)
+	}
+
+	cf, err := google.JWTConfigFromJSON(
+		b,
+		admin.AdminDirectoryUserReadonlyScope,
+		admin.AdminDirectoryGroupScope,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("initialize google credentials: %w", err)
+	}
+
+	cf.Subject = cfg.GoogleDelegatedUser
+
+	return cf, nil
+}
+
 func initSystems(ctx context.Context, cfg *config, db *gorm.DB, logs chan *dbmodels.AuditLog) (map[string]systemReconcilerPivot, error) {
+	googleJWT, err := initGCP(cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	recs := []reconcilers.Reconciler{
 		console_reconciler.New(logs),
-		gcp_team_reconciler.New(logs),
+		gcp_team_reconciler.New(logs, cfg.GoogleDomain, googleJWT),
 	}
 
 	systems := make(map[string]systemReconcilerPivot)
@@ -258,8 +320,8 @@ func setupDatabase(cfg *config) (*gorm.DB, error) {
 	return db, nil
 }
 
-func setupGraphAPI(db *gorm.DB) *graphql_handler.Server {
-	resolver := graph.NewResolver(db)
+func setupGraphAPI(db *gorm.DB, trigger chan<- *dbmodels.Team) *graphql_handler.Server {
+	resolver := graph.NewResolver(db, trigger)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
 	gc.Directives.Auth = middleware.ApiKeyDirective()

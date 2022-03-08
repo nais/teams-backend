@@ -69,6 +69,6 @@ type AuditLog {
     user: User
     team: Team
     action: String!
-    status: Int!
+    success: Boolean!
     message: String!
 }

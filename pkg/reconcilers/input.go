@@ -2,6 +2,7 @@ package reconcilers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/nais/console/pkg/dbmodels"
 	log "github.com/sirupsen/logrus"
@@ -24,11 +25,11 @@ type Input struct {
 }
 
 // Helper method to quickly create an audit log line based on the current synchronization.
-func (s *Input) AuditLog(user *dbmodels.User, status int, action, message string) *dbmodels.AuditLog {
+func (s *Input) AuditLog(user *dbmodels.User, success bool, action, format string, args ...interface{}) *dbmodels.AuditLog {
 	return &dbmodels.AuditLog{
 		Action:          action,
-		Message:         message,
-		Status:          status,
+		Message:         fmt.Sprintf(format, args...),
+		Success:         success,
 		Synchronization: s.Synchronization,
 		System:          s.System,
 		Team:            s.Team,
