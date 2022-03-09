@@ -23,6 +23,27 @@ make
 bin/console
 ```
 
+
+## Bootstrapping other systems
+
+### GCP
+* Create a service account
+* Enable Workspace Admin API
+* Enable `Security -> API Controls -> Domain-wide Delegation`
+* Add service account as API client with scopes:
+  * `https://www.googleapis.com/auth/admin.directory.group`
+  * `https://www.googleapis.com/auth/admin.directory.user.readonly`
+
+### Github
+* Set up single sign-on against tenant's IDP. SCIM is optional, but not required.
+* Create GitHub application and obtain: private key, application ID, installation ID
+* Install GitHub application on organization and give scopes:
+  * Organization Administration: `read`
+  * Organization Members: `readwrite`
+
+Important: do not share the same GitHub application between tenants.
+
+
 ## TODO
 
 * Build synchronization modules
