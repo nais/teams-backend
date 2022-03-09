@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -275,6 +276,15 @@ func initReconcilers(cfg *config, logs chan *dbmodels.AuditLog) []reconcilers.Re
 	} else {
 		log.Warnf("GCP reconciler not configured: %s", err)
 	}
+
+	// GitHub
+	recs = append(recs, github_team_reconciler.New(
+		logs,
+		cfg.GitHubAppId,
+		cfg.GitHubAppInstallationId,
+		cfg.GitHubOrganization,
+		cfg.GitHubPrivateKeyPath,
+	))
 
 	return recs
 }

@@ -5,11 +5,15 @@ import (
 )
 
 type config struct {
-	DatabaseURL           string `envconfig:"CONSOLE_DATABASE_URL"`
-	ListenAddress         string `envconfig:"CONSOLE_LISTEN_ADDRESS"`
-	GoogleDomain          string `envconfig:"CONSOLE_GOOGLE_DOMAIN"`
-	GoogleDelegatedUser   string `envconfig:"CONSOLE_GOOGLE_DELEGATED_USER"`
-	GoogleCredentialsFile string `envconfig:"CONSOLE_GOOGLE_CREDENTIALS_FILE"`
+	DatabaseURL             string `envconfig:"CONSOLE_DATABASE_URL"`
+	ListenAddress           string `envconfig:"CONSOLE_LISTEN_ADDRESS"`
+	GoogleDomain            string `envconfig:"CONSOLE_GOOGLE_DOMAIN"`
+	GoogleDelegatedUser     string `envconfig:"CONSOLE_GOOGLE_DELEGATED_USER"`
+	GoogleCredentialsFile   string `envconfig:"CONSOLE_GOOGLE_CREDENTIALS_FILE"`
+	GitHubOrganization      string `envconfig:"GITHUB_ORGANIZATION"`
+	GitHubAppId             int64  `envconfig:"GITHUB_APP_ID"`
+	GitHubAppInstallationId int64  `envconfig:"GITHUB_APP_INSTALLATION_ID"`
+	GitHubPrivateKeyPath    string `envconfig:"GITHUB_PRIVATE_KEY_PATH"`
 }
 
 func defaultconfig() *config {
