@@ -149,7 +149,7 @@ func (s *gitHubReconciler) connectUsers(ctx context.Context, in reconcilers.Inpu
 		if err != nil {
 			return err
 		}
-		s.logs <- in.AuditLog(nil, true, s.Op("create-user"), "successfully created user %s on team %s", username, *team.Slug)
+		s.logs <- in.AuditLog(nil, true, s.Op("connect-user"), "successfully created user %s on team %s", username, *team.Slug)
 	}
 
 	extra := extraMembers(members, usernames)
@@ -158,6 +158,7 @@ func (s *gitHubReconciler) connectUsers(ctx context.Context, in reconcilers.Inpu
 		if err != nil {
 			return err
 		}
+		s.logs <- in.AuditLog(nil, true, s.Op("disconnect-user"), "successfully removed user %s from team %s", username, *team.Slug)
 	}
 
 	return nil
