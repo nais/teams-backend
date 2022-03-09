@@ -152,6 +152,14 @@ func (s *gitHubReconciler) connectUsers(ctx context.Context, in reconcilers.Inpu
 		s.logs <- in.AuditLog(nil, true, s.Op("create-user"), "successfully created user %s on team %s", username, *team.Slug)
 	}
 
+	extra := extraMembers(members, usernames)
+	for _, username := range extra {
+		_, err = client.Teams.RemoveTeamMembershipBySlug(ctx, s.org, *team.Slug, username)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -196,24 +204,22 @@ func missingUsers(members []*github.User, usernames []string) []string {
 	return usernames
 }
 
-// Given a list of Google group members and a list of users,
+// Given a list of GitHub team members and a list of users,
 // return members not present in user list.
-func extraMembers(members []*github.User, users []*dbmodels.User) []*github.User {
-	memberMap := make(map[string]*github.User)
+func extraMembers(members []*github.User, users []string) []string {
+	memberMap := make(map[string]struct{})
 	for _, member := range members {
-		memberMap[*member.Email] = member
+		memberMap[*member.Login] = struct{}{}
 	}
 	for _, user := range users {
-		if user.Email == nil {
-			continue
-		}
-		delete(memberMap, *user.Email)
+		delete(memberMap, user)
 	}
-	members = make([]*github.User, 0, len(memberMap))
-	for _, member := range memberMap {
-		members = append(members, member)
+
+	users = make([]string, 0, len(memberMap))
+	for member := range memberMap {
+		users = append(users, member)
 	}
-	return members
+	return users
 }
 
 // Return a mapping of user objects to GitHub usernames.
