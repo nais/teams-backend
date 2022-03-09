@@ -10,10 +10,10 @@ type config struct {
 	GoogleDomain            string `envconfig:"CONSOLE_GOOGLE_DOMAIN"`
 	GoogleDelegatedUser     string `envconfig:"CONSOLE_GOOGLE_DELEGATED_USER"`
 	GoogleCredentialsFile   string `envconfig:"CONSOLE_GOOGLE_CREDENTIALS_FILE"`
-	GitHubOrganization      string `envconfig:"GITHUB_ORGANIZATION"`
-	GitHubAppId             int64  `envconfig:"GITHUB_APP_ID"`
-	GitHubAppInstallationId int64  `envconfig:"GITHUB_APP_INSTALLATION_ID"`
-	GitHubPrivateKeyPath    string `envconfig:"GITHUB_PRIVATE_KEY_PATH"`
+	GitHubOrganization      string `envconfig:"CONSOLE_GITHUB_ORGANIZATION"`
+	GitHubAppId             int64  `envconfig:"CONSOLE_GITHUB_APP_ID"`
+	GitHubAppInstallationId int64  `envconfig:"CONSOLE_GITHUB_APP_INSTALLATION_ID"`
+	GitHubPrivateKeyPath    string `envconfig:"CONSOLE_GITHUB_PRIVATE_KEY_PATH"`
 }
 
 func defaultconfig() *config {
