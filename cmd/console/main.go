@@ -282,7 +282,7 @@ func initReconcilers(cfg *config, logs chan *dbmodels.AuditLog) []reconcilers.Re
 	if err == nil {
 		recs = append(recs, gcp_team_reconciler.New(logger, cfg.GoogleDomain, googleJWT))
 	} else {
-		log.Warnf("GCP reconciler not configured: %s", err)
+		log.Warnf("GCP team reconciler not configured: %s", err)
 	}
 
 	// GitHub
@@ -290,7 +290,7 @@ func initReconcilers(cfg *config, logs chan *dbmodels.AuditLog) []reconcilers.Re
 	if err == nil {
 		recs = append(recs, gh)
 	} else {
-		log.Warnf("GCP reconciler not configured: %s", err)
+		log.Warnf("GitHub team reconciler not configured: %s", err)
 	}
 
 	// NAIS deploy
