@@ -7,11 +7,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/nais/console/pkg/dbmodels"
+	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/reconcilers"
 )
 
@@ -23,25 +22,26 @@ type provisionApiKeyRequest struct {
 
 // naisDeployReconciler creates teams on GitHub and connects users to them.
 type naisDeployReconciler struct {
-	logs         chan<- *dbmodels.AuditLog
+	logger       auditlogger.Logger
 	endpoint     string
 	provisionKey []byte
 }
 
-func New(logs chan<- *dbmodels.AuditLog, endpoint string, provisionKey []byte) *naisDeployReconciler {
+func New(logger auditlogger.Logger, endpoint string, provisionKey []byte) *naisDeployReconciler {
 	return &naisDeployReconciler{
-		logs:         logs,
+		logger:       logger,
 		endpoint:     endpoint,
 		provisionKey: provisionKey,
 	}
 }
 
-func (s *naisDeployReconciler) Name() string {
-	return "nais:deploy"
-}
+const (
+	Name              = "nais:deploy"
+	OpProvisionApiKey = "nais:deploy:provision-api-key"
+)
 
-func (s *naisDeployReconciler) Op(operation string) string {
-	return s.Name() + ":" + operation
+func (s *naisDeployReconciler) Name() string {
+	return Name
 }
 
 func (s *naisDeployReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {
@@ -72,11 +72,11 @@ func (s *naisDeployReconciler) Reconcile(ctx context.Context, in reconcilers.Inp
 	}
 
 	if resp.StatusCode == http.StatusCreated {
-		s.logs <- in.AuditLog(nil, true, s.Op("provision-key"), "provisioned NAIS deploy API key to team %s", *in.Team.Slug)
+		s.logger.Logf(in, OpProvisionApiKey, "provisioned NAIS deploy API key to team '%s'", *in.Team.Slug)
 		return nil
 	}
 
-	return fmt.Errorf(resp.Status)
+	return s.logger.Errorf(in, OpProvisionApiKey, "provision NAIS deploy API key to team '%s': %s", *in.Team.Slug, resp.Status)
 }
 
 // GenMAC generates the HMAC signature for a message provided the secret key using SHA256
