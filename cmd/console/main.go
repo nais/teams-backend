@@ -125,17 +125,21 @@ func run() error {
 		trigger <- team
 	}
 
-	for ctx.Err() == nil {
-		select {
-		case <-ctx.Done():
-			break
-
-		case logLine := <-logs:
+	// Asynchronously record all audit log in database
+	go func() {
+		for logLine := range logs {
 			tx := db.Save(logLine)
 			if tx.Error != nil {
 				log.Errorf("store audit log line in database: %s", tx.Error)
 			}
 			logLine.Log().Infof(logLine.Message)
+		}
+	}()
+
+	for ctx.Err() == nil {
+		select {
+		case <-ctx.Done():
+			break
 
 		case team := <-trigger:
 			if nextRun.Before(time.Now()) {
