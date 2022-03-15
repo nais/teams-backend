@@ -284,7 +284,7 @@ func initReconcilers(cfg *config, logs chan *dbmodels.AuditLog) []reconcilers.Re
 
 	// GitHub
 	recs = append(recs, github_team_reconciler.New(
-		logs,
+		logger,
 		cfg.GitHubAppId,
 		cfg.GitHubAppInstallationId,
 		cfg.GitHubOrganization,

@@ -8,6 +8,7 @@ import (
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-github/v43/github"
+	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/shurcooL/githubv4"
@@ -15,7 +16,7 @@ import (
 
 // gitHubReconciler creates teams on GitHub and connects users to them.
 type gitHubReconciler struct {
-	logs                chan<- *dbmodels.AuditLog
+	logger              auditlogger.Logger
 	ghAppId             int64
 	ghAppInstallationId int64
 	org                 string
@@ -61,9 +62,9 @@ func (s *gitHubReconciler) getGraphQLClient() (*githubv4.Client, error) {
 	}), nil
 }
 
-func New(logs chan<- *dbmodels.AuditLog, ghAppId, ghInstallationId int64, org, privateKeyPath string) *gitHubReconciler {
+func New(logger auditlogger.Logger, ghAppId, ghInstallationId int64, org, privateKeyPath string) *gitHubReconciler {
 	return &gitHubReconciler{
-		logs:                logs,
+		logger:              logger,
 		ghAppId:             ghAppId,
 		ghAppInstallationId: ghInstallationId,
 		org:                 org,
@@ -72,24 +73,33 @@ func New(logs chan<- *dbmodels.AuditLog, ghAppId, ghInstallationId int64, org, p
 }
 
 func (s *gitHubReconciler) Name() string {
-	return "github:team"
+	return Name
 }
 
-func (s *gitHubReconciler) Op(operation string) string {
-	return s.Name() + ":" + operation
-}
+const (
+	Name            = "github:team"
+	OpCreate        = "github:team:create"
+	OpAddMember     = "github:team:add-member"
+	OpAddMembers    = "github:team:add-members"
+	OpDeleteMember  = "github:team:delete-member"
+	OpDeleteMembers = "github:team:delete-members"
+)
 
 func (s *gitHubReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {
+	if in.Team == nil || in.Team.Slug == nil {
+		return fmt.Errorf("refusing to create team with empty slug")
+	}
+
 	client, err := s.getRestClient()
 
 	if err != nil {
 		// fixme: this should be done outside in order to fail fast if a key is not present
-		return in.AuditLog(nil, false, s.Op("init"), "retrieve API client: %s", err)
+		return fmt.Errorf("retrieve API client: %s", err)
 	}
 
 	team, err := s.getOrCreateTeam(ctx, client.Teams, in)
 	if err != nil {
-		return in.AuditLog(nil, false, s.Op("create"), "ensure team exists: %s", err)
+		return err
 	}
 
 	err = s.connectUsers(ctx, in, client, team)
@@ -98,10 +108,6 @@ func (s *gitHubReconciler) Reconcile(ctx context.Context, in reconcilers.Input) 
 }
 
 func (s *gitHubReconciler) getOrCreateTeam(ctx context.Context, teamsService *github.TeamsService, in reconcilers.Input) (*github.Team, error) {
-	if in.Team == nil || in.Team.Slug == nil {
-		return nil, fmt.Errorf("refusing to create team with empty slug")
-	}
-
 	existingTeam, _, err := teamsService.GetTeamBySlug(ctx, s.org, *in.Team.Slug)
 
 	if err == nil {
@@ -117,10 +123,10 @@ func (s *gitHubReconciler) getOrCreateTeam(ctx context.Context, teamsService *gi
 
 	team, _, err := teamsService.CreateTeam(ctx, s.org, newTeam)
 	if err != nil {
-		return nil, fmt.Errorf("create new team: %w", err)
+		return nil, s.logger.Errorf(in, OpCreate, "create GitHub team '%s': %s", newTeam, err)
 	}
 
-	s.logs <- in.AuditLog(nil, true, s.Op("create"), "successfully created team")
+	s.logger.Logf(in, OpCreate, "created GitHub team '%s'", newTeam)
 
 	return team, nil
 }
@@ -143,23 +149,28 @@ func (s *gitHubReconciler) connectUsers(ctx context.Context, in reconcilers.Inpu
 	missing := missingUsers(members, usernames)
 
 	for _, username := range missing {
-		// TODO: add user role in membership options
+		// TODO: add user role in membership options?
+		// FIXME: connect audit log with database user, if exists
 		opts := &github.TeamAddTeamMembershipOptions{}
 		_, _, err = client.Teams.AddTeamMembershipBySlug(ctx, s.org, *team.Slug, username, opts)
 		if err != nil {
-			return err
+			return s.logger.UserErrorf(in, OpAddMember, nil, "add member '%s' to GitHub team '%s': %s", username, *team.Slug, err)
 		}
-		s.logs <- in.AuditLog(nil, true, s.Op("connect-user"), "successfully created user %s on team %s", username, *team.Slug)
+		s.logger.UserLogf(in, OpAddMember, nil, "added member '%s' to GitHub team '%s'", username, *team.Slug)
 	}
+
+	s.logger.Logf(in, OpAddMembers, "all members successfully added to GitHub team '%s'", *team.Slug)
 
 	extra := extraMembers(members, usernames)
 	for _, username := range extra {
 		_, err = client.Teams.RemoveTeamMembershipBySlug(ctx, s.org, *team.Slug, username)
 		if err != nil {
-			return err
+			return s.logger.UserErrorf(in, OpDeleteMember, nil, "remove member '%s' from GitHub team '%s': %s", username, *team.Slug, err)
 		}
-		s.logs <- in.AuditLog(nil, true, s.Op("disconnect-user"), "successfully removed user %s from team %s", username, *team.Slug)
+		s.logger.UserLogf(in, OpDeleteMember, nil, "deleted member '%s' from GitHub team '%s'", username, *team.Slug)
 	}
+
+	s.logger.Logf(in, OpDeleteMembers, "all unmanaged members successfully deleted from GitHub team '%s'", *team.Slug)
 
 	return nil
 }
