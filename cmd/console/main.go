@@ -14,6 +14,7 @@ import (
 	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-github/v43/github"
 	"github.com/nais/console/pkg/auditlogger"
+	"github.com/nais/console/pkg/config"
 	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
 	nais_deploy_reconciler "github.com/nais/console/pkg/reconcilers/nais/deploy"
 	"github.com/shurcooL/githubv4"
@@ -59,7 +60,7 @@ func run() error {
 	bt, _ := version.BuildTime()
 	log.Infof("console.nais.io version %s built on %s", version.Version(), bt)
 
-	cfg, err := configure()
+	cfg, err := config.New()
 	if err != nil {
 		return err
 	}
@@ -254,8 +255,8 @@ func migrate(db *gorm.DB) error {
 	)
 }
 
-func initGCP(cfg *config) (*jwt.Config, error) {
-	b, err := ioutil.ReadFile(cfg.GoogleCredentialsFile)
+func initGCP(cfg *config.Config) (*jwt.Config, error) {
+	b, err := ioutil.ReadFile(cfg.Google.CredentialsFile)
 	if err != nil {
 		return nil, fmt.Errorf("read google credentials file: %w", err)
 	}
@@ -269,12 +270,12 @@ func initGCP(cfg *config) (*jwt.Config, error) {
 		return nil, fmt.Errorf("initialize google credentials: %w", err)
 	}
 
-	cf.Subject = cfg.GoogleDelegatedUser
+	cf.Subject = cfg.Google.DelegatedUser
 
 	return cf, nil
 }
 
-func initReconcilers(cfg *config, logs chan *dbmodels.AuditLog) []reconcilers.Reconciler {
+func initReconcilers(cfg *config.Config, logs chan *dbmodels.AuditLog) []reconcilers.Reconciler {
 	logger := auditlogger.New(logs)
 	recs := make([]reconcilers.Reconciler, 0)
 
@@ -284,7 +285,7 @@ func initReconcilers(cfg *config, logs chan *dbmodels.AuditLog) []reconcilers.Re
 	// GCP
 	googleJWT, err := initGCP(cfg)
 	if err == nil {
-		recs = append(recs, gcp_team_reconciler.New(logger, cfg.GoogleDomain, googleJWT))
+		recs = append(recs, gcp_team_reconciler.New(logger, cfg.Google.Domain, googleJWT))
 	} else {
 		log.Warnf("GCP team reconciler not configured: %s", err)
 	}
@@ -298,9 +299,9 @@ func initReconcilers(cfg *config, logs chan *dbmodels.AuditLog) []reconcilers.Re
 	}
 
 	// NAIS deploy
-	provisionKey, err := hex.DecodeString(cfg.NaisDeployProvisionKey)
+	nd, err := initNaisDeploy(cfg, logger)
 	if err == nil {
-		recs = append(recs, nais_deploy_reconciler.New(logs, cfg.NaisDeployEndpoint, provisionKey))
+		recs = append(recs, nd)
 	} else {
 		log.Warnf("NAIS deploy reconciler not configured: %s", err)
 	}
@@ -308,12 +309,12 @@ func initReconcilers(cfg *config, logs chan *dbmodels.AuditLog) []reconcilers.Re
 	return recs
 }
 
-func initGitHub(cfg *config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
+func initGitHub(cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
 	transport, err := ghinstallation.NewKeyFromFile(
 		http.DefaultTransport,
-		cfg.GitHubAppId,
-		cfg.GitHubAppInstallationId,
-		cfg.GitHubPrivateKeyPath,
+		cfg.GitHub.AppId,
+		cfg.GitHub.AppInstallationId,
+		cfg.GitHub.PrivateKeyPath,
 	)
 	if err != nil {
 		return nil, err
@@ -327,7 +328,16 @@ func initGitHub(cfg *config, logger auditlogger.Logger) (reconcilers.Reconciler,
 	restClient := github.NewClient(httpClient)
 	graphClient := githubv4.NewClient(httpClient)
 
-	return github_team_reconciler.New(logger, cfg.GitHubOrganization, restClient.Teams, graphClient), nil
+	return github_team_reconciler.New(logger, cfg.GitHub.Organization, restClient.Teams, graphClient), nil
+}
+
+func initNaisDeploy(cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
+	provisionKey, err := hex.DecodeString(cfg.NaisDeploy.ProvisionKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return nais_deploy_reconciler.New(logger, cfg.NaisDeploy.Endpoint, provisionKey), nil
 }
 
 func initSystems(ctx context.Context, recs []reconcilers.Reconciler, db *gorm.DB) (map[string]systemReconcilerPivot, error) {
@@ -357,7 +367,7 @@ func initSystems(ctx context.Context, recs []reconcilers.Reconciler, db *gorm.DB
 	return systems, nil
 }
 
-func setupDatabase(cfg *config) (*gorm.DB, error) {
+func setupDatabase(cfg *config.Config) (*gorm.DB, error) {
 	log.Infof("Connecting to database...")
 	db, err := gorm.Open(
 		postgres.New(
@@ -398,7 +408,7 @@ func setupGraphAPI(db *gorm.DB, trigger chan<- *dbmodels.Team) *graphql_handler.
 	return handler
 }
 
-func setupHTTPServer(cfg *config, db *gorm.DB, handler *graphql_handler.Server) (*http.Server, error) {
+func setupHTTPServer(cfg *config.Config, db *gorm.DB, handler *graphql_handler.Server) (*http.Server, error) {
 	r := chi.NewRouter()
 	r.Get("/", playground.Handler("GraphQL playground", "/query"))
 	r.Route("/query", func(r chi.Router) {
