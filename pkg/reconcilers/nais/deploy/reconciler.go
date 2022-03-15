@@ -70,6 +70,7 @@ func (s *naisDeployReconciler) Reconcile(ctx context.Context, in reconcilers.Inp
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusCreated {
 		s.logger.Logf(in, OpProvisionApiKey, "provisioned NAIS deploy API key to team '%s'", *in.Team.Slug)
