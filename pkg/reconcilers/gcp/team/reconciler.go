@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers"
 	"golang.org/x/oauth2/jwt"
@@ -13,55 +14,63 @@ import (
 )
 
 type gcpReconciler struct {
-	logs   chan<- *dbmodels.AuditLog
+	logger auditlogger.Logger
 	domain string
 	config *jwt.Config
 }
 
-func New(logs chan<- *dbmodels.AuditLog, domain string, config *jwt.Config) *gcpReconciler {
+func New(logger auditlogger.Logger, domain string, config *jwt.Config) *gcpReconciler {
 	return &gcpReconciler{
-		logs:   logs,
+		logger: logger,
 		domain: domain,
 		config: config,
 	}
 }
 
-func (s *gcpReconciler) Name() string {
-	return "gcp:team"
-}
+const (
+	Name            = "gcp:team"
+	OpCreate        = "gcp:team:create"
+	OpAddMember     = "gcp:team:add-member"
+	OpAddMembers    = "gcp:team:add-members"
+	OpDeleteMember  = "gcp:team:delete-member"
+	OpDeleteMembers = "gcp:team:delete-members"
+)
 
-func (s *gcpReconciler) Op(operation string) string {
-	return s.Name() + ":" + operation
+const (
+	teamPrefix = "nais-team"
+)
+
+func (s *gcpReconciler) Name() string {
+	return Name
 }
 
 // error -> requeue?
 func (s *gcpReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {
 	client := s.config.Client(ctx)
 
+	if in.Team == nil || in.Team.Slug == nil {
+		return fmt.Errorf("refusing to create team with empty slug")
+	}
+
 	srv, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
-		return in.AuditLog(nil, false, s.Op("create"), "retrieve directory client: %s", err)
+		return fmt.Errorf("retrieve directory client: %s", err)
 	}
 
 	grp, err := s.getOrCreateGroup(srv, in)
 	if err != nil {
-		return in.AuditLog(nil, false, s.Op("create"), "ensure group exists: %s", err)
+		return err
 	}
 
 	err = s.connectUsers(srv, grp, in)
 	if err != nil {
-		return in.AuditLog(nil, false, s.Op("connect-users"), "connect users: %s", err)
+		return s.logger.Errorf(in, OpAddMembers, "add members to group: %s", err)
 	}
 
 	return nil
 }
 
 func (s *gcpReconciler) getOrCreateGroup(srv *admin_directory_v1.Service, in reconcilers.Input) (*admin_directory_v1.Group, error) {
-	if in.Team == nil || in.Team.Slug == nil {
-		return nil, fmt.Errorf("refusing to create team with empty slug")
-	}
-
-	const teamPrefix = "nais-team"
 	slug := fmt.Sprintf("%s-%s", teamPrefix, *in.Team.Slug)
 	email := fmt.Sprintf("%s@%s", slug, s.domain)
 
@@ -79,10 +88,10 @@ func (s *gcpReconciler) getOrCreateGroup(srv *admin_directory_v1.Service, in rec
 
 	grp, err = srv.Groups.Insert(grp).Do()
 	if err != nil {
-		return nil, fmt.Errorf("create new group: %w", err)
+		return nil, s.logger.Errorf(in, OpCreate, "create Google Directory group: %s", err)
 	}
 
-	s.logs <- in.AuditLog(nil, true, s.Op("create"), "successfully created team")
+	s.logger.Logf(in, OpCreate, "successfully created Google Directory group '%s'", grp.Email)
 
 	return grp, nil
 }
@@ -90,19 +99,22 @@ func (s *gcpReconciler) getOrCreateGroup(srv *admin_directory_v1.Service, in rec
 func (s *gcpReconciler) connectUsers(srv *admin_directory_v1.Service, grp *admin_directory_v1.Group, in reconcilers.Input) error {
 	members, err := srv.Members.List(grp.Id).Do()
 	if err != nil {
-		return fmt.Errorf("list members: %w", err)
+		return s.logger.Errorf(in, OpAddMembers, "list existing members in Google Directory group: %s", err)
 	}
 
 	deleteMembers := extraMembers(members.Members, in.Team.Users)
 	createUsers := missingUsers(members.Members, in.Team.Users)
 
 	for _, member := range deleteMembers {
+		// FIXME: connect audit log with database user, if exists
 		err = srv.Members.Delete(grp.Id, member.Id).Do()
 		if err != nil {
-			return fmt.Errorf("delete user %s from group %s: %w", member.Email, grp.Email, err)
+			return s.logger.UserErrorf(in, OpDeleteMember, nil, "delete member '%s' from Google Directory group '%s': %s", member.Email, grp.Email, err)
 		}
-		s.logs <- in.AuditLog(nil, true, s.Op("delete-member"), "deleted %s from gcp group %s", member.Email, grp.Email)
+		s.logger.UserLogf(in, OpDeleteMember, nil, "deleted member '%s' from Google Directory group '%s'", member.Email, grp.Email)
 	}
+
+	s.logger.Logf(in, OpDeleteMembers, "all unmanaged members successfully deleted from Google Directory group '%s'", grp.Email)
 
 	for _, user := range createUsers {
 		if user.Email == nil {
@@ -113,10 +125,12 @@ func (s *gcpReconciler) connectUsers(srv *admin_directory_v1.Service, grp *admin
 		}
 		_, err = srv.Members.Insert(grp.Id, member).Do()
 		if err != nil {
-			return fmt.Errorf("add user %s to group %s: %w", *user.Email, grp.Email, err)
+			return s.logger.UserErrorf(in, OpAddMember, user, "add member '%s' to Google Directory group '%s': %s", member.Email, grp.Email, err)
 		}
-		s.logs <- in.AuditLog(nil, true, s.Op("add-member"), "added %s to gcp group %s", member.Email, grp.Email)
+		s.logger.UserLogf(in, OpAddMember, user, "added member '%s' to Google Directory group '%s'", member.Email, grp.Email)
 	}
+
+	s.logger.Logf(in, OpAddMembers, "all members successfully added to Google Directory group '%s'", grp.Email)
 
 	return nil
 }

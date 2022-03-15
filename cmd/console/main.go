@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/nais/console/pkg/auditlogger"
 	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
 	nais_deploy_reconciler "github.com/nais/console/pkg/reconcilers/nais/deploy"
 
@@ -267,6 +268,7 @@ func initGCP(cfg *config) (*jwt.Config, error) {
 }
 
 func initReconcilers(cfg *config, logs chan *dbmodels.AuditLog) []reconcilers.Reconciler {
+	logger := auditlogger.New(logs)
 	recs := make([]reconcilers.Reconciler, 0)
 
 	// Internal system
@@ -275,7 +277,7 @@ func initReconcilers(cfg *config, logs chan *dbmodels.AuditLog) []reconcilers.Re
 	// GCP
 	googleJWT, err := initGCP(cfg)
 	if err == nil {
-		recs = append(recs, gcp_team_reconciler.New(logs, cfg.GoogleDomain, googleJWT))
+		recs = append(recs, gcp_team_reconciler.New(logger, cfg.GoogleDomain, googleJWT))
 	} else {
 		log.Warnf("GCP reconciler not configured: %s", err)
 	}
