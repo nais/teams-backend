@@ -11,9 +11,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bradleyfalzon/ghinstallation/v2"
+	"github.com/google/go-github/v43/github"
 	"github.com/nais/console/pkg/auditlogger"
 	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
 	nais_deploy_reconciler "github.com/nais/console/pkg/reconcilers/nais/deploy"
+	"github.com/shurcooL/githubv4"
 
 	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
@@ -283,13 +286,12 @@ func initReconcilers(cfg *config, logs chan *dbmodels.AuditLog) []reconcilers.Re
 	}
 
 	// GitHub
-	recs = append(recs, github_team_reconciler.New(
-		logger,
-		cfg.GitHubAppId,
-		cfg.GitHubAppInstallationId,
-		cfg.GitHubOrganization,
-		cfg.GitHubPrivateKeyPath,
-	))
+	gh, err := initGitHub(cfg, logger)
+	if err == nil {
+		recs = append(recs, gh)
+	} else {
+		log.Warnf("GCP reconciler not configured: %s", err)
+	}
 
 	// NAIS deploy
 	provisionKey, err := hex.DecodeString(cfg.NaisDeployProvisionKey)
@@ -300,6 +302,28 @@ func initReconcilers(cfg *config, logs chan *dbmodels.AuditLog) []reconcilers.Re
 	}
 
 	return recs
+}
+
+func initGitHub(cfg *config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
+	transport, err := ghinstallation.NewKeyFromFile(
+		http.DefaultTransport,
+		cfg.GitHubAppId,
+		cfg.GitHubAppInstallationId,
+		cfg.GitHubPrivateKeyPath,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Note that both HTTP clients and transports are safe for concurrent use according to the docs,
+	// so we can safely reuse them across objects and concurrent synchronizations.
+	httpClient := &http.Client{
+		Transport: transport,
+	}
+	restClient := github.NewClient(httpClient)
+	graphClient := githubv4.NewClient(httpClient)
+
+	return github_team_reconciler.New(logger, cfg.GitHubOrganization, restClient.Teams, graphClient), nil
 }
 
 func initSystems(ctx context.Context, recs []reconcilers.Reconciler, db *gorm.DB) (map[string]systemReconcilerPivot, error) {

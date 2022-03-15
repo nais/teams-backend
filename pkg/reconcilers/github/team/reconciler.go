@@ -3,10 +3,8 @@ package github_team_reconciler
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"time"
 
-	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-github/v43/github"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/dbmodels"
@@ -14,61 +12,32 @@ import (
 	"github.com/shurcooL/githubv4"
 )
 
+type GraphClient interface {
+	Query(ctx context.Context, q interface{}, variables map[string]interface{}) error
+}
+
+type TeamsService interface {
+	AddTeamMembershipBySlug(ctx context.Context, org, slug, user string, opts *github.TeamAddTeamMembershipOptions) (*github.Membership, *github.Response, error)
+	CreateTeam(ctx context.Context, org string, team github.NewTeam) (*github.Team, *github.Response, error)
+	GetTeamBySlug(ctx context.Context, org, slug string) (*github.Team, *github.Response, error)
+	ListTeamMembersBySlug(ctx context.Context, org, slug string, opts *github.TeamListTeamMembersOptions) ([]*github.User, *github.Response, error)
+	RemoveTeamMembershipBySlug(ctx context.Context, org, slug, user string) (*github.Response, error)
+}
+
 // gitHubReconciler creates teams on GitHub and connects users to them.
 type gitHubReconciler struct {
-	logger              auditlogger.Logger
-	ghAppId             int64
-	ghAppInstallationId int64
-	org                 string
-	privateKeyPath      string
+	logger       auditlogger.Logger
+	teamsService TeamsService
+	graphClient  GraphClient
+	org          string
 }
 
-func (s *gitHubReconciler) getTransport() (*ghinstallation.Transport, error) {
-	itr, err := ghinstallation.NewKeyFromFile(
-		http.DefaultTransport,
-		s.ghAppId,
-		s.ghAppInstallationId,
-		s.privateKeyPath,
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return itr, nil
-}
-
-func (s *gitHubReconciler) getRestClient() (*github.Client, error) {
-	transport, err := s.getTransport()
-
-	if err != nil {
-		return nil, err
-	}
-
-	return github.NewClient(&http.Client{
-		Transport: transport,
-	}), nil
-}
-
-func (s *gitHubReconciler) getGraphQLClient() (*githubv4.Client, error) {
-	transport, err := s.getTransport()
-
-	if err != nil {
-		return nil, err
-	}
-
-	return githubv4.NewClient(&http.Client{
-		Transport: transport,
-	}), nil
-}
-
-func New(logger auditlogger.Logger, ghAppId, ghInstallationId int64, org, privateKeyPath string) *gitHubReconciler {
+func New(logger auditlogger.Logger, org string, teamsService TeamsService, graphClient GraphClient) *gitHubReconciler {
 	return &gitHubReconciler{
-		logger:              logger,
-		ghAppId:             ghAppId,
-		ghAppInstallationId: ghInstallationId,
-		org:                 org,
-		privateKeyPath:      privateKeyPath,
+		logger:       logger,
+		org:          org,
+		teamsService: teamsService,
+		graphClient:  graphClient,
 	}
 }
 
@@ -90,25 +59,18 @@ func (s *gitHubReconciler) Reconcile(ctx context.Context, in reconcilers.Input) 
 		return fmt.Errorf("refusing to create team with empty slug")
 	}
 
-	client, err := s.getRestClient()
-
-	if err != nil {
-		// fixme: this should be done outside in order to fail fast if a key is not present
-		return fmt.Errorf("retrieve API client: %s", err)
-	}
-
-	team, err := s.getOrCreateTeam(ctx, client.Teams, in)
+	team, err := s.getOrCreateTeam(ctx, in)
 	if err != nil {
 		return err
 	}
 
-	err = s.connectUsers(ctx, in, client, team)
+	err = s.connectUsers(ctx, in, team)
 
 	return err
 }
 
-func (s *gitHubReconciler) getOrCreateTeam(ctx context.Context, teamsService *github.TeamsService, in reconcilers.Input) (*github.Team, error) {
-	existingTeam, _, err := teamsService.GetTeamBySlug(ctx, s.org, *in.Team.Slug)
+func (s *gitHubReconciler) getOrCreateTeam(ctx context.Context, in reconcilers.Input) (*github.Team, error) {
+	existingTeam, _, err := s.teamsService.GetTeamBySlug(ctx, s.org, *in.Team.Slug)
 
 	if err == nil {
 		return existingTeam, nil
@@ -121,7 +83,7 @@ func (s *gitHubReconciler) getOrCreateTeam(ctx context.Context, teamsService *gi
 		Description: &description,
 	}
 
-	team, _, err := teamsService.CreateTeam(ctx, s.org, newTeam)
+	team, _, err := s.teamsService.CreateTeam(ctx, s.org, newTeam)
 	if err != nil {
 		return nil, s.logger.Errorf(in, OpCreate, "create GitHub team '%s': %s", newTeam, err)
 	}
@@ -131,13 +93,13 @@ func (s *gitHubReconciler) getOrCreateTeam(ctx context.Context, teamsService *gi
 	return team, nil
 }
 
-func (s *gitHubReconciler) connectUsers(ctx context.Context, in reconcilers.Input, client *github.Client, team *github.Team) error {
+func (s *gitHubReconciler) connectUsers(ctx context.Context, in reconcilers.Input, team *github.Team) error {
 	userMap, err := s.mapSSOUsers(ctx, in)
 	if err != nil {
 		return err
 	}
 
-	members, err := s.getTeamMembers(ctx, client, *team.Slug)
+	members, err := s.getTeamMembers(ctx, *team.Slug)
 	if err != nil {
 		return err
 	}
@@ -152,7 +114,7 @@ func (s *gitHubReconciler) connectUsers(ctx context.Context, in reconcilers.Inpu
 		// TODO: add user role in membership options?
 		// FIXME: connect audit log with database user, if exists
 		opts := &github.TeamAddTeamMembershipOptions{}
-		_, _, err = client.Teams.AddTeamMembershipBySlug(ctx, s.org, *team.Slug, username, opts)
+		_, _, err = s.teamsService.AddTeamMembershipBySlug(ctx, s.org, *team.Slug, username, opts)
 		if err != nil {
 			return s.logger.UserErrorf(in, OpAddMember, nil, "add member '%s' to GitHub team '%s': %s", username, *team.Slug, err)
 		}
@@ -163,7 +125,7 @@ func (s *gitHubReconciler) connectUsers(ctx context.Context, in reconcilers.Inpu
 
 	extra := extraMembers(members, usernames)
 	for _, username := range extra {
-		_, err = client.Teams.RemoveTeamMembershipBySlug(ctx, s.org, *team.Slug, username)
+		_, err = s.teamsService.RemoveTeamMembershipBySlug(ctx, s.org, *team.Slug, username)
 		if err != nil {
 			return s.logger.UserErrorf(in, OpDeleteMember, nil, "remove member '%s' from GitHub team '%s': %s", username, *team.Slug, err)
 		}
@@ -175,7 +137,7 @@ func (s *gitHubReconciler) connectUsers(ctx context.Context, in reconcilers.Inpu
 	return nil
 }
 
-func (s *gitHubReconciler) getTeamMembers(ctx context.Context, client *github.Client, slug string) ([]*github.User, error) {
+func (s *gitHubReconciler) getTeamMembers(ctx context.Context, slug string) ([]*github.User, error) {
 	const maxPerPage = 100
 	opt := &github.TeamListTeamMembersOptions{
 		ListOptions: github.ListOptions{
@@ -185,7 +147,7 @@ func (s *gitHubReconciler) getTeamMembers(ctx context.Context, client *github.Cl
 
 	allMembers := make([]*github.User, 0)
 	for {
-		members, resp, err := client.Teams.ListTeamMembersBySlug(ctx, s.org, slug, opt)
+		members, resp, err := s.teamsService.ListTeamMembersBySlug(ctx, s.org, slug, opt)
 		if err != nil {
 			return nil, err
 		}
@@ -256,11 +218,6 @@ func (s *gitHubReconciler) mapSSOUsers(ctx context.Context, in reconcilers.Input
 
 // Look up a GitHub username from an SSO e-mail address connected to that user account.
 func (s *gitHubReconciler) lookupSSOUser(ctx context.Context, email string) (string, error) {
-	client, err := s.getGraphQLClient()
-	if err != nil {
-		return "", err
-	}
-
 	var query struct {
 		Organization struct {
 			SamlIdentityProvider struct {
@@ -280,7 +237,7 @@ func (s *gitHubReconciler) lookupSSOUser(ctx context.Context, email string) (str
 		"username": githubv4.String(email),
 	}
 
-	err = client.Query(ctx, &query, variables)
+	err := s.graphClient.Query(ctx, &query, variables)
 	if err != nil {
 		return "", err
 	}
