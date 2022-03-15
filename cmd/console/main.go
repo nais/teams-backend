@@ -2,14 +2,17 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
-	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
+	nais_deploy_reconciler "github.com/nais/console/pkg/reconcilers/nais/deploy"
 
 	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
@@ -285,6 +288,14 @@ func initReconcilers(cfg *config, logs chan *dbmodels.AuditLog) []reconcilers.Re
 		cfg.GitHubOrganization,
 		cfg.GitHubPrivateKeyPath,
 	))
+
+	// NAIS deploy
+	provisionKey, err := hex.DecodeString(cfg.NaisDeployProvisionKey)
+	if err == nil {
+		recs = append(recs, nais_deploy_reconciler.New(logs, cfg.NaisDeployEndpoint, provisionKey))
+	} else {
+		log.Warnf("NAIS deploy reconciler not configured: %s", err)
+	}
 
 	return recs
 }
