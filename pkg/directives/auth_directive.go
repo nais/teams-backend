@@ -21,16 +21,25 @@ func Auth(db *gorm.DB) Directive {
 			return nil, fmt.Errorf("this endpoint requires authentication")
 		}
 
-		tx := db.Preload("Roles").Preload("Teams.Roles").Find(user, "id = ?", user.ID)
-		if tx.Error != nil {
-			return nil, tx.Error
+		roles, err := loadUserRoles(db, user)
+		if err != nil {
+			return nil, err
 		}
-
-		roles := flattenRoles(user)
 
 		ctx = auth.ContextWithRoles(ctx, roles)
 		return next(ctx)
 	}
+}
+
+func loadUserRoles(db *gorm.DB, user *dbmodels.User) ([]*dbmodels.Role, error) {
+	u := &dbmodels.User{}
+
+	tx := db.Preload("Roles").Preload("Teams.Roles").Find(u, "id = ?", user.ID)
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+
+	return flattenRoles(u), nil
 }
 
 func flattenRoles(user *dbmodels.User) []*dbmodels.Role {
