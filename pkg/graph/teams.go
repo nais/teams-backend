@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/nais/console/pkg/auth"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/model"
 	"gorm.io/gorm"
@@ -20,7 +21,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 	}
 
 	// Assign creator as admin for team
-	const resource = "nais:console:teams:%s:admin"
+	const resource = "teams:%s:admin"
 	const readwrite = "readwrite"
 	const allow = "allow"
 
@@ -29,6 +30,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		Resource:    fmt.Sprintf(resource, input.Slug),
 		AccessLevel: readwrite,
 		Permission:  allow,
+		User:        auth.UserFromContext(ctx),
 	}
 
 	err := r.db.Transaction(func(tx *gorm.DB) error {
