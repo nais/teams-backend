@@ -18,6 +18,7 @@ type contextKey struct {
 const (
 	AccessRead      = "read"
 	AccessReadWrite = "readwrite"
+	AccessCreate    = "create"
 
 	PermissionAllow = "allow"
 	PermissionDeny  = "deny"
@@ -45,11 +46,15 @@ func ContextWithRoles(ctx context.Context, roles []*dbmodels.Role) context.Conte
 	return context.WithValue(ctx, rolesCtxKey, roles)
 }
 
+func Allowed(ctx context.Context, system *dbmodels.System, accessLevel string, resources ...string) error {
+	return AllowedRoles(RolesFromContext(ctx), system, accessLevel, resources...)
+}
+
 // Check if the roles defined in the access control list allow read or write access to one or more specific system resources.
 // Returns nil if action is allowed, or an error if denied.
 //
 // The first matching rule wins out, but note that DENY rules are prioritized before ALLOW rules.
-func Allowed(roles []*dbmodels.Role, system *dbmodels.System, accessLevel string, resources ...string) error {
+func AllowedRoles(roles []*dbmodels.Role, system *dbmodels.System, accessLevel string, resources ...string) error {
 
 	//goland:noinspection GoErrorStringFormat
 	unauthorized := fmt.Errorf("YOU DIDN'T SAY THE MAGIC WORD!")
@@ -88,8 +93,8 @@ func hasAccessLevel(needed, have string) bool {
 	switch needed {
 	case AccessRead:
 		return have == AccessRead || have == AccessReadWrite
-	case AccessReadWrite:
-		return have == AccessReadWrite
+	case AccessReadWrite, AccessCreate:
+		return have == needed
 	default:
 		return false
 	}

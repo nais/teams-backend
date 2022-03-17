@@ -14,6 +14,12 @@ import (
 )
 
 func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*dbmodels.Team, error) {
+	err := auth.Allowed(ctx, r.console, auth.AccessReadWrite, "teams", "createTeam")
+	if err != nil {
+		return nil, err
+	}
+
+	// New team
 	team := &dbmodels.Team{
 		Slug:    &input.Slug,
 		Name:    &input.Name,
@@ -21,24 +27,12 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 	}
 
 	// Assign creator as admin for team
-	const resource = "teams:%s"
-	const readwrite = auth.AccessReadWrite
-	const allow = auth.PermissionAllow
-
-	me := auth.UserFromContext(ctx)
-	roles := auth.RolesFromContext(ctx)
-
 	role := &dbmodels.Role{
 		System:      r.console,
-		Resource:    fmt.Sprintf(resource, input.Slug),
-		AccessLevel: readwrite,
-		Permission:  allow,
-		User:        me,
-	}
-
-	err := auth.Allowed(roles, r.console, auth.AccessReadWrite, "teams")
-	if err != nil {
-		return nil, err
+		Resource:    fmt.Sprintf("teams:%s", input.Slug),
+		AccessLevel: auth.AccessReadWrite,
+		Permission:  auth.PermissionAllow,
+		User:        auth.UserFromContext(ctx),
 	}
 
 	err = r.db.Transaction(func(tx *gorm.DB) error {
@@ -73,7 +67,14 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
-	err := r.db.Model(team).Association("Users").Append(users)
+
+	// all models populated, check ACL now
+	err := auth.Allowed(ctx, r.console, auth.AccessReadWrite, "teams", "teams:"+*team.Slug)
+	if err != nil {
+		return nil, err
+	}
+
+	err = r.db.Model(team).Association("Users").Append(users)
 	if err != nil {
 		return nil, err
 	}
@@ -83,6 +84,12 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 }
 
 func (r *queryResolver) Teams(ctx context.Context) (*model.Teams, error) {
+	// all models populated, check ACL now
+	err := auth.Allowed(ctx, r.console, auth.AccessRead, "teams")
+	if err != nil {
+		return nil, err
+	}
+
 	var count int64
 	teams := make([]*dbmodels.Team, 0)
 	tx := r.db.WithContext(ctx).Find(&teams)
