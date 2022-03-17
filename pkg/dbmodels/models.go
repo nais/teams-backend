@@ -35,7 +35,7 @@ type Team struct {
 	Purpose  *string         `json:"purpose"`
 	Metadata []*TeamMetadata `json:"-" binding:"-"`
 	Users    []*User         `json:"-" binding:"-" gorm:"many2many:users_teams"`
-	Roles    []*Role         `json:"-" binding:"-" gorm:"many2many:teams_roles"`
+	Roles    []*Role         `json:"-" binding:"-"`
 }
 
 type User struct {
@@ -43,7 +43,7 @@ type User struct {
 	Email *string `json:"email" gorm:"unique"`
 	Name  *string `json:"name" gorm:"not null" example:"plain english"`
 	Teams []*Team `json:"-" binding:"-" gorm:"many2many:users_teams"`
-	Roles []*Role `json:"-" binding:"-" gorm:"many2many:users_roles"`
+	Roles []*Role `json:"-" binding:"-"`
 }
 
 type ApiKey struct {

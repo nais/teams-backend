@@ -21,19 +21,27 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 	}
 
 	// Assign creator as admin for team
-	const resource = "teams:%s:admin"
-	const readwrite = "readwrite"
-	const allow = "allow"
+	const resource = "teams:%s"
+	const readwrite = auth.AccessReadWrite
+	const allow = auth.PermissionAllow
+
+	me := auth.UserFromContext(ctx)
+	roles := auth.RolesFromContext(ctx)
 
 	role := &dbmodels.Role{
 		System:      r.console,
 		Resource:    fmt.Sprintf(resource, input.Slug),
 		AccessLevel: readwrite,
 		Permission:  allow,
-		User:        auth.UserFromContext(ctx),
+		User:        me,
 	}
 
-	err := r.db.Transaction(func(tx *gorm.DB) error {
+	err := auth.Allowed(roles, r.console, auth.AccessReadWrite, "teams")
+	if err != nil {
+		return nil, err
+	}
+
+	err = r.db.Transaction(func(tx *gorm.DB) error {
 		tx.Create(team)
 		tx.Create(role)
 		return tx.Error

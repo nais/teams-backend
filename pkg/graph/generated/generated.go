@@ -811,7 +811,7 @@ extend type Mutation {
     createTeam(input: CreateTeamInput!): Team! @auth
 
     "Add one or more users to a team, then return the team in question."
-    addUsersToTeam(input: AddUsersToTeamInput!): Team! @auth
+    addUsersToTeam(input: AddUsersToTeamInput!): Team! @auth @acl
 }
 
 "Query results for teams."
@@ -1947,8 +1947,14 @@ func (ec *executionContext) _Mutation_addUsersToTeam(ctx context.Context, field 
 			}
 			return ec.directives.Auth(ctx, nil, directive0)
 		}
+		directive2 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Acl == nil {
+				return nil, errors.New("directive acl is not implemented")
+			}
+			return ec.directives.Acl(ctx, nil, directive1)
+		}
 
-		tmp, err := directive1(rctx)
+		tmp, err := directive2(rctx)
 		if err != nil {
 			return nil, graphql.ErrorOnPath(ctx, err)
 		}
