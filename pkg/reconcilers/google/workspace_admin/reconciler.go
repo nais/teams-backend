@@ -3,6 +3,7 @@ package google_workspace_admin_reconciler
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/nais/console/pkg/auditlogger"
@@ -10,6 +11,7 @@ import (
 	"github.com/nais/console/pkg/reconcilers"
 	"golang.org/x/oauth2/jwt"
 	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 )
 
@@ -28,12 +30,13 @@ func New(logger auditlogger.Logger, domain string, config *jwt.Config) *gcpRecon
 }
 
 const (
-	Name            = "google:workspace-admin"
-	OpCreate        = "google:workspace-admin:create"
-	OpAddMember     = "google:workspace-admin:add-member"
-	OpAddMembers    = "google:workspace-admin:add-members"
-	OpDeleteMember  = "google:workspace-admin:delete-member"
-	OpDeleteMembers = "google:workspace-admin:delete-members"
+	Name                    = "google:workspace-admin"
+	OpCreate                = "google:workspace-admin:create"
+	OpAddMember             = "google:workspace-admin:add-member"
+	OpAddMembers            = "google:workspace-admin:add-members"
+	OpDeleteMember          = "google:workspace-admin:delete-member"
+	OpDeleteMembers         = "google:workspace-admin:delete-members"
+	OpAddToGKESecurityGroup = "google:workspace-admin:add-to-gke-security-group"
 )
 
 const (
@@ -65,6 +68,11 @@ func (s *gcpReconciler) Reconcile(ctx context.Context, in reconcilers.Input) err
 	err = s.connectUsers(srv, grp, in)
 	if err != nil {
 		return s.logger.Errorf(in, OpAddMembers, "add members to group: %s", err)
+	}
+
+	err = s.addToGKESecurityGroup(srv, grp, in)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -131,6 +139,28 @@ func (s *gcpReconciler) connectUsers(srv *admin_directory_v1.Service, grp *admin
 	}
 
 	s.logger.Logf(in, OpAddMembers, "all members successfully added to Google Directory group '%s'", grp.Email)
+
+	return nil
+}
+
+func (s *gcpReconciler) addToGKESecurityGroup(srv *admin_directory_v1.Service, grp *admin_directory_v1.Group, in reconcilers.Input) error {
+	const groupPrefix = "gke-security-groups@"
+	groupKey := groupPrefix + s.domain
+
+	member := &admin_directory_v1.Member{
+		Email: grp.Email,
+	}
+
+	_, err := srv.Members.Insert(groupKey, member).Do()
+	if err != nil {
+		googleError, ok := err.(*googleapi.Error)
+		if ok && googleError.Code == http.StatusConflict {
+			return nil
+		}
+		return s.logger.Errorf(in, OpAddToGKESecurityGroup, "add group '%s' to GKE security group '%s': %s", member.Email, groupKey, err)
+	}
+
+	s.logger.Logf(in, OpAddToGKESecurityGroup, "added group '%s' to GKE security group '%s'", member.Email, groupKey)
 
 	return nil
 }
