@@ -17,12 +17,14 @@ import (
 type Resolver struct {
 	db      *gorm.DB
 	trigger chan<- *dbmodels.Team
+	console *dbmodels.System
 }
 
-func NewResolver(db *gorm.DB, trigger chan<- *dbmodels.Team) *Resolver {
+func NewResolver(db *gorm.DB, console *dbmodels.System, trigger chan<- *dbmodels.Team) *Resolver {
 	return &Resolver{
 		db:      db,
 		trigger: trigger,
+		console: console,
 	}
 }
 

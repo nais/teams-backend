@@ -9,6 +9,7 @@ import (
 
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/model"
+	"gorm.io/gorm"
 )
 
 func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*dbmodels.Team, error) {
@@ -17,10 +18,29 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		Name:    &input.Name,
 		Purpose: input.Purpose,
 	}
-	tx := r.db.WithContext(ctx).Create(team)
-	if tx.Error != nil {
-		return nil, tx.Error
+
+	// Assign creator as admin for team
+	const resource = "nais:console:teams:%s:admin"
+	const readwrite = "readwrite"
+	const allow = "allow"
+
+	role := &dbmodels.Role{
+		System:      r.console,
+		Resource:    fmt.Sprintf(resource, input.Slug),
+		AccessLevel: readwrite,
+		Permission:  allow,
 	}
+
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		tx.Create(team)
+		tx.Create(role)
+		return tx.Error
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
 	r.trigger <- team
 	return team, nil
 }

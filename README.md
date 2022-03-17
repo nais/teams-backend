@@ -44,6 +44,26 @@ bin/console
 Important: do not share the same GitHub application between tenants.
 
 
+## ACL
+
+Within a team, users are either _owners_ or _members_. This maps somewhat accurately
+to our target systems.
+
+* Every user has a set of basic rights
+
+User roles:
+
+* Global
+  * `nais:console:teams:admin` -> manage all teams
+  * `nais:console:teams:create` -> create team
+* Per team
+  * `nais:console:teams:<team>:admin` -> manage team
+
+Team roles:
+
+* Per reconciler: disabled, read, readwrite
+  * Only implement "readwrite", and make it look like a boolean option
+
 ## TODO
 
 * Build synchronization modules
@@ -52,7 +72,6 @@ Important: do not share the same GitHub application between tenants.
       * Prefix example: `nais-tenantname`?
     * Project name: `TEAM-CLUSTER`? Human-readable, no limits.
     * JITA access for GCP super admin (nais admins customers' clusters)
-    * RBAC sync: create groups and add them to `gke-security-groups@<domain>`. Ends up in rolebinding "groups" field.
   * Kubernetes
     * Connect team group into "nais:developer"
     * Deploy using NAIS deploy
