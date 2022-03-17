@@ -15,6 +15,7 @@ import (
 	"github.com/google/go-github/v43/github"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
+	"github.com/nais/console/pkg/directives"
 	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
 	gcp_team_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
 	nais_deploy_reconciler "github.com/nais/console/pkg/reconcilers/nais/deploy"
@@ -397,8 +398,7 @@ func setupGraphAPI(db *gorm.DB, console *dbmodels.System, trigger chan<- *dbmode
 	resolver := graph.NewResolver(db, console, trigger)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
-	gc.Directives.Auth = middleware.ApiKeyDirective()
-	gc.Directives.Acl = middleware.ACLDirective(db)
+	gc.Directives.Auth = directives.Auth(db)
 
 	handler := graphql_handler.NewDefaultServer(
 		generated.NewExecutableSchema(

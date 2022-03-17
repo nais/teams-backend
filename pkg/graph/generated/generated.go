@@ -47,7 +47,6 @@ type ResolverRoot interface {
 }
 
 type DirectiveRoot struct {
-	Acl  func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
 	Auth func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
 }
 
@@ -724,18 +723,18 @@ input APIKeyInput {
 `, BuiltIn: false},
 	{Name: "graphql/roles.graphqls", Input: `extend type Query {
     "Search for users."
-    roles(input: QueryRoleInput): Roles! @auth @acl
+    roles(input: QueryRoleInput): Roles! @auth
 }
 
 extend type Mutation {
     "Create a role, then return the created role."
-    createRole(input: CreateRoleInput!): Role! @auth @acl
+    createRole(input: CreateRoleInput!): Role! @auth
 
     "Update role information, then return the updated role."
     updateRole(input: UpdateRoleInput!): Role! @auth
 
-    assignRoleToUser(input: AssignRoleInput!): User! @auth @acl
-    assignRoleToTeam(input: AssignRoleInput!): Team! @auth @acl
+    assignRoleToUser(input: AssignRoleInput!): User! @auth
+    assignRoleToTeam(input: AssignRoleInput!): Team! @auth
 }
 
 "Query results for roles."
@@ -786,14 +785,6 @@ type Mutation
 "Require authentication for all requests with this directive."
 directive @auth on FIELD_DEFINITION
 
-"Require ACL authorization for all requests with this directive."
-directive @acl on FIELD_DEFINITION
-# directive @acl(
-    # system: String!
-    # resource: String!
-    # accessLevel: String!
-# ) on FIELD_DEFINITION
-
 "Specify pagination options."
 input PaginationInput {
     offset: Int! = 0
@@ -811,7 +802,7 @@ extend type Mutation {
     createTeam(input: CreateTeamInput!): Team! @auth
 
     "Add one or more users to a team, then return the team in question."
-    addUsersToTeam(input: AddUsersToTeamInput!): Team! @auth @acl
+    addUsersToTeam(input: AddUsersToTeamInput!): Team! @auth
 }
 
 "Query results for teams."
@@ -911,12 +902,12 @@ type AuditLog {
 `, BuiltIn: false},
 	{Name: "graphql/users.graphqls", Input: `extend type Query {
     "Search for users."
-    users(input: QueryUserInput): Users! @auth @acl
+    users(input: QueryUserInput): Users! @auth
 }
 
 extend type Mutation {
     "Create a user, then return the created user."
-    createUser(input: CreateUserInput!): User! @auth @acl
+    createUser(input: CreateUserInput!): User! @auth
 
     "Update user information, then return the updated user."
     updateUser(input: UpdateUserInput!): User! @auth
@@ -1619,14 +1610,8 @@ func (ec *executionContext) _Mutation_createRole(ctx context.Context, field grap
 			}
 			return ec.directives.Auth(ctx, nil, directive0)
 		}
-		directive2 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Acl == nil {
-				return nil, errors.New("directive acl is not implemented")
-			}
-			return ec.directives.Acl(ctx, nil, directive1)
-		}
 
-		tmp, err := directive2(rctx)
+		tmp, err := directive1(rctx)
 		if err != nil {
 			return nil, graphql.ErrorOnPath(ctx, err)
 		}
@@ -1749,14 +1734,8 @@ func (ec *executionContext) _Mutation_assignRoleToUser(ctx context.Context, fiel
 			}
 			return ec.directives.Auth(ctx, nil, directive0)
 		}
-		directive2 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Acl == nil {
-				return nil, errors.New("directive acl is not implemented")
-			}
-			return ec.directives.Acl(ctx, nil, directive1)
-		}
 
-		tmp, err := directive2(rctx)
+		tmp, err := directive1(rctx)
 		if err != nil {
 			return nil, graphql.ErrorOnPath(ctx, err)
 		}
@@ -1817,14 +1796,8 @@ func (ec *executionContext) _Mutation_assignRoleToTeam(ctx context.Context, fiel
 			}
 			return ec.directives.Auth(ctx, nil, directive0)
 		}
-		directive2 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Acl == nil {
-				return nil, errors.New("directive acl is not implemented")
-			}
-			return ec.directives.Acl(ctx, nil, directive1)
-		}
 
-		tmp, err := directive2(rctx)
+		tmp, err := directive1(rctx)
 		if err != nil {
 			return nil, graphql.ErrorOnPath(ctx, err)
 		}
@@ -1947,14 +1920,8 @@ func (ec *executionContext) _Mutation_addUsersToTeam(ctx context.Context, field 
 			}
 			return ec.directives.Auth(ctx, nil, directive0)
 		}
-		directive2 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Acl == nil {
-				return nil, errors.New("directive acl is not implemented")
-			}
-			return ec.directives.Acl(ctx, nil, directive1)
-		}
 
-		tmp, err := directive2(rctx)
+		tmp, err := directive1(rctx)
 		if err != nil {
 			return nil, graphql.ErrorOnPath(ctx, err)
 		}
@@ -2015,14 +1982,8 @@ func (ec *executionContext) _Mutation_createUser(ctx context.Context, field grap
 			}
 			return ec.directives.Auth(ctx, nil, directive0)
 		}
-		directive2 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Acl == nil {
-				return nil, errors.New("directive acl is not implemented")
-			}
-			return ec.directives.Acl(ctx, nil, directive1)
-		}
 
-		tmp, err := directive2(rctx)
+		tmp, err := directive1(rctx)
 		if err != nil {
 			return nil, graphql.ErrorOnPath(ctx, err)
 		}
@@ -2250,14 +2211,8 @@ func (ec *executionContext) _Query_roles(ctx context.Context, field graphql.Coll
 			}
 			return ec.directives.Auth(ctx, nil, directive0)
 		}
-		directive2 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Acl == nil {
-				return nil, errors.New("directive acl is not implemented")
-			}
-			return ec.directives.Acl(ctx, nil, directive1)
-		}
 
-		tmp, err := directive2(rctx)
+		tmp, err := directive1(rctx)
 		if err != nil {
 			return nil, graphql.ErrorOnPath(ctx, err)
 		}
@@ -2373,14 +2328,8 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 			}
 			return ec.directives.Auth(ctx, nil, directive0)
 		}
-		directive2 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Acl == nil {
-				return nil, errors.New("directive acl is not implemented")
-			}
-			return ec.directives.Acl(ctx, nil, directive1)
-		}
 
-		tmp, err := directive2(rctx)
+		tmp, err := directive1(rctx)
 		if err != nil {
 			return nil, graphql.ErrorOnPath(ctx, err)
 		}

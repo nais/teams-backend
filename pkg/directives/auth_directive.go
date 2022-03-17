@@ -1,4 +1,4 @@
-package middleware
+package directives
 
 import (
 	"context"
@@ -10,7 +10,11 @@ import (
 	"gorm.io/gorm"
 )
 
-func ACLDirective(db *gorm.DB) Directive {
+type Directive func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
+
+// Make sure there is an authenticated user making this request.
+// Also fetches all roles connected to that user, either solo or through a team, and puts them into the context.
+func Auth(db *gorm.DB) Directive {
 	return func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error) {
 		user := auth.UserFromContext(ctx)
 		if user == nil {
@@ -25,8 +29,6 @@ func ACLDirective(db *gorm.DB) Directive {
 		roles := flattenRoles(user)
 
 		ctx = auth.ContextWithRoles(ctx, roles)
-
-		// TODO: check ACL against endpoint
 		return next(ctx)
 	}
 }

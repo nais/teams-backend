@@ -11,14 +11,6 @@ type Mutation
 "Require authentication for all requests with this directive."
 directive @auth on FIELD_DEFINITION
 
-"Require ACL authorization for all requests with this directive."
-directive @acl on FIELD_DEFINITION
-# directive @acl(
-    # system: String!
-    # resource: String!
-    # accessLevel: String!
-# ) on FIELD_DEFINITION
-
 "Specify pagination options."
 input PaginationInput {
     offset: Int! = 0

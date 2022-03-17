@@ -1,17 +1,17 @@
 extend type Query {
     "Search for users."
-    roles(input: QueryRoleInput): Roles! @auth @acl
+    roles(input: QueryRoleInput): Roles! @auth
 }
 
 extend type Mutation {
     "Create a role, then return the created role."
-    createRole(input: CreateRoleInput!): Role! @auth @acl
+    createRole(input: CreateRoleInput!): Role! @auth
 
     "Update role information, then return the updated role."
     updateRole(input: UpdateRoleInput!): Role! @auth
 
-    assignRoleToUser(input: AssignRoleInput!): User! @auth @acl
-    assignRoleToTeam(input: AssignRoleInput!): Team! @auth @acl
+    assignRoleToUser(input: AssignRoleInput!): User! @auth
+    assignRoleToTeam(input: AssignRoleInput!): Team! @auth
 }
 
 "Query results for roles."
