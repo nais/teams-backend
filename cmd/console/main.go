@@ -16,6 +16,7 @@ import (
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
+	gcp_team_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
 	nais_deploy_reconciler "github.com/nais/console/pkg/reconcilers/nais/deploy"
 	"github.com/shurcooL/githubv4"
 
@@ -28,7 +29,6 @@ import (
 	"github.com/nais/console/pkg/middleware"
 	"github.com/nais/console/pkg/reconcilers"
 	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
-	gcp_team_reconciler "github.com/nais/console/pkg/reconcilers/gcp/team"
 	"github.com/nais/console/pkg/version"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/oauth2/google"
@@ -244,6 +244,7 @@ func migrate(db *gorm.DB) error {
 	}
 
 	return db.AutoMigrate(
+		&dbmodels.ApiKey{},
 		&dbmodels.AuditLog{},
 		&dbmodels.Role{},
 		&dbmodels.Synchronization{},
@@ -251,7 +252,6 @@ func migrate(db *gorm.DB) error {
 		&dbmodels.TeamMetadata{},
 		&dbmodels.Team{},
 		&dbmodels.User{},
-		&dbmodels.ApiKey{},
 	)
 }
 

@@ -1,4 +1,4 @@
-package gcp_team_reconciler_test
+package google_workspace_admin_reconciler_test
 
 import (
 	"context"

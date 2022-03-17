@@ -53,11 +53,6 @@ Important: do not share the same GitHub application between tenants.
     * Project name: `TEAM-CLUSTER`? Human-readable, no limits.
     * JITA access for GCP super admin (nais admins customers' clusters)
     * RBAC sync: create groups and add them to `gke-security-groups@<domain>`. Ends up in rolebinding "groups" field.
-  * GitHub
-    * Teams, members, and ACL
-  * NAIS deploy
-    * How do we get our self-provisioned API key?
-      * Provisioned by naisd, together with other credentials we need (gcp, github, etc.)
   * Kubernetes
     * Connect team group into "nais:developer"
     * Deploy using NAIS deploy
