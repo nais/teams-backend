@@ -10,16 +10,16 @@ import (
 
 // Base model that all database tables inherit.
 type Model struct {
-	ID          *uuid.UUID     `json:"id" binding:"-" gorm:"primaryKey; type:uuid; default:uuid_generate_v4()"`
-	CreatedAt   time.Time      `json:"created_at" binding:"-" gorm:"<-:create; autoCreateTime; index; not null"`
-	CreatedBy   *User          `json:"-" binding:"-"`
-	UpdatedBy   *User          `json:"-" binding:"-"`
-	DeletedBy   *User          `json:"-" binding:"-"`
-	CreatedByID *uuid.UUID     `json:"created_by_id" binding:"-" gorm:"type:uuid"`
-	UpdatedByID *uuid.UUID     `json:"updated_by_id" binding:"-" gorm:"type:uuid"`
-	DeletedByID *uuid.UUID     `json:"deleted_by_id" binding:"-" gorm:"type:uuid"`
-	UpdatedAt   time.Time      `json:"updated_at" binding:"-" gorm:"autoUpdateTime; not null"`
-	DeletedAt   gorm.DeletedAt `json:"-" binding:"-" gorm:"index"`
+	ID          *uuid.UUID     `json:"id" gorm:"primaryKey; type:uuid; default:uuid_generate_v4()"`
+	CreatedAt   time.Time      `json:"created_at" gorm:"<-:create; autoCreateTime; index; not null"`
+	CreatedBy   *User          `json:"-"`
+	UpdatedBy   *User          `json:"-"`
+	DeletedBy   *User          `json:"-"`
+	CreatedByID *uuid.UUID     `json:"created_by_id" gorm:"type:uuid"`
+	UpdatedByID *uuid.UUID     `json:"updated_by_id" gorm:"type:uuid"`
+	DeletedByID *uuid.UUID     `json:"deleted_by_id" gorm:"type:uuid"`
+	UpdatedAt   time.Time      `json:"updated_at" gorm:"autoUpdateTime; not null"`
+	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
 // Enable callers to access the base model through an interface.
@@ -33,23 +33,23 @@ type Team struct {
 	Slug     *string         `json:"slug" gorm:"<-:create; unique; not null"`
 	Name     *string         `json:"name" gorm:"unique; not null"`
 	Purpose  *string         `json:"purpose"`
-	Metadata []*TeamMetadata `json:"-" binding:"-"`
-	Users    []*User         `json:"-" binding:"-" gorm:"many2many:users_teams"`
-	Roles    []*Role         `json:"-" binding:"-"`
+	Metadata []*TeamMetadata `json:"-"`
+	Users    []*User         `json:"-" gorm:"many2many:users_teams"`
+	Roles    []*Role         `json:"-"`
 }
 
 type User struct {
 	Model
 	Email *string `json:"email" gorm:"unique"`
 	Name  *string `json:"name" gorm:"not null" example:"plain english"`
-	Teams []*Team `json:"-" binding:"-" gorm:"many2many:users_teams"`
-	Roles []*Role `json:"-" binding:"-"`
+	Teams []*Team `json:"-" gorm:"many2many:users_teams"`
+	Roles []*Role `json:"-"`
 }
 
 type ApiKey struct {
 	Model
-	APIKey string    `json:"apikey" binding:"-" gorm:"unique; not null"`
-	User   *User     `json:"-" binding:"-"`
+	APIKey string    `json:"apikey" gorm:"unique; not null"`
+	User   *User     `json:"-"`
 	UserID uuid.UUID `json:"user_id" gorm:"type:uuid; not null"`
 }
 
