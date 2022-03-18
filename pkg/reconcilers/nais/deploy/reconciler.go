@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"github.com/nais/console/pkg/auditlogger"
+	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/reconcilers/registry"
 )
 
 type provisionApiKeyRequest struct {
@@ -27,6 +29,15 @@ type naisDeployReconciler struct {
 	provisionKey []byte
 }
 
+const (
+	Name              = "nais:deploy"
+	OpProvisionApiKey = "nais:deploy:provision-api-key"
+)
+
+func init() {
+	registry.Register(Name, NewFromConfig)
+}
+
 func New(logger auditlogger.Logger, endpoint string, provisionKey []byte) *naisDeployReconciler {
 	return &naisDeployReconciler{
 		logger:       logger,
@@ -34,11 +45,14 @@ func New(logger auditlogger.Logger, endpoint string, provisionKey []byte) *naisD
 		provisionKey: provisionKey,
 	}
 }
+func NewFromConfig(cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
+	provisionKey, err := hex.DecodeString(cfg.NaisDeploy.ProvisionKey)
+	if err != nil {
+		return nil, err
+	}
 
-const (
-	Name              = "nais:deploy"
-	OpProvisionApiKey = "nais:deploy:provision-api-key"
-)
+	return New(logger, cfg.NaisDeploy.Endpoint, provisionKey), nil
+}
 
 func (s *naisDeployReconciler) Name() string {
 	return Name

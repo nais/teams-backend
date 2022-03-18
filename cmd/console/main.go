@@ -2,47 +2,31 @@ package main
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/bradleyfalzon/ghinstallation/v2"
-	"github.com/google/go-github/v43/github"
-	"github.com/nais/console/pkg/auditlogger"
-	"github.com/nais/console/pkg/config"
-	"github.com/nais/console/pkg/directives"
-	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
-	gcp_team_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
-	nais_deploy_reconciler "github.com/nais/console/pkg/reconcilers/nais/deploy"
-	"github.com/shurcooL/githubv4"
-
 	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/go-chi/chi"
+	"github.com/nais/console/pkg/auditlogger"
+	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/dbmodels"
+	"github.com/nais/console/pkg/directives"
+	"github.com/nais/console/pkg/fixtures"
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/middleware"
 	"github.com/nais/console/pkg/reconcilers"
-	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
+	"github.com/nais/console/pkg/reconcilers/registry"
 	"github.com/nais/console/pkg/version"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/oauth2/google"
-	"golang.org/x/oauth2/jwt"
-	admin "google.golang.org/api/admin/directory/v1"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
-
-type systemReconcilerPivot struct {
-	system     *dbmodels.System
-	reconciler reconcilers.Reconciler
-}
 
 func main() {
 	err := run()
@@ -71,22 +55,28 @@ func run() error {
 		return err
 	}
 
-	// Control channels for goroutine communication
-	const maxQueueSize = 4096
-	logs := make(chan *dbmodels.AuditLog, maxQueueSize)
-	trigger := make(chan *dbmodels.Team, maxQueueSize)
-
-	recs := initReconcilers(cfg, logs)
-	for _, rec := range recs {
-		log.Infof("Reconciler initialized: %s", rec.Name())
-	}
-
-	systems, err := initSystems(ctx, recs, db)
+	err = fixtures.EnsureSystemsExistInDatabase(ctx, db)
 	if err != nil {
 		return err
 	}
 
-	handler := setupGraphAPI(db, systems["console"].system, trigger)
+	sysEntries, err := systems(ctx, db)
+	if err != nil {
+		return err
+	}
+
+	// Control channels for goroutine communication
+	const maxQueueSize = 4096
+	logs := make(chan *dbmodels.AuditLog, maxQueueSize)
+	trigger := make(chan *dbmodels.Team, maxQueueSize)
+	logger := auditlogger.New(logs)
+
+	recs := initReconcilers(cfg, logger, sysEntries)
+	for system, rec := range recs {
+		log.Infof("Reconciler initialized: '%s' -> %T", system.Name, rec)
+	}
+
+	handler := setupGraphAPI(db, sysEntries["console"], trigger)
 	srv, err := setupHTTPServer(cfg, db, handler)
 	if err != nil {
 		return err
@@ -156,7 +146,7 @@ func run() error {
 		case <-runTimer.C:
 			log.Infof("Running reconcile of %d teams...", len(pendingTeams))
 
-			err = syncAll(ctx, syncTimeout, db, systems, &pendingTeams)
+			err = syncAll(ctx, syncTimeout, db, recs, &pendingTeams)
 
 			if err != nil {
 				log.Error(err)
@@ -176,7 +166,7 @@ func run() error {
 	return nil
 }
 
-func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems map[string]systemReconcilerPivot, teams *map[string]*dbmodels.Team) error {
+func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems map[*dbmodels.System]reconcilers.Reconciler, teams *map[string]*dbmodels.Team) error {
 	errors := 0
 
 	ctx, cancel := context.WithTimeout(ctx, timeout)
@@ -191,15 +181,15 @@ func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems ma
 	for key, team := range *teams {
 		teamErrors := 0
 
-		for _, system := range systems {
+		for system, reconciler := range systems {
 			input := reconcilers.Input{
-				System:          system.system,
+				System:          system,
 				Synchronization: synchronization,
 				Team:            team,
 			}
 
 			input.Logger().Infof("Starting reconcile")
-			err := system.reconciler.Reconcile(ctx, input)
+			err := reconciler.Reconcile(ctx, input)
 
 			switch er := err.(type) {
 			case nil:
@@ -256,116 +246,33 @@ func migrate(db *gorm.DB) error {
 	)
 }
 
-func initGCP(cfg *config.Config) (*jwt.Config, error) {
-	b, err := ioutil.ReadFile(cfg.Google.CredentialsFile)
-	if err != nil {
-		return nil, fmt.Errorf("read google credentials file: %w", err)
+func systems(ctx context.Context, db *gorm.DB) (map[string]*dbmodels.System, error) {
+	dbsystems := make([]*dbmodels.System, 0)
+	tx := db.WithContext(ctx).Find(&dbsystems)
+	if tx.Error != nil {
+		return nil, tx.Error
 	}
-
-	cf, err := google.JWTConfigFromJSON(
-		b,
-		admin.AdminDirectoryUserReadonlyScope,
-		admin.AdminDirectoryGroupScope,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("initialize google credentials: %w", err)
+	results := make(map[string]*dbmodels.System)
+	for _, sys := range dbsystems {
+		results[sys.Name] = sys
 	}
-
-	cf.Subject = cfg.Google.DelegatedUser
-
-	return cf, nil
+	return results, nil
 }
 
-func initReconcilers(cfg *config.Config, logs chan *dbmodels.AuditLog) []reconcilers.Reconciler {
-	logger := auditlogger.New(logs)
-	recs := make([]reconcilers.Reconciler, 0)
+func initReconcilers(cfg *config.Config, logger auditlogger.Logger, systems map[string]*dbmodels.System) map[*dbmodels.System]reconcilers.Reconciler {
+	recs := make(map[*dbmodels.System]reconcilers.Reconciler)
 
-	// Internal system
-	recs = append(recs, console_reconciler.New(logs))
-
-	// GCP
-	googleJWT, err := initGCP(cfg)
-	if err == nil {
-		recs = append(recs, gcp_team_reconciler.New(logger, cfg.Google.Domain, googleJWT))
-	} else {
-		log.Warnf("GCP team reconciler not configured: %s", err)
-	}
-
-	// GitHub
-	gh, err := initGitHub(cfg, logger)
-	if err == nil {
-		recs = append(recs, gh)
-	} else {
-		log.Warnf("GitHub team reconciler not configured: %s", err)
-	}
-
-	// NAIS deploy
-	nd, err := initNaisDeploy(cfg, logger)
-	if err == nil {
-		recs = append(recs, nd)
-	} else {
-		log.Warnf("NAIS deploy reconciler not configured: %s", err)
+	factories := registry.Reconcilers()
+	for key, factory := range factories {
+		rec, err := factory(cfg, logger)
+		if err != nil {
+			log.Warnf("Reconciler '%s' not configured: %s", key, err)
+			continue
+		}
+		recs[systems[key]] = rec
 	}
 
 	return recs
-}
-
-func initGitHub(cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
-	transport, err := ghinstallation.NewKeyFromFile(
-		http.DefaultTransport,
-		cfg.GitHub.AppId,
-		cfg.GitHub.AppInstallationId,
-		cfg.GitHub.PrivateKeyPath,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// Note that both HTTP clients and transports are safe for concurrent use according to the docs,
-	// so we can safely reuse them across objects and concurrent synchronizations.
-	httpClient := &http.Client{
-		Transport: transport,
-	}
-	restClient := github.NewClient(httpClient)
-	graphClient := githubv4.NewClient(httpClient)
-
-	return github_team_reconciler.New(logger, cfg.GitHub.Organization, restClient.Teams, graphClient), nil
-}
-
-func initNaisDeploy(cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
-	provisionKey, err := hex.DecodeString(cfg.NaisDeploy.ProvisionKey)
-	if err != nil {
-		return nil, err
-	}
-
-	return nais_deploy_reconciler.New(logger, cfg.NaisDeploy.Endpoint, provisionKey), nil
-}
-
-func initSystems(ctx context.Context, recs []reconcilers.Reconciler, db *gorm.DB) (map[string]systemReconcilerPivot, error) {
-	systems := make(map[string]systemReconcilerPivot)
-	for _, reconciler := range recs {
-		systemName := reconciler.Name()
-		sys := &dbmodels.System{}
-		tx := db.WithContext(ctx).First(sys, "name = ?", systemName)
-
-		// System not found in database, try to create
-		if sys.ID == nil {
-			sys.Name = systemName
-			tx = db.WithContext(ctx).Save(sys)
-		}
-
-		if tx.Error != nil {
-			return nil, tx.Error
-		}
-		systems[systemName] = systemReconcilerPivot{
-			system:     sys,
-			reconciler: reconciler,
-		}
-	}
-
-	// TODO: filter out non-configured systems
-
-	return systems, nil
 }
 
 func setupDatabase(cfg *config.Config) (*gorm.DB, error) {

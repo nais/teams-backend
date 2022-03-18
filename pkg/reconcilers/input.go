@@ -10,7 +10,6 @@ import (
 
 // All synchronizers must implement the Reconciler interface.
 type Reconciler interface {
-	Name() string
 	Reconcile(ctx context.Context, s Input) error
 }
 

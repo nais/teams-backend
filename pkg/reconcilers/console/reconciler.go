@@ -3,24 +3,34 @@ package console_reconciler
 import (
 	"context"
 
-	"github.com/nais/console/pkg/dbmodels"
+	"github.com/nais/console/pkg/auditlogger"
+	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/reconcilers/registry"
 )
 
-type consoleSynchronizer struct {
-	logs chan<- *dbmodels.AuditLog
+type consoleReconciler struct{}
+
+const (
+	Name = "console"
+)
+
+func init() {
+	registry.Register(Name, NewFromConfig)
 }
 
-func New(logs chan<- *dbmodels.AuditLog) *consoleSynchronizer {
-	return &consoleSynchronizer{
-		logs: logs,
-	}
+func New() *consoleReconciler {
+	return &consoleReconciler{}
 }
 
-func (s *consoleSynchronizer) Name() string {
+func NewFromConfig(_ *config.Config, _ auditlogger.Logger) (reconcilers.Reconciler, error) {
+	return New(), nil
+}
+
+func (s *consoleReconciler) Name() string {
 	return "console"
 }
 
-func (s *consoleSynchronizer) Reconcile(ctx context.Context, in reconcilers.Input) error {
+func (s *consoleReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {
 	return nil
 }

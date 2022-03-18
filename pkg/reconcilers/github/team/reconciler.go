@@ -3,12 +3,16 @@ package github_team_reconciler
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
+	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-github/v43/github"
 	"github.com/nais/console/pkg/auditlogger"
+	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/reconcilers/registry"
 	"github.com/shurcooL/githubv4"
 )
 
@@ -32,6 +36,19 @@ type gitHubReconciler struct {
 	org          string
 }
 
+const (
+	Name            = "github:team"
+	OpCreate        = "github:team:create"
+	OpAddMember     = "github:team:add-member"
+	OpAddMembers    = "github:team:add-members"
+	OpDeleteMember  = "github:team:delete-member"
+	OpDeleteMembers = "github:team:delete-members"
+)
+
+func init() {
+	registry.Register(Name, NewFromConfig)
+}
+
 func New(logger auditlogger.Logger, org string, teamsService TeamsService, graphClient GraphClient) *gitHubReconciler {
 	return &gitHubReconciler{
 		logger:       logger,
@@ -41,18 +58,27 @@ func New(logger auditlogger.Logger, org string, teamsService TeamsService, graph
 	}
 }
 
-func (s *gitHubReconciler) Name() string {
-	return Name
-}
+func NewFromConfig(cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
+	transport, err := ghinstallation.NewKeyFromFile(
+		http.DefaultTransport,
+		cfg.GitHub.AppId,
+		cfg.GitHub.AppInstallationId,
+		cfg.GitHub.PrivateKeyPath,
+	)
+	if err != nil {
+		return nil, err
+	}
 
-const (
-	Name            = "github:team"
-	OpCreate        = "github:team:create"
-	OpAddMember     = "github:team:add-member"
-	OpAddMembers    = "github:team:add-members"
-	OpDeleteMember  = "github:team:delete-member"
-	OpDeleteMembers = "github:team:delete-members"
-)
+	// Note that both HTTP clients and transports are safe for concurrent use according to the docs,
+	// so we can safely reuse them across objects and concurrent synchronizations.
+	httpClient := &http.Client{
+		Transport: transport,
+	}
+	restClient := github.NewClient(httpClient)
+	graphClient := githubv4.NewClient(httpClient)
+
+	return New(logger, cfg.GitHub.Organization, restClient.Teams, graphClient), nil
+}
 
 func (s *gitHubReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {
 	if in.Team == nil || in.Team.Slug == nil {

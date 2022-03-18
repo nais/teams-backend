@@ -3,12 +3,16 @@ package google_workspace_admin_reconciler
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"time"
 
 	"github.com/nais/console/pkg/auditlogger"
+	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/reconcilers/registry"
+	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/googleapi"
@@ -19,14 +23,6 @@ type gcpReconciler struct {
 	logger auditlogger.Logger
 	domain string
 	config *jwt.Config
-}
-
-func New(logger auditlogger.Logger, domain string, config *jwt.Config) *gcpReconciler {
-	return &gcpReconciler{
-		logger: logger,
-		domain: domain,
-		config: config,
-	}
 }
 
 const (
@@ -43,11 +39,38 @@ const (
 	teamPrefix = "nais-team"
 )
 
-func (s *gcpReconciler) Name() string {
-	return Name
+func init() {
+	registry.Register(Name, NewFromConfig)
 }
 
-// error -> requeue?
+func New(logger auditlogger.Logger, domain string, config *jwt.Config) *gcpReconciler {
+	return &gcpReconciler{
+		logger: logger,
+		domain: domain,
+		config: config,
+	}
+}
+
+func NewFromConfig(cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
+	b, err := ioutil.ReadFile(cfg.Google.CredentialsFile)
+	if err != nil {
+		return nil, fmt.Errorf("read google credentials file: %w", err)
+	}
+
+	cf, err := google.JWTConfigFromJSON(
+		b,
+		admin_directory_v1.AdminDirectoryUserReadonlyScope,
+		admin_directory_v1.AdminDirectoryGroupScope,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("initialize google credentials: %w", err)
+	}
+
+	cf.Subject = cfg.Google.DelegatedUser
+
+	return New(logger, cfg.Google.Domain, cf), nil
+}
+
 func (s *gcpReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {
 	client := s.config.Client(ctx)
 
