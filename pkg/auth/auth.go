@@ -24,6 +24,12 @@ const (
 	PermissionDeny  = "deny"
 )
 
+type Resource string
+
+func (r Resource) Format(args ...interface{}) Resource {
+	return Resource(fmt.Sprintf(string(r), args...))
+}
+
 // Finds any authenticated user from the context. Requires that a middleware authenticator has set the user.
 func UserFromContext(ctx context.Context) *dbmodels.User {
 	user, _ := ctx.Value(userCtxKey).(*dbmodels.User)
@@ -46,7 +52,7 @@ func ContextWithRoles(ctx context.Context, roles []*dbmodels.Role) context.Conte
 	return context.WithValue(ctx, rolesCtxKey, roles)
 }
 
-func Allowed(ctx context.Context, system *dbmodels.System, accessLevel string, resources ...string) error {
+func Allowed(ctx context.Context, system *dbmodels.System, accessLevel string, resources ...Resource) error {
 	return AllowedRoles(RolesFromContext(ctx), system, accessLevel, resources...)
 }
 
@@ -54,7 +60,7 @@ func Allowed(ctx context.Context, system *dbmodels.System, accessLevel string, r
 // Returns nil if action is allowed, or an error if denied.
 //
 // The first matching rule wins out, but note that DENY rules are prioritized before ALLOW rules.
-func AllowedRoles(roles []*dbmodels.Role, system *dbmodels.System, accessLevel string, resources ...string) error {
+func AllowedRoles(roles []*dbmodels.Role, system *dbmodels.System, accessLevel string, resources ...Resource) error {
 
 	//goland:noinspection GoErrorStringFormat
 	unauthorized := fmt.Errorf("YOU DIDN'T SAY THE MAGIC WORD!")
@@ -73,7 +79,7 @@ func AllowedRoles(roles []*dbmodels.Role, system *dbmodels.System, accessLevel s
 
 		for _, resource := range resources {
 			// Skip unmatching resources
-			if role.Resource != resource {
+			if Resource(role.Resource) != resource {
 				continue
 			}
 

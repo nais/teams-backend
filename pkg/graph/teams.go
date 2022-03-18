@@ -14,7 +14,7 @@ import (
 )
 
 func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*dbmodels.Team, error) {
-	err := auth.Allowed(ctx, r.console, auth.AccessReadWrite, "teams", "createTeam")
+	err := auth.Allowed(ctx, r.console, auth.AccessReadWrite, ResourceTeams, ResourceCreateTeam)
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +29,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 	// Assign creator as admin for team
 	role := &dbmodels.Role{
 		System:      r.console,
-		Resource:    fmt.Sprintf("teams:%s", input.Slug),
+		Resource:    string(ResourceSpecificTeam.Format(input.Slug)),
 		AccessLevel: auth.AccessReadWrite,
 		Permission:  auth.PermissionAllow,
 		User:        auth.UserFromContext(ctx),
@@ -69,7 +69,7 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 	}
 
 	// all models populated, check ACL now
-	err := auth.Allowed(ctx, r.console, auth.AccessReadWrite, "teams", "teams:"+*team.Slug)
+	err := auth.Allowed(ctx, r.console, auth.AccessReadWrite, ResourceTeams, ResourceSpecificTeam.Format(*team.Slug))
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 
 func (r *queryResolver) Teams(ctx context.Context) (*model.Teams, error) {
 	// all models populated, check ACL now
-	err := auth.Allowed(ctx, r.console, auth.AccessRead, "teams")
+	err := auth.Allowed(ctx, r.console, auth.AccessRead, ResourceTeams)
 	if err != nil {
 		return nil, err
 	}
