@@ -60,6 +60,11 @@ func run() error {
 		return err
 	}
 
+	err = fixtures.InsertRootUser(ctx, db)
+	if err != nil {
+		return err
+	}
+
 	sysEntries, err := systems(ctx, db)
 	if err != nil {
 		return err

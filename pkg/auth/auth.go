@@ -73,7 +73,7 @@ func AllowedRoles(roles []*dbmodels.Role, system *dbmodels.System, accessLevel s
 	for _, role := range roles {
 
 		// Skip unmatching systems
-		if role.SystemID != system.ID {
+		if *role.SystemID != *system.ID {
 			continue
 		}
 
