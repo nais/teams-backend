@@ -6,6 +6,9 @@ metadata:
   name: console
   namespace: aura
 spec:
+  azure:
+    application:
+      enabled: true
   image: {{ image }}
   gcp:
     sqlInstances:

@@ -176,6 +176,18 @@ func run() error {
 	return nil
 }
 
+type Number interface {
+	int | float64
+}
+
+func sum[T Number](values ...T) T {
+	var result T
+	for _, x := range values {
+		result += x
+	}
+	return result
+}
+
 func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems map[*dbmodels.System]reconcilers.Reconciler, teams *map[string]*dbmodels.Team) error {
 	errors := 0
 
