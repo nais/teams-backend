@@ -8,7 +8,6 @@ import (
 	"github.com/nais/console/pkg/auth"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph"
-	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
@@ -45,7 +44,7 @@ func InsertRootUser(ctx context.Context, db *gorm.DB) error {
 		}
 
 		console := &dbmodels.System{}
-		tx.First(console, "name = ?", console_reconciler.Name)
+		tx.First(console, "name = ?", "console")
 		if console.ID == nil {
 			return fmt.Errorf("system fixtures not in database")
 		}

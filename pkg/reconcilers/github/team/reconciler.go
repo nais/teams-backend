@@ -59,6 +59,10 @@ func New(logger auditlogger.Logger, org string, teamsService TeamsService, graph
 }
 
 func NewFromConfig(cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
+	if !cfg.GitHub.Enabled {
+		return nil, reconcilers.ErrReconcilerNotEnabled
+	}
+
 	transport, err := ghinstallation.NewKeyFromFile(
 		http.DefaultTransport,
 		cfg.GitHub.AppId,

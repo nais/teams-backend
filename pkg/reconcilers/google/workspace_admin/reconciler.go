@@ -52,6 +52,10 @@ func New(logger auditlogger.Logger, domain string, config *jwt.Config) *gcpRecon
 }
 
 func NewFromConfig(cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
+	if !cfg.Google.Enabled {
+		return nil, reconcilers.ErrReconcilerNotEnabled
+	}
+
 	b, err := ioutil.ReadFile(cfg.Google.CredentialsFile)
 	if err != nil {
 		return nil, fmt.Errorf("read google credentials file: %w", err)

@@ -76,10 +76,15 @@ func run() error {
 	trigger := make(chan *dbmodels.Team, maxQueueSize)
 	logger := auditlogger.New(logs)
 
-	recs := initReconcilers(cfg, logger, sysEntries)
+	recs, err := initReconcilers(cfg, logger, sysEntries)
+	if err != nil {
+		return err
+	}
+
 	for system, rec := range recs {
 		log.Infof("Reconciler initialized: '%s' -> %T", system.Name, rec)
 	}
+	log.Infof("Initialized %d reconcilers.", len(recs))
 
 	handler := setupGraphAPI(db, sysEntries["console"], trigger)
 	srv, err := setupHTTPServer(cfg, db, handler)
@@ -264,20 +269,23 @@ func systems(ctx context.Context, db *gorm.DB) (map[string]*dbmodels.System, err
 	return results, nil
 }
 
-func initReconcilers(cfg *config.Config, logger auditlogger.Logger, systems map[string]*dbmodels.System) map[*dbmodels.System]reconcilers.Reconciler {
+func initReconcilers(cfg *config.Config, logger auditlogger.Logger, systems map[string]*dbmodels.System) (map[*dbmodels.System]reconcilers.Reconciler, error) {
 	recs := make(map[*dbmodels.System]reconcilers.Reconciler)
 
 	factories := registry.Reconcilers()
 	for key, factory := range factories {
 		rec, err := factory(cfg, logger)
-		if err != nil {
-			log.Warnf("Reconciler '%s' not configured: %s", key, err)
-			continue
+		switch err {
+		case reconcilers.ErrReconcilerNotEnabled:
+			log.Warnf("Reconciler '%s' is disabled through configuration", key)
+		default:
+			return nil, fmt.Errorf("reconciler '%s': %w", key, err)
+		case nil:
+			recs[systems[key]] = rec
 		}
-		recs[systems[key]] = rec
 	}
 
-	return recs
+	return recs, nil
 }
 
 func setupDatabase(cfg *config.Config) (*gorm.DB, error) {

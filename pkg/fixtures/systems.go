@@ -8,7 +8,6 @@ import (
 	"gorm.io/gorm"
 
 	// load modules to have them show up in the registry
-	_ "github.com/nais/console/pkg/reconcilers/console"
 	_ "github.com/nais/console/pkg/reconcilers/github/team"
 	_ "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
 	_ "github.com/nais/console/pkg/reconcilers/nais/deploy"

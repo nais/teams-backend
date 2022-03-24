@@ -46,6 +46,10 @@ func New(logger auditlogger.Logger, endpoint string, provisionKey []byte) *naisD
 	}
 }
 func NewFromConfig(cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
+	if !cfg.NaisDeploy.Enabled {
+		return nil, reconcilers.ErrReconcilerNotEnabled
+	}
+
 	provisionKey, err := hex.DecodeString(cfg.NaisDeploy.ProvisionKey)
 	if err != nil {
 		return nil, err

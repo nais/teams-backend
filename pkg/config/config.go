@@ -5,6 +5,7 @@ import (
 )
 
 type GitHub struct {
+	Enabled           bool   `envconfig:"CONSOLE_GITHUB_ENABLED"`
 	AppId             int64  `envconfig:"CONSOLE_GITHUB_APP_ID"`
 	AppInstallationId int64  `envconfig:"CONSOLE_GITHUB_APP_INSTALLATION_ID"`
 	Organization      string `envconfig:"CONSOLE_GITHUB_ORGANIZATION"`
@@ -12,12 +13,14 @@ type GitHub struct {
 }
 
 type Google struct {
+	Enabled         bool   `envconfig:"CONSOLE_GOOGLE_ENABLED"`
 	CredentialsFile string `envconfig:"CONSOLE_GOOGLE_CREDENTIALS_FILE"`
 	DelegatedUser   string `envconfig:"CONSOLE_GOOGLE_DELEGATED_USER"`
 	Domain          string `envconfig:"CONSOLE_GOOGLE_DOMAIN"`
 }
 
 type NaisDeploy struct {
+	Enabled      bool   `envconfig:"CONSOLE_NAIS_DEPLOY_ENABLED"`
 	Endpoint     string `envconfig:"CONSOLE_NAIS_DEPLOY_ENDPOINT"`
 	ProvisionKey string `envconfig:"CONSOLE_NAIS_DEPLOY_PROVISION_KEY"`
 }
