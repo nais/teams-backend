@@ -17,7 +17,7 @@ func TestTheWholeThing(t *testing.T) {
 	ctx := context.Background()
 	b, err := ioutil.ReadFile("/tmp/credentials.json")
 	if err != nil {
-		log.Fatalf("Unable to read client secret file: %v", err)
+		t.Skipf("Unable to read client secret file: %v", err)
 	}
 
 	config, err := google.JWTConfigFromJSON(
