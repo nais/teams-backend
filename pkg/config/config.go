@@ -35,7 +35,7 @@ type Config struct {
 
 func Defaults() *Config {
 	return &Config{
-		DatabaseURL:   "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable",
+		DatabaseURL:   "postgres://console:console@localhost:5432/console?sslmode=disable",
 		ListenAddress: "127.0.0.1:3000",
 		NaisDeploy: NaisDeploy{
 			Endpoint: "http://localhost:8080/api/v1/provision",
