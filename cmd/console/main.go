@@ -23,6 +23,7 @@ import (
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/reconcilers/registry"
 	"github.com/nais/console/pkg/version"
+	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -332,7 +333,10 @@ func setupHTTPServer(cfg *config.Config, db *gorm.DB, handler *graphql_handler.S
 	r := chi.NewRouter()
 	r.Get("/", playground.Handler("GraphQL playground", "/query"))
 	r.Route("/query", func(r chi.Router) {
-		r.Use(middleware.ApiKeyAuthentication(db))
+		r.Use(
+			cors.AllowAll().Handler, // TODO: Specify a stricter CORS policy
+			middleware.ApiKeyAuthentication(db),
+		)
 		r.Post("/", handler.ServeHTTP)
 	})
 	srv := &http.Server{
