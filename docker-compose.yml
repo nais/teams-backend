@@ -9,6 +9,8 @@ services:
       POSTGRES_USER: console
       POSTGRES_PASSWORD: console
       POSTGRES_DB: console
+    volumes:
+      - pgdata:/var/lib/postgresql/data
 
   pgadmin:
     depends_on:
@@ -25,4 +27,5 @@ services:
       - pgadmin:/var/lib/pgadmin
 
 volumes:
+  pgdata:
   pgadmin:
