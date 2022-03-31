@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/99designs/gqlgen/graphql"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 	"net/http"
 	"os"
 	"os/signal"
@@ -326,6 +329,18 @@ func setupGraphAPI(db *gorm.DB, console *dbmodels.System, trigger chan<- *dbmode
 			gc,
 		),
 	)
+	handler.SetErrorPresenter(func(ctx context.Context, e error) *gqlerror.Error {
+		err := graphql.DefaultErrorPresenter(ctx, e)
+
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			err.Message = "Not found"
+			err.Extensions = map[string]interface{}{
+				"code": "404",
+			}
+		}
+
+		return err
+	})
 	return handler
 }
 
