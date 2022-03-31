@@ -6,7 +6,7 @@ package graph
 import (
 	"context"
 	"fmt"
-
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auth"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/model"
@@ -103,4 +103,20 @@ func (r *queryResolver) Teams(ctx context.Context) (*model.Teams, error) {
 		},
 		Nodes: teams,
 	}, nil
+}
+
+func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team, error) {
+	err := auth.Allowed(ctx, r.console, auth.AccessRead, ResourceTeams)
+	if err != nil {
+		return nil, err
+	}
+
+	team := &dbmodels.Team{}
+	tx := r.db.WithContext(ctx).Where("id = ?", id).First(team)
+
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+
+	return team, nil
 }

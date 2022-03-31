@@ -1,6 +1,9 @@
 extend type Query {
     "Search for teams."
     teams: Teams! @auth
+
+    "Get a specific team"
+    team(id: UUID!): Team! @auth
 }
 
 extend type Mutation {
