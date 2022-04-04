@@ -8,15 +8,22 @@ import (
 	"gorm.io/gorm"
 
 	// load modules to have them show up in the registry
+	_ "github.com/nais/console/pkg/reconcilers/console"
 	_ "github.com/nais/console/pkg/reconcilers/github/team"
 	_ "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
 	_ "github.com/nais/console/pkg/reconcilers/nais/deploy"
 )
 
 func EnsureSystemsExistInDatabase(ctx context.Context, db *gorm.DB) error {
-	systemNames := registry.Reconcilers()
+	recs := registry.Reconcilers()
+	names := make([]string, 0)
+	for name := range recs {
+		names = append(names, name)
+	}
+	names = append(names, "console")
+	// fixme
 
-	for systemName := range systemNames {
+	for _, systemName := range names {
 		sys := &dbmodels.System{
 			Name: systemName,
 		}

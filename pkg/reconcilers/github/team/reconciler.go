@@ -65,8 +65,8 @@ func NewFromConfig(cfg *config.Config, logger auditlogger.Logger) (reconcilers.R
 
 	transport, err := ghinstallation.NewKeyFromFile(
 		http.DefaultTransport,
-		cfg.GitHub.AppId,
-		cfg.GitHub.AppInstallationId,
+		cfg.GitHub.AppID,
+		cfg.GitHub.AppInstallationID,
 		cfg.GitHub.PrivateKeyPath,
 	)
 	if err != nil {

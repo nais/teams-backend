@@ -6,8 +6,8 @@ import (
 
 type GitHub struct {
 	Enabled           bool   `envconfig:"CONSOLE_GITHUB_ENABLED"`
-	AppId             int64  `envconfig:"CONSOLE_GITHUB_APP_ID"`
-	AppInstallationId int64  `envconfig:"CONSOLE_GITHUB_APP_INSTALLATION_ID"`
+	AppID             int64  `envconfig:"CONSOLE_GITHUB_APP_ID"`
+	AppInstallationID int64  `envconfig:"CONSOLE_GITHUB_APP_INSTALLATION_ID"`
 	Organization      string `envconfig:"CONSOLE_GITHUB_ORGANIZATION"`
 	PrivateKeyPath    string `envconfig:"CONSOLE_GITHUB_PRIVATE_KEY_PATH"`
 }
