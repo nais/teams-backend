@@ -78,10 +78,6 @@ func NewFromConfig(cfg *config.Config, logger auditlogger.Logger) (reconcilers.R
 func (s *gcpReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {
 	client := s.config.Client(ctx)
 
-	if in.Team == nil || in.Team.Slug == nil {
-		return fmt.Errorf("refusing to create team with empty slug")
-	}
-
 	srv, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
 		return fmt.Errorf("retrieve directory client: %s", err)

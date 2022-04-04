@@ -85,10 +85,6 @@ func NewFromConfig(cfg *config.Config, logger auditlogger.Logger) (reconcilers.R
 }
 
 func (s *gitHubReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {
-	if in.Team == nil || in.Team.Slug == nil {
-		return fmt.Errorf("refusing to create team with empty slug")
-	}
-
 	team, err := s.getOrCreateTeam(ctx, in)
 	if err != nil {
 		return err

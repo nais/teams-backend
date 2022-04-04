@@ -6,6 +6,7 @@ package graph
 import (
 	"context"
 	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auth"
 	"github.com/nais/console/pkg/dbmodels"

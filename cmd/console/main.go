@@ -202,6 +202,10 @@ func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems ma
 				Team:            team,
 			}
 
+			if input.Team == nil || input.Team.Slug == nil {
+				panic("BUG: refusing to create team with empty slug")
+			}
+
 			input.Logger().Infof("Starting reconcile")
 			err := reconciler.Reconcile(ctx, input)
 
