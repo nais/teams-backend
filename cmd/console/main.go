@@ -4,17 +4,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/99designs/gqlgen/graphql"
-	"github.com/vektah/gqlparser/v2/gqlerror"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/99designs/gqlgen/graphql"
+	"github.com/vektah/gqlparser/v2/gqlerror"
+
 	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/go-chi/chi"
+	"github.com/go-chi/cors"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/dbmodels"
@@ -26,7 +28,6 @@ import (
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/reconcilers/registry"
 	"github.com/nais/console/pkg/version"
-	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -350,6 +351,15 @@ func setupGraphAPI(db *gorm.DB, console *dbmodels.System, trigger chan<- *dbmode
 
 func setupHTTPServer(cfg *config.Config, db *gorm.DB, handler *graphql_handler.Server) (*http.Server, error) {
 	r := chi.NewRouter()
+
+	corsMiddleware := cors.Handler(cors.Options{
+		//AllowedOrigins: []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"*"},
+		AllowCredentials: true,
+	})
+
+	r.Use(corsMiddleware)
 	r.Get("/", playground.Handler("GraphQL playground", "/query"))
 	r.Route("/query", func(r chi.Router) {
 		r.Use(

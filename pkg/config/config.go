@@ -4,6 +4,14 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
+type Azure struct {
+	Enabled      bool   `envconfig:"CONSOLE_AZURE_ENABLED"`
+	ClientID     string `envconfig:"CONSOLE_AZURE_CLIENT_ID"`
+	ClientSecret string `envconfig:"CONSOLE_AZURE_CLIENT_SECRET"`
+	TenantID     string `envconfig:"CONSOLE_AZURE_TENANT_ID"`
+	RedirectURL  string `envconfig:"CONSOLE_AZURE_REDIRECT_URL"`
+}
+
 type GitHub struct {
 	Enabled           bool   `envconfig:"CONSOLE_GITHUB_ENABLED"`
 	AppID             int64  `envconfig:"CONSOLE_GITHUB_APP_ID"`
@@ -26,6 +34,7 @@ type NaisDeploy struct {
 }
 
 type Config struct {
+	Azure         Azure
 	GitHub        GitHub
 	Google        Google
 	NaisDeploy    NaisDeploy

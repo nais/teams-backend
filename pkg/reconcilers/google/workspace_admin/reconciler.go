@@ -35,10 +35,6 @@ const (
 	OpAddToGKESecurityGroup = "google:workspace-admin:add-to-gke-security-group"
 )
 
-const (
-	teamPrefix = "nais-team"
-)
-
 func init() {
 	registry.Register(Name, NewFromConfig)
 }
@@ -102,7 +98,7 @@ func (s *gcpReconciler) Reconcile(ctx context.Context, in reconcilers.Input) err
 }
 
 func (s *gcpReconciler) getOrCreateGroup(srv *admin_directory_v1.Service, in reconcilers.Input) (*admin_directory_v1.Group, error) {
-	slug := fmt.Sprintf("%s-%s", teamPrefix, *in.Team.Slug)
+	slug := reconcilers.TeamNamePrefix + *in.Team.Slug
 	email := fmt.Sprintf("%s@%s", slug, s.domain)
 
 	grp, err := srv.Groups.Get(email).Do()

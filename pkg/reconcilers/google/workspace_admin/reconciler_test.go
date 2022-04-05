@@ -1,3 +1,5 @@
+//go:build adhoc_integration_test
+
 package google_workspace_admin_reconciler_test
 
 import (

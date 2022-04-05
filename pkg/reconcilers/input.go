@@ -25,6 +25,8 @@ type Input struct {
 
 var ErrReconcilerNotEnabled = fmt.Errorf("reconciler not enabled")
 
+const TeamNamePrefix = "nais-team-"
+
 // Helper method to quickly create an audit log line based on the current synchronization.
 // FIXME: improve API
 func (s *Input) AuditLog(user *dbmodels.User, success bool, action, format string, args ...interface{}) *dbmodels.AuditLog {

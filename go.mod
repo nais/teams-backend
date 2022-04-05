@@ -6,11 +6,11 @@ require (
 	github.com/99designs/gqlgen v0.17.2
 	github.com/bradleyfalzon/ghinstallation/v2 v2.0.4
 	github.com/go-chi/chi v1.5.4
+	github.com/go-chi/cors v1.2.0
 	github.com/google/go-github/v43 v43.0.0
 	github.com/google/uuid v1.3.0
 	github.com/jackc/pgconn v1.11.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/rs/cors v1.8.2
 	github.com/shurcooL/githubv4 v0.0.0-20220115235240-a14260e6f8a2
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
