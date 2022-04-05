@@ -352,14 +352,6 @@ func setupGraphAPI(db *gorm.DB, console *dbmodels.System, trigger chan<- *dbmode
 func setupHTTPServer(cfg *config.Config, db *gorm.DB, handler *graphql_handler.Server) (*http.Server, error) {
 	r := chi.NewRouter()
 
-	corsMiddleware := cors.Handler(cors.Options{
-		//AllowedOrigins: []string{"*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"*"},
-		AllowCredentials: true,
-	})
-
-	r.Use(corsMiddleware)
 	r.Get("/", playground.Handler("GraphQL playground", "/query"))
 	r.Route("/query", func(r chi.Router) {
 		r.Use(
