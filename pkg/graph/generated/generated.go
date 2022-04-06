@@ -66,16 +66,17 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddUsersToTeam   func(childComplexity int, input model.AddUsersToTeamInput) int
-		AssignRoleToTeam func(childComplexity int, input model.AssignRoleInput) int
-		AssignRoleToUser func(childComplexity int, input model.AssignRoleInput) int
-		CreateAPIKey     func(childComplexity int, input model.APIKeyInput) int
-		CreateRole       func(childComplexity int, input model.CreateRoleInput) int
-		CreateTeam       func(childComplexity int, input model.CreateTeamInput) int
-		CreateUser       func(childComplexity int, input model.CreateUserInput) int
-		DeleteAPIKey     func(childComplexity int, input model.APIKeyInput) int
-		UpdateRole       func(childComplexity int, input model.UpdateRoleInput) int
-		UpdateUser       func(childComplexity int, input model.UpdateUserInput) int
+		AddUsersToTeam      func(childComplexity int, input model.AddUsersToTeamInput) int
+		AssignRoleToTeam    func(childComplexity int, input model.AssignRoleInput) int
+		AssignRoleToUser    func(childComplexity int, input model.AssignRoleInput) int
+		CreateAPIKey        func(childComplexity int, input model.APIKeyInput) int
+		CreateRole          func(childComplexity int, input model.CreateRoleInput) int
+		CreateTeam          func(childComplexity int, input model.CreateTeamInput) int
+		CreateUser          func(childComplexity int, input model.CreateUserInput) int
+		DeleteAPIKey        func(childComplexity int, input model.APIKeyInput) int
+		RemoveUsersFromTeam func(childComplexity int, input model.AddUsersToTeamInput) int
+		UpdateRole          func(childComplexity int, input model.UpdateRoleInput) int
+		UpdateUser          func(childComplexity int, input model.UpdateUserInput) int
 	}
 
 	Pagination struct {
@@ -159,6 +160,7 @@ type MutationResolver interface {
 	AssignRoleToTeam(ctx context.Context, input model.AssignRoleInput) (*dbmodels.Team, error)
 	CreateTeam(ctx context.Context, input model.CreateTeamInput) (*dbmodels.Team, error)
 	AddUsersToTeam(ctx context.Context, input model.AddUsersToTeamInput) (*dbmodels.Team, error)
+	RemoveUsersFromTeam(ctx context.Context, input model.AddUsersToTeamInput) (*dbmodels.Team, error)
 	CreateUser(ctx context.Context, input model.CreateUserInput) (*dbmodels.User, error)
 	UpdateUser(ctx context.Context, input model.UpdateUserInput) (*dbmodels.User, error)
 }
@@ -345,6 +347,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.DeleteAPIKey(childComplexity, args["input"].(model.APIKeyInput)), true
+
+	case "Mutation.removeUsersFromTeam":
+		if e.complexity.Mutation.RemoveUsersFromTeam == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_removeUsersFromTeam_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.RemoveUsersFromTeam(childComplexity, args["input"].(model.AddUsersToTeamInput)), true
 
 	case "Mutation.updateRole":
 		if e.complexity.Mutation.UpdateRole == nil {
@@ -820,6 +834,9 @@ extend type Mutation {
 
     "Add one or more users to a team, then return the team in question."
     addUsersToTeam(input: AddUsersToTeamInput!): Team! @auth
+
+    "Remove one or more users from a team, then return team in question."
+    removeUsersFromTeam(input: AddUsersToTeamInput!): Team! @auth
 }
 
 "Query results for teams."
@@ -1074,6 +1091,21 @@ func (ec *executionContext) field_Mutation_deleteAPIKey_args(ctx context.Context
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
 		arg0, err = ec.unmarshalNAPIKeyInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAPIKeyInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_removeUsersFromTeam_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.AddUsersToTeamInput
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNAddUsersToTeamInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAddUsersToTeamInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1945,6 +1977,68 @@ func (ec *executionContext) _Mutation_addUsersToTeam(ctx context.Context, field 
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
 			return ec.resolvers.Mutation().AddUsersToTeam(rctx, args["input"].(model.AddUsersToTeamInput))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Auth == nil {
+				return nil, errors.New("directive auth is not implemented")
+			}
+			return ec.directives.Auth(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*dbmodels.Team); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/dbmodels.Team`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*dbmodels.Team)
+	fc.Result = res
+	return ec.marshalNTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐTeam(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_removeUsersFromTeam(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_removeUsersFromTeam_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().RemoveUsersFromTeam(rctx, args["input"].(model.AddUsersToTeamInput))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -5432,6 +5526,16 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "addUsersToTeam":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_addUsersToTeam(ctx, field)
+			}
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, innerFunc)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "removeUsersFromTeam":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_removeUsersFromTeam(ctx, field)
 			}
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, innerFunc)

@@ -12,6 +12,9 @@ extend type Mutation {
 
     "Add one or more users to a team, then return the team in question."
     addUsersToTeam(input: AddUsersToTeamInput!): Team! @auth
+
+    "Remove one or more users from a team, then return team in question."
+    removeUsersFromTeam(input: AddUsersToTeamInput!): Team! @auth
 }
 
 "Query results for teams."

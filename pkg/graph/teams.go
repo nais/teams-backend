@@ -84,6 +84,40 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 	return team, nil
 }
 
+func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.AddUsersToTeamInput) (*dbmodels.Team, error) {
+	users := make([]*dbmodels.User, 0)
+	team := &dbmodels.Team{}
+	tx := r.db.WithContext(ctx)
+
+	tx.Find(&users, input.UserID)
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+
+	if len(users) != len(input.UserID) {
+		return nil, fmt.Errorf("one or more non-existing user IDs given as parameters")
+	}
+
+	tx.First(team, "id = ?", input.TeamID)
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+
+	// all models populated, check ACL now
+	err := auth.Allowed(ctx, r.console, auth.AccessReadWrite, ResourceTeams, ResourceSpecificTeam.Format(*team.Slug))
+	if err != nil {
+		return nil, err
+	}
+
+	err = r.db.Model(team).Association("Users").Delete(users)
+	if err != nil {
+		return nil, err
+	}
+	tx.Preload("Users").First(team)
+	r.trigger <- team
+	return team, nil
+}
+
 func (r *queryResolver) Teams(ctx context.Context) (*model.Teams, error) {
 	// all models populated, check ACL now
 	err := auth.Allowed(ctx, r.console, auth.AccessRead, ResourceTeams)
