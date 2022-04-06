@@ -25,7 +25,7 @@ type Team {
     name: String!
     purpose: String
     roles: [Role!]!
-    users: Users!
+    users: [User!]!
     metadata: [TeamMetadata!]!
 }
 
@@ -36,8 +36,8 @@ type Role {
     resource: String!
     access_level: String!
     permission: String!
-    users: [User!]!
-    teams: [Team!]!
+    user: User
+    team: Team
 }
 
 # TODO

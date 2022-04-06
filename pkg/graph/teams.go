@@ -147,10 +147,16 @@ func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team
 	}
 
 	team := &dbmodels.Team{}
-	tx := r.db.WithContext(ctx).Where("id = ?", id).First(team)
 
+	tx := r.db.WithContext(ctx).Where("id = ?", id).First(team)
 	if tx.Error != nil {
 		return nil, tx.Error
+	}
+
+	resource := ResourceSpecificTeam.Format(*team.Slug)
+	err = r.db.WithContext(ctx).Model(team).Preload("Roles", "resource = ?", resource).Preload("Roles.System").Association("Users").Find(&team.Users)
+	if err != nil {
+		return nil, err
 	}
 
 	return team, nil
