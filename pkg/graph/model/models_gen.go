@@ -83,6 +83,12 @@ type Roles struct {
 	Nodes      []*dbmodels.Role `json:"nodes"`
 }
 
+type TeamRole struct {
+	// ID of the rolebinding
+	ID   *uuid.UUID `json:"id"`
+	Name string     `json:"name"`
+}
+
 // Query results for teams.
 type Teams struct {
 	Pagination *Pagination      `json:"pagination"`

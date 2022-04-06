@@ -159,11 +159,14 @@ func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team
 		return nil, tx.Error
 	}
 
-	resource := ResourceSpecificTeam.Format(*team.Slug)
-	err = r.db.WithContext(ctx).Model(team).Preload("RoleBindings").Preload("RoleBindings.Role", "resource = ?", resource).Preload("RoleBindings.Role.System").Association("Users").Find(&team.Users)
+	err = r.db.WithContext(ctx).Model(team).
+		Preload("RoleBindings", "team_id = ?", team.ID).
+		Preload("RoleBindings.Role", "resource = ?", ResourceTeams).
+		Preload("RoleBindings.Role.System").
+		Association("Users").
+		Find(&team.Users)
 	if err != nil {
 		return nil, err
 	}
-
 	return team, nil
 }

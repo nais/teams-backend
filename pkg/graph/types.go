@@ -27,6 +27,15 @@ func (r *userResolver) Teams(ctx context.Context, obj *dbmodels.User) (*model.Te
 	}, nil
 }
 
+func (r *userResolver) Roles(ctx context.Context, obj *dbmodels.User) ([]*dbmodels.Role, error) {
+	roles := make([]*dbmodels.Role, 0)
+	err := r.db.WithContext(ctx).Model(obj).Association("RoleBindings").Find(&roles)
+	if err != nil {
+		return nil, err
+	}
+	return roles, nil
+}
+
 // Team returns generated.TeamResolver implementation.
 func (r *Resolver) Team() generated.TeamResolver { return &teamResolver{r} }
 

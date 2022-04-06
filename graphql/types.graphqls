@@ -9,13 +9,18 @@ type Pagination {
     "Maximum number of records included in the dataset."
     limit: Int!
 }
+type TeamRole {
+    "ID of the rolebinding"
+    id: UUID!
+    name: String!
+}
 
 type User {
     id: UUID!
     email: String
     name: String!
     teams: Teams!
-    rolebindings: [RoleBinding!]!
+    roles: [Role!]!
     created_at: Time
 }
 
@@ -32,7 +37,7 @@ type Team {
 # TODO
 type Role {
     id: UUID!
-    system: System!
+    name: String!
     resource: String!
     access_level: String!
     permission: String!
