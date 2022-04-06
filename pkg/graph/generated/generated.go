@@ -150,7 +150,7 @@ type ComplexityRoot struct {
 		Email     func(childComplexity int) int
 		ID        func(childComplexity int) int
 		Name      func(childComplexity int) int
-		Roles     func(childComplexity int) int
+		Roles     func(childComplexity int, teamID *uuid.UUID) int
 		Teams     func(childComplexity int) int
 	}
 
@@ -184,7 +184,7 @@ type TeamResolver interface {
 }
 type UserResolver interface {
 	Teams(ctx context.Context, obj *dbmodels.User) (*model.Teams, error)
-	Roles(ctx context.Context, obj *dbmodels.User) ([]*dbmodels.Role, error)
+	Roles(ctx context.Context, obj *dbmodels.User, teamID *uuid.UUID) ([]*dbmodels.Role, error)
 }
 
 type executableSchema struct {
@@ -676,7 +676,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.User.Roles(childComplexity), true
+		args, err := ec.field_User_roles_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.User.Roles(childComplexity, args["team_id"].(*uuid.UUID)), true
 
 	case "User.teams":
 		if e.complexity.User.Teams == nil {
@@ -916,7 +921,7 @@ type User {
     email: String
     name: String!
     teams: Teams!
-    roles: [Role!]!
+    roles(team_id: UUID!): [Role!]!
     created_at: Time
 }
 
@@ -1247,6 +1252,21 @@ func (ec *executionContext) field_Query_users_args(ctx context.Context, rawArgs 
 		}
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_User_roles_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *uuid.UUID
+	if tmp, ok := rawArgs["team_id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("team_id"))
+		arg0, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["team_id"] = arg0
 	return args, nil
 }
 
@@ -3747,9 +3767,16 @@ func (ec *executionContext) _User_roles(ctx context.Context, field graphql.Colle
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_User_roles_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.User().Roles(rctx, obj)
+		return ec.resolvers.User().Roles(rctx, obj, args["team_id"].(*uuid.UUID))
 	})
 	if err != nil {
 		ec.Error(ctx, err)

@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
@@ -27,12 +28,19 @@ func (r *userResolver) Teams(ctx context.Context, obj *dbmodels.User) (*model.Te
 	}, nil
 }
 
-func (r *userResolver) Roles(ctx context.Context, obj *dbmodels.User) ([]*dbmodels.Role, error) {
+func (r *userResolver) Roles(ctx context.Context, obj *dbmodels.User, teamID *uuid.UUID) ([]*dbmodels.Role, error) {
+	roleBindings := make([]*dbmodels.RoleBinding, 0)
 	roles := make([]*dbmodels.Role, 0)
-	err := r.db.WithContext(ctx).Model(obj).Association("RoleBindings").Find(&roles)
-	if err != nil {
-		return nil, err
+
+	tx := r.db.WithContext(ctx).Model(&dbmodels.RoleBinding{}).Preload("Role").Find(&roleBindings, "user_id = ? AND team_id = ?", obj.ID, *teamID)
+	if tx.Error != nil {
+		return nil, tx.Error
 	}
+
+	for _, rb := range roleBindings {
+		roles = append(roles, rb.Role)
+	}
+
 	return roles, nil
 }
 
