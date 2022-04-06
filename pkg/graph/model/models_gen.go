@@ -63,6 +63,7 @@ type PaginationInput struct {
 
 type QueryRoleInput struct {
 	Pagination *PaginationInput `json:"pagination"`
+	Resource   *string          `json:"resource"`
 	ID         *uuid.UUID       `json:"id"`
 	SystemID   *uuid.UUID       `json:"system_id"`
 	TeamID     *uuid.UUID       `json:"team_id"`

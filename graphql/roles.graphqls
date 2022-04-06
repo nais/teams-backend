@@ -22,6 +22,7 @@ type Roles {
 
 input QueryRoleInput {
     pagination: PaginationInput
+    resource: String
     id: UUID
     system_id: UUID
     team_id: UUID

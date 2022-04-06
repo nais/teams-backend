@@ -773,6 +773,7 @@ type Roles {
 
 input QueryRoleInput {
     pagination: PaginationInput
+    resource: String
     id: UUID
     system_id: UUID
     team_id: UUID
@@ -5128,6 +5129,14 @@ func (ec *executionContext) unmarshalInputQueryRoleInput(ctx context.Context, ob
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pagination"))
 			it.Pagination, err = ec.unmarshalOPaginationInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPaginationInput(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "resource":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resource"))
+			it.Resource, err = ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}

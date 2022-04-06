@@ -77,5 +77,9 @@ Team roles:
     * Deploy using NAIS deploy
 
 * Implement ACLs
+  * Only team owners should be able to edit teams
 
 * Implement remainder of GraphQL API
+  * Profile endpoint
+  * Audit log
+  * ACL management
