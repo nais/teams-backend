@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
@@ -68,6 +69,8 @@ func (s *azureReconciler) Reconcile(ctx context.Context, in reconcilers.Input) e
 	if err != nil {
 		return err
 	}
+
+	// FIXME: support changing metadata (group name, description)
 
 	err = s.connectUsers(ctx, grp, in)
 	if err != nil {
@@ -345,7 +348,7 @@ func missingUsers(members []*Member, users []*dbmodels.User) []*dbmodels.User {
 		userMap[*user.Email] = user
 	}
 	for _, member := range members {
-		delete(userMap, member.Mail)
+		delete(userMap, strings.ToLower(member.Mail))
 	}
 	users = make([]*dbmodels.User, 0, len(userMap))
 	for _, user := range userMap {
@@ -359,7 +362,7 @@ func missingUsers(members []*Member, users []*dbmodels.User) []*dbmodels.User {
 func extraMembers(members []*Member, users []*dbmodels.User) []*Member {
 	memberMap := make(map[string]*Member)
 	for _, member := range members {
-		memberMap[member.Mail] = member
+		memberMap[strings.ToLower(member.Mail)] = member
 	}
 	for _, user := range users {
 		if user.Email == nil {
