@@ -41,6 +41,7 @@ type Config struct {
 type ResolverRoot interface {
 	Mutation() MutationResolver
 	Query() QueryResolver
+	Team() TeamResolver
 	User() UserResolver
 }
 
@@ -96,8 +97,13 @@ type ComplexityRoot struct {
 		Permission  func(childComplexity int) int
 		Resource    func(childComplexity int) int
 		System      func(childComplexity int) int
-		Team        func(childComplexity int) int
-		User        func(childComplexity int) int
+	}
+
+	RoleBinding struct {
+		ID   func(childComplexity int) int
+		Role func(childComplexity int) int
+		Team func(childComplexity int) int
+		User func(childComplexity int) int
 	}
 
 	Roles struct {
@@ -135,12 +141,12 @@ type ComplexityRoot struct {
 	}
 
 	User struct {
-		CreatedAt func(childComplexity int) int
-		Email     func(childComplexity int) int
-		ID        func(childComplexity int) int
-		Name      func(childComplexity int) int
-		Roles     func(childComplexity int) int
-		Teams     func(childComplexity int) int
+		CreatedAt    func(childComplexity int) int
+		Email        func(childComplexity int) int
+		ID           func(childComplexity int) int
+		Name         func(childComplexity int) int
+		RoleBindings func(childComplexity int) int
+		Teams        func(childComplexity int) int
 	}
 
 	Users struct {
@@ -167,6 +173,9 @@ type QueryResolver interface {
 	Teams(ctx context.Context) (*model.Teams, error)
 	Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team, error)
 	Users(ctx context.Context, input *model.QueryUserInput) (*model.Users, error)
+}
+type TeamResolver interface {
+	Roles(ctx context.Context, obj *dbmodels.Team) ([]*dbmodels.Role, error)
 }
 type UserResolver interface {
 	Teams(ctx context.Context, obj *dbmodels.User) (*model.Teams, error)
@@ -474,19 +483,33 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Role.System(childComplexity), true
 
-	case "Role.team":
-		if e.complexity.Role.Team == nil {
+	case "RoleBinding.id":
+		if e.complexity.RoleBinding.ID == nil {
 			break
 		}
 
-		return e.complexity.Role.Team(childComplexity), true
+		return e.complexity.RoleBinding.ID(childComplexity), true
 
-	case "Role.user":
-		if e.complexity.Role.User == nil {
+	case "RoleBinding.role":
+		if e.complexity.RoleBinding.Role == nil {
 			break
 		}
 
-		return e.complexity.Role.User(childComplexity), true
+		return e.complexity.RoleBinding.Role(childComplexity), true
+
+	case "RoleBinding.team":
+		if e.complexity.RoleBinding.Team == nil {
+			break
+		}
+
+		return e.complexity.RoleBinding.Team(childComplexity), true
+
+	case "RoleBinding.user":
+		if e.complexity.RoleBinding.User == nil {
+			break
+		}
+
+		return e.complexity.RoleBinding.User(childComplexity), true
 
 	case "Roles.nodes":
 		if e.complexity.Roles.Nodes == nil {
@@ -628,12 +651,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.User.Name(childComplexity), true
 
-	case "User.roles":
-		if e.complexity.User.Roles == nil {
+	case "User.rolebindings":
+		if e.complexity.User.RoleBindings == nil {
 			break
 		}
 
-		return e.complexity.User.Roles(childComplexity), true
+		return e.complexity.User.RoleBindings(childComplexity), true
 
 	case "User.teams":
 		if e.complexity.User.Teams == nil {
@@ -868,7 +891,7 @@ type User {
     email: String
     name: String!
     teams: Teams!
-    roles: [Role!]!
+    rolebindings: [RoleBinding!]!
     created_at: Time
 }
 
@@ -889,6 +912,12 @@ type Role {
     resource: String!
     access_level: String!
     permission: String!
+}
+
+# TODO
+type RoleBinding {
+    id: UUID!
+    role: Role!
     user: User
     team: Team
 }
@@ -2782,7 +2811,7 @@ func (ec *executionContext) _Role_permission(ctx context.Context, field graphql.
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Role_user(ctx context.Context, field graphql.CollectedField, obj *dbmodels.Role) (ret graphql.Marshaler) {
+func (ec *executionContext) _RoleBinding_id(ctx context.Context, field graphql.CollectedField, obj *dbmodels.RoleBinding) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2790,7 +2819,77 @@ func (ec *executionContext) _Role_user(ctx context.Context, field graphql.Collec
 		}
 	}()
 	fc := &graphql.FieldContext{
-		Object:     "Role",
+		Object:     "RoleBinding",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*uuid.UUID)
+	fc.Result = res
+	return ec.marshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _RoleBinding_role(ctx context.Context, field graphql.CollectedField, obj *dbmodels.RoleBinding) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "RoleBinding",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Role, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*dbmodels.Role)
+	fc.Result = res
+	return ec.marshalNRole2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐRole(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _RoleBinding_user(ctx context.Context, field graphql.CollectedField, obj *dbmodels.RoleBinding) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "RoleBinding",
 		Field:      field,
 		Args:       nil,
 		IsMethod:   false,
@@ -2814,7 +2913,7 @@ func (ec *executionContext) _Role_user(ctx context.Context, field graphql.Collec
 	return ec.marshalOUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐUser(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Role_team(ctx context.Context, field graphql.CollectedField, obj *dbmodels.Role) (ret graphql.Marshaler) {
+func (ec *executionContext) _RoleBinding_team(ctx context.Context, field graphql.CollectedField, obj *dbmodels.RoleBinding) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2822,7 +2921,7 @@ func (ec *executionContext) _Role_team(ctx context.Context, field graphql.Collec
 		}
 	}()
 	fc := &graphql.FieldContext{
-		Object:     "Role",
+		Object:     "RoleBinding",
 		Field:      field,
 		Args:       nil,
 		IsMethod:   false,
@@ -3169,14 +3268,14 @@ func (ec *executionContext) _Team_roles(ctx context.Context, field graphql.Colle
 		Object:     "Team",
 		Field:      field,
 		Args:       nil,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Roles, nil
+		return ec.resolvers.Team().Roles(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3537,7 +3636,7 @@ func (ec *executionContext) _User_teams(ctx context.Context, field graphql.Colle
 	return ec.marshalNTeams2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeams(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _User_roles(ctx context.Context, field graphql.CollectedField, obj *dbmodels.User) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_rolebindings(ctx context.Context, field graphql.CollectedField, obj *dbmodels.User) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3555,7 +3654,7 @@ func (ec *executionContext) _User_roles(ctx context.Context, field graphql.Colle
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Roles, nil
+		return obj.RoleBindings, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3567,9 +3666,9 @@ func (ec *executionContext) _User_roles(ctx context.Context, field graphql.Colle
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*dbmodels.Role)
+	res := resTmp.([]*dbmodels.RoleBinding)
 	fc.Result = res
-	return ec.marshalNRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐRoleᚄ(ctx, field.Selections, res)
+	return ec.marshalNRoleBinding2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐRoleBindingᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _User_created_at(ctx context.Context, field graphql.CollectedField, obj *dbmodels.User) (ret graphql.Marshaler) {
@@ -5815,16 +5914,57 @@ func (ec *executionContext) _Role(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var roleBindingImplementors = []string{"RoleBinding"}
+
+func (ec *executionContext) _RoleBinding(ctx context.Context, sel ast.SelectionSet, obj *dbmodels.RoleBinding) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, roleBindingImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("RoleBinding")
+		case "id":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._RoleBinding_id(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "role":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._RoleBinding_role(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "user":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Role_user(ctx, field, obj)
+				return ec._RoleBinding_user(ctx, field, obj)
 			}
 
 			out.Values[i] = innerFunc(ctx)
 
 		case "team":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Role_team(ctx, field, obj)
+				return ec._RoleBinding_team(ctx, field, obj)
 			}
 
 			out.Values[i] = innerFunc(ctx)
@@ -5971,7 +6111,7 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = innerFunc(ctx)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "slug":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
@@ -5981,7 +6121,7 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = innerFunc(ctx)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "name":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
@@ -5991,7 +6131,7 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = innerFunc(ctx)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "purpose":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
@@ -6001,15 +6141,25 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = innerFunc(ctx)
 
 		case "roles":
+			field := field
+
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Team_roles(ctx, field, obj)
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Team_roles(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
 			}
 
-			out.Values[i] = innerFunc(ctx)
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
 
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			})
 		case "users":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Team_users(ctx, field, obj)
@@ -6018,7 +6168,7 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = innerFunc(ctx)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "metadata":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
@@ -6028,7 +6178,7 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = innerFunc(ctx)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -6177,9 +6327,9 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 				return innerFunc(ctx)
 
 			})
-		case "roles":
+		case "rolebindings":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._User_roles(ctx, field, obj)
+				return ec._User_rolebindings(ctx, field, obj)
 			}
 
 			out.Values[i] = innerFunc(ctx)
@@ -6809,6 +6959,60 @@ func (ec *executionContext) marshalNRole2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkg�
 		return graphql.Null
 	}
 	return ec._Role(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNRoleBinding2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐRoleBindingᚄ(ctx context.Context, sel ast.SelectionSet, v []*dbmodels.RoleBinding) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNRoleBinding2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐRoleBinding(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNRoleBinding2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐRoleBinding(ctx context.Context, sel ast.SelectionSet, v *dbmodels.RoleBinding) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._RoleBinding(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNRoles2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRoles(ctx context.Context, sel ast.SelectionSet, v model.Roles) graphql.Marshaler {

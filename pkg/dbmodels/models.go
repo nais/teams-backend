@@ -35,15 +35,15 @@ type Team struct {
 	Purpose  *string         `json:"purpose"`
 	Metadata []*TeamMetadata `json:"-"`
 	Users    []*User         `json:"-" gorm:"many2many:users_teams"`
-	Roles    []*Role         `json:"-"`
+	Systems  []*System       `json:"-" gorm:"many2many:systems_teams"`
 }
 
 type User struct {
 	Model
-	Email *string `json:"email" gorm:"unique"`
-	Name  *string `json:"name" gorm:"not null" example:"plain english"`
-	Teams []*Team `json:"-" gorm:"many2many:users_teams"`
-	Roles []*Role `json:"-"`
+	Email        *string        `json:"email" gorm:"unique"`
+	Name         *string        `json:"name" gorm:"not null" example:"plain english"`
+	Teams        []*Team        `json:"-" gorm:"many2many:users_teams"`
+	RoleBindings []*RoleBinding `json:"-" gorm:"foreignKey:UserID"`
 }
 
 type ApiKey struct {
@@ -68,15 +68,23 @@ type System struct {
 
 type Role struct {
 	Model
-	System      *System    `gorm:"not null"`
-	SystemID    *uuid.UUID `gorm:"not null; index"`
-	Resource    string     `gorm:"not null"` // sub-resource at system (maybe not needed if systems are namespaced, e.g. gcp:buckets)
-	AccessLevel string     `gorm:"not null"` // read, write, R/W, other combinations per system
-	Permission  string     `gorm:"not null"` // allow/deny
-	User        *User      // specific user who is allowed or denied access
-	Team        *Team      // specific team who is allowed or denied access
-	UserID      *uuid.UUID
-	TeamID      *uuid.UUID
+	System       *System        `gorm:"not null"`
+	SystemID     *uuid.UUID     `gorm:"not null; index"`
+	Name         string         `gorm:"uniqueIndex; not null"`
+	Resource     string         `gorm:"not null"` // sub-resource at system (maybe not needed if systems are namespaced, e.g. gcp:buckets)
+	AccessLevel  string         `gorm:"not null"` // read, write, R/W, other combinations per system
+	Permission   string         `gorm:"not null"` // allow/deny
+	RoleBindings []*RoleBinding `gorm:"foreignKey:RoleID"`
+}
+
+type RoleBinding struct {
+	Model
+	Role   *Role      `gorm:"not null"` // which role is granted
+	Team   *Team      `gorm:""`         // role is granted in context of this team
+	User   *User      `gorm:"not null"` // which user is granted this role
+	UserID *uuid.UUID `gorm:"not null; index"`
+	RoleID *uuid.UUID `gorm:"not null; index"`
+	TeamID *uuid.UUID `gorm:"index"`
 }
 
 type Synchronization struct {

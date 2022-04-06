@@ -9,7 +9,7 @@ import (
 )
 
 var userCtxKey = &contextKey{"user"}
-var rolesCtxKey = &contextKey{"roles"}
+var roleBindingsCtxKey = &contextKey{"rolebindings"}
 
 type contextKey struct {
 	name string
@@ -42,49 +42,49 @@ func ContextWithUser(ctx context.Context, user *dbmodels.User) context.Context {
 }
 
 // Finds any authenticated user from the context. Requires that a middleware authenticator has set the user.
-func RolesFromContext(ctx context.Context) []*dbmodels.Role {
-	roles, _ := ctx.Value(rolesCtxKey).([]*dbmodels.Role)
+func RoleBindingsFromContext(ctx context.Context) []*dbmodels.RoleBinding {
+	roles, _ := ctx.Value(roleBindingsCtxKey).([]*dbmodels.RoleBinding)
 	return roles
 }
 
 // Insert user/team roles into a context
-func ContextWithRoles(ctx context.Context, roles []*dbmodels.Role) context.Context {
-	return context.WithValue(ctx, rolesCtxKey, roles)
+func ContextWithRoleBindings(ctx context.Context, roles []*dbmodels.RoleBinding) context.Context {
+	return context.WithValue(ctx, roleBindingsCtxKey, roles)
 }
 
 func Allowed(ctx context.Context, system *dbmodels.System, accessLevel string, resources ...Resource) error {
-	return AllowedRoles(RolesFromContext(ctx), system, accessLevel, resources...)
+	return AllowedRoles(RoleBindingsFromContext(ctx), system, accessLevel, resources...)
 }
 
 // Check if the roles defined in the access control list allow read or write access to one or more specific system resources.
 // Returns nil if action is allowed, or an error if denied.
 //
 // The first matching rule wins out, but note that DENY rules are prioritized before ALLOW rules.
-func AllowedRoles(roles []*dbmodels.Role, system *dbmodels.System, accessLevel string, resources ...Resource) error {
+func AllowedRoles(roleBindings []*dbmodels.RoleBinding, system *dbmodels.System, accessLevel string, resources ...Resource) error {
 
 	//goland:noinspection GoErrorStringFormat
 	unauthorized := fmt.Errorf("YOU DIDN'T SAY THE MAGIC WORD!")
 
 	// Sort 'deny' roles before 'allow' so that we can fail fast.
-	sort.Slice(roles, func(i, j int) bool {
-		return roles[i].Permission > roles[j].Permission
+	sort.Slice(roleBindings, func(i, j int) bool {
+		return roleBindings[i].Role.Permission > roleBindings[j].Role.Permission
 	})
 
-	for _, role := range roles {
+	for _, roleBinding := range roleBindings {
 
 		// Skip unmatching systems
-		if *role.SystemID != *system.ID {
+		if *roleBinding.Role.SystemID != *system.ID {
 			continue
 		}
 
 		for _, resource := range resources {
 			// Skip unmatching resources
-			if Resource(role.Resource) != resource {
+			if Resource(roleBinding.Role.Resource) != resource {
 				continue
 			}
 
 			// At this point, the role we are working with is pointing directly to the resource in question.
-			if role.Permission == PermissionDeny || !hasAccessLevel(accessLevel, role.AccessLevel) {
+			if roleBinding.Role.Permission == PermissionDeny || !hasAccessLevel(accessLevel, roleBinding.Role.AccessLevel) {
 				return unauthorized
 			}
 

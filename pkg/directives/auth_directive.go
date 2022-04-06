@@ -21,36 +21,23 @@ func Auth(db *gorm.DB) Directive {
 			return nil, fmt.Errorf("this endpoint requires authentication")
 		}
 
-		roles, err := loadUserRoles(db, user)
+		roleBindings, err := loadUserRoleBindings(db, user)
 		if err != nil {
 			return nil, err
 		}
 
-		ctx = auth.ContextWithRoles(ctx, roles)
+		ctx = auth.ContextWithRoleBindings(ctx, roleBindings)
 		return next(ctx)
 	}
 }
 
-func loadUserRoles(db *gorm.DB, user *dbmodels.User) ([]*dbmodels.Role, error) {
+func loadUserRoleBindings(db *gorm.DB, user *dbmodels.User) ([]*dbmodels.RoleBinding, error) {
 	u := &dbmodels.User{}
 
-	tx := db.Preload("Roles").Preload("Teams.Roles").Find(u, "id = ?", user.ID)
+	tx := db.Preload("RoleBindings").Preload("RoleBindings.Role").Find(u, "id = ?", user.ID)
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
 
-	return flattenRoles(u), nil
-}
-
-func flattenRoles(user *dbmodels.User) []*dbmodels.Role {
-	roles := make([]*dbmodels.Role, 0)
-	for _, role := range user.Roles {
-		roles = append(roles, role)
-	}
-	for _, team := range user.Teams {
-		for _, role := range team.Roles {
-			roles = append(roles, role)
-		}
-	}
-	return roles
+	return u.RoleBindings, nil
 }

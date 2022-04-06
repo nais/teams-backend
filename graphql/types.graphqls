@@ -15,7 +15,7 @@ type User {
     email: String
     name: String!
     teams: Teams!
-    roles: [Role!]!
+    rolebindings: [RoleBinding!]!
     created_at: Time
 }
 
@@ -36,6 +36,12 @@ type Role {
     resource: String!
     access_level: String!
     permission: String!
+}
+
+# TODO
+type RoleBinding {
+    id: UUID!
+    role: Role!
     user: User
     team: Team
 }

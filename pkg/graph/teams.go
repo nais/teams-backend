@@ -11,6 +11,7 @@ import (
 	"github.com/nais/console/pkg/auth"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/model"
+	"github.com/nais/console/pkg/roles"
 	"gorm.io/gorm"
 )
 
@@ -20,25 +21,30 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		return nil, err
 	}
 
-	// New team
 	team := &dbmodels.Team{
 		Slug:    &input.Slug,
 		Name:    &input.Name,
 		Purpose: input.Purpose,
 	}
 
-	// Assign creator as admin for team
-	role := &dbmodels.Role{
-		System:      r.console,
-		Resource:    string(ResourceSpecificTeam.Format(input.Slug)),
-		AccessLevel: auth.AccessReadWrite,
-		Permission:  auth.PermissionAllow,
-		User:        auth.UserFromContext(ctx),
-	}
-
 	err = r.db.Transaction(func(tx *gorm.DB) error {
+		// New team
 		tx.Create(team)
-		tx.Create(role)
+
+		// Assign creator as administrator for team
+		rolebinding := &dbmodels.RoleBinding{
+			TeamID: team.ID,
+			RoleID: roles.ManageTeam,
+			User:   auth.UserFromContext(ctx),
+		}
+
+		tx.Create(rolebinding)
+
+		err = tx.Model(team).Association("Users").Append(auth.UserFromContext(ctx))
+		if err != nil {
+			return err
+		}
+
 		return tx.Error
 	})
 
@@ -154,7 +160,7 @@ func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team
 	}
 
 	resource := ResourceSpecificTeam.Format(*team.Slug)
-	err = r.db.WithContext(ctx).Model(team).Preload("Roles", "resource = ?", resource).Preload("Roles.System").Association("Users").Find(&team.Users)
+	err = r.db.WithContext(ctx).Model(team).Preload("RoleBindings").Preload("RoleBindings.Role", "resource = ?", resource).Preload("RoleBindings.Role.System").Association("Users").Find(&team.Users)
 	if err != nil {
 		return nil, err
 	}

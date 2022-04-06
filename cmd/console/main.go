@@ -257,6 +257,7 @@ func migrate(db *gorm.DB) error {
 		&dbmodels.ApiKey{},
 		&dbmodels.AuditLog{},
 		&dbmodels.Role{},
+		&dbmodels.RoleBinding{},
 		&dbmodels.Synchronization{},
 		&dbmodels.System{},
 		&dbmodels.TeamMetadata{},

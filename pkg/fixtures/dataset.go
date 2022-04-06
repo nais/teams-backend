@@ -8,6 +8,7 @@ import (
 	"github.com/nais/console/pkg/auth"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph"
+	"github.com/nais/console/pkg/roles"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
@@ -27,8 +28,8 @@ func strp(s string) *string {
 }
 
 const (
-	idRootUser = 0xa0
-	idRootRole = 0xa1
+	idRootUser        = 0xa0
+	idRootRoleBinding = 0xa2
 
 	defaultApiKey = "secret"
 )
@@ -58,12 +59,18 @@ func InsertRootUser(ctx context.Context, db *gorm.DB) error {
 		}
 
 		role := &dbmodels.Role{
-			Model:       pk(idRootRole),
+			Model:       dbmodels.Model{ID: roles.ManageTeam},
 			SystemID:    console.ID,
+			Name:        "Manage team",
 			Resource:    string(graph.ResourceTeams),
 			AccessLevel: auth.AccessReadWrite,
 			Permission:  auth.PermissionAllow,
-			UserID:      serialuuid(idRootUser),
+		}
+
+		rolebinding := &dbmodels.RoleBinding{
+			Model:  pk(idRootRoleBinding),
+			UserID: serialuuid(idRootUser),
+			RoleID: roles.ManageTeam,
 		}
 
 		apikey := &dbmodels.ApiKey{
@@ -73,6 +80,7 @@ func InsertRootUser(ctx context.Context, db *gorm.DB) error {
 
 		tx.Save(rootUser)
 		tx.Save(role)
+		tx.Save(rolebinding)
 		tx.Save(apikey)
 
 		return tx.Error
