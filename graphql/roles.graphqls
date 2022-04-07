@@ -1,37 +1,22 @@
 extend type Query {
     "Search for users."
-    roles(input: QueryRoleInput): Roles! @auth
+    roles: [Role!]! @auth
 }
 
 extend type Mutation {
-    "Create a role, then return the created role."
-    createRole(input: CreateRoleInput!): Role! @auth
-
-    "Update role information, then return the updated role."
-    updateRole(input: UpdateRoleInput!): Role! @auth
-
-    assignRoleToUser(input: AssignRoleInput!): User! @auth
-    assignRoleToTeam(input: AssignRoleInput!): Team! @auth
+    assignRoleToUser(input: AssignRoleInput!): RoleBinding! @auth
+    removeRoleFromUser(input: AssignRoleInput!): Team! @auth
 }
 
 "Query results for roles."
 type Roles {
-    pagination: Pagination!
-    nodes: [Role!]!
-}
-
-input QueryRoleInput {
-    pagination: PaginationInput
-    resource: String
-    id: UUID
-    system_id: UUID
-    team_id: UUID
-    user_id: UUID
+    roles: [Role!]!
 }
 
 input AssignRoleInput {
     role_id: UUID!
-    target_id: UUID!
+    user_id: UUID!
+    team_id: UUID!
 }
 
 input CreateRoleInput {

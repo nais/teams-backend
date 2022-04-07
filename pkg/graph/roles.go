@@ -5,89 +5,34 @@ package graph
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/model"
 )
 
-func (r *mutationResolver) CreateRole(ctx context.Context, input model.CreateRoleInput) (*dbmodels.Role, error) {
-	u := &dbmodels.Role{
-		SystemID:    input.SystemID,
-		Resource:    input.Resource,
-		AccessLevel: input.AccessLevel,
-		Permission:  input.Permission,
+func (r *mutationResolver) AssignRoleToUser(ctx context.Context, input model.AssignRoleInput) (*dbmodels.RoleBinding, error) {
+	rb := &dbmodels.RoleBinding{
+		UserID: input.UserID,
+		RoleID: input.RoleID,
+		TeamID: input.TeamID,
 	}
-	err := r.createDB(ctx, u)
-	return u, err
-}
-
-func (r *mutationResolver) UpdateRole(ctx context.Context, input model.UpdateRoleInput) (*dbmodels.Role, error) {
-	u := &dbmodels.Role{
-		Model: dbmodels.Model{
-			ID: input.ID,
-		},
-		SystemID: input.SystemID,
-	}
-	if input.Resource != nil {
-		u.Resource = *input.Resource
-	}
-	if input.AccessLevel != nil {
-		u.AccessLevel = *input.AccessLevel
-	}
-	if input.Permission != nil {
-		u.Permission = *input.Permission
-	}
-	err := r.updateDB(ctx, u)
-	return u, err
-}
-
-func (r *mutationResolver) AssignRoleToUser(ctx context.Context, input model.AssignRoleInput) (*dbmodels.User, error) {
-	user := &dbmodels.User{}
-	tx := r.db.WithContext(ctx).First(user, "id = ?", input.TargetID)
+	tx := r.db.WithContext(ctx).Create(rb)
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
-
-	role := &dbmodels.Role{}
-	tx = r.db.WithContext(ctx).First(role, "id = ?", input.RoleID)
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-
-	err := r.db.WithContext(ctx).Model(role).Association("Users").Append(user)
-	if err != nil {
-		return nil, err
-	}
-
-	return user, nil
+	return rb, nil
 }
 
-func (r *mutationResolver) AssignRoleToTeam(ctx context.Context, input model.AssignRoleInput) (*dbmodels.Team, error) {
-	team := &dbmodels.Team{}
-	tx := r.db.WithContext(ctx).First(team, "id = ?", input.TargetID)
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-
-	role := &dbmodels.Role{}
-	tx = r.db.WithContext(ctx).First(role, "id = ?", input.RoleID)
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-
-	err := r.db.WithContext(ctx).Model(role).Association("Teams").Append(team)
-	if err != nil {
-		return nil, err
-	}
-
-	return team, nil
+func (r *mutationResolver) RemoveRoleFromUser(ctx context.Context, input model.AssignRoleInput) (*dbmodels.Team, error) {
+	panic(fmt.Errorf("not implemented"))
 }
 
-func (r *queryResolver) Roles(ctx context.Context, input *model.QueryRoleInput) (*model.Roles, error) {
+func (r *queryResolver) Roles(ctx context.Context) ([]*dbmodels.Role, error) {
 	roles := make([]*dbmodels.Role, 0)
-	pagination, err := r.paginatedQuery(ctx, input, &dbmodels.Role{}, &roles)
-	return &model.Roles{
-		Pagination: pagination,
-		Nodes:      roles,
-	}, err
+	tx := r.db.WithContext(ctx).Find(&roles)
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+	return roles, nil
 }

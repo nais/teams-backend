@@ -23,8 +23,9 @@ type AddUsersToTeamInput struct {
 }
 
 type AssignRoleInput struct {
-	RoleID   *uuid.UUID `json:"role_id"`
-	TargetID *uuid.UUID `json:"target_id"`
+	RoleID *uuid.UUID `json:"role_id"`
+	UserID *uuid.UUID `json:"user_id"`
+	TeamID *uuid.UUID `json:"team_id"`
 }
 
 type CreateRoleInput struct {
@@ -61,15 +62,6 @@ type PaginationInput struct {
 	Limit  int `json:"limit"`
 }
 
-type QueryRoleInput struct {
-	Pagination *PaginationInput `json:"pagination"`
-	Resource   *string          `json:"resource"`
-	ID         *uuid.UUID       `json:"id"`
-	SystemID   *uuid.UUID       `json:"system_id"`
-	TeamID     *uuid.UUID       `json:"team_id"`
-	UserID     *uuid.UUID       `json:"user_id"`
-}
-
 type QueryUserInput struct {
 	Pagination *PaginationInput `json:"pagination"`
 	ID         *uuid.UUID       `json:"id"`
@@ -79,8 +71,7 @@ type QueryUserInput struct {
 
 // Query results for roles.
 type Roles struct {
-	Pagination *Pagination      `json:"pagination"`
-	Nodes      []*dbmodels.Role `json:"nodes"`
+	Roles []*dbmodels.Role `json:"roles"`
 }
 
 type TeamRole struct {

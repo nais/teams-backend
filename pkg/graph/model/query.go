@@ -34,22 +34,3 @@ func (in *QueryUserInput) GetPagination() *PaginationInput {
 	}
 	return in.Pagination
 }
-
-func (in *QueryRoleInput) GetQuery() interface{} {
-	if in == nil {
-		return &dbmodels.Role{}
-	}
-	// FIXME: query based on foreign keys
-	return &dbmodels.User{
-		Model: dbmodels.Model{
-			ID: in.ID,
-		},
-	}
-}
-
-func (in *QueryRoleInput) GetPagination() *PaginationInput {
-	if in == nil || in.Pagination == nil {
-		return fallbackPagination
-	}
-	return in.Pagination
-}
