@@ -159,7 +159,7 @@ type MutationResolver interface {
 	CreateAPIKey(ctx context.Context, input model.APIKeyInput) (*model.APIKey, error)
 	DeleteAPIKey(ctx context.Context, input model.APIKeyInput) (bool, error)
 	AssignRoleToUser(ctx context.Context, input model.AssignRoleInput) (*dbmodels.RoleBinding, error)
-	RemoveRoleFromUser(ctx context.Context, input model.AssignRoleInput) (*dbmodels.Team, error)
+	RemoveRoleFromUser(ctx context.Context, input model.AssignRoleInput) (bool, error)
 	CreateTeam(ctx context.Context, input model.CreateTeamInput) (*dbmodels.Team, error)
 	AddUsersToTeam(ctx context.Context, input model.AddUsersToTeamInput) (*dbmodels.Team, error)
 	RemoveUsersFromTeam(ctx context.Context, input model.AddUsersToTeamInput) (*dbmodels.Team, error)
@@ -742,7 +742,7 @@ input APIKeyInput {
 
 extend type Mutation {
     assignRoleToUser(input: AssignRoleInput!): RoleBinding! @auth
-    removeRoleFromUser(input: AssignRoleInput!): Team! @auth
+    removeRoleFromUser(input: AssignRoleInput!): Boolean! @auth
 }
 
 "Query results for roles."
@@ -1696,10 +1696,10 @@ func (ec *executionContext) _Mutation_removeRoleFromUser(ctx context.Context, fi
 		if tmp == nil {
 			return nil, nil
 		}
-		if data, ok := tmp.(*dbmodels.Team); ok {
+		if data, ok := tmp.(bool); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/dbmodels.Team`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be bool`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1711,9 +1711,9 @@ func (ec *executionContext) _Mutation_removeRoleFromUser(ctx context.Context, fi
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*dbmodels.Team)
+	res := resTmp.(bool)
 	fc.Result = res
-	return ec.marshalNTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐTeam(ctx, field.Selections, res)
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_createTeam(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {

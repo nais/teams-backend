@@ -5,7 +5,7 @@ extend type Query {
 
 extend type Mutation {
     assignRoleToUser(input: AssignRoleInput!): RoleBinding! @auth
-    removeRoleFromUser(input: AssignRoleInput!): Team! @auth
+    removeRoleFromUser(input: AssignRoleInput!): Boolean! @auth
 }
 
 "Query results for roles."

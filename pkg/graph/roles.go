@@ -5,10 +5,10 @@ package graph
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/model"
+	"gorm.io/gorm/clause"
 )
 
 func (r *mutationResolver) AssignRoleToUser(ctx context.Context, input model.AssignRoleInput) (*dbmodels.RoleBinding, error) {
@@ -17,15 +17,26 @@ func (r *mutationResolver) AssignRoleToUser(ctx context.Context, input model.Ass
 		RoleID: input.RoleID,
 		TeamID: input.TeamID,
 	}
-	tx := r.db.WithContext(ctx).Create(rb)
+
+	tx := r.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "user_id"}, {Name: "team_id"}, {Name: "role_id"}},
+		DoUpdates: clause.Assignments(map[string]interface{}{"deleted_at": nil}),
+	}).Create(rb)
+
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
 	return rb, nil
 }
 
-func (r *mutationResolver) RemoveRoleFromUser(ctx context.Context, input model.AssignRoleInput) (*dbmodels.Team, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *mutationResolver) RemoveRoleFromUser(ctx context.Context, input model.AssignRoleInput) (bool, error) {
+	rb := &dbmodels.RoleBinding{}
+
+	tx := r.db.WithContext(ctx).First(rb, "user_id = ? AND team_id = ? AND role_id = ?", input.UserID, input.TeamID, input.RoleID).Delete(rb)
+	if tx.Error != nil {
+		return false, tx.Error
+	}
+	return true, nil
 }
 
 func (r *queryResolver) Roles(ctx context.Context) ([]*dbmodels.Role, error) {
