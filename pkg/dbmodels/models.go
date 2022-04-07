@@ -82,9 +82,9 @@ type RoleBinding struct {
 	Role   *Role      `gorm:"not null"` // which role is granted
 	Team   *Team      `gorm:""`         // role is granted in context of this team
 	User   *User      `gorm:"not null"` // which user is granted this role
-	UserID *uuid.UUID `gorm:"not null; index"`
-	RoleID *uuid.UUID `gorm:"not null; index"`
-	TeamID *uuid.UUID `gorm:"index"`
+	UserID *uuid.UUID `gorm:"not null; index:user_role_team_index,unique"`
+	RoleID *uuid.UUID `gorm:"not null; index:user_role_team_index,unique"`
+	TeamID *uuid.UUID `gorm:"index:user_role_team_index,unique"`
 }
 
 type Synchronization struct {
