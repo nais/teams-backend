@@ -41,7 +41,6 @@ type Config struct {
 type ResolverRoot interface {
 	Mutation() MutationResolver
 	Query() QueryResolver
-	Team() TeamResolver
 	User() UserResolver
 }
 
@@ -125,7 +124,6 @@ type ComplexityRoot struct {
 		Metadata func(childComplexity int) int
 		Name     func(childComplexity int) int
 		Purpose  func(childComplexity int) int
-		Roles    func(childComplexity int) int
 		Slug     func(childComplexity int) int
 		Users    func(childComplexity int) int
 	}
@@ -178,9 +176,6 @@ type QueryResolver interface {
 	Teams(ctx context.Context) (*model.Teams, error)
 	Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team, error)
 	Users(ctx context.Context, input *model.QueryUserInput) (*model.Users, error)
-}
-type TeamResolver interface {
-	Roles(ctx context.Context, obj *dbmodels.Team) ([]*dbmodels.Role, error)
 }
 type UserResolver interface {
 	Teams(ctx context.Context, obj *dbmodels.User) (*model.Teams, error)
@@ -580,13 +575,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Team.Purpose(childComplexity), true
 
-	case "Team.roles":
-		if e.complexity.Team.Roles == nil {
-			break
-		}
-
-		return e.complexity.Team.Roles(childComplexity), true
-
 	case "Team.slug":
 		if e.complexity.Team.Slug == nil {
 			break
@@ -930,7 +918,6 @@ type Team {
     slug: String!
     name: String!
     purpose: String
-    roles: [Role!]!
     users: [User!]!
     metadata: [TeamMetadata!]!
 }
@@ -3300,41 +3287,6 @@ func (ec *executionContext) _Team_purpose(ctx context.Context, field graphql.Col
 	res := resTmp.(*string)
 	fc.Result = res
 	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _Team_roles(ctx context.Context, field graphql.CollectedField, obj *dbmodels.Team) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:     "Team",
-		Field:      field,
-		Args:       nil,
-		IsMethod:   true,
-		IsResolver: true,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Team().Roles(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*dbmodels.Role)
-	fc.Result = res
-	return ec.marshalNRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐRoleᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Team_users(ctx context.Context, field graphql.CollectedField, obj *dbmodels.Team) (ret graphql.Marshaler) {
@@ -6233,7 +6185,7 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = innerFunc(ctx)
 
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "slug":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
@@ -6243,7 +6195,7 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = innerFunc(ctx)
 
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "name":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
@@ -6253,7 +6205,7 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = innerFunc(ctx)
 
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "purpose":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
@@ -6262,26 +6214,6 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 
 			out.Values[i] = innerFunc(ctx)
 
-		case "roles":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Team_roles(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
 		case "users":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Team_users(ctx, field, obj)
@@ -6290,7 +6222,7 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = innerFunc(ctx)
 
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "metadata":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
@@ -6300,7 +6232,7 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = innerFunc(ctx)
 
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))

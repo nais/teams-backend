@@ -29,7 +29,6 @@ type Team {
     slug: String!
     name: String!
     purpose: String
-    roles: [Role!]!
     users: [User!]!
     metadata: [TeamMetadata!]!
 }
