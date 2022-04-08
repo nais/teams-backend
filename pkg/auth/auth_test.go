@@ -47,13 +47,15 @@ func TestSimpleAllowDeny(t *testing.T) {
 		},
 	}
 
+	rolebindings := makeRoleBindings(roles)
+
 	// Read access should allow both read and readwrite permissions
-	assert.NoError(t, auth.AllowedRoles(roles, system, auth.AccessRead, allowReadableResource))
-	assert.NoError(t, auth.AllowedRoles(roles, system, auth.AccessRead, allowWritableResource))
+	assert.NoError(t, auth.AllowedRoles(rolebindings, system, auth.AccessRead, allowReadableResource))
+	assert.NoError(t, auth.AllowedRoles(rolebindings, system, auth.AccessRead, allowWritableResource))
 
 	// Write access should apply only to readwrite permission
-	assert.NoError(t, auth.AllowedRoles(roles, system, auth.AccessReadWrite, allowWritableResource))
-	assert.Error(t, auth.AllowedRoles(roles, system, auth.AccessReadWrite, allowReadableResource))
+	assert.NoError(t, auth.AllowedRoles(rolebindings, system, auth.AccessReadWrite, allowWritableResource))
+	assert.Error(t, auth.AllowedRoles(rolebindings, system, auth.AccessReadWrite, allowReadableResource))
 }
 
 // Roles MUST be defined for any resource to be accessible.
@@ -66,12 +68,12 @@ func TestDefaultDeny(t *testing.T) {
 		},
 	}
 
-	roles := make([]*dbmodels.Role, 0)
+	rolebindings := make([]*dbmodels.RoleBinding, 0)
 
-	assert.Error(t, auth.AllowedRoles(roles, system, auth.AccessRead, "you"))
-	assert.Error(t, auth.AllowedRoles(roles, system, auth.AccessRead, "shall"))
-	assert.Error(t, auth.AllowedRoles(roles, system, auth.AccessReadWrite, "not"))
-	assert.Error(t, auth.AllowedRoles(roles, system, auth.AccessReadWrite, "pass"))
+	assert.Error(t, auth.AllowedRoles(rolebindings, system, auth.AccessRead, "you"))
+	assert.Error(t, auth.AllowedRoles(rolebindings, system, auth.AccessRead, "shall"))
+	assert.Error(t, auth.AllowedRoles(rolebindings, system, auth.AccessReadWrite, "not"))
+	assert.Error(t, auth.AllowedRoles(rolebindings, system, auth.AccessReadWrite, "pass"))
 }
 
 // Check that an explicit DENY for a resource overrules an explicit ALLOW.
@@ -101,9 +103,11 @@ func TestAllowDenyOrdering(t *testing.T) {
 		},
 	}
 
+	rolebindings := makeRoleBindings(roles)
+
 	// Access should be denied to both read and write
-	assert.Error(t, auth.AllowedRoles(roles, system, auth.AccessRead, resource))
-	assert.Error(t, auth.AllowedRoles(roles, system, auth.AccessReadWrite, resource))
+	assert.Error(t, auth.AllowedRoles(rolebindings, system, auth.AccessRead, resource))
+	assert.Error(t, auth.AllowedRoles(rolebindings, system, auth.AccessReadWrite, resource))
 }
 
 // Check that denied reads for a resource overrules allowed writes.
@@ -133,8 +137,10 @@ func TestExplicitDeny(t *testing.T) {
 		},
 	}
 
-	assert.Error(t, auth.AllowedRoles(roles, system, auth.AccessRead, resource))
-	assert.Error(t, auth.AllowedRoles(roles, system, auth.AccessReadWrite, resource))
+	rolebindings := makeRoleBindings(roles)
+
+	assert.Error(t, auth.AllowedRoles(rolebindings, system, auth.AccessRead, resource))
+	assert.Error(t, auth.AllowedRoles(rolebindings, system, auth.AccessReadWrite, resource))
 }
 
 // When checking access for multiple resources, fail fast if any of them are denied.
@@ -165,10 +171,23 @@ func TestAnyDenyWins(t *testing.T) {
 		},
 	}
 
-	assert.Error(t, auth.AllowedRoles(roles, system, auth.AccessRead, firstResource, secondResource))
-	assert.Error(t, auth.AllowedRoles(roles, system, auth.AccessReadWrite, firstResource, secondResource))
+	rolebindings := makeRoleBindings(roles)
+
+	assert.Error(t, auth.AllowedRoles(rolebindings, system, auth.AccessRead, firstResource, secondResource))
+	assert.Error(t, auth.AllowedRoles(rolebindings, system, auth.AccessReadWrite, firstResource, secondResource))
 
 	// Switch ordering
-	assert.Error(t, auth.AllowedRoles(roles, system, auth.AccessRead, secondResource, firstResource))
-	assert.Error(t, auth.AllowedRoles(roles, system, auth.AccessReadWrite, secondResource, firstResource))
+	assert.Error(t, auth.AllowedRoles(rolebindings, system, auth.AccessRead, secondResource, firstResource))
+	assert.Error(t, auth.AllowedRoles(rolebindings, system, auth.AccessReadWrite, secondResource, firstResource))
+}
+
+func makeRoleBindings(roles []*dbmodels.Role) []*dbmodels.RoleBinding {
+	rolebindings := make([]*dbmodels.RoleBinding, 0)
+	for _, role := range roles {
+		rb := &dbmodels.RoleBinding{
+			Role: role,
+		}
+		rolebindings = append(rolebindings, rb)
+	}
+	return rolebindings
 }
