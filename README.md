@@ -76,10 +76,10 @@ Team roles:
     * Connect team group into "nais:developer"
     * Deploy using NAIS deploy
 
-* Implement ACLs
-  * Only team owners should be able to edit teams
-
 * Implement remainder of GraphQL API
   * Profile endpoint
   * Audit log
   * ACL management
+
+* Better error messages in GraphQL API
+  * Don't expose database errors directly

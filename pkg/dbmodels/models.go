@@ -10,15 +10,18 @@ import (
 
 // Base model that all database tables inherit.
 type Model struct {
-	ID          *uuid.UUID     `json:"id" gorm:"primaryKey; type:uuid; default:uuid_generate_v4()"`
-	CreatedAt   time.Time      `json:"created_at" gorm:"<-:create; autoCreateTime; index; not null"`
-	CreatedBy   *User          `json:"-"`
-	UpdatedBy   *User          `json:"-"`
+	ID          *uuid.UUID `json:"id" gorm:"primaryKey; type:uuid; default:uuid_generate_v4()"`
+	CreatedAt   time.Time  `json:"created_at" gorm:"<-:create; autoCreateTime; index; not null"`
+	CreatedBy   *User      `json:"-"`
+	UpdatedBy   *User      `json:"-"`
+	CreatedByID *uuid.UUID `json:"created_by_id" gorm:"type:uuid"`
+	UpdatedByID *uuid.UUID `json:"updated_by_id" gorm:"type:uuid"`
+	UpdatedAt   time.Time  `json:"updated_at" gorm:"autoUpdateTime; not null"`
+}
+
+type SoftDeletes struct {
 	DeletedBy   *User          `json:"-"`
-	CreatedByID *uuid.UUID     `json:"created_by_id" gorm:"type:uuid"`
-	UpdatedByID *uuid.UUID     `json:"updated_by_id" gorm:"type:uuid"`
 	DeletedByID *uuid.UUID     `json:"deleted_by_id" gorm:"type:uuid"`
-	UpdatedAt   time.Time      `json:"updated_at" gorm:"autoUpdateTime; not null"`
 	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
@@ -30,6 +33,7 @@ func (m *Model) GetModel() *Model {
 
 type Team struct {
 	Model
+	SoftDeletes
 	Slug     *string         `json:"slug" gorm:"<-:create; unique; not null"`
 	Name     *string         `json:"name" gorm:"unique; not null"`
 	Purpose  *string         `json:"purpose"`
@@ -40,6 +44,7 @@ type Team struct {
 
 type User struct {
 	Model
+	SoftDeletes
 	Email        *string        `json:"email" gorm:"unique"`
 	Name         *string        `json:"name" gorm:"not null" example:"plain english"`
 	Teams        []*Team        `json:"-" gorm:"many2many:users_teams"`
@@ -48,6 +53,7 @@ type User struct {
 
 type ApiKey struct {
 	Model
+	SoftDeletes
 	APIKey string    `json:"apikey" gorm:"unique; not null"`
 	User   *User     `json:"-"`
 	UserID uuid.UUID `json:"user_id" gorm:"type:uuid; not null"`
@@ -63,11 +69,13 @@ type TeamMetadata struct {
 
 type System struct {
 	Model
+	SoftDeletes
 	Name string `gorm:"uniqueIndex; not null"`
 }
 
 type Role struct {
 	Model
+	SoftDeletes
 	System       *System        `gorm:"not null"`
 	SystemID     *uuid.UUID     `gorm:"not null; index"`
 	Name         string         `gorm:"uniqueIndex; not null"`
@@ -89,10 +97,12 @@ type RoleBinding struct {
 
 type Synchronization struct {
 	Model
+	SoftDeletes
 }
 
 type AuditLog struct {
 	Model
+	SoftDeletes
 	System            *System          `gorm:"not null"`
 	Synchronization   *Synchronization `gorm:"not null"`
 	User              *User            // User object, not subject, i.e. which user was affected by the operation.

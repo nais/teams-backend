@@ -5,7 +5,6 @@ import (
 )
 
 const (
-	ResourceTeams        auth.Resource = "teams"
-	ResourceSpecificTeam auth.Resource = "teams:%s"
-	ResourceCreateTeam   auth.Resource = "createTeam"
+	ResourceTeams      auth.Resource = "teams"
+	ResourceCreateTeam auth.Resource = "createTeam"
 )

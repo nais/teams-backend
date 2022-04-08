@@ -52,15 +52,15 @@ func ContextWithRoleBindings(ctx context.Context, roles []*dbmodels.RoleBinding)
 	return context.WithValue(ctx, roleBindingsCtxKey, roles)
 }
 
-func Allowed(ctx context.Context, system *dbmodels.System, accessLevel string, resources ...Resource) error {
-	return AllowedRoles(RoleBindingsFromContext(ctx), system, accessLevel, resources...)
+func Allowed(ctx context.Context, system *dbmodels.System, team *dbmodels.Team, accessLevel string, resources ...Resource) error {
+	return AllowedRoles(RoleBindingsFromContext(ctx), system, team, accessLevel, resources...)
 }
 
 // Check if the roles defined in the access control list allow read or write access to one or more specific system resources.
 // Returns nil if action is allowed, or an error if denied.
 //
 // The first matching rule wins out, but note that DENY rules are prioritized before ALLOW rules.
-func AllowedRoles(roleBindings []*dbmodels.RoleBinding, system *dbmodels.System, accessLevel string, resources ...Resource) error {
+func AllowedRoles(roleBindings []*dbmodels.RoleBinding, system *dbmodels.System, team *dbmodels.Team, accessLevel string, resources ...Resource) error {
 
 	//goland:noinspection GoErrorStringFormat
 	unauthorized := fmt.Errorf("YOU DIDN'T SAY THE MAGIC WORD!")
@@ -74,6 +74,11 @@ func AllowedRoles(roleBindings []*dbmodels.RoleBinding, system *dbmodels.System,
 
 		// Skip unmatching systems
 		if *roleBinding.Role.SystemID != *system.ID {
+			continue
+		}
+
+		// If a team permission is needed, check that the rolebinding team matches, or is set to nil (global permission).
+		if team != nil && roleBinding.Team != nil && *roleBinding.Team.ID != *team.ID {
 			continue
 		}
 

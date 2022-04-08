@@ -8,7 +8,6 @@ import (
 
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/model"
-	"gorm.io/gorm/clause"
 )
 
 func (r *mutationResolver) AssignRoleToUser(ctx context.Context, input model.AssignRoleInput) (*dbmodels.RoleBinding, error) {
@@ -18,11 +17,7 @@ func (r *mutationResolver) AssignRoleToUser(ctx context.Context, input model.Ass
 		TeamID: input.TeamID,
 	}
 
-	// FIXME: should rolebindings have soft deletes?
-	tx := r.db.WithContext(ctx).Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "user_id"}, {Name: "team_id"}, {Name: "role_id"}},
-		DoUpdates: clause.Assignments(map[string]interface{}{"deleted_at": nil}),
-	}).Create(rb)
+	tx := r.db.WithContext(ctx).Create(rb)
 
 	if tx.Error != nil {
 		return nil, tx.Error

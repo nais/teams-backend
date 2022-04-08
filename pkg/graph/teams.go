@@ -16,7 +16,7 @@ import (
 )
 
 func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*dbmodels.Team, error) {
-	err := auth.Allowed(ctx, r.console, auth.AccessReadWrite, ResourceTeams, ResourceCreateTeam)
+	err := auth.Allowed(ctx, r.console, nil, auth.AccessReadWrite, ResourceTeams, ResourceCreateTeam)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,8 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 	}
 
 	// all models populated, check ACL now
-	err := auth.Allowed(ctx, r.console, auth.AccessReadWrite, ResourceTeams, ResourceSpecificTeam.Format(*team.Slug))
+	err := auth.Allowed(ctx, r.console, team, auth.AccessReadWrite, ResourceTeams)
+
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +111,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 	}
 
 	// all models populated, check ACL now
-	err := auth.Allowed(ctx, r.console, auth.AccessReadWrite, ResourceTeams, ResourceSpecificTeam.Format(*team.Slug))
+	err := auth.Allowed(ctx, r.console, team, auth.AccessReadWrite, ResourceTeams)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +127,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 
 func (r *queryResolver) Teams(ctx context.Context) (*model.Teams, error) {
 	// all models populated, check ACL now
-	err := auth.Allowed(ctx, r.console, auth.AccessRead, ResourceTeams)
+	err := auth.Allowed(ctx, r.console, nil, auth.AccessRead, ResourceTeams)
 	if err != nil {
 		return nil, err
 	}
@@ -147,16 +148,16 @@ func (r *queryResolver) Teams(ctx context.Context) (*model.Teams, error) {
 }
 
 func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team, error) {
-	err := auth.Allowed(ctx, r.console, auth.AccessRead, ResourceTeams)
-	if err != nil {
-		return nil, err
-	}
-
 	team := &dbmodels.Team{}
 
 	tx := r.db.WithContext(ctx).Where("id = ?", id).First(team)
 	if tx.Error != nil {
 		return nil, tx.Error
+	}
+
+	err := auth.Allowed(ctx, r.console, team, auth.AccessRead, ResourceTeams)
+	if err != nil {
+		return nil, err
 	}
 
 	err = r.db.WithContext(ctx).Model(team).
