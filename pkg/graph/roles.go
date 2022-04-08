@@ -18,6 +18,7 @@ func (r *mutationResolver) AssignRoleToUser(ctx context.Context, input model.Ass
 		TeamID: input.TeamID,
 	}
 
+	// FIXME: should rolebindings have soft deletes?
 	tx := r.db.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "user_id"}, {Name: "team_id"}, {Name: "role_id"}},
 		DoUpdates: clause.Assignments(map[string]interface{}{"deleted_at": nil}),
