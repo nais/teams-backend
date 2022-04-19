@@ -4,6 +4,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
+// Azure reconciler
 type Azure struct {
 	Enabled      bool   `envconfig:"CONSOLE_AZURE_ENABLED"`
 	ClientID     string `envconfig:"CONSOLE_AZURE_CLIENT_ID"`
@@ -12,6 +13,7 @@ type Azure struct {
 	RedirectURL  string `envconfig:"CONSOLE_AZURE_REDIRECT_URL"`
 }
 
+// GitHub reconciler
 type GitHub struct {
 	Enabled           bool   `envconfig:"CONSOLE_GITHUB_ENABLED"`
 	AppID             int64  `envconfig:"CONSOLE_GITHUB_APP_ID"`
@@ -20,6 +22,7 @@ type GitHub struct {
 	PrivateKeyPath    string `envconfig:"CONSOLE_GITHUB_PRIVATE_KEY_PATH"`
 }
 
+// Google workspace admin reconciler
 type Google struct {
 	Enabled         bool   `envconfig:"CONSOLE_GOOGLE_ENABLED"`
 	CredentialsFile string `envconfig:"CONSOLE_GOOGLE_CREDENTIALS_FILE"`
@@ -27,16 +30,26 @@ type Google struct {
 	Domain          string `envconfig:"CONSOLE_GOOGLE_DOMAIN"`
 }
 
+// Nais deploy reconciler
 type NaisDeploy struct {
 	Enabled      bool   `envconfig:"CONSOLE_NAIS_DEPLOY_ENABLED"`
 	Endpoint     string `envconfig:"CONSOLE_NAIS_DEPLOY_ENDPOINT"`
 	ProvisionKey string `envconfig:"CONSOLE_NAIS_DEPLOY_PROVISION_KEY"`
 }
 
+// User synchronizer
+type UserSync struct {
+	Enabled         bool   `envconfig:"CONSOLE_USERSYNC_ENABLED"`
+	CredentialsFile string `envconfig:"CONSOLE_USERSYNC_CREDENTIALS_FILE"`
+	DelegatedUser   string `envconfig:"CONSOLE_USERSYNC_DELEGATED_USER"`
+	Domain          string `envconfig:"CONSOLE_USERSYNC_DOMAIN"`
+}
+
 type Config struct {
 	Azure         Azure
 	GitHub        GitHub
 	Google        Google
+	UserSync      UserSync
 	NaisDeploy    NaisDeploy
 	DatabaseURL   string `envconfig:"CONSOLE_DATABASE_URL"`
 	ListenAddress string `envconfig:"CONSOLE_LISTEN_ADDRESS"`

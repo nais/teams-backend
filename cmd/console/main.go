@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/99designs/gqlgen/graphql"
+	"github.com/nais/console/pkg/usersync"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 
 	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
@@ -143,6 +144,13 @@ func run() error {
 		}
 	}()
 
+	// User synchronizer
+	usersyncer, err := usersync.NewFromConfig(cfg, db, logger)
+	if err != nil {
+		return err
+	}
+	userSyncTimer := time.NewTimer(1 * time.Millisecond)
+
 	for ctx.Err() == nil {
 		select {
 		case <-ctx.Done():
@@ -173,6 +181,15 @@ func run() error {
 			}
 
 			log.Infof("Reconciliation complete.")
+
+		case <-userSyncTimer.C:
+			ctx, cancel := context.WithTimeout(ctx, time.Second*30)
+			err = usersyncer.FetchAll(ctx)
+			cancel()
+			if err != nil {
+				log.Error(err)
+			}
+			userSyncTimer.Reset(30 * time.Second)
 		}
 	}
 
