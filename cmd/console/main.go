@@ -145,11 +145,16 @@ func run() error {
 	}()
 
 	// User synchronizer
+	userSyncTimer := time.NewTimer(1 * time.Second)
 	usersyncer, err := usersync.NewFromConfig(cfg, db, logger)
 	if err != nil {
-		return err
+		userSyncTimer.Stop()
+		if err == usersync.ErrNotEnabled {
+			log.Warnf("User synchronization disabled: %s", err)
+		} else {
+			return err
+		}
 	}
-	userSyncTimer := time.NewTimer(1 * time.Millisecond)
 
 	for ctx.Err() == nil {
 		select {

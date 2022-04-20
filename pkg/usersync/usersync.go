@@ -2,6 +2,7 @@ package usersync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 
@@ -32,6 +33,10 @@ const (
 	OpDelete     = "usersync:delete"
 )
 
+var (
+	ErrNotEnabled = errors.New("disabled by configuration")
+)
+
 func New(logger auditlogger.Logger, db *gorm.DB, domain string, config *jwt.Config) *userSynchronizer {
 	return &userSynchronizer{
 		config: config,
@@ -43,7 +48,7 @@ func New(logger auditlogger.Logger, db *gorm.DB, domain string, config *jwt.Conf
 
 func NewFromConfig(cfg *config.Config, db *gorm.DB, logger auditlogger.Logger) (*userSynchronizer, error) {
 	if !cfg.UserSync.Enabled {
-		return nil, reconcilers.ErrReconcilerNotEnabled
+		return nil, ErrNotEnabled
 	}
 
 	b, err := ioutil.ReadFile(cfg.UserSync.CredentialsFile)
