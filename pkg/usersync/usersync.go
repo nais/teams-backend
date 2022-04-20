@@ -26,13 +26,8 @@ type userSynchronizer struct {
 }
 
 const (
-	Name                    = "google:workspace-admin"
-	OpCreate                = "google:workspace-admin:create"
-	OpAddMember             = "google:workspace-admin:add-member"
-	OpAddMembers            = "google:workspace-admin:add-members"
-	OpDeleteMember          = "google:workspace-admin:delete-member"
-	OpDeleteMembers         = "google:workspace-admin:delete-members"
-	OpAddToGKESecurityGroup = "google:workspace-admin:add-to-gke-security-group"
+	OpCreate = "usersync:create"
+	OpDelete = "usersync:delete"
 )
 
 func New(logger auditlogger.Logger, db *gorm.DB, domain string, config *jwt.Config) *userSynchronizer {
@@ -97,7 +92,7 @@ func (s *userSynchronizer) FetchAll(ctx context.Context) error {
 
 				tx = tx.Create(localUser)
 				if tx.Error == nil {
-					s.logger.UserLogf(reconcilers.Input{System: &dbmodels.System{}}, "usersync:create", localUser, "Local user created")
+					s.logger.UserLogf(reconcilers.Input{System: &dbmodels.System{}}, OpCreate, localUser, "Local user created")
 				}
 			}
 
@@ -124,8 +119,10 @@ func (s *userSynchronizer) FetchAll(ctx context.Context) error {
 
 			tx = tx.Delete(localUser)
 			if tx.Error != nil {
-				return fmt.Errorf("delete local user %s: %w", localUser.Email, tx.Error)
+				return fmt.Errorf("delete local user %s: %w", *localUser.Email, tx.Error)
 			}
+
+			s.logger.UserLogf(reconcilers.Input{System: &dbmodels.System{}}, OpDelete, localUser, "Local user deleted")
 		}
 
 		return tx.Error
