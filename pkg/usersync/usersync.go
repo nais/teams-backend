@@ -88,12 +88,9 @@ func (s *userSynchronizer) FetchAll(ctx context.Context) error {
 		for _, remoteUser := range resp.Users {
 			localUser := &dbmodels.User{}
 
-			// If we don't shadow this variable, it will bug out in the next iteration, i.e. query for two e-mail addresses.
-			// BUG?
-			tx := tx.First(localUser, "email = ?", remoteUser.PrimaryEmail)
-
-			if tx.Error != nil {
-				localUser := &dbmodels.User{
+			stmt := s.db.First(localUser, "email = ?", remoteUser.PrimaryEmail)
+			if stmt.Error != nil {
+				localUser = &dbmodels.User{
 					Email: strp(remoteUser.PrimaryEmail),
 					Name:  strp(remoteUser.Name.FullName),
 				}
