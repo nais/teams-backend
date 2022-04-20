@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/auth"
+	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/roles"
@@ -16,7 +16,7 @@ import (
 )
 
 func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*dbmodels.Team, error) {
-	err := auth.Allowed(ctx, r.console, nil, auth.AccessReadWrite, ResourceTeams, ResourceCreateTeam)
+	err := authz.Allowed(ctx, r.console, nil, authz.AccessReadWrite, ResourceTeams, ResourceCreateTeam)
 	if err != nil {
 		return nil, err
 	}
@@ -35,12 +35,12 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		rolebinding := &dbmodels.RoleBinding{
 			TeamID: team.ID,
 			RoleID: roles.ManageTeam,
-			User:   auth.UserFromContext(ctx),
+			User:   authz.UserFromContext(ctx),
 		}
 
 		tx.Create(rolebinding)
 
-		err = tx.Model(team).Association("Users").Append(auth.UserFromContext(ctx))
+		err = tx.Model(team).Association("Users").Append(authz.UserFromContext(ctx))
 		if err != nil {
 			return err
 		}
@@ -76,7 +76,7 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 	}
 
 	// all models populated, check ACL now
-	err := auth.Allowed(ctx, r.console, team, auth.AccessReadWrite, ResourceTeams)
+	err := authz.Allowed(ctx, r.console, team, authz.AccessReadWrite, ResourceTeams)
 
 	if err != nil {
 		return nil, err
@@ -111,7 +111,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 	}
 
 	// all models populated, check ACL now
-	err := auth.Allowed(ctx, r.console, team, auth.AccessReadWrite, ResourceTeams)
+	err := authz.Allowed(ctx, r.console, team, authz.AccessReadWrite, ResourceTeams)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +127,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 
 func (r *queryResolver) Teams(ctx context.Context) (*model.Teams, error) {
 	// all models populated, check ACL now
-	err := auth.Allowed(ctx, r.console, nil, auth.AccessRead, ResourceTeams)
+	err := authz.Allowed(ctx, r.console, nil, authz.AccessRead, ResourceTeams)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +155,7 @@ func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team
 		return nil, tx.Error
 	}
 
-	err := auth.Allowed(ctx, r.console, team, auth.AccessRead, ResourceTeams)
+	err := authz.Allowed(ctx, r.console, team, authz.AccessRead, ResourceTeams)
 	if err != nil {
 		return nil, err
 	}

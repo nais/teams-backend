@@ -1,10 +1,10 @@
-package auth_test
+package authz_test
 
 import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/auth"
+	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/stretchr/testify/assert"
 )
@@ -30,32 +30,32 @@ func TestSimpleAllowDeny(t *testing.T) {
 		{
 			SystemID:    &unusedSystem,
 			Resource:    allowReadableResource,
-			AccessLevel: auth.AccessRead,
-			Permission:  auth.PermissionDeny,
+			AccessLevel: authz.AccessRead,
+			Permission:  authz.PermissionDeny,
 		},
 		{
 			SystemID:    &systemID,
 			Resource:    allowReadableResource,
-			AccessLevel: auth.AccessRead,
-			Permission:  auth.PermissionAllow,
+			AccessLevel: authz.AccessRead,
+			Permission:  authz.PermissionAllow,
 		},
 		{
 			SystemID:    &systemID,
 			Resource:    allowWritableResource,
-			AccessLevel: auth.AccessReadWrite,
-			Permission:  auth.PermissionAllow,
+			AccessLevel: authz.AccessReadWrite,
+			Permission:  authz.PermissionAllow,
 		},
 	}
 
 	rolebindings := makeRoleBindings(roles)
 
 	// Read access should allow both read and readwrite permissions
-	assert.NoError(t, auth.AllowedRoles(rolebindings, system, nil, auth.AccessRead, allowReadableResource))
-	assert.NoError(t, auth.AllowedRoles(rolebindings, system, nil, auth.AccessRead, allowWritableResource))
+	assert.NoError(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessRead, allowReadableResource))
+	assert.NoError(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessRead, allowWritableResource))
 
 	// Write access should apply only to readwrite permission
-	assert.NoError(t, auth.AllowedRoles(rolebindings, system, nil, auth.AccessReadWrite, allowWritableResource))
-	assert.Error(t, auth.AllowedRoles(rolebindings, system, nil, auth.AccessReadWrite, allowReadableResource))
+	assert.NoError(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessReadWrite, allowWritableResource))
+	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessReadWrite, allowReadableResource))
 }
 
 // Roles MUST be defined for any resource to be accessible.
@@ -70,10 +70,10 @@ func TestDefaultDeny(t *testing.T) {
 
 	rolebindings := make([]*dbmodels.RoleBinding, 0)
 
-	assert.Error(t, auth.AllowedRoles(rolebindings, system, nil, auth.AccessRead, "you"))
-	assert.Error(t, auth.AllowedRoles(rolebindings, system, nil, auth.AccessRead, "shall"))
-	assert.Error(t, auth.AllowedRoles(rolebindings, system, nil, auth.AccessReadWrite, "not"))
-	assert.Error(t, auth.AllowedRoles(rolebindings, system, nil, auth.AccessReadWrite, "pass"))
+	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessRead, "you"))
+	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessRead, "shall"))
+	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessReadWrite, "not"))
+	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessReadWrite, "pass"))
 }
 
 // Check that an explicit DENY for a resource overrules an explicit ALLOW.
@@ -92,22 +92,22 @@ func TestAllowDenyOrdering(t *testing.T) {
 		{
 			SystemID:    &systemID,
 			Resource:    resource,
-			AccessLevel: auth.AccessRead,
-			Permission:  auth.PermissionAllow,
+			AccessLevel: authz.AccessRead,
+			Permission:  authz.PermissionAllow,
 		},
 		{
 			SystemID:    &systemID,
 			Resource:    resource,
-			AccessLevel: auth.AccessRead,
-			Permission:  auth.PermissionDeny,
+			AccessLevel: authz.AccessRead,
+			Permission:  authz.PermissionDeny,
 		},
 	}
 
 	rolebindings := makeRoleBindings(roles)
 
 	// Access should be denied to both read and write
-	assert.Error(t, auth.AllowedRoles(rolebindings, system, nil, auth.AccessRead, resource))
-	assert.Error(t, auth.AllowedRoles(rolebindings, system, nil, auth.AccessReadWrite, resource))
+	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessRead, resource))
+	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessReadWrite, resource))
 }
 
 // Check that denied reads for a resource overrules allowed writes.
@@ -126,21 +126,21 @@ func TestExplicitDeny(t *testing.T) {
 		{
 			SystemID:    &systemID,
 			Resource:    resource,
-			AccessLevel: auth.AccessReadWrite,
-			Permission:  auth.PermissionAllow,
+			AccessLevel: authz.AccessReadWrite,
+			Permission:  authz.PermissionAllow,
 		},
 		{
 			SystemID:    &systemID,
 			Resource:    resource,
-			AccessLevel: auth.AccessRead,
-			Permission:  auth.PermissionDeny,
+			AccessLevel: authz.AccessRead,
+			Permission:  authz.PermissionDeny,
 		},
 	}
 
 	rolebindings := makeRoleBindings(roles)
 
-	assert.Error(t, auth.AllowedRoles(rolebindings, system, nil, auth.AccessRead, resource))
-	assert.Error(t, auth.AllowedRoles(rolebindings, system, nil, auth.AccessReadWrite, resource))
+	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessRead, resource))
+	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessReadWrite, resource))
 }
 
 // When checking access for multiple resources, fail fast if any of them are denied.
@@ -160,25 +160,25 @@ func TestAnyDenyWins(t *testing.T) {
 		{
 			SystemID:    &systemID,
 			Resource:    firstResource,
-			AccessLevel: auth.AccessReadWrite,
-			Permission:  auth.PermissionAllow,
+			AccessLevel: authz.AccessReadWrite,
+			Permission:  authz.PermissionAllow,
 		},
 		{
 			SystemID:    &systemID,
 			Resource:    secondResource,
-			AccessLevel: auth.AccessRead,
-			Permission:  auth.PermissionDeny,
+			AccessLevel: authz.AccessRead,
+			Permission:  authz.PermissionDeny,
 		},
 	}
 
 	rolebindings := makeRoleBindings(roles)
 
-	assert.Error(t, auth.AllowedRoles(rolebindings, system, nil, auth.AccessRead, firstResource, secondResource))
-	assert.Error(t, auth.AllowedRoles(rolebindings, system, nil, auth.AccessReadWrite, firstResource, secondResource))
+	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessRead, firstResource, secondResource))
+	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessReadWrite, firstResource, secondResource))
 
 	// Switch ordering
-	assert.Error(t, auth.AllowedRoles(rolebindings, system, nil, auth.AccessRead, secondResource, firstResource))
-	assert.Error(t, auth.AllowedRoles(rolebindings, system, nil, auth.AccessReadWrite, secondResource, firstResource))
+	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessRead, secondResource, firstResource))
+	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessReadWrite, secondResource, firstResource))
 }
 
 func makeRoleBindings(roles []*dbmodels.Role) []*dbmodels.RoleBinding {

@@ -45,12 +45,19 @@ type UserSync struct {
 	Domain          string `envconfig:"CONSOLE_USERSYNC_DOMAIN"`
 }
 
+type OAuth struct {
+	ClientID     string `envconfig:"CONSOLE_OAUTH_CLIENT_ID"`
+	ClientSecret string `envconfig:"CONSOLE_OAUTH_CLIENT_SECRET"`
+	RedirectURL  string `envconfig:"CONSOLE_OAUTH_REDIRECT_URL"`
+}
+
 type Config struct {
 	Azure         Azure
 	GitHub        GitHub
 	Google        Google
 	UserSync      UserSync
 	NaisDeploy    NaisDeploy
+	OAuth         OAuth
 	DatabaseURL   string `envconfig:"CONSOLE_DATABASE_URL"`
 	ListenAddress string `envconfig:"CONSOLE_LISTEN_ADDRESS"`
 }

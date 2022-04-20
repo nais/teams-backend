@@ -11,14 +11,12 @@ import (
 	"time"
 
 	"github.com/99designs/gqlgen/graphql"
-	"github.com/nais/console/pkg/usersync"
-	"github.com/vektah/gqlparser/v2/gqlerror"
-
 	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
 	"github.com/nais/console/pkg/auditlogger"
+	"github.com/nais/console/pkg/authn"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/directives"
@@ -28,8 +26,10 @@ import (
 	"github.com/nais/console/pkg/middleware"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/reconcilers/registry"
+	"github.com/nais/console/pkg/usersync"
 	"github.com/nais/console/pkg/version"
 	log "github.com/sirupsen/logrus"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -92,8 +92,9 @@ func run() error {
 	}
 	log.Infof("Initialized %d reconcilers.", len(recs))
 
+	authhandler := setupAuthHandler(cfg)
 	handler := setupGraphAPI(db, sysEntries["console"], trigger)
-	srv, err := setupHTTPServer(cfg, db, handler)
+	srv, err := setupHTTPServer(cfg, db, handler, authhandler)
 	if err != nil {
 		return err
 	}
@@ -267,6 +268,13 @@ func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems ma
 	return nil
 }
 
+func setupAuthHandler(cfg *config.Config) *authn.Handler {
+	cf := authn.NewGoogle(cfg.OAuth.ClientID, cfg.OAuth.ClientSecret, cfg.OAuth.RedirectURL)
+	store := authn.NewStore()
+	handler := authn.New(cf, store)
+	return handler
+}
+
 func setupLogging() {
 	log.SetFormatter(&log.JSONFormatter{
 		TimestampFormat: time.RFC3339Nano,
@@ -382,7 +390,7 @@ func setupGraphAPI(db *gorm.DB, console *dbmodels.System, trigger chan<- *dbmode
 	return handler
 }
 
-func setupHTTPServer(cfg *config.Config, db *gorm.DB, handler *graphql_handler.Server) (*http.Server, error) {
+func setupHTTPServer(cfg *config.Config, db *gorm.DB, graphapi *graphql_handler.Server, authhandler *authn.Handler) (*http.Server, error) {
 	r := chi.NewRouter()
 
 	r.Get("/", playground.Handler("GraphQL playground", "/query"))
@@ -391,8 +399,15 @@ func setupHTTPServer(cfg *config.Config, db *gorm.DB, handler *graphql_handler.S
 			cors.AllowAll().Handler, // TODO: Specify a stricter CORS policy
 			middleware.ApiKeyAuthentication(db),
 		)
-		r.Post("/", handler.ServeHTTP)
+		r.Post("/", graphapi.ServeHTTP)
 	})
+
+	r.Route("/oauth2", func(r chi.Router) {
+		r.Get("/login", authhandler.Login)
+		r.Get("/logout", authhandler.Logout)
+		r.Get("/callback", authhandler.Callback)
+	})
+
 	srv := &http.Server{
 		Addr:    cfg.ListenAddress,
 		Handler: r,

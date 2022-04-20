@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/99designs/gqlgen/graphql"
-	"github.com/nais/console/pkg/auth"
+	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/dbmodels"
 	"gorm.io/gorm"
 )
@@ -16,7 +16,7 @@ type Directive func(ctx context.Context, obj interface{}, next graphql.Resolver)
 // Also fetches all roles connected to that user, either solo or through a team, and puts them into the context.
 func Auth(db *gorm.DB) Directive {
 	return func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error) {
-		user := auth.UserFromContext(ctx)
+		user := authz.UserFromContext(ctx)
 		if user == nil {
 			return nil, fmt.Errorf("this endpoint requires authentication")
 		}
@@ -26,7 +26,7 @@ func Auth(db *gorm.DB) Directive {
 			return nil, err
 		}
 
-		ctx = auth.ContextWithRoleBindings(ctx, roleBindings)
+		ctx = authz.ContextWithRoleBindings(ctx, roleBindings)
 		return next(ctx)
 	}
 }

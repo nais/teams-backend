@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/auth"
+	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/roles"
@@ -63,8 +63,8 @@ func InsertRootUser(ctx context.Context, db *gorm.DB) error {
 			SystemID:    console.ID,
 			Name:        "Manage team",
 			Resource:    string(graph.ResourceTeams),
-			AccessLevel: auth.AccessReadWrite,
-			Permission:  auth.PermissionAllow,
+			AccessLevel: authz.AccessReadWrite,
+			Permission:  authz.PermissionAllow,
 		}
 
 		rolebinding := &dbmodels.RoleBinding{

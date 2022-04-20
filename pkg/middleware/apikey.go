@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/nais/console/pkg/auth"
+	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/dbmodels"
 	"gorm.io/gorm"
 )
@@ -28,7 +28,7 @@ func ApiKeyAuthentication(db *gorm.DB) func(next http.Handler) http.Handler {
 				return
 			}
 
-			ctx := auth.ContextWithUser(r.Context(), key.User)
+			ctx := authz.ContextWithUser(r.Context(), key.User)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		}
 		return http.HandlerFunc(fn)

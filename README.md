@@ -33,6 +33,11 @@ bin/console
 * Add service account as API client with scopes:
   * `https://www.googleapis.com/auth/admin.directory.group`
   * `https://www.googleapis.com/auth/admin.directory.user.readonly`
+* Set up OAuth2 consent screen
+  * Internal
+* Create OAuth2 client ID
+  * Web application
+  * 
 
 ### Github
 * Set up single sign-on against tenant's IDP. SCIM is optional, but not required.

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/nais/console/pkg/auth"
+	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/model"
 	"gorm.io/gorm"
@@ -36,7 +36,7 @@ type Model interface {
 // Create a new object in the database, attaching the current user in metadata.
 func (r *Resolver) createDB(ctx context.Context, obj Model) error {
 	m := obj.GetModel()
-	user := auth.UserFromContext(ctx)
+	user := authz.UserFromContext(ctx)
 	m.CreatedBy = user
 	m.UpdatedBy = user
 	tx := r.db.WithContext(ctx).Create(obj)
@@ -50,7 +50,7 @@ func (r *Resolver) createDB(ctx context.Context, obj Model) error {
 // Update an object in the database, attaching the current user in metadata.
 func (r *Resolver) updateDB(ctx context.Context, obj Model) error {
 	m := obj.GetModel()
-	m.UpdatedBy = auth.UserFromContext(ctx)
+	m.UpdatedBy = authz.UserFromContext(ctx)
 	tx := r.db.WithContext(ctx).Updates(obj)
 	if tx.Error != nil {
 		return tx.Error
