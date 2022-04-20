@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/nais/console/pkg/dbmodels"
-	log "github.com/sirupsen/logrus"
 )
 
 // All synchronizers must implement the Reconciler interface.
@@ -39,13 +38,4 @@ func (s *Input) AuditLog(user *dbmodels.User, success bool, action, format strin
 		Team:            s.Team,
 		User:            user,
 	}
-}
-
-// Helper method to create a log entry with synchronization and system metadata.
-func (s *Input) Logger() *log.Entry {
-	return log.StandardLogger().WithFields(log.Fields{
-		"correlation_id": s.Synchronization.ID.String(),
-		"system":         s.System.Name,
-		"team":           *s.Team.Slug,
-	})
 }

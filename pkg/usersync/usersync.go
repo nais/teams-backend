@@ -86,12 +86,24 @@ func (s *userSynchronizer) FetchAll(ctx context.Context) error {
 		// Loop over all remote users and create them locally.
 		// Existing users are ignored.
 		for _, remoteUser := range resp.Users {
-			localUser := &dbmodels.User{
-				Email: strp(remoteUser.PrimaryEmail),
-				Name:  strp(remoteUser.Name.FullName),
+			localUser := &dbmodels.User{}
+
+			// If we don't shadow this variable, it will bug out in the next iteration, i.e. query for two e-mail addresses.
+			// BUG?
+			tx := tx.First(localUser, "email = ?", remoteUser.PrimaryEmail)
+
+			if tx.Error != nil {
+				localUser := &dbmodels.User{
+					Email: strp(remoteUser.PrimaryEmail),
+					Name:  strp(remoteUser.Name.FullName),
+				}
+
+				tx = tx.Create(localUser)
+				if tx.Error == nil {
+					s.logger.UserLogf(reconcilers.Input{System: &dbmodels.System{}}, "usersync:create", localUser, "Local user created")
+				}
 			}
 
-			tx.FirstOrCreate(localUser, "email = ?", remoteUser.PrimaryEmail)
 			if tx.Error != nil {
 				return fmt.Errorf("create local user %s: %w", remoteUser.PrimaryEmail, tx.Error)
 			}
@@ -102,7 +114,7 @@ func (s *userSynchronizer) FetchAll(ctx context.Context) error {
 		// Delete all local users with e-mail addresses that are not a part of the directory.
 		localUsers := make([]*dbmodels.User, 0)
 		domainEmails := "%@" + s.domain
-		tx.Find(&localUsers, "email LIKE ?", domainEmails)
+		tx = tx.Find(&localUsers, "email LIKE ?", domainEmails)
 		if tx.Error != nil {
 			return fmt.Errorf("get local users: %w", tx.Error)
 		}
@@ -113,7 +125,7 @@ func (s *userSynchronizer) FetchAll(ctx context.Context) error {
 				continue
 			}
 
-			tx.Delete(localUser)
+			tx = tx.Delete(localUser)
 			if tx.Error != nil {
 				return fmt.Errorf("delete local user %s: %w", localUser.Email, tx.Error)
 			}

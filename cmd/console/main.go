@@ -224,17 +224,17 @@ func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems ma
 				panic("BUG: refusing to create team with empty slug")
 			}
 
-			input.Logger().Infof("Starting reconcile")
+			log.Info(input.AuditLog(nil, true, "console:reconcile:start", "Starting reconcile"))
 			err := reconciler.Reconcile(ctx, input)
 
 			switch er := err.(type) {
 			case nil:
-				input.Logger().Infof("Successfully reconciled")
+				log.Info(input.AuditLog(nil, true, "console:reconcile:end", "Successfully reconciled"))
 			case *dbmodels.AuditLog:
 				er.Log().Error(er.Message)
 				teamErrors++
 			case error:
-				input.Logger().Error(er)
+				log.Error(input.AuditLog(nil, true, "console:reconcile:end", er.Error()))
 				teamErrors++
 			}
 		}
