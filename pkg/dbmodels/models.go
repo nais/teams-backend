@@ -103,9 +103,9 @@ type Synchronization struct {
 type AuditLog struct {
 	Model
 	SoftDeletes
-	System            *System          `gorm:"not null"`
-	Synchronization   *Synchronization `gorm:"not null"`
-	User              *User            // User object, not subject, i.e. which user was affected by the operation.
+	System            *System
+	Synchronization   *Synchronization
+	User              *User // User object, not subject, i.e. which user was affected by the operation.
 	Team              *Team
 	SystemID          *uuid.UUID
 	SynchronizationID *uuid.UUID
