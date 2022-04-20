@@ -183,13 +183,23 @@ func run() error {
 			log.Infof("Reconciliation complete.")
 
 		case <-userSyncTimer.C:
+			log.Infof("Starting user synchronization...")
+
 			ctx, cancel := context.WithTimeout(ctx, time.Second*30)
 			err = usersyncer.FetchAll(ctx)
 			cancel()
-			if err != nil {
+
+			switch er := err.(type) {
+			case nil:
+				break
+			case *dbmodels.AuditLog:
+				er.Log().Error(er.Message)
+			default:
 				log.Error(err)
 			}
+
 			userSyncTimer.Reset(30 * time.Second)
+			log.Infof("User synchronization complete.")
 		}
 	}
 

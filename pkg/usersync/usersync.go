@@ -26,8 +26,10 @@ type userSynchronizer struct {
 }
 
 const (
-	OpCreate = "usersync:create"
-	OpDelete = "usersync:delete"
+	OpListRemote = "usersync:list:remote"
+	OpListLocal  = "usersync:list:local"
+	OpCreate     = "usersync:create"
+	OpDelete     = "usersync:delete"
 )
 
 func New(logger auditlogger.Logger, db *gorm.DB, domain string, config *jwt.Config) *userSynchronizer {
@@ -64,6 +66,9 @@ func NewFromConfig(cfg *config.Config, db *gorm.DB, logger auditlogger.Logger) (
 }
 
 func (s *userSynchronizer) FetchAll(ctx context.Context) error {
+	// dummy object for logging
+	in := reconcilers.Input{System: &dbmodels.System{}}
+
 	client := s.config.Client(ctx)
 	srv, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
@@ -72,7 +77,7 @@ func (s *userSynchronizer) FetchAll(ctx context.Context) error {
 
 	resp, err := srv.Users.List().Domain(s.domain).Do()
 	if err != nil {
-		return fmt.Errorf("list remote users: %w", err)
+		return s.logger.Errorf(in, OpListRemote, "list remote users: %w", err)
 	}
 
 	userIds := make(map[uuid.UUID]struct{})
@@ -91,13 +96,11 @@ func (s *userSynchronizer) FetchAll(ctx context.Context) error {
 				}
 
 				tx = tx.Create(localUser)
-				if tx.Error == nil {
-					s.logger.UserLogf(reconcilers.Input{System: &dbmodels.System{}}, OpCreate, localUser, "Local user created")
+				if tx.Error != nil {
+					return s.logger.Errorf(in, OpCreate, "create local user %s: %w", remoteUser.PrimaryEmail, tx.Error)
 				}
-			}
 
-			if tx.Error != nil {
-				return fmt.Errorf("create local user %s: %w", remoteUser.PrimaryEmail, tx.Error)
+				s.logger.UserLogf(in, OpCreate, localUser, "Local user created")
 			}
 
 			userIds[*localUser.ID] = struct{}{}
@@ -108,7 +111,7 @@ func (s *userSynchronizer) FetchAll(ctx context.Context) error {
 		domainEmails := "%@" + s.domain
 		tx = tx.Find(&localUsers, "email LIKE ?", domainEmails)
 		if tx.Error != nil {
-			return fmt.Errorf("get local users: %w", tx.Error)
+			return s.logger.Errorf(in, OpListLocal, "list local users: %w", tx.Error)
 		}
 
 		for _, localUser := range localUsers {
@@ -119,10 +122,10 @@ func (s *userSynchronizer) FetchAll(ctx context.Context) error {
 
 			tx = tx.Delete(localUser)
 			if tx.Error != nil {
-				return fmt.Errorf("delete local user %s: %w", *localUser.Email, tx.Error)
+				return s.logger.Errorf(in, OpDelete, "delete local user %s: %w", *localUser.Email, tx.Error)
 			}
 
-			s.logger.UserLogf(reconcilers.Input{System: &dbmodels.System{}}, OpDelete, localUser, "Local user deleted")
+			s.logger.UserLogf(in, OpDelete, localUser, "Local user deleted")
 		}
 
 		return tx.Error
