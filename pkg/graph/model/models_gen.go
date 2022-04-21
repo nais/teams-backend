@@ -28,6 +28,22 @@ type AssignRoleInput struct {
 	TeamID *uuid.UUID `json:"team_id"`
 }
 
+type AuditLogInput struct {
+	// Filter by team ID.
+	TeamID *uuid.UUID `json:"teamID"`
+	// Filter by user ID.
+	UserID *uuid.UUID `json:"userID"`
+	// Filter by system ID.
+	SystemID *uuid.UUID `json:"systemID"`
+	// Filter by synchronization ID.
+	SynchronizationID *uuid.UUID `json:"synchronizationID"`
+}
+
+type AuditLogs struct {
+	Pagination *Pagination          `json:"pagination"`
+	Nodes      []*dbmodels.AuditLog `json:"nodes"`
+}
+
 type CreateRoleInput struct {
 	SystemID    *uuid.UUID `json:"system_id"`
 	Resource    string     `json:"resource"`

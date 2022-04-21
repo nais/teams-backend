@@ -1,0 +1,27 @@
+extend type Query {
+    auditlogs(input: AuditLogInput!): AuditLogs! @auth
+}
+
+# Use-cases:
+# * List activity for team
+# * List activity for user
+#   * List things done by user
+#   * List things done to user
+# * List activity for system
+# * List activity for correlation ID
+
+input AuditLogInput {
+    "Filter by team ID."
+    teamID: UUID
+    "Filter by user ID."
+    userID: UUID
+    "Filter by system ID."
+    systemID: UUID
+    "Filter by synchronization ID."
+    synchronizationID: UUID
+}
+
+type AuditLogs {
+    pagination: Pagination!
+    nodes: [AuditLog!]!
+}
