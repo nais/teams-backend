@@ -90,6 +90,7 @@ type ComplexityRoot struct {
 
 	Query struct {
 		Auditlogs func(childComplexity int, input model.AuditLogInput) int
+		Me        func(childComplexity int) int
 		Roles     func(childComplexity int) int
 		Team      func(childComplexity int, id *uuid.UUID) int
 		Teams     func(childComplexity int) int
@@ -180,6 +181,7 @@ type QueryResolver interface {
 	Teams(ctx context.Context) (*model.Teams, error)
 	Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team, error)
 	Users(ctx context.Context, input *model.QueryUserInput) (*model.Users, error)
+	Me(ctx context.Context) (*dbmodels.User, error)
 }
 type UserResolver interface {
 	Teams(ctx context.Context, obj *dbmodels.User) (*model.Teams, error)
@@ -425,6 +427,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.Auditlogs(childComplexity, args["input"].(model.AuditLogInput)), true
+
+	case "Query.me":
+		if e.complexity.Query.Me == nil {
+			break
+		}
+
+		return e.complexity.Query.Me(childComplexity), true
 
 	case "Query.roles":
 		if e.complexity.Query.Roles == nil {
@@ -998,6 +1007,8 @@ type AuditLog {
 	{Name: "graphql/users.graphqls", Input: `extend type Query {
     "Search for users."
     users(input: QueryUserInput): Users! @auth
+    "Get logged in user."
+    me: User! @auth
 }
 
 extend type Mutation {
@@ -2650,6 +2661,61 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 	res := resTmp.(*model.Users)
 	fc.Result = res
 	return ec.marshalNUsers2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUsers(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_me(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().Me(rctx)
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Auth == nil {
+				return nil, errors.New("directive auth is not implemented")
+			}
+			return ec.directives.Auth(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*dbmodels.User); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/dbmodels.User`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*dbmodels.User)
+	fc.Result = res
+	return ec.marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -5957,6 +6023,29 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_users(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "me":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_me(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}

@@ -6,6 +6,7 @@ package graph
 import (
 	"context"
 
+	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/model"
 )
@@ -38,4 +39,8 @@ func (r *queryResolver) Users(ctx context.Context, input *model.QueryUserInput) 
 		Pagination: pagination,
 		Nodes:      users,
 	}, err
+}
+
+func (r *queryResolver) Me(ctx context.Context) (*dbmodels.User, error) {
+	return authz.UserFromContext(ctx), nil
 }

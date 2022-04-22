@@ -1,6 +1,8 @@
 extend type Query {
     "Search for users."
     users(input: QueryUserInput): Users! @auth
+    "Get logged in user."
+    me: User! @auth
 }
 
 extend type Mutation {
