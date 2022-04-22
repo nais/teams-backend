@@ -74,6 +74,7 @@ type Synchronization {
 
 # TODO
 type AuditLog {
+    id: UUID!
     system: System!
     synchronization: Synchronization!
     user: User
