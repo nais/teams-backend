@@ -390,13 +390,30 @@ func setupGraphAPI(db *gorm.DB, console *dbmodels.System, trigger chan<- *dbmode
 	return handler
 }
 
+func corsConfig() cors.Options {
+	// TODO: Specify a stricter CORS policy
+	return cors.Options{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{
+			http.MethodHead,
+			http.MethodGet,
+			http.MethodPost,
+			http.MethodPut,
+			http.MethodPatch,
+			http.MethodDelete,
+		},
+		AllowedHeaders:   []string{"*"},
+		AllowCredentials: true,
+	}
+}
+
 func setupHTTPServer(cfg *config.Config, db *gorm.DB, graphapi *graphql_handler.Server, authhandler *authn.Handler, store authn.SessionStore) (*http.Server, error) {
 	r := chi.NewRouter()
 
 	r.Get("/", playground.Handler("GraphQL playground", "/query"))
 	r.Route("/query", func(r chi.Router) {
 		r.Use(
-			cors.AllowAll().Handler, // TODO: Specify a stricter CORS policy
+			cors.New(corsConfig()).Handler,
 			middleware.ApiKeyAuthentication(db),
 			middleware.Oauth2Authentication(db, store),
 		)
