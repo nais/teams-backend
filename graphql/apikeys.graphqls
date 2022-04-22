@@ -15,5 +15,5 @@ extend type Mutation {
 }
 
 input APIKeyInput {
-    user_id: UUID!
+    userID: UUID!
 }

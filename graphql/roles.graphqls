@@ -14,23 +14,23 @@ type Roles {
 }
 
 input AssignRoleInput {
-    role_id: UUID!
-    user_id: UUID!
-    team_id: UUID!
+    roleID: UUID!
+    userID: UUID!
+    teamID: UUID!
 }
 
 input CreateRoleInput {
-    system_id: UUID!
+    systemID: UUID!
     resource: String!
-    access_level: String!
+    accessLevel: String!
     permission: String!
 }
 
 input UpdateRoleInput {
     id: UUID!
-    system_id: UUID
+    systemID: UUID
     resource: String
-    access_level: String
+    accessLevel: String
     permission: String
 }
 

@@ -448,7 +448,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Users(childComplexity, args["input"].(*model.QueryUserInput)), true
 
-	case "Role.access_level":
+	case "Role.accessLevel":
 		if e.complexity.Role.AccessLevel == nil {
 			break
 		}
@@ -623,7 +623,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Teams.Pagination(childComplexity), true
 
-	case "User.created_at":
+	case "User.createdAt":
 		if e.complexity.User.CreatedAt == nil {
 			break
 		}
@@ -661,7 +661,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.User.Roles(childComplexity, args["team_id"].(*uuid.UUID)), true
+		return e.complexity.User.Roles(childComplexity, args["teamID"].(*uuid.UUID)), true
 
 	case "User.teams":
 		if e.complexity.User.Teams == nil {
@@ -765,7 +765,7 @@ var sources = []*ast.Source{
 }
 
 input APIKeyInput {
-    user_id: UUID!
+    userID: UUID!
 }
 `, BuiltIn: false},
 	{Name: "graphql/auditlogs.graphqls", Input: `extend type Query {
@@ -812,23 +812,23 @@ type Roles {
 }
 
 input AssignRoleInput {
-    role_id: UUID!
-    user_id: UUID!
-    team_id: UUID!
+    roleID: UUID!
+    userID: UUID!
+    teamID: UUID!
 }
 
 input CreateRoleInput {
-    system_id: UUID!
+    systemID: UUID!
     resource: String!
-    access_level: String!
+    accessLevel: String!
     permission: String!
 }
 
 input UpdateRoleInput {
     id: UUID!
-    system_id: UUID
+    systemID: UUID
     resource: String
-    access_level: String
+    accessLevel: String
     permission: String
 }
 
@@ -914,8 +914,8 @@ type User {
     email: String
     name: String!
     teams: Teams!
-    roles(team_id: UUID!): [Role!]!
-    created_at: Time
+    roles(teamID: UUID!): [Role!]!
+    createdAt: Time
 }
 
 type Team {
@@ -932,7 +932,7 @@ type Role {
     id: UUID!
     name: String!
     resource: String!
-    access_level: String!
+    accessLevel: String!
     permission: String!
 }
 
@@ -1221,14 +1221,14 @@ func (ec *executionContext) field_User_roles_args(ctx context.Context, rawArgs m
 	var err error
 	args := map[string]interface{}{}
 	var arg0 *uuid.UUID
-	if tmp, ok := rawArgs["team_id"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("team_id"))
+	if tmp, ok := rawArgs["teamID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamID"))
 		arg0, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["team_id"] = arg0
+	args["teamID"] = arg0
 	return args, nil
 }
 
@@ -2749,7 +2749,7 @@ func (ec *executionContext) _Role_resource(ctx context.Context, field graphql.Co
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Role_access_level(ctx context.Context, field graphql.CollectedField, obj *dbmodels.Role) (ret graphql.Marshaler) {
+func (ec *executionContext) _Role_accessLevel(ctx context.Context, field graphql.CollectedField, obj *dbmodels.Role) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3669,7 +3669,7 @@ func (ec *executionContext) _User_roles(ctx context.Context, field graphql.Colle
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.User().Roles(rctx, obj, args["team_id"].(*uuid.UUID))
+		return ec.resolvers.User().Roles(rctx, obj, args["teamID"].(*uuid.UUID))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3686,7 +3686,7 @@ func (ec *executionContext) _User_roles(ctx context.Context, field graphql.Colle
 	return ec.marshalNRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐRoleᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _User_created_at(ctx context.Context, field graphql.CollectedField, obj *dbmodels.User) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_createdAt(ctx context.Context, field graphql.CollectedField, obj *dbmodels.User) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4983,10 +4983,10 @@ func (ec *executionContext) unmarshalInputAPIKeyInput(ctx context.Context, obj i
 
 	for k, v := range asMap {
 		switch k {
-		case "user_id":
+		case "userID":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("user_id"))
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userID"))
 			it.UserID, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
 			if err != nil {
 				return it, err
@@ -5037,26 +5037,26 @@ func (ec *executionContext) unmarshalInputAssignRoleInput(ctx context.Context, o
 
 	for k, v := range asMap {
 		switch k {
-		case "role_id":
+		case "roleID":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("role_id"))
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("roleID"))
 			it.RoleID, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "user_id":
+		case "userID":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("user_id"))
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userID"))
 			it.UserID, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "team_id":
+		case "teamID":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("team_id"))
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamID"))
 			it.TeamID, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
 			if err != nil {
 				return it, err
@@ -5123,10 +5123,10 @@ func (ec *executionContext) unmarshalInputCreateRoleInput(ctx context.Context, o
 
 	for k, v := range asMap {
 		switch k {
-		case "system_id":
+		case "systemID":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("system_id"))
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("systemID"))
 			it.SystemID, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
 			if err != nil {
 				return it, err
@@ -5139,10 +5139,10 @@ func (ec *executionContext) unmarshalInputCreateRoleInput(ctx context.Context, o
 			if err != nil {
 				return it, err
 			}
-		case "access_level":
+		case "accessLevel":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("access_level"))
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("accessLevel"))
 			it.AccessLevel, err = ec.unmarshalNString2string(ctx, v)
 			if err != nil {
 				return it, err
@@ -5333,10 +5333,10 @@ func (ec *executionContext) unmarshalInputUpdateRoleInput(ctx context.Context, o
 			if err != nil {
 				return it, err
 			}
-		case "system_id":
+		case "systemID":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("system_id"))
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("systemID"))
 			it.SystemID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
 			if err != nil {
 				return it, err
@@ -5349,10 +5349,10 @@ func (ec *executionContext) unmarshalInputUpdateRoleInput(ctx context.Context, o
 			if err != nil {
 				return it, err
 			}
-		case "access_level":
+		case "accessLevel":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("access_level"))
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("accessLevel"))
 			it.AccessLevel, err = ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
@@ -5945,9 +5945,9 @@ func (ec *executionContext) _Role(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "access_level":
+		case "accessLevel":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Role_access_level(ctx, field, obj)
+				return ec._Role_accessLevel(ctx, field, obj)
 			}
 
 			out.Values[i] = innerFunc(ctx)
@@ -6409,9 +6409,9 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 				return innerFunc(ctx)
 
 			})
-		case "created_at":
+		case "createdAt":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._User_created_at(ctx, field, obj)
+				return ec._User_createdAt(ctx, field, obj)
 			}
 
 			out.Values[i] = innerFunc(ctx)

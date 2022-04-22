@@ -12,7 +12,7 @@ type APIKey struct {
 }
 
 type APIKeyInput struct {
-	UserID *uuid.UUID `json:"user_id"`
+	UserID *uuid.UUID `json:"userID"`
 }
 
 type AddUsersToTeamInput struct {
@@ -23,9 +23,9 @@ type AddUsersToTeamInput struct {
 }
 
 type AssignRoleInput struct {
-	RoleID *uuid.UUID `json:"role_id"`
-	UserID *uuid.UUID `json:"user_id"`
-	TeamID *uuid.UUID `json:"team_id"`
+	RoleID *uuid.UUID `json:"roleID"`
+	UserID *uuid.UUID `json:"userID"`
+	TeamID *uuid.UUID `json:"teamID"`
 }
 
 type AuditLogInput struct {
@@ -45,9 +45,9 @@ type AuditLogs struct {
 }
 
 type CreateRoleInput struct {
-	SystemID    *uuid.UUID `json:"system_id"`
+	SystemID    *uuid.UUID `json:"systemID"`
 	Resource    string     `json:"resource"`
-	AccessLevel string     `json:"access_level"`
+	AccessLevel string     `json:"accessLevel"`
 	Permission  string     `json:"permission"`
 }
 
@@ -104,9 +104,9 @@ type Teams struct {
 
 type UpdateRoleInput struct {
 	ID          *uuid.UUID `json:"id"`
-	SystemID    *uuid.UUID `json:"system_id"`
+	SystemID    *uuid.UUID `json:"systemID"`
 	Resource    *string    `json:"resource"`
-	AccessLevel *string    `json:"access_level"`
+	AccessLevel *string    `json:"accessLevel"`
 	Permission  *string    `json:"permission"`
 }
 
