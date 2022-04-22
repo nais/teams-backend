@@ -17,9 +17,10 @@ import (
 const (
 	RedirectURICookie               = "redirecturi"
 	OAuthStateCookie                = "oauthstate"
-	sessionCookieName               = "console_session_id"
+	SessionCookieName               = "console_session_id"
 	tokenLength                     = 32
 	sessionLength     time.Duration = 7 * time.Hour
+	IDTokenKey                      = "id_token"
 )
 
 type OAuth2 interface {
@@ -109,7 +110,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rawIDToken, ok := tokens.Extra("id_token").(string)
+	rawIDToken, ok := tokens.Extra(IDTokenKey).(string)
 	if !ok {
 		h.log.Info("Missing id_token")
 		http.Redirect(w, r, loginPage+"?error=unauthenticated", http.StatusFound)
@@ -134,11 +135,11 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.repo.Create(*session)
+	h.repo.Create(session)
 
 	// TODO(thokra): Encrypt cookie value
 	http.SetCookie(w, &http.Cookie{
-		Name:     sessionCookieName,
+		Name:     SessionCookieName,
 		Value:    session.Key,
 		Path:     "/",
 		Domain:   r.Host,
@@ -163,9 +164,9 @@ func deleteCookie(w http.ResponseWriter, name, domain string) {
 }
 
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
-	deleteCookie(w, sessionCookieName, r.Host)
+	deleteCookie(w, SessionCookieName, r.Host)
 
-	cookie, err := r.Cookie(sessionCookieName)
+	cookie, err := r.Cookie(SessionCookieName)
 	if err != nil {
 		h.log.WithError(err).Info("Unable to logout session")
 	}

@@ -92,9 +92,10 @@ func run() error {
 	}
 	log.Infof("Initialized %d reconcilers.", len(recs))
 
-	authhandler := setupAuthHandler(cfg)
+	store := authn.NewStore()
+	authhandler := setupAuthHandler(cfg, store)
 	handler := setupGraphAPI(db, sysEntries["console"], trigger)
-	srv, err := setupHTTPServer(cfg, db, handler, authhandler)
+	srv, err := setupHTTPServer(cfg, db, handler, authhandler, store)
 	if err != nil {
 		return err
 	}
@@ -268,9 +269,8 @@ func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems ma
 	return nil
 }
 
-func setupAuthHandler(cfg *config.Config) *authn.Handler {
+func setupAuthHandler(cfg *config.Config, store authn.SessionStore) *authn.Handler {
 	cf := authn.NewGoogle(cfg.OAuth.ClientID, cfg.OAuth.ClientSecret, cfg.OAuth.RedirectURL)
-	store := authn.NewStore()
 	handler := authn.New(cf, store)
 	return handler
 }
@@ -390,7 +390,7 @@ func setupGraphAPI(db *gorm.DB, console *dbmodels.System, trigger chan<- *dbmode
 	return handler
 }
 
-func setupHTTPServer(cfg *config.Config, db *gorm.DB, graphapi *graphql_handler.Server, authhandler *authn.Handler) (*http.Server, error) {
+func setupHTTPServer(cfg *config.Config, db *gorm.DB, graphapi *graphql_handler.Server, authhandler *authn.Handler, store authn.SessionStore) (*http.Server, error) {
 	r := chi.NewRouter()
 
 	r.Get("/", playground.Handler("GraphQL playground", "/query"))
@@ -398,6 +398,7 @@ func setupHTTPServer(cfg *config.Config, db *gorm.DB, graphapi *graphql_handler.
 		r.Use(
 			cors.AllowAll().Handler, // TODO: Specify a stricter CORS policy
 			middleware.ApiKeyAuthentication(db),
+			middleware.Oauth2Authentication(db, store),
 		)
 		r.Post("/", graphapi.ServeHTTP)
 	})
