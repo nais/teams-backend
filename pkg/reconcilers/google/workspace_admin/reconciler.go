@@ -141,7 +141,9 @@ func (s *gcpReconciler) connectUsers(srv *admin_directory_v1.Service, grp *admin
 		s.logger.UserLogf(in, OpDeleteMember, nil, "deleted member '%s' from Google Directory group '%s'", member.Email, grp.Email)
 	}
 
-	s.logger.Logf(in, OpDeleteMembers, "all unmanaged members successfully deleted from Google Directory group '%s'", grp.Email)
+	if len(deleteMembers) > 0 {
+		s.logger.Logf(in, OpDeleteMembers, "all unmanaged members successfully deleted from Google Directory group '%s'", grp.Email)
+	}
 
 	for _, user := range createUsers {
 		if user.Email == nil {
@@ -157,7 +159,9 @@ func (s *gcpReconciler) connectUsers(srv *admin_directory_v1.Service, grp *admin
 		s.logger.UserLogf(in, OpAddMember, user, "added member '%s' to Google Directory group '%s'", member.Email, grp.Email)
 	}
 
-	s.logger.Logf(in, OpAddMembers, "all members successfully added to Google Directory group '%s'", grp.Email)
+	if len(createUsers) > 0 {
+		s.logger.Logf(in, OpAddMembers, "all members successfully added to Google Directory group '%s'", grp.Email)
+	}
 
 	return nil
 }

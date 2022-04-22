@@ -75,11 +75,12 @@ type Synchronization {
 # TODO
 type AuditLog {
     id: UUID!
-    system: System!
-    synchronization: Synchronization!
+    system: System
+    synchronization: Synchronization
     user: User
     team: Team
     action: String!
     success: Boolean!
     message: String!
+    createdAt: Time
 }
