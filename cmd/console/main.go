@@ -393,7 +393,7 @@ func setupGraphAPI(db *gorm.DB, console *dbmodels.System, trigger chan<- *dbmode
 func corsConfig() cors.Options {
 	// TODO: Specify a stricter CORS policy
 	return cors.Options{
-		AllowedOrigins: []string{"*"},
+		AllowedOrigins: []string{"http://localhost:*", "https://*"},
 		AllowedMethods: []string{
 			http.MethodHead,
 			http.MethodGet,
