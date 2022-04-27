@@ -2,6 +2,7 @@ package azure_group_reconciler_test
 
 import (
 	"context"
+	"fmt"
 	"github.com/nais/console/pkg/azureclient"
 	"github.com/stretchr/testify/mock"
 	"testing"
@@ -26,8 +27,6 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 	defer close(ch)
 
 	creds := clientcredentials.Config{}
-	mockClient := &azureclient.MockClient{}
-	reconciler := azure_group.New(logger, creds, mockClient)
 
 	group := &azureclient.Group{
 		ID:           "some-group-id",
@@ -52,28 +51,172 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		Email: &keepMember.Mail,
 	}
 
-	mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, teamName).
-		Return(group, nil)
-	mockClient.On("ListGroupMembers", mock.Anything, group).
-		Return([]*azureclient.Member{keepMember, removeMember}, nil)
-	mockClient.On("RemoveMemberFromGroup", mock.Anything, group, removeMember).Return(nil)
-	mockClient.On("GetUser", mock.Anything, *addUser.Email).Return(addMember, nil)
-	mockClient.On("AddMemberToGroup", mock.Anything, group, addMember).Return(nil)
+	t.Run("happy case", func(t *testing.T) {
+		mockClient := &azureclient.MockClient{}
+		reconciler := azure_group.New(logger, creds, mockClient)
 
-	err := reconciler.Reconcile(ctx, reconcilers.Input{
-		System:          nil,
-		Synchronization: nil,
-		Team: &dbmodels.Team{
-			Slug:    strp(teamName),
-			Name:    strp(teamName),
-			Purpose: strp(teamName),
-			Users: []*dbmodels.User{
-				addUser, keepUser,
+		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, teamName).
+			Return(group, nil).Once()
+		mockClient.On("ListGroupMembers", mock.Anything, group).
+			Return([]*azureclient.Member{keepMember, removeMember}, nil).Once()
+		mockClient.On("RemoveMemberFromGroup", mock.Anything, group, removeMember).Return(nil).Once()
+		mockClient.On("GetUser", mock.Anything, *addUser.Email).Return(addMember, nil).Once()
+		mockClient.On("AddMemberToGroup", mock.Anything, group, addMember).Return(nil).Once()
+
+		err := reconciler.Reconcile(ctx, reconcilers.Input{
+			System:          nil,
+			Synchronization: nil,
+			Team: &dbmodels.Team{
+				Slug:    strp(teamName),
+				Name:    strp(teamName),
+				Purpose: strp(teamName),
+				Users: []*dbmodels.User{
+					addUser, keepUser,
+				},
 			},
-		},
+		})
+
+		assert.NoError(t, err)
+		mockClient.AssertExpectations(t)
 	})
 
-	assert.NoError(t, err)
+	t.Run("GetOrCreateGroup fail", func(t *testing.T) {
+		mockClient := &azureclient.MockClient{}
+		reconciler := azure_group.New(logger, creds, mockClient)
+
+		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, teamName).
+			Return(nil, fmt.Errorf("GetOrCreateGroup failed")).Once()
+
+		err := reconciler.Reconcile(ctx, reconcilers.Input{
+			System:          nil,
+			Synchronization: nil,
+			Team: &dbmodels.Team{
+				Slug:    strp(teamName),
+				Name:    strp(teamName),
+				Purpose: strp(teamName),
+				Users: []*dbmodels.User{
+					addUser, keepUser,
+				},
+			},
+		})
+
+		assert.Error(t, err)
+		mockClient.AssertExpectations(t)
+	})
+
+	t.Run("ListGroupMembers fail", func(t *testing.T) {
+		mockClient := &azureclient.MockClient{}
+		reconciler := azure_group.New(logger, creds, mockClient)
+
+		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, teamName).
+			Return(group, nil).Once()
+		mockClient.On("ListGroupMembers", mock.Anything, group).
+			Return(nil, fmt.Errorf("ListGroupMembers failed")).Once()
+
+		err := reconciler.Reconcile(ctx, reconcilers.Input{
+			System:          nil,
+			Synchronization: nil,
+			Team: &dbmodels.Team{
+				Slug:    strp(teamName),
+				Name:    strp(teamName),
+				Purpose: strp(teamName),
+				Users: []*dbmodels.User{
+					addUser, keepUser,
+				},
+			},
+		})
+
+		assert.Error(t, err)
+		mockClient.AssertExpectations(t)
+	})
+
+	t.Run("RemoveMemberFromGroup fail", func(t *testing.T) {
+		mockClient := &azureclient.MockClient{}
+		reconciler := azure_group.New(logger, creds, mockClient)
+
+		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, teamName).
+			Return(group, nil).Once()
+		mockClient.On("ListGroupMembers", mock.Anything, group).
+			Return([]*azureclient.Member{keepMember, removeMember}, nil).Once()
+		mockClient.On("RemoveMemberFromGroup", mock.Anything, group, removeMember).
+			Return(fmt.Errorf("RemoveMemberFromGroup failed")).Once()
+
+		err := reconciler.Reconcile(ctx, reconcilers.Input{
+			System:          nil,
+			Synchronization: nil,
+			Team: &dbmodels.Team{
+				Slug:    strp(teamName),
+				Name:    strp(teamName),
+				Purpose: strp(teamName),
+				Users: []*dbmodels.User{
+					addUser, keepUser,
+				},
+			},
+		})
+
+		assert.Error(t, err)
+		mockClient.AssertExpectations(t)
+	})
+
+	t.Run("GetUser fail", func(t *testing.T) {
+		mockClient := &azureclient.MockClient{}
+		reconciler := azure_group.New(logger, creds, mockClient)
+
+		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, teamName).
+			Return(group, nil).Once()
+		mockClient.On("ListGroupMembers", mock.Anything, group).
+			Return([]*azureclient.Member{keepMember, removeMember}, nil).Once()
+		mockClient.On("RemoveMemberFromGroup", mock.Anything, group, removeMember).Return(nil).Once()
+		mockClient.On("GetUser", mock.Anything, *addUser.Email).Return(nil, fmt.Errorf("GetUser failed")).Once()
+
+		err := reconciler.Reconcile(ctx, reconcilers.Input{
+			System:          nil,
+			Synchronization: nil,
+			Team: &dbmodels.Team{
+				Slug:    strp(teamName),
+				Name:    strp(teamName),
+				Purpose: strp(teamName),
+				Users: []*dbmodels.User{
+					addUser, keepUser,
+				},
+			},
+		})
+
+		assert.Error(t, err)
+		mockClient.AssertExpectations(t)
+	})
+
+	t.Run("AddMemberToGroup fail", func(t *testing.T) {
+
+		mockClient := &azureclient.MockClient{}
+		reconciler := azure_group.New(logger, creds, mockClient)
+
+		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, teamName).
+			Return(group, nil).Once()
+		mockClient.On("ListGroupMembers", mock.Anything, group).
+			Return([]*azureclient.Member{keepMember, removeMember}, nil).Once()
+		mockClient.On("RemoveMemberFromGroup", mock.Anything, group, removeMember).Return(nil).Once()
+		mockClient.On("GetUser", mock.Anything, *addUser.Email).Return(addMember, nil).Once()
+		mockClient.On("AddMemberToGroup", mock.Anything, group, addMember).
+			Return(fmt.Errorf("AddMemberToGroup failed")).Once()
+
+		err := reconciler.Reconcile(ctx, reconcilers.Input{
+			System:          nil,
+			Synchronization: nil,
+			Team: &dbmodels.Team{
+				Slug:    strp(teamName),
+				Name:    strp(teamName),
+				Purpose: strp(teamName),
+				Users: []*dbmodels.User{
+					addUser, keepUser,
+				},
+			},
+		})
+
+		assert.Error(t, err)
+		mockClient.AssertExpectations(t)
+
+	})
 }
 
 func strp(s string) *string {
