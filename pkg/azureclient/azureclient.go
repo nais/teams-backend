@@ -91,7 +91,7 @@ func (s *client) GetGroup(ctx context.Context, slug string) (*Group, error) {
 	case 1:
 		break
 	default:
-		return nil, fmt.Errorf("ambigious response; more than one search result for azure group '%s'", slug)
+		return nil, fmt.Errorf("ambiguous response; more than one search result for azure group '%s'", slug)
 	}
 
 	return grp.Value[0], nil

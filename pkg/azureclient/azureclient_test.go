@@ -23,7 +23,7 @@ func NewTestClient(fn RoundTripFunc) *http.Client {
 
 func Test_client_GetUser(t *testing.T) {
 	httpClient := NewTestClient(func(req *http.Request) *http.Response {
-		assert.Equal(t, req.URL.String(), "https://graph.microsoft.com/v1.0/users/user@example.com")
+		assert.Equal(t, "https://graph.microsoft.com/v1.0/users/user@example.com", req.URL.String())
 		assert.Equal(t, http.MethodGet, req.Method)
 
 		return &http.Response{
@@ -46,7 +46,7 @@ func Test_client_GetUser(t *testing.T) {
 
 func Test_client_GetUserThatDoesNotExist(t *testing.T) {
 	httpClient := NewTestClient(func(req *http.Request) *http.Response {
-		assert.Equal(t, req.URL.String(), "https://graph.microsoft.com/v1.0/users/user@example.com")
+		assert.Equal(t, "https://graph.microsoft.com/v1.0/users/user@example.com", req.URL.String())
 		assert.Equal(t, http.MethodGet, req.Method)
 
 		return &http.Response{
@@ -66,7 +66,7 @@ func Test_client_GetUserThatDoesNotExist(t *testing.T) {
 
 func Test_client_GetUserWithInvalidApiResponse(t *testing.T) {
 	httpClient := NewTestClient(func(req *http.Request) *http.Response {
-		assert.Equal(t, req.URL.String(), "https://graph.microsoft.com/v1.0/users/user@example.com")
+		assert.Equal(t, "https://graph.microsoft.com/v1.0/users/user@example.com", req.URL.String())
 		assert.Equal(t, http.MethodGet, req.Method)
 
 		return &http.Response{
@@ -81,4 +81,61 @@ func Test_client_GetUserWithInvalidApiResponse(t *testing.T) {
 
 	assert.Nil(t, member)
 	assert.EqualError(t, err, "invalid character 's' looking for beginning of value")
+}
+
+func Test_client_GetGroup(t *testing.T) {
+	httpClient := NewTestClient(func(req *http.Request) *http.Response {
+		assert.Equal(t, "https://graph.microsoft.com/v1.0/groups?%24filter=mailNickname+eq+%27slug%27", req.URL.String())
+		assert.Equal(t, http.MethodGet, req.Method)
+
+		return &http.Response{
+			StatusCode: 200,
+			Body:       ioutil.NopCloser(bytes.NewBufferString(`{"value": [{"id":"group-id"}]}`)),
+			Header:     make(http.Header),
+		}
+	})
+
+	client := New(httpClient)
+	group, err := client.GetGroup(context.TODO(), "slug")
+
+	assert.NoError(t, err)
+	assert.Equal(t, "group-id", group.ID)
+}
+
+func Test_client_GetGroupThatDoesNotExist(t *testing.T) {
+	httpClient := NewTestClient(func(req *http.Request) *http.Response {
+		assert.Equal(t, "https://graph.microsoft.com/v1.0/groups?%24filter=mailNickname+eq+%27slug%27", req.URL.String())
+		assert.Equal(t, http.MethodGet, req.Method)
+
+		return &http.Response{
+			StatusCode: 200,
+			Body:       ioutil.NopCloser(bytes.NewBufferString(`{"value": []}`)),
+			Header:     make(http.Header),
+		}
+	})
+
+	client := New(httpClient)
+	group, err := client.GetGroup(context.TODO(), "slug")
+
+	assert.Nil(t, group)
+	assert.EqualError(t, err, "azure group 'slug' does not exist")
+}
+
+func Test_client_GetGroupWithAmbiguousResult(t *testing.T) {
+	httpClient := NewTestClient(func(req *http.Request) *http.Response {
+		assert.Equal(t, "https://graph.microsoft.com/v1.0/groups?%24filter=mailNickname+eq+%27slug%27", req.URL.String())
+		assert.Equal(t, http.MethodGet, req.Method)
+
+		return &http.Response{
+			StatusCode: 200,
+			Body:       ioutil.NopCloser(bytes.NewBufferString(`{"value": [{"id":"group-id"}, {"id":"group-id-2"}]}`)),
+			Header:     make(http.Header),
+		}
+	})
+
+	client := New(httpClient)
+	group, err := client.GetGroup(context.TODO(), "slug")
+
+	assert.Nil(t, group)
+	assert.EqualError(t, err, "ambiguous response; more than one search result for azure group 'slug'")
 }
