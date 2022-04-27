@@ -18,6 +18,7 @@ import (
 type azureReconciler struct {
 	logger auditlogger.Logger
 	oauth  clientcredentials.Config
+	client azureclient.Client
 }
 
 const (
@@ -33,10 +34,11 @@ func init() {
 	registry.Register(Name, NewFromConfig)
 }
 
-func New(logger auditlogger.Logger, oauth clientcredentials.Config) *azureReconciler {
+func New(logger auditlogger.Logger, oauth clientcredentials.Config, client azureclient.Client) *azureReconciler {
 	return &azureReconciler{
 		logger: logger,
 		oauth:  oauth,
+		client: client,
 	}
 }
 
@@ -56,16 +58,11 @@ func NewFromConfig(cfg *config.Config, logger auditlogger.Logger) (reconcilers.R
 		},
 	}
 
-	return New(logger, conf), nil
-}
-
-func (s *azureReconciler) Client(ctx context.Context) azureclient.Client {
-	return azureclient.New(s.oauth.Client(ctx))
+	return New(logger, conf, azureclient.New(conf.Client(context.Background()))), nil
 }
 
 func (s *azureReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {
-	client := s.Client(ctx)
-	grp, err := client.GetOrCreateGroup(ctx, teamNameWithPrefix(in.Team.Slug), *in.Team.Name, *in.Team.Purpose)
+	grp, err := s.client.GetOrCreateGroup(ctx, teamNameWithPrefix(in.Team.Slug), *in.Team.Name, *in.Team.Purpose)
 	if err != nil {
 		return err
 	}
@@ -81,8 +78,7 @@ func (s *azureReconciler) Reconcile(ctx context.Context, in reconcilers.Input) e
 }
 
 func (s *azureReconciler) connectUsers(ctx context.Context, grp *azureclient.Group, in reconcilers.Input) error {
-	client := s.Client(ctx)
-	members, err := client.ListGroupMembers(ctx, grp)
+	members, err := s.client.ListGroupMembers(ctx, grp)
 	if err != nil {
 		return s.logger.Errorf(in, OpAddMembers, "list existing members in Azure group: %s", err)
 	}
@@ -92,7 +88,7 @@ func (s *azureReconciler) connectUsers(ctx context.Context, grp *azureclient.Gro
 
 	for _, member := range deleteMembers {
 		// FIXME: connect audit log with database user, if exists
-		err = client.RemoveMemberFromGroup(ctx, grp, member)
+		err = s.client.RemoveMemberFromGroup(ctx, grp, member)
 		if err != nil {
 			return s.logger.UserErrorf(in, OpDeleteMember, nil, "delete member '%s' from Azure group '%s': %s", member.Mail, grp.MailNickname, err)
 		}
@@ -105,11 +101,11 @@ func (s *azureReconciler) connectUsers(ctx context.Context, grp *azureclient.Gro
 		if user.Email == nil {
 			continue
 		}
-		member, err := client.GetUser(ctx, *user.Email)
+		member, err := s.client.GetUser(ctx, *user.Email)
 		if err != nil {
 			return s.logger.UserErrorf(in, OpAddMember, user, "add member '%s' to Azure group '%s': %s", *user.Email, grp.MailNickname, err)
 		}
-		err = client.AddMemberToGroup(ctx, grp, member)
+		err = s.client.AddMemberToGroup(ctx, grp, member)
 		if err != nil {
 			return s.logger.UserErrorf(in, OpAddMember, user, "add member '%s' to Azure group '%s': %s", member.Mail, grp.MailNickname, err)
 		}

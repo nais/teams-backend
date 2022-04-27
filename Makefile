@@ -21,3 +21,6 @@ alpine:
 
 docker:
 	docker build -t ghcr.io/nais/console:latest .
+
+mocks:
+	mockery --inpackage --case snake --srcpkg ./pkg/azureclient --name Client
