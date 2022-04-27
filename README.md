@@ -69,22 +69,9 @@ Team roles:
 * Per reconciler: disabled, read, readwrite
   * Only implement "readwrite", and make it look like a boolean option
 
-## TODO
 
-* Build synchronization modules
-  * GCP
-    * Project ID: `hashtrunc(PREFIX-TEAM-CLUSTER)` (6-30 chars, lowercase, `[a-z][a-z0-9-]+[a-z0-9]`)
-      * Prefix example: `nais-tenantname`?
-    * Project name: `TEAM-CLUSTER`? Human-readable, no limits.
-    * JITA access for GCP super admin (nais admins customers' clusters)
-  * Kubernetes
-    * Connect team group into "nais:developer"
-    * Deploy using NAIS deploy
+# What should we test?
 
-* Implement remainder of GraphQL API
-  * Profile endpoint
-  * Audit log
-  * ACL management
-
-* Better error messages in GraphQL API
-  * Don't expose database errors directly
+* reconcilers
+* user synchronizer
+* authentication middleware

@@ -16,7 +16,7 @@ import (
 	"github.com/nais/console/pkg/reconcilers/registry"
 )
 
-type provisionApiKeyRequest struct {
+type ProvisionApiKeyRequest struct {
 	Team      string
 	Rotate    bool
 	Timestamp int64
@@ -24,6 +24,7 @@ type provisionApiKeyRequest struct {
 
 // naisDeployReconciler creates teams on GitHub and connects users to them.
 type naisDeployReconciler struct {
+	client       *http.Client
 	logger       auditlogger.Logger
 	endpoint     string
 	provisionKey []byte
@@ -38,13 +39,15 @@ func init() {
 	registry.Register(Name, NewFromConfig)
 }
 
-func New(logger auditlogger.Logger, endpoint string, provisionKey []byte) *naisDeployReconciler {
+func New(logger auditlogger.Logger, client *http.Client, endpoint string, provisionKey []byte) *naisDeployReconciler {
 	return &naisDeployReconciler{
+		client:       client,
 		logger:       logger,
 		endpoint:     endpoint,
 		provisionKey: provisionKey,
 	}
 }
+
 func NewFromConfig(cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
 	if !cfg.NaisDeploy.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
@@ -55,17 +58,13 @@ func NewFromConfig(cfg *config.Config, logger auditlogger.Logger) (reconcilers.R
 		return nil, err
 	}
 
-	return New(logger, cfg.NaisDeploy.Endpoint, provisionKey), nil
-}
-
-func (s *naisDeployReconciler) Name() string {
-	return Name
+	return New(logger, http.DefaultClient, cfg.NaisDeploy.Endpoint, provisionKey), nil
 }
 
 func (s *naisDeployReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {
 	const signatureHeader = "X-NAIS-Signature"
 
-	payload, err := json.Marshal(&provisionApiKeyRequest{
+	payload, err := json.Marshal(&ProvisionApiKeyRequest{
 		Rotate:    false,
 		Team:      *in.Team.Slug,
 		Timestamp: time.Now().Unix(),
@@ -84,7 +83,7 @@ func (s *naisDeployReconciler) Reconcile(ctx context.Context, in reconcilers.Inp
 	req.Header.Set(signatureHeader, signature)
 	req.Header.Set("content-type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := s.client.Do(req)
 	if err != nil {
 		return err
 	}
