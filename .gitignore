@@ -19,4 +19,5 @@
 .idea
 .vscode
 .tool-versions
+.env
 /local/
