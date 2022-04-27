@@ -1,4 +1,4 @@
-package azure_group_reconciler
+package azureclient
 
 type GroupResponse struct {
 	Value []*Group

@@ -60,7 +60,3 @@ func TestReconcile(t *testing.T) {
 
 	wg.Wait()
 }
-
-func strp(s string) *string {
-	return &s
-}

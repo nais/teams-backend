@@ -1,16 +1,11 @@
 package azure_group_reconciler
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/nais/console/pkg/auditlogger"
+	"github.com/nais/console/pkg/azureclient"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers"
@@ -64,8 +59,13 @@ func NewFromConfig(cfg *config.Config, logger auditlogger.Logger) (reconcilers.R
 	return New(logger, conf), nil
 }
 
+func (s *azureReconciler) Client(ctx context.Context) azureclient.Client {
+	return azureclient.New(s.oauth.Client(ctx))
+}
+
 func (s *azureReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {
-	grp, err := s.getOrCreateGroup(ctx, in)
+	client := s.Client(ctx)
+	grp, err := client.GetOrCreateGroup(ctx, teamNameWithPrefix(in.Team.Slug), *in.Team.Name, *in.Team.Purpose)
 	if err != nil {
 		return err
 	}
@@ -80,193 +80,9 @@ func (s *azureReconciler) Reconcile(ctx context.Context, in reconcilers.Input) e
 	return nil
 }
 
-func (s *azureReconciler) getGroup(ctx context.Context, slug string) (*Group, error) {
-	client := s.oauth.Client(ctx)
-
-	v := &url.Values{}
-	v.Add("$filter", fmt.Sprintf("mailNickname eq '%s'", slug))
-	u := "https://graph.microsoft.com/v1.0/groups?" + v.Encode()
-
-	req, err := http.NewRequestWithContext(ctx, "GET", u, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-	dec := json.NewDecoder(resp.Body)
-	grp := &GroupResponse{}
-	err = dec.Decode(grp)
-
-	if err != nil {
-		return nil, err
-	}
-
-	switch len(grp.Value) {
-	case 0:
-		return nil, fmt.Errorf("azure group '%s' does not exist", slug)
-	case 1:
-		break
-	default:
-		return nil, fmt.Errorf("ambigious response; more than one search result for azure group '%s'", slug)
-	}
-
-	return grp.Value[0], nil
-}
-
-func (s *azureReconciler) createGroup(ctx context.Context, in reconcilers.Input) (*Group, error) {
-	client := s.oauth.Client(ctx)
-	slug := reconcilers.TeamNamePrefix + *in.Team.Slug
-
-	u := "https://graph.microsoft.com/v1.0/groups"
-
-	grp := &Group{
-		Description:     *in.Team.Purpose,
-		DisplayName:     *in.Team.Name,
-		GroupTypes:      nil,
-		MailEnabled:     false,
-		MailNickname:    slug,
-		SecurityEnabled: true,
-	}
-
-	payload, err := json.Marshal(grp)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("content-type", "application/json")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusCreated {
-		text, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("create azure group '%s': %s: %s", slug, resp.Status, string(text))
-	}
-
-	dec := json.NewDecoder(resp.Body)
-	grp = &Group{}
-	err = dec.Decode(grp)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if len(grp.ID) == 0 {
-		return nil, fmt.Errorf("azure group '%s' created, but no ID returned", slug)
-	}
-
-	return grp, nil
-}
-
-// https://docs.microsoft.com/en-us/graph/api/group-list-members?view=graph-rest-1.0&tabs=http
-func (s *azureReconciler) listGroupMembers(ctx context.Context, grp *Group) ([]*Member, error) {
-	client := s.oauth.Client(ctx)
-	u := fmt.Sprintf("https://graph.microsoft.com/v1.0/groups/%s/members", grp.ID)
-
-	req, err := http.NewRequestWithContext(ctx, "GET", u, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-	dec := json.NewDecoder(resp.Body)
-	members := &MemberResponse{}
-	err = dec.Decode(members)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return members.Value, nil
-}
-
-func (s *azureReconciler) getOrCreateGroup(ctx context.Context, in reconcilers.Input) (*Group, error) {
-	slug := reconcilers.TeamNamePrefix + *in.Team.Slug
-	grp, err := s.getGroup(ctx, slug)
-	if err == nil {
-		return grp, err
-	}
-
-	return s.createGroup(ctx, in)
-}
-
-func (s *azureReconciler) addMemberToGroup(ctx context.Context, grp *Group, member *Member) error {
-	client := s.oauth.Client(ctx)
-
-	u := fmt.Sprintf("https://graph.microsoft.com/v1.0/groups/%s/members/$ref", grp.ID)
-
-	request := &AddMemberRequest{
-		ODataID: member.ODataID(),
-	}
-
-	payload, err := json.Marshal(request)
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(payload))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("content-type", "application/json")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusNoContent {
-		text, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("add member '%s' to azure group '%s': %s: %s", member.Mail, grp.MailNickname, resp.Status, string(text))
-	}
-
-	return nil
-}
-
-func (s *azureReconciler) removeMemberFromGroup(ctx context.Context, grp *Group, member *Member) error {
-	client := s.oauth.Client(ctx)
-
-	u := fmt.Sprintf("https://graph.microsoft.com/v1.0/groups/%s/members/%s/$ref", grp.ID, member.ID)
-
-	req, err := http.NewRequestWithContext(ctx, "DELETE", u, nil)
-	if err != nil {
-		return err
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusNoContent {
-		text, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("remove member '%s' from azure group '%s': %s: %s", member.Mail, grp.MailNickname, resp.Status, string(text))
-	}
-
-	return nil
-}
-
-func (s *azureReconciler) connectUsers(ctx context.Context, grp *Group, in reconcilers.Input) error {
-	members, err := s.listGroupMembers(ctx, grp)
+func (s *azureReconciler) connectUsers(ctx context.Context, grp *azureclient.Group, in reconcilers.Input) error {
+	client := s.Client(ctx)
+	members, err := client.ListGroupMembers(ctx, grp)
 	if err != nil {
 		return s.logger.Errorf(in, OpAddMembers, "list existing members in Azure group: %s", err)
 	}
@@ -276,7 +92,7 @@ func (s *azureReconciler) connectUsers(ctx context.Context, grp *Group, in recon
 
 	for _, member := range deleteMembers {
 		// FIXME: connect audit log with database user, if exists
-		err = s.removeMemberFromGroup(ctx, grp, member)
+		err = client.RemoveMemberFromGroup(ctx, grp, member)
 		if err != nil {
 			return s.logger.UserErrorf(in, OpDeleteMember, nil, "delete member '%s' from Azure group '%s': %s", member.Mail, grp.MailNickname, err)
 		}
@@ -289,11 +105,11 @@ func (s *azureReconciler) connectUsers(ctx context.Context, grp *Group, in recon
 		if user.Email == nil {
 			continue
 		}
-		member, err := s.getUser(ctx, *user.Email)
+		member, err := client.GetUser(ctx, *user.Email)
 		if err != nil {
 			return s.logger.UserErrorf(in, OpAddMember, user, "add member '%s' to Azure group '%s': %s", *user.Email, grp.MailNickname, err)
 		}
-		err = s.addMemberToGroup(ctx, grp, member)
+		err = client.AddMemberToGroup(ctx, grp, member)
 		if err != nil {
 			return s.logger.UserErrorf(in, OpAddMember, user, "add member '%s' to Azure group '%s': %s", member.Mail, grp.MailNickname, err)
 		}
@@ -305,41 +121,9 @@ func (s *azureReconciler) connectUsers(ctx context.Context, grp *Group, in recon
 	return nil
 }
 
-func (s *azureReconciler) getUser(ctx context.Context, email string) (*Member, error) {
-	client := s.oauth.Client(ctx)
-	u := fmt.Sprintf("https://graph.microsoft.com/v1.0/users/%s", email)
-
-	req, err := http.NewRequestWithContext(ctx, "GET", u, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		text, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("%s: %s", resp.Status, string(text))
-	}
-
-	dec := json.NewDecoder(resp.Body)
-	user := &Member{}
-	err = dec.Decode(user)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return user, nil
-}
-
 // Given a list of Azure group members and a list of users,
 // return users not present in members list.
-func missingUsers(members []*Member, users []*dbmodels.User) []*dbmodels.User {
+func missingUsers(members []*azureclient.Member, users []*dbmodels.User) []*dbmodels.User {
 	userMap := make(map[string]*dbmodels.User)
 	for _, user := range users {
 		if user.Email == nil {
@@ -359,8 +143,8 @@ func missingUsers(members []*Member, users []*dbmodels.User) []*dbmodels.User {
 
 // Given a list of Azure group members and a list of users,
 // return members not present in user list.
-func extraMembers(members []*Member, users []*dbmodels.User) []*Member {
-	memberMap := make(map[string]*Member)
+func extraMembers(members []*azureclient.Member, users []*dbmodels.User) []*azureclient.Member {
+	memberMap := make(map[string]*azureclient.Member)
 	for _, member := range members {
 		memberMap[strings.ToLower(member.Mail)] = member
 	}
@@ -370,9 +154,16 @@ func extraMembers(members []*Member, users []*dbmodels.User) []*Member {
 		}
 		delete(memberMap, *user.Email)
 	}
-	members = make([]*Member, 0, len(memberMap))
+	members = make([]*azureclient.Member, 0, len(memberMap))
 	for _, member := range memberMap {
 		members = append(members, member)
 	}
 	return members
+}
+
+func teamNameWithPrefix(slug *string) string {
+	if slug == nil {
+		panic("nil slug passed to teamNameWithPrefix")
+	}
+	return reconcilers.TeamNamePrefix + *slug
 }
