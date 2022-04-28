@@ -13,13 +13,23 @@ import (
 
 type RoundTripFunc func(req *http.Request) *http.Response
 
-func (f RoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
-	return f(req), nil
+type RoundTripper struct {
+	funcs          []RoundTripFunc
+	requestCounter int
 }
 
-func NewTestClient(fn RoundTripFunc) *http.Client {
+func (r *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	handler := r.funcs[r.requestCounter]
+	r.requestCounter++
+	return handler(req), nil
+}
+
+func NewTestClient(funcs ...RoundTripFunc) *http.Client {
 	return &http.Client{
-		Transport: fn,
+		Transport: &RoundTripper{
+			funcs:          funcs,
+			requestCounter: 0,
+		},
 	}
 }
 
@@ -211,6 +221,61 @@ func Test_CreateGroupWithIncompleteResponse(t *testing.T) {
 
 	assert.Nil(t, group)
 	assert.EqualError(t, err, "azure group 'mail' created, but no ID returned")
+}
+
+func Test_GetOrCreateGroupWhenGroupExists(t *testing.T) {
+	httpClient := NewTestClient(
+		func(req *http.Request) *http.Response {
+			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups?%24filter=mailNickname+eq+%27slug%27", req.URL.String())
+			assert.Equal(t, http.MethodGet, req.Method)
+
+			return response("200 OK", `{"value": [{"id":"group-id"}]}`)
+		},
+		func(req *http.Request) *http.Response {
+			assert.Fail(t, "Request should not occur")
+			return nil
+		},
+	)
+
+	client := New(httpClient)
+
+	group, err := client.GetOrCreateGroup(context.TODO(), "slug", "name", "description")
+
+	assert.NoError(t, err)
+	assert.Equal(t, "group-id", group.ID)
+}
+
+func Test_GetOrCreateGroupWhenGroupDoesNotExist(t *testing.T) {
+	httpClient := NewTestClient(
+		func(req *http.Request) *http.Response {
+			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups?%24filter=mailNickname+eq+%27slug%27", req.URL.String())
+			assert.Equal(t, http.MethodGet, req.Method)
+
+			return response("404 Not Found", "{}")
+		},
+		func(req *http.Request) *http.Response {
+			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups", req.URL.String())
+			assert.Equal(t, http.MethodPost, req.Method)
+			assert.Equal(t, "application/json", req.Header.Get("content-type"))
+
+			return response("201 Created", `{
+				"id":"some-id",
+				"description":"description",
+				"displayName": "name",
+				"mailNickname": "mail"
+			}`)
+		},
+	)
+
+	client := New(httpClient)
+
+	group, err := client.GetOrCreateGroup(context.TODO(), "slug", "name", "description")
+
+	assert.NoError(t, err)
+	assert.Equal(t, "some-id", group.ID)
+	assert.Equal(t, "description", group.Description)
+	assert.Equal(t, "name", group.DisplayName)
+	assert.Equal(t, "mail", group.MailNickname)
 }
 
 func response(status, body string) *http.Response {
