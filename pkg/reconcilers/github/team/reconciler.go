@@ -2,6 +2,7 @@ package github_team_reconciler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -120,7 +121,8 @@ func (s *gitHubReconciler) getOrCreateTeam(ctx context.Context, in reconcilers.I
 		Description: &description,
 	}
 
-	team, _, err := s.teamsService.CreateTeam(ctx, s.org, newTeam)
+	team, resp, err := s.teamsService.CreateTeam(ctx, s.org, newTeam)
+	err = httperr(http.StatusCreated, resp, err)
 	if err != nil {
 		return nil, s.logger.Errorf(in, OpCreate, "create GitHub team '%s': %s", newTeam, err)
 	}
@@ -151,7 +153,8 @@ func (s *gitHubReconciler) connectUsers(ctx context.Context, in reconcilers.Inpu
 		// TODO: add user role in membership options?
 		// FIXME: connect audit log with database user, if exists
 		opts := &github.TeamAddTeamMembershipOptions{}
-		_, _, err = s.teamsService.AddTeamMembershipBySlug(ctx, s.org, *team.Slug, username, opts)
+		_, resp, err := s.teamsService.AddTeamMembershipBySlug(ctx, s.org, *team.Slug, username, opts)
+		err = httperr(http.StatusOK, resp, err)
 		if err != nil {
 			return s.logger.UserErrorf(in, OpAddMember, nil, "add member '%s' to GitHub team '%s': %s", username, *team.Slug, err)
 		}
@@ -162,7 +165,8 @@ func (s *gitHubReconciler) connectUsers(ctx context.Context, in reconcilers.Inpu
 
 	extra := extraMembers(members, usernames)
 	for _, username := range extra {
-		_, err = s.teamsService.RemoveTeamMembershipBySlug(ctx, s.org, *team.Slug, username)
+		resp, err := s.teamsService.RemoveTeamMembershipBySlug(ctx, s.org, *team.Slug, username)
+		err = httperr(http.StatusNoContent, resp, err)
 		if err != nil {
 			return s.logger.UserErrorf(in, OpDeleteMember, nil, "remove member '%s' from GitHub team '%s': %s", username, *team.Slug, err)
 		}
@@ -185,6 +189,7 @@ func (s *gitHubReconciler) getTeamMembers(ctx context.Context, slug string) ([]*
 	allMembers := make([]*github.User, 0)
 	for {
 		members, resp, err := s.teamsService.ListTeamMembersBySlug(ctx, s.org, slug, opt)
+		err = httperr(http.StatusOK, resp, err)
 		if err != nil {
 			return nil, err
 		}
@@ -298,4 +303,18 @@ func stringWithFallback(strp *string, fallback string) string {
 		return fallback
 	}
 	return *strp
+}
+
+func httperr(expected int, resp *github.Response, err error) error {
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != expected {
+		if resp.Body == nil {
+			return errors.New("unknown error")
+		}
+		body, _ := ioutil.ReadAll(resp.Body)
+		return fmt.Errorf("server raised error: %s: %s", resp.Status, string(body))
+	}
+	return nil
 }
