@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -348,31 +348,104 @@ func Test_ListGroupMembersWithInvalidResponse(t *testing.T) {
 func Test_AddMemberToGroup(t *testing.T) {
 	httpClient := NewTestClient(
 		func(req *http.Request) *http.Response {
-			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/group-id/members", req.URL.String())
-			assert.Equal(t, http.MethodGet, req.Method)
+			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/group-id/members/$ref", req.URL.String())
+			assert.Equal(t, http.MethodPost, req.Method)
+			assert.Equal(t, "application/json", req.Header.Get("content-type"))
+			body, _ := io.ReadAll(req.Body)
+			assert.Equal(t, `{"@odata.id":"https://graph.microsoft.com/v1.0/directoryObjects/user-id"}`, string(body))
 
-			return response("200 OK", "some response")
+			return response("204 No Content", "")
 		},
 	)
 
 	client := New(httpClient)
 
-	members, err := client.ListGroupMembers(context.TODO(), &Group{
+	err := client.AddMemberToGroup(context.TODO(), &Group{
 		ID: "group-id",
+	}, &Member{
+		ID:   "user-id",
+		Mail: "mail@example.com",
 	})
 
-	assert.EqualError(t, err, "invalid character 's' looking for beginning of value")
-	assert.Nil(t, members)
+	assert.NoError(t, err)
 }
 
-func response(status, body string) *http.Response {
+func Test_AddMemberToGroupWithInvalidResponse(t *testing.T) {
+	httpClient := NewTestClient(
+		func(req *http.Request) *http.Response {
+			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/group-id/members/$ref", req.URL.String())
+			assert.Equal(t, http.MethodPost, req.Method)
+			assert.Equal(t, "application/json", req.Header.Get("content-type"))
+
+			return response("200 OK", "some response body")
+		},
+	)
+
+	client := New(httpClient)
+
+	err := client.AddMemberToGroup(context.TODO(), &Group{
+		ID:           "group-id",
+		MailNickname: "group",
+	}, &Member{
+		ID:   "user-id",
+		Mail: "mail@example.com",
+	})
+
+	assert.EqualError(t, err, "add member 'mail@example.com' to azure group 'group': 200 OK: some response body")
+}
+
+func Test_RemoveMemberFromGroup(t *testing.T) {
+	httpClient := NewTestClient(
+		func(req *http.Request) *http.Response {
+			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/group-id/members/user-id/$ref", req.URL.String())
+			assert.Equal(t, http.MethodDelete, req.Method)
+
+			return response("204 No Content", "")
+		},
+	)
+
+	client := New(httpClient)
+
+	err := client.RemoveMemberFromGroup(context.TODO(), &Group{
+		ID: "group-id",
+	}, &Member{
+		ID: "user-id",
+	})
+
+	assert.NoError(t, err)
+}
+
+func Test_RemoveMemberFromGroupWithInvalidResponse(t *testing.T) {
+	httpClient := NewTestClient(
+		func(req *http.Request) *http.Response {
+			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/group-id/members/user-id/$ref", req.URL.String())
+			assert.Equal(t, http.MethodDelete, req.Method)
+
+			return response("200 OK", "some response body")
+		},
+	)
+
+	client := New(httpClient)
+
+	err := client.RemoveMemberFromGroup(context.TODO(), &Group{
+		ID:           "group-id",
+		MailNickname: "mail@example.com",
+	}, &Member{
+		ID:   "user-id",
+		Mail: "mail",
+	})
+
+	assert.EqualError(t, err, "remove member 'mail' from azure group 'mail@example.com': 200 OK: some response body")
+}
+
+func response(status string, body string) *http.Response {
 	parts := strings.Fields(status)
 	statusCode, _ := strconv.Atoi(parts[0])
 
 	return &http.Response{
 		Status:     status,
 		StatusCode: statusCode,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(body)),
+		Body:       io.NopCloser(bytes.NewBufferString(body)),
 		Header:     make(http.Header),
 	}
 }
