@@ -24,3 +24,5 @@ docker:
 
 mocks:
 	mockery --inpackage --case snake --srcpkg ./pkg/azureclient --name Client
+	mockery --inpackage --case snake --srcpkg ./pkg/reconcilers/github/team --name TeamsService
+	mockery --inpackage --case snake --srcpkg ./pkg/reconcilers/github/team --name GraphClient
