@@ -27,8 +27,7 @@ func (r *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 func NewTestClient(funcs ...RoundTripFunc) *http.Client {
 	return &http.Client{
 		Transport: &RoundTripper{
-			funcs:          funcs,
-			requestCounter: 0,
+			funcs: funcs,
 		},
 	}
 }
