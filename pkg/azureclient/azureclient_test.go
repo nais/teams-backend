@@ -277,6 +277,73 @@ func Test_GetOrCreateGroupWhenGroupDoesNotExist(t *testing.T) {
 	assert.Equal(t, "mail", group.MailNickname)
 }
 
+func Test_ListGroupMembers(t *testing.T) {
+	httpClient := NewTestClient(
+		func(req *http.Request) *http.Response {
+			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/group-id/members", req.URL.String())
+			assert.Equal(t, http.MethodGet, req.Method)
+
+			return response("200 OK", `{
+				"value": [
+					{"id": "user-id-1"},
+					{"id": "user-id-2"}
+				]
+			}`)
+		},
+	)
+
+	client := New(httpClient)
+
+	members, err := client.ListGroupMembers(context.TODO(), &Group{
+		ID: "group-id",
+	})
+
+	assert.NoError(t, err)
+	assert.Len(t, members, 2)
+	assert.Equal(t, "user-id-1", members[0].ID)
+	assert.Equal(t, "user-id-2", members[1].ID)
+}
+
+func Test_ListGroupMembersWhenGroupDoesNotExist(t *testing.T) {
+	httpClient := NewTestClient(
+		func(req *http.Request) *http.Response {
+			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/group-id/members", req.URL.String())
+			assert.Equal(t, http.MethodGet, req.Method)
+
+			return response("404 Not Found", `{"error":{"message":"some error"}}`)
+		},
+	)
+
+	client := New(httpClient)
+
+	members, err := client.ListGroupMembers(context.TODO(), &Group{
+		ID: "group-id",
+	})
+
+	assert.NoError(t, err)
+	assert.Len(t, members, 0)
+}
+
+func Test_ListGroupMembersWithInvalidResponse(t *testing.T) {
+	httpClient := NewTestClient(
+		func(req *http.Request) *http.Response {
+			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/group-id/members", req.URL.String())
+			assert.Equal(t, http.MethodGet, req.Method)
+
+			return response("200 OK", "some response")
+		},
+	)
+
+	client := New(httpClient)
+
+	members, err := client.ListGroupMembers(context.TODO(), &Group{
+		ID: "group-id",
+	})
+
+	assert.EqualError(t, err, "invalid character 's' looking for beginning of value")
+	assert.Nil(t, members)
+}
+
 func response(status, body string) *http.Response {
 	parts := strings.Fields(status)
 	statusCode, _ := strconv.Atoi(parts[0])
