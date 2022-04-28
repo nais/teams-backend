@@ -317,14 +317,35 @@ func Test_ListGroupMembersWhenGroupDoesNotExist(t *testing.T) {
 	client := New(httpClient)
 
 	members, err := client.ListGroupMembers(context.TODO(), &Group{
-		ID: "group-id",
+		ID:           "group-id",
+		MailNickname: "mail",
 	})
 
-	assert.NoError(t, err)
+	assert.EqualError(t, err, `list group members 'mail': 404 Not Found: {"error":{"message":"some error"}}`)
 	assert.Len(t, members, 0)
 }
 
 func Test_ListGroupMembersWithInvalidResponse(t *testing.T) {
+	httpClient := NewTestClient(
+		func(req *http.Request) *http.Response {
+			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/group-id/members", req.URL.String())
+			assert.Equal(t, http.MethodGet, req.Method)
+
+			return response("200 OK", "some response")
+		},
+	)
+
+	client := New(httpClient)
+
+	members, err := client.ListGroupMembers(context.TODO(), &Group{
+		ID: "group-id",
+	})
+
+	assert.EqualError(t, err, "invalid character 's' looking for beginning of value")
+	assert.Nil(t, members)
+}
+
+func Test_AddMemberToGroup(t *testing.T) {
 	httpClient := NewTestClient(
 		func(req *http.Request) *http.Response {
 			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/group-id/members", req.URL.String())

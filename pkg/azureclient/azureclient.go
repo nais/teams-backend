@@ -169,6 +169,11 @@ func (s *client) ListGroupMembers(ctx context.Context, grp *Group) ([]*Member, e
 		return nil, err
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		text, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("list group members '%s': %s: %s", grp.MailNickname, resp.Status, string(text))
+	}
+
 	defer resp.Body.Close()
 	dec := json.NewDecoder(resp.Body)
 	members := &MemberResponse{}
