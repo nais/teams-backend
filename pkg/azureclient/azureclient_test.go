@@ -6,6 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
+	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -26,14 +28,10 @@ func Test_client_GetUser(t *testing.T) {
 		assert.Equal(t, "https://graph.microsoft.com/v1.0/users/user@example.com", req.URL.String())
 		assert.Equal(t, http.MethodGet, req.Method)
 
-		return &http.Response{
-			StatusCode: 200,
-			Body: ioutil.NopCloser(bytes.NewBufferString(`{
-				"mail": "user@example.com",
-				"id": "some-id"
-			}`)),
-			Header: make(http.Header),
-		}
+		return response("200 OK", `{
+			"mail": "user@example.com",
+			"id": "some-id"
+		}`)
 	})
 
 	client := New(httpClient)
@@ -49,12 +47,7 @@ func Test_client_GetUserThatDoesNotExist(t *testing.T) {
 		assert.Equal(t, "https://graph.microsoft.com/v1.0/users/user@example.com", req.URL.String())
 		assert.Equal(t, http.MethodGet, req.Method)
 
-		return &http.Response{
-			Status:     "404 Not Found",
-			StatusCode: 404,
-			Body:       ioutil.NopCloser(bytes.NewBufferString(`{"error": {"message": "user does not exist"}}`)),
-			Header:     make(http.Header),
-		}
+		return response("404 Not Found", `{"error": {"message": "user does not exist"}}`)
 	})
 
 	client := New(httpClient)
@@ -69,11 +62,7 @@ func Test_client_GetUserWithInvalidApiResponse(t *testing.T) {
 		assert.Equal(t, "https://graph.microsoft.com/v1.0/users/user@example.com", req.URL.String())
 		assert.Equal(t, http.MethodGet, req.Method)
 
-		return &http.Response{
-			StatusCode: 200,
-			Body:       ioutil.NopCloser(bytes.NewBufferString(`some string`)),
-			Header:     make(http.Header),
-		}
+		return response("200 OK", "some string")
 	})
 
 	client := New(httpClient)
@@ -88,11 +77,7 @@ func Test_client_GetGroup(t *testing.T) {
 		assert.Equal(t, "https://graph.microsoft.com/v1.0/groups?%24filter=mailNickname+eq+%27slug%27", req.URL.String())
 		assert.Equal(t, http.MethodGet, req.Method)
 
-		return &http.Response{
-			StatusCode: 200,
-			Body:       ioutil.NopCloser(bytes.NewBufferString(`{"value": [{"id":"group-id"}]}`)),
-			Header:     make(http.Header),
-		}
+		return response("200 OK", `{"value": [{"id":"group-id"}]}`)
 	})
 
 	client := New(httpClient)
@@ -107,11 +92,7 @@ func Test_client_GetGroupThatDoesNotExist(t *testing.T) {
 		assert.Equal(t, "https://graph.microsoft.com/v1.0/groups?%24filter=mailNickname+eq+%27slug%27", req.URL.String())
 		assert.Equal(t, http.MethodGet, req.Method)
 
-		return &http.Response{
-			StatusCode: 200,
-			Body:       ioutil.NopCloser(bytes.NewBufferString(`{"value": []}`)),
-			Header:     make(http.Header),
-		}
+		return response("200 OK", `{"value": []}`)
 	})
 
 	client := New(httpClient)
@@ -126,11 +107,7 @@ func Test_client_GetGroupWithAmbiguousResult(t *testing.T) {
 		assert.Equal(t, "https://graph.microsoft.com/v1.0/groups?%24filter=mailNickname+eq+%27slug%27", req.URL.String())
 		assert.Equal(t, http.MethodGet, req.Method)
 
-		return &http.Response{
-			StatusCode: 200,
-			Body:       ioutil.NopCloser(bytes.NewBufferString(`{"value": [{"id":"group-id"}, {"id":"group-id-2"}]}`)),
-			Header:     make(http.Header),
-		}
+		return response("200 OK", `{"value": [{"id":"group-id"}, {"id":"group-id-2"}]}`)
 	})
 
 	client := New(httpClient)
@@ -138,4 +115,16 @@ func Test_client_GetGroupWithAmbiguousResult(t *testing.T) {
 
 	assert.Nil(t, group)
 	assert.EqualError(t, err, "ambiguous response; more than one search result for azure group 'slug'")
+}
+
+func response(status, body string) *http.Response {
+	parts := strings.Fields(status)
+	statusCode, _ := strconv.Atoi(parts[0])
+
+	return &http.Response{
+		Status:     status,
+		StatusCode: statusCode,
+		Body:       ioutil.NopCloser(bytes.NewBufferString(body)),
+		Header:     make(http.Header),
+	}
 }
