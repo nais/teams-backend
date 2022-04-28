@@ -11,6 +11,7 @@ import (
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers"
 	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
+	"github.com/shurcooL/githubv4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -26,6 +27,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 	defer close(ch)
 
 	const org = "my-organization"
+	const description = "this describes my organization"
 
 	addUser := &dbmodels.User{
 		Email: strp("add@example.com"),
@@ -38,7 +40,39 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		reconciler := github_team_reconciler.New(logger, org, teamsService, graphClient)
 
 		teamsService.On("GetTeamBySlug", mock.Anything, org, teamName).
-			Return(nil, &github.Response{Response: &http.Response{StatusCode: http.StatusNotFound}}, nil).Once()
+			Return(nil, &github.Response{
+				Response: &http.Response{
+					StatusCode: http.StatusNotFound,
+				},
+			}, nil).Once()
+
+		teamsService.On("CreateTeam", mock.Anything, org,
+			github.NewTeam{
+				Name:        teamName,
+				Description: strp(description),
+			}).
+			Return(&github.Response{
+				Response: &http.Response{
+					StatusCode: http.StatusCreated,
+				},
+			}, nil).Once()
+
+		mp := map[string]interface{}{
+			"org":      githubv4.String(org),
+			"username": githubv4.String(*addUser.Email),
+		}
+		graphClient.On("Query", mock.Anything, mock.Anything, mp).Run(
+			func(args mock.Arguments) {
+				query := args.Get(1).(*github_team_reconciler.LookupSSOUserQuery)
+				query.Organization.SamlIdentityProvider.ExternalIdentities.Nodes = []github_team_reconciler.LookupSSOUserNode{
+					{
+						User: github_team_reconciler.LookupSSOUser{
+							Login: "foo",
+						},
+					},
+				}
+			},
+		).Once().Return(nil)
 
 		err := reconciler.Reconcile(ctx, reconcilers.Input{
 			System:          nil,
@@ -46,7 +80,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Team: &dbmodels.Team{
 				Slug:    strp(teamName),
 				Name:    strp(teamName),
-				Purpose: strp(teamName),
+				Purpose: strp(description),
 				Users: []*dbmodels.User{
 					addUser, keepUser,
 				},

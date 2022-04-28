@@ -253,21 +253,27 @@ func (s *gitHubReconciler) mapSSOUsers(ctx context.Context, in reconcilers.Input
 	return userMap, nil
 }
 
+type LookupSSOUser struct {
+	Login githubv4.String
+}
+
+type LookupSSOUserNode struct {
+	User LookupSSOUser
+}
+
+type LookupSSOUserQuery struct {
+	Organization struct {
+		SamlIdentityProvider struct {
+			ExternalIdentities struct {
+				Nodes []LookupSSOUserNode
+			} `graphql:"externalIdentities(first: 1, userName: $username)"`
+		}
+	} `graphql:"organization(login: $org)"`
+}
+
 // Look up a GitHub username from an SSO e-mail address connected to that user account.
 func (s *gitHubReconciler) lookupSSOUser(ctx context.Context, email string) (string, error) {
-	var query struct {
-		Organization struct {
-			SamlIdentityProvider struct {
-				ExternalIdentities struct {
-					Nodes []struct {
-						User struct {
-							Login githubv4.String
-						}
-					}
-				} `graphql:"externalIdentities(first: 1, userName: $username)"`
-			}
-		} `graphql:"organization(login: $org)"`
-	}
+	var query LookupSSOUserQuery
 
 	variables := map[string]interface{}{
 		"org":      githubv4.String(s.org),
