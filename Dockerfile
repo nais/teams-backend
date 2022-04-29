@@ -1,7 +1,6 @@
-FROM golang:1.17-alpine as builder
-RUN apk add --no-cache git make curl
+FROM golang:1.18-alpine as builder
+RUN apk add --no-cache git make curl build-base
 ENV GOOS=linux
-ENV CGO_ENABLED=0
 COPY . /src
 WORKDIR /src
 RUN make test
