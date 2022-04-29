@@ -14,6 +14,7 @@ spec:
       labels:
         {{- include "console.selectorLabels" . | nindent 8 }}
     spec:
+      serviceAccountName: {{ include "console.serviceAccountName" . }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -21,6 +22,9 @@ spec:
           env:
             - name: CONSOLE_LISTEN_ADDRESS
               value: 0.0.0.0:3000
+          envFrom:
+            - secretRef:
+                name: {{ include "console.fullname" . }}
           ports:
             - name: http
               containerPort: 3000
