@@ -286,26 +286,6 @@ func setupLogging() {
 	log.SetLevel(log.DebugLevel)
 }
 
-func migrate(db *gorm.DB) error {
-	// uuid-ossp is needed for PostgreSQL to generate UUIDs as primary keys
-	tx := db.Exec(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`)
-	if tx.Error != nil {
-		return tx.Error
-	}
-
-	return db.AutoMigrate(
-		&dbmodels.ApiKey{},
-		&dbmodels.AuditLog{},
-		&dbmodels.Role{},
-		&dbmodels.RoleBinding{},
-		&dbmodels.Synchronization{},
-		&dbmodels.System{},
-		&dbmodels.TeamMetadata{},
-		&dbmodels.Team{},
-		&dbmodels.User{},
-	)
-}
-
 func systems(ctx context.Context, db *gorm.DB) (map[string]*dbmodels.System, error) {
 	dbsystems := make([]*dbmodels.System, 0)
 	tx := db.WithContext(ctx).Find(&dbsystems)
@@ -354,8 +334,14 @@ func setupDatabase(cfg *config.Config) (*gorm.DB, error) {
 	}
 	log.Infof("Successfully connected to database.")
 
+	// uuid-ossp is needed for PostgreSQL to generate UUIDs as primary keys
+	tx := db.Exec(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`)
+	if tx.Error != nil {
+		return nil, fmt.Errorf("install postgres uuid extension: %w", tx.Error)
+	}
+
 	log.Infof("Migrating database schema...")
-	err = migrate(db)
+	err = dbmodels.Migrate(db)
 	if err != nil {
 		return nil, err
 	}

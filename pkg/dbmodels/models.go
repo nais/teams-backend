@@ -10,7 +10,7 @@ import (
 
 // Base model that all database tables inherit.
 type Model struct {
-	ID          *uuid.UUID `json:"id" gorm:"primaryKey; type:uuid; default:uuid_generate_v4()"`
+	ID          *uuid.UUID `json:"id" gorm:"primaryKey; type:uuid; default:(uuid_generate_v4())"`
 	CreatedAt   time.Time  `json:"created_at" gorm:"<-:create; autoCreateTime; index; not null"`
 	CreatedBy   *User      `json:"-"`
 	UpdatedBy   *User      `json:"-"`
