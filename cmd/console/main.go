@@ -396,7 +396,10 @@ func corsConfig() cors.Options {
 func setupHTTPServer(cfg *config.Config, db *gorm.DB, graphapi *graphql_handler.Server, authhandler *authn.Handler, store authn.SessionStore) (*http.Server, error) {
 	r := chi.NewRouter()
 
+	r.Get("/healthz", func(_ http.ResponseWriter, _ *http.Request) {})
+
 	r.Get("/", playground.Handler("GraphQL playground", "/query"))
+
 	r.Route("/query", func(r chi.Router) {
 		r.Use(
 			cors.New(corsConfig()).Handler,
