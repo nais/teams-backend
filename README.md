@@ -7,7 +7,7 @@ ADR: https://github.com/navikt/pig/blob/master/kubeops/adr/010-console-nais-io.m
 
 ## Local development
 
-Console needs Go 1.17, and depends on a PostgreSQL database.
+Console needs Go 1.18, and depends on a PostgreSQL database.
 For convenience, a Docker Compose configuration is provided.
 
 Running the compiled binary without any arguments will start an instance that
