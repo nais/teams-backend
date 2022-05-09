@@ -14,7 +14,7 @@ spec:
       labels:
         {{- include "console.selectorLabels" . | nindent 8 }}
     spec:
-      serviceAccountName: {{ include "console.serviceAccountName" . }}
+      serviceAccountName: {{ include "console.name" . }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
