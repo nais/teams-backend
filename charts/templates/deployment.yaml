@@ -37,7 +37,7 @@ spec:
             - name: CONSOLE_LISTEN_ADDRESS
               value: 0.0.0.0:3000
             - name: CONSOLE_DATABASE_URL
-              value: "postgres://console@{{ .Values.envProjectId }}.iam@127.0.0.1:5432/console?sslmode=disabled"
+              value: "postgres://console@{{ .Values.envProjectId }}.iam@127.0.0.1:5432/console?sslmode=disable"
           ports:
             - name: http
               containerPort: 3000
