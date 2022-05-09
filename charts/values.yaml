@@ -1,6 +1,6 @@
 envProjectId: ""
 database:
-  url: ""
+  instance: ""
 image:
   repository: europe-north1-docker.pkg.dev/nais-io/nais/images/console
   pullPolicy: IfNotPresent

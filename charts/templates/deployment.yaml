@@ -16,15 +16,27 @@ spec:
     spec:
       serviceAccountName: {{ include "console.name" . }}
       containers:
+        - name: cloud-sql-proxy
+          image: gcr.io/cloudsql-docker/gce-proxy:1.28.0 # make sure the use the latest version
+          command:
+            - "/cloud_sql_proxy"
+            - "-log_debug_stdout"
+            - "-instances={{ .Values.envProjectId }}:europe-north1:{{ .Values.database.instance }}=tcp:5432"
+            - "-enable_iam_login"
+          securityContext:
+            runAsNonRoot: true
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "0.22"
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             - name: CONSOLE_LISTEN_ADDRESS
               value: 0.0.0.0:3000
-          envFrom:
-            - secretRef:
-                name: {{ include "console.fullname" . }}
+            - name: CONSOLE_DATABASE_URL
+              value: "postgres://console@{{ .Values.envProjectId }}.iam@localhost:5432/console?sslmode=disabled"
           ports:
             - name: http
               containerPort: 3000
