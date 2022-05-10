@@ -1,12 +1,13 @@
 package middleware
 
 import (
+	"net/http"
+	"time"
+
 	"github.com/nais/console/pkg/authn"
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/dbmodels"
 	"gorm.io/gorm"
-	"net/http"
-	"time"
 )
 
 func Oauth2Authentication(db *gorm.DB, store authn.SessionStore) func(next http.Handler) http.Handler {

@@ -408,12 +408,22 @@ func setupHTTPServer(cfg *config.Config, db *gorm.DB, graphapi *graphql_handler.
 
 	r.Get("/", playground.Handler("GraphQL playground", "/query"))
 
+	middlewares := []func(http.Handler) http.Handler{
+		cors.New(corsConfig()).Handler,
+		middleware.ApiKeyAuthentication(db),
+		middleware.Oauth2Authentication(db, store),
+	}
+
+	// If no other authentication mechanisms produce a authenticated user,
+	// fall back to auto-login if it is enabled.
+	if len(cfg.AutoLoginUser) > 0 {
+		log.Warnf("Auto-login user '%s' is ENABLED for ALL REQUESTS.", cfg.AutoLoginUser)
+		log.Warnf("THIS IS A MAJOR SECURITY ISSUE! DO NOT RUN THIS CONFIGURATION IN PRODUCTION!!!")
+		middlewares = append(middlewares, middleware.AutologinMiddleware(db, cfg.AutoLoginUser))
+	}
+
 	r.Route("/query", func(r chi.Router) {
-		r.Use(
-			cors.New(corsConfig()).Handler,
-			middleware.ApiKeyAuthentication(db),
-			middleware.Oauth2Authentication(db, store),
-		)
+		r.Use(middlewares...)
 		r.Post("/", graphapi.ServeHTTP)
 	})
 

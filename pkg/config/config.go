@@ -58,6 +58,7 @@ type Config struct {
 	UserSync      UserSync
 	NaisDeploy    NaisDeploy
 	OAuth         OAuth
+	AutoLoginUser string `envconfig:"CONSOLE_AUTO_LOGIN_USER"`
 	FrontendURL   string `envconfig:"CONSOLE_FRONTEND_URL"`
 	DatabaseURL   string `envconfig:"CONSOLE_DATABASE_URL"`
 	ListenAddress string `envconfig:"CONSOLE_LISTEN_ADDRESS"`
