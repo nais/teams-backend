@@ -18,9 +18,18 @@ type MemberResponse struct {
 	Value []*Member
 }
 
+type OwnerResponse struct {
+	Value []*Owner
+}
+
 type Member struct {
 	ID   string `json:"id,omitempty"`
 	Mail string `json:"mail,omitempty"`
+}
+
+type Owner struct {
+	ID                string `json:"id,omitempty"`
+	UserPrincipalName string `json:"userPrincipalName,omitempty"`
 }
 
 type AddMemberRequest struct {

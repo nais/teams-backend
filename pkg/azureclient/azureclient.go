@@ -15,12 +15,13 @@ type client struct {
 }
 
 type Client interface {
-	GetUser(ctx context.Context, email string) (*Member, error)
-	GetGroup(ctx context.Context, slug string) (*Group, error)
-	CreateGroup(ctx context.Context, grp *Group) (*Group, error)
-	GetOrCreateGroup(ctx context.Context, slug, name, description string) (*Group, error)
-	ListGroupMembers(ctx context.Context, grp *Group) ([]*Member, error)
 	AddMemberToGroup(ctx context.Context, grp *Group, member *Member) error
+	CreateGroup(ctx context.Context, grp *Group) (*Group, error)
+	GetGroup(ctx context.Context, slug string) (*Group, error)
+	GetOrCreateGroup(ctx context.Context, slug, name, description string) (*Group, error)
+	GetUser(ctx context.Context, email string) (*Member, error)
+	ListGroupMembers(ctx context.Context, grp *Group) ([]*Member, error)
+	ListGroupOwners(ctx context.Context, grp *Group) ([]*Owner, error)
 	RemoveMemberFromGroup(ctx context.Context, grp *Group, member *Member) error
 }
 
@@ -153,6 +154,37 @@ func (s *client) GetOrCreateGroup(ctx context.Context, slug, name, description s
 	}
 
 	return s.CreateGroup(ctx, grp)
+}
+
+// https://docs.microsoft.com/en-us/graph/api/group-list-owners?view=graph-rest-1.0&tabs=http
+func (s *client) ListGroupOwners(ctx context.Context, grp *Group) ([]*Owner, error) {
+	u := fmt.Sprintf("https://graph.microsoft.com/v1.0/groups/%s/owners", grp.ID)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		text, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("list group owners '%s': %s: %s", grp.MailNickname, resp.Status, string(text))
+	}
+
+	defer resp.Body.Close()
+	dec := json.NewDecoder(resp.Body)
+	owners := &OwnerResponse{}
+	err = dec.Decode(owners)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return owners.Value, nil
 }
 
 // https://docs.microsoft.com/en-us/graph/api/group-list-members?view=graph-rest-1.0&tabs=http

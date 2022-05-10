@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/legacy"
+	"github.com/nais/console/pkg/roles"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -48,19 +50,53 @@ func TestImportTeamsFromLegacyAzure(t *testing.T) {
 				return tx.Error
 			}
 			team := yamlteam.Convert()
-			log.Infof("Fetch team info for %s...", *team.Name)
+
+			log.Debugf("Fetch team info for %s...", *team.Name)
 			members, err := gimp.GroupMembers(yamlteam.AzureID)
 			if err != nil {
 				return err
 			}
+
+			validMembers := make([]*dbmodels.User, 0, len(members))
 			for _, member := range members {
-				tx.FirstOrCreate(member, "email = ?", member.Email)
+				if !strings.HasSuffix(*member.Email, cfg.Google.Domain) {
+					log.Warnf("Skip member %s", *member.Email)
+					continue
+				}
+				tx.FirstOrCreate(member, "email = ?", *member.Email)
+				log.Debugf("Created user %s", *member.Email)
+				validMembers = append(validMembers, member)
 			}
-			log.Infof("Created %s with %d members", *team.Name, len(members))
-			team.Users = members
+
+			team.Users = validMembers
 			tx.Save(team)
+
+			log.Infof("Fetch team administrators for %s...", *team.Name)
+			owners, err := gimp.GroupOwners(yamlteam.AzureID)
+			for _, owner := range owners {
+				if !strings.HasSuffix(*owner.Email, cfg.Google.Domain) {
+					log.Warnf("Skip owner %s", *owner.Email)
+					continue
+				}
+				tx.FirstOrCreate(owner, "email = ?", *owner.Email)
+				log.Debugf("Created user %s", *owner.Email)
+				rb := &dbmodels.RoleBinding{
+					RoleID: roles.ManageTeam,
+					TeamID: team.ID,
+					UserID: owner.ID,
+				}
+				tx.Save(rb)
+				validMembers = append(validMembers, owner)
+			}
+
+			team.Users = validMembers
+			tx.Save(team)
+
+			log.Infof("Created %s with %d owners and %d members", *team.Name, len(owners), len(members))
+
 			dbteams = append(dbteams, team)
 		}
+
 		return nil
 	})
 

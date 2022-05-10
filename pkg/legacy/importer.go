@@ -57,7 +57,20 @@ func (gimp *GroupImporter) GroupMembers(groupID string) ([]*dbmodels.User, error
 	return users, nil
 }
 
-func (gimp *GroupImporter) importUser(user *dbmodels.User) error {
-	tx := gimp.db.FirstOrCreate(user, "email = ?", user.Email)
-	return tx.Error
+func (gimp *GroupImporter) GroupOwners(groupID string) ([]*dbmodels.User, error) {
+	ctx := context.Background()
+	members, err := gimp.client.ListGroupOwners(ctx, &azureclient.Group{
+		ID: groupID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	users := make([]*dbmodels.User, 0, len(members))
+	for _, member := range members {
+		users = append(users, &dbmodels.User{
+			Email: &member.UserPrincipalName,
+			Name:  &member.UserPrincipalName,
+		})
+	}
+	return users, nil
 }
