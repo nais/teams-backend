@@ -58,6 +58,7 @@ type Config struct {
 	UserSync      UserSync
 	NaisDeploy    NaisDeploy
 	OAuth         OAuth
+	FrontendURL   string `envconfig:"CONSOLE_FRONTEND_URL"`
 	DatabaseURL   string `envconfig:"CONSOLE_DATABASE_URL"`
 	ListenAddress string `envconfig:"CONSOLE_LISTEN_ADDRESS"`
 }
@@ -65,6 +66,7 @@ type Config struct {
 func Defaults() *Config {
 	return &Config{
 		DatabaseURL:   "postgres://console:console@localhost:5432/console?sslmode=disable",
+		FrontendURL:   "http://localhost:3001",
 		ListenAddress: "127.0.0.1:3000",
 		NaisDeploy: NaisDeploy{
 			Endpoint: "http://localhost:8080/api/v1/provision",

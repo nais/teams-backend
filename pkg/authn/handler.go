@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -33,12 +34,14 @@ type Handler struct {
 	oauth2Config OAuth2
 	log          *logrus.Entry
 	repo         SessionStore
+	frontendURL  url.URL
 }
 
-func New(oauth2Config OAuth2, repo SessionStore) *Handler {
+func New(oauth2Config OAuth2, repo SessionStore, frontendURL url.URL) *Handler {
 	return &Handler{
 		oauth2Config: oauth2Config,
 		repo:         repo,
+		frontendURL:  frontendURL,
 	}
 }
 
@@ -69,28 +72,24 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
-	loginPage := "/"
+	frontendURL := h.frontendURL
 
 	redirectURI, err := r.Cookie(RedirectURICookie)
 	if err == nil {
-		loginPage = loginPage + strings.TrimPrefix(redirectURI.Value, "/")
-	}
-
-	if strings.HasPrefix(r.Host, "localhost") {
-		loginPage = "http://localhost:3000" + loginPage
+		frontendURL.Path = strings.TrimPrefix(redirectURI.Value, "/")
 	}
 
 	deleteCookie(w, RedirectURICookie, r.Host)
 	code := r.URL.Query().Get("code")
 	if len(code) == 0 {
-		http.Redirect(w, r, loginPage+"?error=unauthenticated", http.StatusFound)
+		http.Redirect(w, r, frontendURL.String()+"?error=unauthenticated", http.StatusFound)
 		return
 	}
 
 	oauthCookie, err := r.Cookie(OAuthStateCookie)
 	if err != nil {
 		h.log.Errorf("Missing oauth state cookie: %v", err)
-		http.Redirect(w, r, loginPage+"?error=invalid-state", http.StatusFound)
+		http.Redirect(w, r, frontendURL.String()+"?error=invalid-state", http.StatusFound)
 		return
 	}
 
@@ -99,21 +98,21 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	state := r.URL.Query().Get("state")
 	if state != oauthCookie.Value {
 		h.log.Info("Incoming state does not match local state")
-		http.Redirect(w, r, loginPage+"?error=invalid-state", http.StatusFound)
+		http.Redirect(w, r, frontendURL.String()+"?error=invalid-state", http.StatusFound)
 		return
 	}
 
 	tokens, err := h.oauth2Config.Exchange(r.Context(), code)
 	if err != nil {
 		h.log.Errorf("Exchanging authorization code for tokens: %v", err)
-		http.Redirect(w, r, loginPage+"?error=unauthenticated", http.StatusFound)
+		http.Redirect(w, r, frontendURL.String()+"?error=unauthenticated", http.StatusFound)
 		return
 	}
 
 	rawIDToken, ok := tokens.Extra(IDTokenKey).(string)
 	if !ok {
 		h.log.Info("Missing id_token")
-		http.Redirect(w, r, loginPage+"?error=unauthenticated", http.StatusFound)
+		http.Redirect(w, r, frontendURL.String()+"?error=unauthenticated", http.StatusFound)
 		return
 	}
 
@@ -121,7 +120,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	idToken, err := h.oauth2Config.Verify(r.Context(), rawIDToken)
 	if err != nil {
 		h.log.Info("Invalid id_token")
-		http.Redirect(w, r, loginPage+"?error=unauthenticated", http.StatusFound)
+		http.Redirect(w, r, frontendURL.String()+"?error=unauthenticated", http.StatusFound)
 		return
 	}
 
@@ -131,7 +130,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := idToken.Claims(session); err != nil {
 		h.log.WithError(err).Info("Unable to parse claims")
-		http.Redirect(w, r, loginPage+"?error=unauthenticated", http.StatusFound)
+		http.Redirect(w, r, frontendURL.String()+"?error=unauthenticated", http.StatusFound)
 		return
 	}
 
@@ -148,7 +147,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 
-	http.Redirect(w, r, loginPage, http.StatusFound)
+	http.Redirect(w, r, frontendURL.String(), http.StatusFound)
 }
 
 func deleteCookie(w http.ResponseWriter, name, domain string) {

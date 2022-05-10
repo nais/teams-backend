@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -93,7 +94,10 @@ func run() error {
 	log.Infof("Initialized %d reconcilers.", len(recs))
 
 	store := authn.NewStore()
-	authhandler := setupAuthHandler(cfg, store)
+	authhandler, err := setupAuthHandler(cfg, store)
+	if err != nil {
+		return err
+	}
 	handler := setupGraphAPI(db, sysEntries["console"], trigger)
 	srv, err := setupHTTPServer(cfg, db, handler, authhandler, store)
 	if err != nil {
@@ -269,10 +273,14 @@ func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems ma
 	return nil
 }
 
-func setupAuthHandler(cfg *config.Config, store authn.SessionStore) *authn.Handler {
+func setupAuthHandler(cfg *config.Config, store authn.SessionStore) (*authn.Handler, error) {
 	cf := authn.NewGoogle(cfg.OAuth.ClientID, cfg.OAuth.ClientSecret, cfg.OAuth.RedirectURL)
-	handler := authn.New(cf, store)
-	return handler
+	frontendURL, err := url.Parse(cfg.FrontendURL)
+	if err != nil {
+		return nil, err
+	}
+	handler := authn.New(cf, store, *frontendURL)
+	return handler, nil
 }
 
 func setupLogging() {
