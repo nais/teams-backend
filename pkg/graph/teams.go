@@ -134,7 +134,7 @@ func (r *queryResolver) Teams(ctx context.Context) (*model.Teams, error) {
 
 	var count int64
 	teams := make([]*dbmodels.Team, 0)
-	tx := r.db.WithContext(ctx).Find(&teams)
+	tx := r.db.WithContext(ctx).Order("name").Find(&teams)
 	tx.Count(&count)
 	if tx.Error != nil {
 		return nil, tx.Error
