@@ -8,9 +8,11 @@ import (
 	"github.com/nais/console/pkg/dbmodels"
 	"golang.org/x/oauth2/clientcredentials"
 	"golang.org/x/oauth2/microsoft"
+	"gorm.io/gorm"
 )
 
 type GroupImporter struct {
+	db     *gorm.DB
 	oauth  clientcredentials.Config
 	client azureclient.Client
 }
@@ -49,7 +51,13 @@ func (gimp *GroupImporter) GroupMembers(groupID string) ([]*dbmodels.User, error
 	for _, member := range members {
 		users = append(users, &dbmodels.User{
 			Email: &member.Mail,
+			Name:  &member.Mail,
 		})
 	}
 	return users, nil
+}
+
+func (gimp *GroupImporter) importUser(user *dbmodels.User) error {
+	tx := gimp.db.FirstOrCreate(user, "email = ?", user.Email)
+	return tx.Error
 }
