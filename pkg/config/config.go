@@ -30,6 +30,14 @@ type Google struct {
 	Domain          string `envconfig:"CONSOLE_GOOGLE_DOMAIN"`
 }
 
+// Google Cloud Platform reconciler
+type GCP struct {
+	Enabled          bool              `envconfig:"CONSOLE_GCP_ENABLED"`
+	CredentialsFile  string            `envconfig:"CONSOLE_GCP_CREDENTIALS_FILE"`
+	ProjectParentIDs map[string]string `envconfig:"CONSOLE_GCP_PROJECT_PARENT_IDS"` // suffix is key, parentID is value
+	Domain           string            `envconfig:"CONSOLE_GCP_DOMAIN"`
+}
+
 // Nais deploy reconciler
 type NaisDeploy struct {
 	Enabled      bool   `envconfig:"CONSOLE_NAIS_DEPLOY_ENABLED"`
@@ -55,6 +63,7 @@ type Config struct {
 	Azure         Azure
 	GitHub        GitHub
 	Google        Google
+	GCP           GCP
 	UserSync      UserSync
 	NaisDeploy    NaisDeploy
 	OAuth         OAuth
