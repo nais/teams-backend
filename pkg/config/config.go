@@ -51,6 +51,7 @@ type NaisNamespace struct {
 	CredentialsFile string `envconfig:"CONSOLE_NAIS_NAMESPACE_CREDENTIALS_FILE"`
 	Domain          string `envconfig:"CONSOLE_NAIS_NAMESPACE_DOMAIN"`
 	TopicPrefix     string `envconfig:"CONSOLE_NAIS_NAMESPACE_TOPIC_PREFIX"`
+	ProjectID       string `envconfig:"CONSOLE_NAIS_NAMESPACE_PROJECT_ID"`
 }
 
 // User synchronizer

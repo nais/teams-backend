@@ -1,21 +1,19 @@
-package google_gcp_reconciler
+package nais_namespace_reconciler
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"strings"
 
+	"cloud.google.com/go/pubsub"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/reconcilers/registry"
-	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
-	"google.golang.org/api/cloudresourcemanager/v3"
 	"google.golang.org/api/option"
-	"google.golang.org/api/pubsub/v1"
 	"gorm.io/gorm"
 )
 
@@ -40,6 +38,8 @@ type namespaceReconciler struct {
 	logger           auditlogger.Logger
 	projectParentIDs map[string]string
 	topicPrefix      string
+	credentialsFile  string
+	projectID        string
 }
 
 const (
@@ -51,14 +51,15 @@ func init() {
 	registry.Register(Name, NewFromConfig)
 }
 
-func New(db *gorm.DB, logger auditlogger.Logger, domain, topicPrefix string, config *jwt.Config, projectParentIDs map[string]string) *namespaceReconciler {
+func New(db *gorm.DB, logger auditlogger.Logger, domain, topicPrefix, credentialsFile, projectID string, projectParentIDs map[string]string) *namespaceReconciler {
 	return &namespaceReconciler{
 		db:               db,
 		logger:           logger,
 		domain:           domain,
 		topicPrefix:      topicPrefix,
-		config:           config,
+		credentialsFile:  credentialsFile,
 		projectParentIDs: projectParentIDs,
+		projectID:        projectID,
 	}
 }
 
@@ -67,32 +68,39 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, logger auditlogger.Logger) (
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
 
-	b, err := ioutil.ReadFile(cfg.NaisNamespace.CredentialsFile)
-	if err != nil {
-		return nil, fmt.Errorf("read google credentials file: %w", err)
-	}
-
-	cf, err := google.JWTConfigFromJSON(
-		b,
-		cloudresourcemanager.CloudPlatformScope,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("initialize google credentials: %w", err)
-	}
-
-	return New(db, logger, cfg.NaisNamespace.Domain, cfg.NaisNamespace.TopicPrefix, cf, cfg.GCP.ProjectParentIDs), nil
+	return New(db, logger, cfg.NaisNamespace.Domain, cfg.NaisNamespace.TopicPrefix, cfg.NaisNamespace.CredentialsFile, cfg.NaisNamespace.ProjectID, cfg.GCP.ProjectParentIDs), nil
 }
 
 func (s *namespaceReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {
-	client := s.config.Client(ctx)
-
-	svc, err := pubsub.NewService(ctx, option.WithHTTPClient(client))
+	svc, err := pubsub.NewClient(ctx, s.projectID, option.WithCredentialsFile(s.credentialsFile))
 	if err != nil {
 		return fmt.Errorf("retrieve pubsub client: %s", err)
 	}
 
+	projects := make(map[string]string)
+	for _, meta := range in.Team.Metadata {
+		parts := strings.SplitN(meta.Key, ":", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		if parts[0] != dbmodels.TeamMetaGoogleProjectID {
+			continue
+		}
+		if len(parts[1]) == 0 {
+			return fmt.Errorf("BUG: wrong format in gcp project id key")
+		}
+		if meta.Value == nil {
+			return fmt.Errorf("BUG: nil value stored as gcp project id")
+		}
+		projects[parts[1]] = *meta.Value
+	}
+
 	for environment := range s.projectParentIDs {
-		err = s.createNamespace(svc, in.Team, environment)
+		gcpProjectID := projects[environment]
+		if len(gcpProjectID) == 0 {
+			return fmt.Errorf("no GCP project created for team '%s' and environment '%s'", in.Team.Slug, environment)
+		}
+		err = s.createNamespace(ctx, svc, in.Team, environment, gcpProjectID)
 		if err != nil {
 			return err
 		}
@@ -101,23 +109,12 @@ func (s *namespaceReconciler) Reconcile(ctx context.Context, in reconcilers.Inpu
 	return nil
 }
 
-func (s *namespaceReconciler) createNamespace(pubsubService *pubsub.Service, team *dbmodels.Team, environment string) error {
-	meta := &dbmodels.TeamMetadata{}
-	key := dbmodels.TeamMetaGoogleProjectID + ":" + environment
-	tx := s.db.First(meta, "key = ? AND team_id = ?", key, team.ID)
-	if tx.Error != nil {
-		return tx.Error
-	}
-
-	if meta.Value == nil {
-		return fmt.Errorf("no GCP project created for team '%s' and environment '%s'", team.Slug, environment)
-	}
-
+func (s *namespaceReconciler) createNamespace(ctx context.Context, pubsubService *pubsub.Client, team *dbmodels.Team, environment, gcpProjectID string) error {
 	req := &naisdRequest{
 		Type: NaisdCreateNamespace,
 		Data: naisdData{
 			Name:       team.Slug.String(),
-			GcpProject: *meta.Value,
+			GcpProject: gcpProjectID,
 		},
 	}
 
@@ -126,16 +123,14 @@ func (s *namespaceReconciler) createNamespace(pubsubService *pubsub.Service, tea
 		return err
 	}
 
-	publishRequest := &pubsub.PublishRequest{
-		Messages: []*pubsub.PubsubMessage{
-			{
-				Data: string(payload),
-			},
-		},
+	msg := &pubsub.Message{
+		Data: payload,
 	}
 
 	topic := s.topicPrefix + environment
-	_, err = pubsubService.Projects.Topics.Publish(topic, publishRequest).Do()
+	future := pubsubService.Topic(topic).Publish(ctx, msg)
+	<-future.Ready()
+	_, err = future.Get(ctx)
 
 	return err
 }
