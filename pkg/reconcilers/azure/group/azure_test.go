@@ -3,10 +3,11 @@ package azure_group_reconciler_test
 import (
 	"context"
 	"fmt"
-	"github.com/nais/console/pkg/azureclient"
-	"github.com/stretchr/testify/mock"
 	"testing"
 	"time"
+
+	"github.com/nais/console/pkg/azureclient"
+	"github.com/stretchr/testify/mock"
 
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/dbmodels"
@@ -18,6 +19,7 @@ import (
 
 func TestAzureReconciler_Reconcile(t *testing.T) {
 	const teamName = "myteam"
+	teamSlug := dbmodels.Slug(teamName)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 	defer cancel()
@@ -67,7 +69,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			System:          nil,
 			Synchronization: nil,
 			Team: &dbmodels.Team{
-				Slug:    strp(teamName),
+				Slug:    &teamSlug,
 				Name:    strp(teamName),
 				Purpose: strp(teamName),
 				Users: []*dbmodels.User{
@@ -91,7 +93,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			System:          nil,
 			Synchronization: nil,
 			Team: &dbmodels.Team{
-				Slug:    strp(teamName),
+				Slug:    &teamSlug,
 				Name:    strp(teamName),
 				Purpose: strp(teamName),
 				Users: []*dbmodels.User{
@@ -117,7 +119,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			System:          nil,
 			Synchronization: nil,
 			Team: &dbmodels.Team{
-				Slug:    strp(teamName),
+				Slug:    &teamSlug,
 				Name:    strp(teamName),
 				Purpose: strp(teamName),
 				Users: []*dbmodels.User{
@@ -145,7 +147,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			System:          nil,
 			Synchronization: nil,
 			Team: &dbmodels.Team{
-				Slug:    strp(teamName),
+				Slug:    &teamSlug,
 				Name:    strp(teamName),
 				Purpose: strp(teamName),
 				Users: []*dbmodels.User{
@@ -173,7 +175,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			System:          nil,
 			Synchronization: nil,
 			Team: &dbmodels.Team{
-				Slug:    strp(teamName),
+				Slug:    &teamSlug,
 				Name:    strp(teamName),
 				Purpose: strp(teamName),
 				Users: []*dbmodels.User{
@@ -204,7 +206,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			System:          nil,
 			Synchronization: nil,
 			Team: &dbmodels.Team{
-				Slug:    strp(teamName),
+				Slug:    &teamSlug,
 				Name:    strp(teamName),
 				Purpose: strp(teamName),
 				Users: []*dbmodels.User{

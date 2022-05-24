@@ -26,7 +26,7 @@ type User {
 
 type Team {
     id: UUID!
-    slug: String!
+    slug: Slug!
     name: String!
     purpose: String
     users: [User!]!

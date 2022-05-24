@@ -96,7 +96,7 @@ func (s *gcpReconciler) Reconcile(ctx context.Context, in reconcilers.Input) err
 func (s *gcpReconciler) CreateProject(svc *cloudresourcemanager.Service, in reconcilers.Input, environment, parentID string) (*cloudresourcemanager.Project, error) {
 	// TODO: what if our deterministic "globally unique" project ID is taken?
 
-	projectID := CreateProjectID(s.domain, environment, *in.Team.Slug)
+	projectID := CreateProjectID(s.domain, environment, in.Team.Slug.String())
 
 	proj := &cloudresourcemanager.Project{
 		Parent:    parentID,

@@ -66,7 +66,7 @@ func (s *naisDeployReconciler) Reconcile(ctx context.Context, in reconcilers.Inp
 
 	payload, err := json.Marshal(&ProvisionApiKeyRequest{
 		Rotate:    false,
-		Team:      *in.Team.Slug,
+		Team:      in.Team.Slug.String(),
 		Timestamp: time.Now().Unix(),
 	})
 

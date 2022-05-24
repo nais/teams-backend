@@ -2,10 +2,11 @@ package dbmodels
 
 import (
 	"fmt"
-	"github.com/99designs/gqlgen/graphql"
 	"io"
 	"regexp"
 	"strconv"
+
+	"github.com/99designs/gqlgen/graphql"
 )
 
 type Slug string
@@ -24,7 +25,7 @@ func MarshalSlug(slug *Slug) graphql.Marshaler {
 func UnmarshalSlug(v interface{}) (*Slug, error) {
 	input, ok := v.(string)
 	if !ok {
-		return nil, fmt.Errorf("Slug must be a string")
+		return nil, fmt.Errorf("slug must be a string")
 	}
 
 	slug := Slug(input)
@@ -41,7 +42,7 @@ func (s Slug) Validate() error {
 	match := re.MatchString(s.String())
 
 	if !match {
-		return fmt.Errorf("Invalid slug")
+		return fmt.Errorf("slug '%s' does not match regular expression '%s'", s, re)
 	}
 
 	return nil

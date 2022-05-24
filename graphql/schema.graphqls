@@ -4,7 +4,7 @@
 scalar UUID
 scalar Time
 
-"Slugs can contain a-z and -, and must be between 3 and 20 characters. Slugs can not start or end with -"
+"Slugs must contain only lowercase letters and dashes, and must be between 3 and 20 characters. Slugs must start and end with a lowercase letter."
 scalar Slug
 
 type Query

@@ -879,7 +879,7 @@ input UpdateRoleInput {
 scalar UUID
 scalar Time
 
-"Slugs can contain a-z and -, and must be between 3 and 20 characters. Slugs can not start or end with -"
+"Slugs must contain only lowercase letters and dashes, and must be between 3 and 20 characters. Slugs must start and end with a lowercase letter."
 scalar Slug
 
 type Query
@@ -963,7 +963,7 @@ type User {
 
 type Team {
     id: UUID!
-    slug: String!
+    slug: Slug!
     name: String!
     purpose: String
     users: [User!]!
@@ -4079,9 +4079,9 @@ func (ec *executionContext) _Team_slug(ctx context.Context, field graphql.Collec
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(*dbmodels.Slug)
 	fc.Result = res
-	return ec.marshalNString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSlug(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Team_slug(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4091,7 +4091,7 @@ func (ec *executionContext) fieldContext_Team_slug(ctx context.Context, field gr
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			return nil, errors.New("field of type Slug does not have child fields")
 		},
 	}
 	return fc, nil

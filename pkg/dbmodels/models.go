@@ -34,7 +34,7 @@ func (m *Model) GetModel() *Model {
 type Team struct {
 	Model
 	SoftDeletes
-	Slug     *string         `json:"slug" gorm:"<-:create; unique; not null"`
+	Slug     *Slug           `json:"slug" gorm:"<-:create; unique; not null"`
 	Name     *string         `json:"name" gorm:"unique; not null"`
 	Purpose  *string         `json:"purpose"`
 	Metadata []*TeamMetadata `json:"-"`

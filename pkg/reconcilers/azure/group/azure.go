@@ -157,9 +157,9 @@ func extraMembers(members []*azureclient.Member, users []*dbmodels.User) []*azur
 	return members
 }
 
-func teamNameWithPrefix(slug *string) string {
+func teamNameWithPrefix(slug *dbmodels.Slug) string {
 	if slug == nil {
 		panic("nil slug passed to teamNameWithPrefix")
 	}
-	return reconcilers.TeamNamePrefix + *slug
+	return reconcilers.TeamNamePrefix + slug.String()
 }

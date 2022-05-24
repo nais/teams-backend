@@ -21,6 +21,7 @@ import (
 
 func TestAzureReconciler_Reconcile(t *testing.T) {
 	const teamName = "myteam"
+	teamSlug := dbmodels.Slug(teamName)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 	defer cancel()
@@ -42,7 +43,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		System:          nil,
 		Synchronization: nil,
 		Team: &dbmodels.Team{
-			Slug:    strp(teamName),
+			Slug:    &teamSlug,
 			Name:    strp(teamName),
 			Purpose: strp(description),
 			Users: []*dbmodels.User{

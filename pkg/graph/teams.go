@@ -22,7 +22,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 	}
 
 	team := &dbmodels.Team{
-		Slug:    input.Slug.StringP(),
+		Slug:    input.Slug,
 		Name:    &input.Name,
 		Purpose: input.Purpose,
 	}

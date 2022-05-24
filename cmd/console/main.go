@@ -172,9 +172,9 @@ func run() error {
 				nextRun = time.Now().Add(immediateRun)
 				runTimer.Reset(immediateRun)
 			}
-			if pendingTeams[*team.Slug] == nil {
+			if pendingTeams[team.Slug.String()] == nil {
 				log.Infof("Scheduling team '%s' for reconciliation in %s", *team.Slug, nextRun.Sub(time.Now()))
-				pendingTeams[*team.Slug] = team
+				pendingTeams[team.Slug.String()] = team
 			}
 
 		case <-runTimer.C:

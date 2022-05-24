@@ -42,12 +42,13 @@ func TestNaisDeployReconciler_Reconcile(t *testing.T) {
 	defer close(ch)
 
 	reconciler := nais_deploy_reconciler.New(logger, http.DefaultClient, srv.URL, key)
+	slug := dbmodels.Slug(teamName)
 
 	err := reconciler.Reconcile(ctx, reconcilers.Input{
 		System:          nil,
 		Synchronization: nil,
 		Team: &dbmodels.Team{
-			Slug: strp(teamName),
+			Slug: &slug,
 		},
 	})
 
