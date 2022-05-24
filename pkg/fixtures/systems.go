@@ -11,6 +11,7 @@ import (
 	_ "github.com/nais/console/pkg/reconcilers/azure/group"
 	_ "github.com/nais/console/pkg/reconcilers/console"
 	_ "github.com/nais/console/pkg/reconcilers/github/team"
+	_ "github.com/nais/console/pkg/reconcilers/google/gcp"
 	_ "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
 	_ "github.com/nais/console/pkg/reconcilers/nais/deploy"
 )

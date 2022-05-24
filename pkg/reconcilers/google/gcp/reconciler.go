@@ -2,7 +2,6 @@ package google_gcp_reconciler
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -27,13 +26,9 @@ type gcpReconciler struct {
 }
 
 const (
-	Name                    = "google:workspace-admin"
-	OpCreate                = "google:workspace-admin:create"
-	OpAddMember             = "google:workspace-admin:add-member"
-	OpAddMembers            = "google:workspace-admin:add-members"
-	OpDeleteMember          = "google:workspace-admin:delete-member"
-	OpDeleteMembers         = "google:workspace-admin:delete-members"
-	OpAddToGKESecurityGroup = "google:workspace-admin:add-to-gke-security-group"
+	Name                = "google:gcp:project"
+	OpCreateProject     = "google:gcp:project:create-project"
+	OpAssignPermissions = "google:gcp:project:assign-permissions"
 )
 
 func init() {
@@ -108,7 +103,8 @@ func (s *gcpReconciler) CreateProject(svc *cloudresourcemanager.Service, in reco
 	switch typedError := err.(type) {
 	case *googleapi.Error:
 		if typedError.Code != http.StatusConflict {
-			return nil, err
+			return nil, s.logger.Errorf(in, OpCreateProject, "create GCP project: %s", err)
+
 		}
 		// conflict may be due to
 		// 1) already created by us in this folder, or
@@ -117,11 +113,11 @@ func (s *gcpReconciler) CreateProject(svc *cloudresourcemanager.Service, in reco
 
 		query, err := svc.Projects.Search().Query("id:" + projectID).Do()
 		if err != nil {
-			return nil, err
+			return nil, s.logger.Errorf(in, OpCreateProject, "create GCP project: %s", err)
 		}
 
 		if len(query.Projects) == 0 {
-			return nil, fmt.Errorf("FIXME: project ID is taken")
+			return nil, s.logger.Errorf(in, OpCreateProject, "create GCP project: globally unique project ID is already assigned", err)
 		}
 
 		for _, proj = range query.Projects {
@@ -130,24 +126,26 @@ func (s *gcpReconciler) CreateProject(svc *cloudresourcemanager.Service, in reco
 			}
 		}
 
-		return nil, fmt.Errorf("BUG: search results for project ID returned project without correct ID")
+		return nil, s.logger.Errorf(in, OpCreateProject, "create GCP project: BUG: search results for project ID returned project without correct ID")
 
 	case nil:
 		for !oper.Done {
 			var err error
 			oper, err = svc.Operations.Get(oper.Name).Do()
 			if err != nil {
-				return nil, err
+				return nil, s.logger.Errorf(in, OpCreateProject, "create GCP project: %s", err)
 			}
 		}
 
 		if oper.Error != nil {
-			return nil, errors.New(oper.Error.Message)
+			return nil, s.logger.Errorf(in, OpCreateProject, "create GCP project: %s", oper.Error.Message)
 		}
 
 	default:
 		return nil, err
 	}
+
+	s.logger.Logf(in, OpCreateProject, "successfully created GCP project '%s'", proj.Name)
 
 	return proj, nil
 }
@@ -169,5 +167,11 @@ func (s *gcpReconciler) CreatePermissions(svc *cloudresourcemanager.Service, in 
 
 	_, err := svc.Projects.SetIamPolicy(projectName, req).Do()
 
-	return err
+	if err != nil {
+		return s.logger.Errorf(in, OpAssignPermissions, "assign GCP project IAM permissions: %s", err)
+	}
+
+	s.logger.Logf(in, OpAssignPermissions, "successfully assigned GCP project IAM permissions for '%s'", projectName)
+
+	return nil
 }
