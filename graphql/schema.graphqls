@@ -4,6 +4,9 @@
 scalar UUID
 scalar Time
 
+"Slugs can contain a-z and -, and must be between 3 and 20 characters. Slugs can not start or end with -"
+scalar Slug
+
 type Query
 
 type Mutation

@@ -52,9 +52,9 @@ type CreateRoleInput struct {
 }
 
 type CreateTeamInput struct {
-	Slug    string  `json:"slug"`
-	Name    string  `json:"name"`
-	Purpose *string `json:"purpose"`
+	Slug    *dbmodels.Slug `json:"slug"`
+	Name    string         `json:"name"`
+	Purpose *string        `json:"purpose"`
 }
 
 type CreateUserInput struct {
