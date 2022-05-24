@@ -1,3 +1,5 @@
+//go:build adhoc_integration_test
+
 package google_gcp_reconciler_test
 
 import (
@@ -25,7 +27,7 @@ func TestCreateProjectName(t *testing.T) {
 	assert.Equal(t, "happyteam-is-very-ha-prod-4801", google_gcp_reconciler.CreateProjectID("bais.io", "production", "happyteam-is-very-happy-and-altogether-too-long"))
 }
 
-func TestFoo(t *testing.T) {
+func TestGCPReconciler(t *testing.T) {
 	ctx := context.Background()
 
 	cfg, err := config.New()
