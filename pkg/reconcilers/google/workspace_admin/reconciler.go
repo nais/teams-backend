@@ -17,6 +17,7 @@ import (
 	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
+	"gorm.io/gorm"
 )
 
 type gcpReconciler struct {
@@ -47,7 +48,7 @@ func New(logger auditlogger.Logger, domain string, config *jwt.Config) *gcpRecon
 	}
 }
 
-func NewFromConfig(cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
+func NewFromConfig(db *gorm.DB, cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
 	if !cfg.Google.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}

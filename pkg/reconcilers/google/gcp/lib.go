@@ -10,6 +10,10 @@ import (
 // must be 6 to 30 lowercase ASCII letters, digits, or hyphens. It must
 // start with a letter. Trailing hyphens are prohibited. Example:
 // `tokyo-rain-123`
+//
+// TODO: what if our deterministic "globally unique" project ID is taken?
+// The output from this function is used during generation of the GCP project.
+// This ID must be available or else the code breaks.
 func CreateProjectID(domain, environment, teamname string) string {
 	hasher := sha256.New()
 	hasher.Write([]byte(teamname))

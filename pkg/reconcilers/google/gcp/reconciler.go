@@ -6,19 +6,22 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
+	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/reconcilers/registry"
-	log "github.com/sirupsen/logrus"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 	"google.golang.org/api/cloudresourcemanager/v3"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
+	"gorm.io/gorm"
 )
 
 type gcpReconciler struct {
+	db               *gorm.DB
 	config           *jwt.Config
 	domain           string
 	logger           auditlogger.Logger
@@ -35,8 +38,9 @@ func init() {
 	registry.Register(Name, NewFromConfig)
 }
 
-func New(logger auditlogger.Logger, domain string, config *jwt.Config, projectParentIDs map[string]string) *gcpReconciler {
+func New(db *gorm.DB, logger auditlogger.Logger, domain string, config *jwt.Config, projectParentIDs map[string]string) *gcpReconciler {
 	return &gcpReconciler{
+		db:               db,
 		logger:           logger,
 		domain:           domain,
 		config:           config,
@@ -44,7 +48,7 @@ func New(logger auditlogger.Logger, domain string, config *jwt.Config, projectPa
 	}
 }
 
-func NewFromConfig(cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
+func NewFromConfig(db *gorm.DB, cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
 	if !cfg.GCP.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
@@ -62,7 +66,7 @@ func NewFromConfig(cfg *config.Config, logger auditlogger.Logger) (reconcilers.R
 		return nil, fmt.Errorf("initialize google credentials: %w", err)
 	}
 
-	return New(logger, cfg.GCP.Domain, cf, cfg.GCP.ProjectParentIDs), nil
+	return New(db, logger, cfg.GCP.Domain, cf, cfg.GCP.ProjectParentIDs), nil
 }
 
 func (s *gcpReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {
@@ -79,6 +83,11 @@ func (s *gcpReconciler) Reconcile(ctx context.Context, in reconcilers.Input) err
 			return err
 		}
 
+		err = saveProjectMeta(s.db, in.Team.ID, environment, proj.ProjectId)
+		if err != nil {
+			return s.logger.Errorf(in, OpCreateProject, "create GCP project: project was created, but ID could not be stored in database: %s", err)
+		}
+
 		err = s.CreatePermissions(svc, in, proj.Name)
 		if err != nil {
 			return err
@@ -89,8 +98,6 @@ func (s *gcpReconciler) Reconcile(ctx context.Context, in reconcilers.Input) err
 }
 
 func (s *gcpReconciler) CreateProject(svc *cloudresourcemanager.Service, in reconcilers.Input, environment, parentID string) (*cloudresourcemanager.Project, error) {
-	// TODO: what if our deterministic "globally unique" project ID is taken?
-
 	projectID := CreateProjectID(s.domain, environment, in.Team.Slug.String())
 
 	proj := &cloudresourcemanager.Project{
@@ -102,14 +109,12 @@ func (s *gcpReconciler) CreateProject(svc *cloudresourcemanager.Service, in reco
 
 	switch typedError := err.(type) {
 	case *googleapi.Error:
-		if typedError.Code != http.StatusConflict {
-			return nil, s.logger.Errorf(in, OpCreateProject, "create GCP project: %s", err)
-
-		}
 		// conflict may be due to
 		// 1) already created by us in this folder, or
 		// 2) someone else owns this project
-		log.Warnf("project creation conflict")
+		if typedError.Code != http.StatusConflict {
+			return nil, s.logger.Errorf(in, OpCreateProject, "create GCP project: %s", err)
+		}
 
 		query, err := svc.Projects.Search().Query("id:" + projectID).Do()
 		if err != nil {
@@ -174,4 +179,14 @@ func (s *gcpReconciler) CreatePermissions(svc *cloudresourcemanager.Service, in 
 	s.logger.Logf(in, OpAssignPermissions, "successfully assigned GCP project IAM permissions for '%s'", projectName)
 
 	return nil
+}
+
+func saveProjectMeta(db *gorm.DB, teamID *uuid.UUID, environment, projectID string) error {
+	meta := &dbmodels.TeamMetadata{
+		TeamID: teamID,
+		Key:    dbmodels.TeamMetaGoogleProjectID + ":" + environment,
+		Value:  &projectID,
+	}
+	tx := db.Save(meta)
+	return tx.Error
 }

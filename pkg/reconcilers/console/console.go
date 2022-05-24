@@ -7,6 +7,7 @@ import (
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/reconcilers/registry"
+	"gorm.io/gorm"
 )
 
 type consoleReconciler struct{}
@@ -23,7 +24,7 @@ func New() *consoleReconciler {
 	return &consoleReconciler{}
 }
 
-func NewFromConfig(_ *config.Config, _ auditlogger.Logger) (reconcilers.Reconciler, error) {
+func NewFromConfig(_ *gorm.DB, _ *config.Config, _ auditlogger.Logger) (reconcilers.Reconciler, error) {
 	return New(), nil
 }
 

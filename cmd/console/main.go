@@ -83,7 +83,7 @@ func run() error {
 	trigger := make(chan *dbmodels.Team, maxQueueSize)
 	logger := auditlogger.New(logs)
 
-	recs, err := initReconcilers(cfg, logger, sysEntries)
+	recs, err := initReconcilers(db, cfg, logger, sysEntries)
 	if err != nil {
 		return err
 	}
@@ -307,12 +307,12 @@ func systems(ctx context.Context, db *gorm.DB) (map[string]*dbmodels.System, err
 	return results, nil
 }
 
-func initReconcilers(cfg *config.Config, logger auditlogger.Logger, systems map[string]*dbmodels.System) (map[*dbmodels.System]reconcilers.Reconciler, error) {
+func initReconcilers(db *gorm.DB, cfg *config.Config, logger auditlogger.Logger, systems map[string]*dbmodels.System) (map[*dbmodels.System]reconcilers.Reconciler, error) {
 	recs := make(map[*dbmodels.System]reconcilers.Reconciler)
 
 	factories := registry.Reconcilers()
 	for key, factory := range factories {
-		rec, err := factory(cfg, logger)
+		rec, err := factory(db, cfg, logger)
 		switch err {
 		case reconcilers.ErrReconcilerNotEnabled:
 			log.Warnf("Reconciler '%s' is disabled through configuration", key)

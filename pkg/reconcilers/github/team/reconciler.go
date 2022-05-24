@@ -16,6 +16,7 @@ import (
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/reconcilers/registry"
 	"github.com/shurcooL/githubv4"
+	"gorm.io/gorm"
 )
 
 type GraphClient interface {
@@ -60,7 +61,7 @@ func New(logger auditlogger.Logger, org string, teamsService TeamsService, graph
 	}
 }
 
-func NewFromConfig(cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
+func NewFromConfig(db *gorm.DB, cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
 	if !cfg.GitHub.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}

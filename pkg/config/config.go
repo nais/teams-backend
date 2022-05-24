@@ -45,6 +45,14 @@ type NaisDeploy struct {
 	ProvisionKey string `envconfig:"CONSOLE_NAIS_DEPLOY_PROVISION_KEY"`
 }
 
+// Google Cloud Platform reconciler
+type NaisNamespace struct {
+	Enabled         bool   `envconfig:"CONSOLE_NAIS_NAMESPACE_ENABLED"`
+	CredentialsFile string `envconfig:"CONSOLE_NAIS_NAMESPACE_CREDENTIALS_FILE"`
+	Domain          string `envconfig:"CONSOLE_NAIS_NAMESPACE_DOMAIN"`
+	TopicPrefix     string `envconfig:"CONSOLE_NAIS_NAMESPACE_TOPIC_PREFIX"`
+}
+
 // User synchronizer
 type UserSync struct {
 	Enabled         bool   `envconfig:"CONSOLE_USERSYNC_ENABLED"`
@@ -66,6 +74,7 @@ type Config struct {
 	GCP           GCP
 	UserSync      UserSync
 	NaisDeploy    NaisDeploy
+	NaisNamespace NaisNamespace
 	OAuth         OAuth
 	AutoLoginUser string `envconfig:"CONSOLE_AUTO_LOGIN_USER"`
 	FrontendURL   string `envconfig:"CONSOLE_FRONTEND_URL"`

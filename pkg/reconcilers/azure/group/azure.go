@@ -12,6 +12,7 @@ import (
 	"github.com/nais/console/pkg/reconcilers/registry"
 	"golang.org/x/oauth2/clientcredentials"
 	"golang.org/x/oauth2/microsoft"
+	"gorm.io/gorm"
 )
 
 // gitHubReconciler creates teams on GitHub and connects users to them.
@@ -42,7 +43,7 @@ func New(logger auditlogger.Logger, oauth clientcredentials.Config, client azure
 	}
 }
 
-func NewFromConfig(cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
+func NewFromConfig(_ *gorm.DB, cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
 	if !cfg.Azure.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}

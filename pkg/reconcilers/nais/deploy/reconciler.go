@@ -14,6 +14,7 @@ import (
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/reconcilers/registry"
+	"gorm.io/gorm"
 )
 
 type ProvisionApiKeyRequest struct {
@@ -48,7 +49,7 @@ func New(logger auditlogger.Logger, client *http.Client, endpoint string, provis
 	}
 }
 
-func NewFromConfig(cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
+func NewFromConfig(db *gorm.DB, cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
 	if !cfg.NaisDeploy.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
