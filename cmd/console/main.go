@@ -134,7 +134,10 @@ func run() error {
 
 	// Synchronize every team on startup
 	allTeams := make([]*dbmodels.Team, 0)
-	db.Preload("Users").Find(&allTeams)
+	db.Preload("Users").
+		Preload("SystemState").
+		Preload("TeamMetadata").
+		Find(&allTeams)
 	for _, team := range allTeams {
 		trigger <- team
 	}

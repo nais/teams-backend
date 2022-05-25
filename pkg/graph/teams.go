@@ -15,6 +15,15 @@ import (
 	"gorm.io/gorm"
 )
 
+func (r *mutationResolver) teamWithAssociations(teamID uuid.UUID) *dbmodels.Team {
+	team := &dbmodels.Team{}
+	r.db.Preload("Users").
+		Preload("SystemState").
+		Preload("TeamMetadata").
+		First(team, "id = ?", teamID)
+	return team
+}
+
 func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*dbmodels.Team, error) {
 	err := authz.Allowed(ctx, r.console, nil, authz.AccessReadWrite, ResourceTeams, ResourceCreateTeam)
 	if err != nil {
@@ -52,7 +61,9 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		return nil, err
 	}
 
+	team = r.teamWithAssociations(*team.ID)
 	r.trigger <- team
+
 	return team, nil
 }
 
@@ -86,8 +97,10 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 	if err != nil {
 		return nil, err
 	}
-	tx.Preload("Users").First(team)
+
+	team = r.teamWithAssociations(*team.ID)
 	r.trigger <- team
+
 	return team, nil
 }
 
@@ -120,8 +133,10 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 	if err != nil {
 		return nil, err
 	}
-	tx.Preload("Users").First(team)
+
+	team = r.teamWithAssociations(*team.ID)
 	r.trigger <- team
+
 	return team, nil
 }
 
