@@ -12,6 +12,7 @@ func Migrate(db *gorm.DB) error {
 		&RoleBinding{},
 		&Synchronization{},
 		&System{},
+		&SystemState{},
 		&TeamMetadata{},
 		&Team{},
 		&User{},

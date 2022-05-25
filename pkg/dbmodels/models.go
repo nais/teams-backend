@@ -34,12 +34,13 @@ func (m *Model) GetModel() *Model {
 type Team struct {
 	Model
 	SoftDeletes
-	Slug     *Slug           `json:"slug" gorm:"<-:create; unique; not null"`
-	Name     *string         `json:"name" gorm:"unique; not null"`
-	Purpose  *string         `json:"purpose"`
-	Metadata []*TeamMetadata `json:"-"`
-	Users    []*User         `json:"-" gorm:"many2many:users_teams"`
-	Systems  []*System       `json:"-" gorm:"many2many:systems_teams"`
+	Slug        *Slug           `json:"slug" gorm:"<-:create; unique; not null"`
+	Name        *string         `json:"name" gorm:"unique; not null"`
+	Purpose     *string         `json:"purpose"`
+	Metadata    []*TeamMetadata `json:"-"`
+	SystemState []*SystemState  `json:"-"`
+	Users       []*User         `json:"-" gorm:"many2many:users_teams"`
+	Systems     []*System       `json:"-" gorm:"many2many:systems_teams"`
 }
 
 type User struct {
@@ -65,6 +66,17 @@ type TeamMetadata struct {
 	TeamID *uuid.UUID `gorm:"uniqueIndex:team_key"`
 	Key    string     `gorm:"uniqueIndex:team_key; not null"`
 	Value  *string
+}
+
+type SystemState struct {
+	Model
+	Team        *Team
+	TeamID      *uuid.UUID `gorm:"uniqueIndex:system_env_team_key; index"`
+	System      *System
+	SystemID    *uuid.UUID `gorm:"uniqueIndex:system_env_team_key; not null; index"`
+	Environment *string    `gorm:"uniqueIndex:system_env_team_key"`
+	Key         string     `gorm:"uniqueIndex:system_env_team_key; not null"`
+	Value       string     `gorm:"not null"`
 }
 
 type System struct {

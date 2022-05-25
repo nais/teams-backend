@@ -3,6 +3,7 @@ module github.com/nais/console
 go 1.17
 
 require (
+	cloud.google.com/go/pubsub v1.21.1
 	github.com/99designs/gqlgen v0.17.6
 	github.com/bradleyfalzon/ghinstallation/v2 v2.0.4
 	github.com/coreos/go-oidc/v3 v3.1.0
@@ -29,7 +30,6 @@ require (
 	cloud.google.com/go v0.100.2 // indirect
 	cloud.google.com/go/compute v1.6.0 // indirect
 	cloud.google.com/go/iam v0.3.0 // indirect
-	cloud.google.com/go/pubsub v1.21.1 // indirect
 	github.com/agnivade/levenshtein v1.1.1 // indirect
 	github.com/antzucaro/matchr v0.0.0-20210222213004-b04723ef80f0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect

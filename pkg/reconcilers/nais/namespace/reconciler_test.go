@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	sqliteGo "github.com/mattn/go-sqlite3"
+	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers"
@@ -21,6 +22,10 @@ import (
 func TestNaisNamespaceReconciler(t *testing.T) {
 	ctx := context.Background()
 
+	ch := make(chan *dbmodels.AuditLog, 100)
+	logger := auditlogger.New(ch)
+	defer close(ch)
+
 	cfg, err := config.New()
 	if err != nil {
 		panic(err)
@@ -31,19 +36,28 @@ func TestNaisNamespaceReconciler(t *testing.T) {
 		panic(err)
 	}
 
-	rec, err := nais_namespace_reconciler.NewFromConfig(db, cfg, nil)
+	rec, err := nais_namespace_reconciler.NewFromConfig(db, cfg, logger)
 	if err != nil {
 		panic(err)
 	}
 
+	sysid := uuid.New()
+
 	teamName := dbmodels.Slug("foo")
 	err = rec.Reconcile(ctx, reconcilers.Input{
+		System: &dbmodels.System{
+			Model: dbmodels.Model{
+				ID: &sysid,
+			},
+		},
 		Team: &dbmodels.Team{
 			Slug: &teamName,
-			Metadata: []*dbmodels.TeamMetadata{
+			SystemState: []*dbmodels.SystemState{
 				{
-					Key:   "google-project-id:dev",
-					Value: strp("this-is-the-google-project-id"),
+					SystemID:    &sysid,
+					Environment: strp("dev"),
+					Key:         "google-project-id",
+					Value:       "this-is-the-google-project-id",
 				},
 			},
 		},

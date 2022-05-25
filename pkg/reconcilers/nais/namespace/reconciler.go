@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"cloud.google.com/go/pubsub"
 	"github.com/nais/console/pkg/auditlogger"
@@ -77,32 +76,31 @@ func (s *namespaceReconciler) Reconcile(ctx context.Context, in reconcilers.Inpu
 		return fmt.Errorf("retrieve pubsub client: %s", err)
 	}
 
+	// map of environment -> project ID
 	projects := make(map[string]string)
-	for _, meta := range in.Team.Metadata {
-		parts := strings.SplitN(meta.Key, ":", 2)
-		if len(parts) != 2 {
+
+	// read all state variables
+	for _, state := range in.Team.SystemState {
+		if state.SystemID != in.System.ID {
 			continue
 		}
-		if parts[0] != dbmodels.TeamMetaGoogleProjectID {
+		if state.Key != dbmodels.SystemStateGoogleProjectID {
 			continue
 		}
-		if len(parts[1]) == 0 {
-			return fmt.Errorf("BUG: wrong format in gcp project id key")
+		if state.Environment == nil {
+			continue
 		}
-		if meta.Value == nil {
-			return fmt.Errorf("BUG: nil value stored as gcp project id")
-		}
-		projects[parts[1]] = *meta.Value
+		projects[*state.Environment] = state.Value
 	}
 
 	for environment := range s.projectParentIDs {
 		gcpProjectID := projects[environment]
 		if len(gcpProjectID) == 0 {
-			return fmt.Errorf("no GCP project created for team '%s' and environment '%s'", in.Team.Slug, environment)
+			return s.logger.Errorf(in, OpCreateNamespace, "no GCP project created for team '%s' and environment '%s'", in.Team.Slug, environment)
 		}
 		err = s.createNamespace(ctx, svc, in.Team, environment, gcpProjectID)
 		if err != nil {
-			return err
+			return s.logger.Errorf(in, OpCreateNamespace, err.Error())
 		}
 	}
 

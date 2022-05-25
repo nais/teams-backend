@@ -83,7 +83,7 @@ func (s *gcpReconciler) Reconcile(ctx context.Context, in reconcilers.Input) err
 			return err
 		}
 
-		err = saveProjectMeta(s.db, in.Team.ID, environment, proj.ProjectId)
+		err = saveProjectState(s.db, in.Team.ID, environment, proj.ProjectId)
 		if err != nil {
 			return s.logger.Errorf(in, OpCreateProject, "create GCP project: project was created, but ID could not be stored in database: %s", err)
 		}
@@ -181,11 +181,11 @@ func (s *gcpReconciler) CreatePermissions(svc *cloudresourcemanager.Service, in 
 	return nil
 }
 
-func saveProjectMeta(db *gorm.DB, teamID *uuid.UUID, environment, projectID string) error {
-	meta := &dbmodels.TeamMetadata{
+func saveProjectState(db *gorm.DB, teamID *uuid.UUID, environment, projectID string) error {
+	meta := &dbmodels.SystemState{
 		TeamID: teamID,
-		Key:    dbmodels.TeamMetaGoogleProjectID + ":" + environment,
-		Value:  &projectID,
+		Key:    dbmodels.SystemStateGoogleProjectID + ":" + environment,
+		Value:  projectID,
 	}
 	tx := db.Save(meta)
 	return tx.Error

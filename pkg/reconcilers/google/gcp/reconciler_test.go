@@ -35,14 +35,15 @@ func TestGCPReconciler(t *testing.T) {
 		panic(err)
 	}
 
-	rec, err := google_gcp_reconciler.NewFromConfig(cfg, nil)
+	rec, err := google_gcp_reconciler.NewFromConfig(nil, cfg, nil)
 	if err != nil {
 		panic(err)
 	}
 
+	teamSlug := dbmodels.Slug("foo")
 	input := reconcilers.Input{
 		Team: &dbmodels.Team{
-			Slug:    strp("foo"),
+			Slug:    &teamSlug,
 			Name:    strp("Hello, World!"),
 			Purpose: strp("you know it"),
 		},

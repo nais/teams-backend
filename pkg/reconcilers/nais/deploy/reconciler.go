@@ -49,7 +49,7 @@ func New(logger auditlogger.Logger, client *http.Client, endpoint string, provis
 	}
 }
 
-func NewFromConfig(db *gorm.DB, cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
+func NewFromConfig(_ *gorm.DB, cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
 	if !cfg.NaisDeploy.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
