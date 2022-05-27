@@ -141,7 +141,7 @@ func run() error {
 	// Asynchronously record all audit log in database
 	go func() {
 		for logLine := range logs {
-			tx := db.Save(logLine)
+			tx := db.Create(logLine)
 			if tx.Error != nil {
 				log.Errorf("store audit log line in database: %s", tx.Error)
 			}
