@@ -9,7 +9,7 @@ func (r *mutationResolver) teamWithAssociations(teamID uuid.UUID) *dbmodels.Team
 	team := &dbmodels.Team{}
 	r.db.Preload("Users").
 		Preload("SystemState").
-		Preload("TeamMetadata").
+		Preload("Metadata").
 		First(team, "id = ?", teamID)
 	return team
 }
