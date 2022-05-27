@@ -136,7 +136,7 @@ func run() error {
 	allTeams := make([]*dbmodels.Team, 0)
 	db.Preload("Users").
 		Preload("SystemState").
-		Preload("TeamMetadata").
+		Preload("Metadata").
 		Find(&allTeams)
 	for _, team := range allTeams {
 		trigger <- team
