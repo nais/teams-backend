@@ -23,8 +23,6 @@ func EnsureSystemsExistInDatabase(ctx context.Context, db *gorm.DB) error {
 	for name := range recs {
 		names = append(names, name)
 	}
-	names = append(names, "console")
-	// fixme
 
 	for _, systemName := range names {
 		sys := &dbmodels.System{
