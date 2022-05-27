@@ -2,6 +2,7 @@ package fixtures
 
 import (
 	"context"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers/registry"
@@ -24,12 +25,15 @@ func EnsureSystemsExistInDatabase(ctx context.Context, db *gorm.DB) error {
 			Name: name,
 		}
 
+		log.Infof(`Ensure system "%s" exists in the database...`, name)
 		tx := db.WithContext(ctx).FirstOrCreate(sys, "name = ?", name)
 
 		if tx.Error != nil {
 			return tx.Error
 		}
 	}
+
+	log.Infof("All systems have been added to the database.")
 
 	return nil
 }
