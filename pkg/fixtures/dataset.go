@@ -3,6 +3,7 @@ package fixtures
 import (
 	"context"
 	"fmt"
+	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/authz"
@@ -31,6 +32,9 @@ const (
 	idRootUser        = 0xa0
 	idRootRoleBinding = 0xa2
 
+	emailRootUser = "root@localhost"
+	nameRootUser  = "admin"
+
 	defaultApiKey = "secret"
 )
 
@@ -45,7 +49,7 @@ func InsertRootUser(ctx context.Context, db *gorm.DB) error {
 		}
 
 		console := &dbmodels.System{}
-		tx.First(console, "name = ?", "console")
+		tx.First(console, "name = ?", console_reconciler.Name)
 		if console.ID == nil {
 			return fmt.Errorf("system fixtures not in database")
 		}
@@ -54,8 +58,8 @@ func InsertRootUser(ctx context.Context, db *gorm.DB) error {
 
 		rootUser := &dbmodels.User{
 			Model: pk(idRootUser),
-			Email: strp("root@localhost"),
-			Name:  strp("the administrator"),
+			Email: strp(emailRootUser),
+			Name:  strp(nameRootUser),
 		}
 
 		role := &dbmodels.Role{
@@ -78,10 +82,10 @@ func InsertRootUser(ctx context.Context, db *gorm.DB) error {
 			UserID: *rootUser.ID,
 		}
 
-		tx.Save(rootUser)
-		tx.Save(role)
-		tx.Save(rolebinding)
-		tx.Save(apikey)
+		tx.Create(rootUser)
+		tx.Create(role)
+		tx.Create(rolebinding)
+		tx.Create(apikey)
 
 		return tx.Error
 	})
