@@ -19,17 +19,12 @@ import (
 
 func EnsureSystemsExistInDatabase(ctx context.Context, db *gorm.DB) error {
 	recs := registry.Reconcilers()
-	names := make([]string, 0)
 	for name := range recs {
-		names = append(names, name)
-	}
-
-	for _, systemName := range names {
 		sys := &dbmodels.System{
-			Name: systemName,
+			Name: name,
 		}
 
-		tx := db.WithContext(ctx).FirstOrCreate(sys, "name = ?", systemName)
+		tx := db.WithContext(ctx).FirstOrCreate(sys, "name = ?", name)
 
 		if tx.Error != nil {
 			return tx.Error
