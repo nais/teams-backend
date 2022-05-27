@@ -28,10 +28,6 @@ func NewFromConfig(_ *gorm.DB, _ *config.Config, _ auditlogger.Logger) (reconcil
 	return New(), nil
 }
 
-func (s *consoleReconciler) Name() string {
-	return "console"
-}
-
 func (s *consoleReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {
 	return nil
 }
