@@ -67,7 +67,7 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, logger auditlogger.Logger) (
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
 
-	return New(db, logger, cfg.NaisNamespace.Domain, cfg.NaisNamespace.TopicPrefix, cfg.NaisNamespace.CredentialsFile, cfg.NaisNamespace.ProjectID, cfg.GCP.ProjectParentIDs), nil
+	return New(db, logger, cfg.NaisNamespace.Domain, cfg.NaisNamespace.TopicPrefix, cfg.GCPCredentialsFile, cfg.NaisNamespace.ProjectID, cfg.GCP.ProjectParentIDs), nil
 }
 
 func (s *namespaceReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {

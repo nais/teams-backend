@@ -24,16 +24,14 @@ type GitHub struct {
 
 // Google workspace admin reconciler
 type Google struct {
-	Enabled         bool   `envconfig:"CONSOLE_GOOGLE_ENABLED"`
-	CredentialsFile string `envconfig:"CONSOLE_GOOGLE_CREDENTIALS_FILE"`
-	DelegatedUser   string `envconfig:"CONSOLE_GOOGLE_DELEGATED_USER"`
-	Domain          string `envconfig:"CONSOLE_GOOGLE_DOMAIN"`
+	Enabled       bool   `envconfig:"CONSOLE_GOOGLE_ENABLED"`
+	DelegatedUser string `envconfig:"CONSOLE_GOOGLE_DELEGATED_USER"`
+	Domain        string `envconfig:"CONSOLE_GOOGLE_DOMAIN"`
 }
 
 // Google Cloud Platform reconciler
 type GCP struct {
 	Enabled          bool              `envconfig:"CONSOLE_GCP_ENABLED"`
-	CredentialsFile  string            `envconfig:"CONSOLE_GCP_CREDENTIALS_FILE"`
 	ProjectParentIDs map[string]string `envconfig:"CONSOLE_GCP_PROJECT_PARENT_IDS"` // suffix is key, parentID is value
 	Domain           string            `envconfig:"CONSOLE_GCP_DOMAIN"`
 }
@@ -47,19 +45,17 @@ type NaisDeploy struct {
 
 // Google Cloud Platform reconciler
 type NaisNamespace struct {
-	Enabled         bool   `envconfig:"CONSOLE_NAIS_NAMESPACE_ENABLED"`
-	CredentialsFile string `envconfig:"CONSOLE_NAIS_NAMESPACE_CREDENTIALS_FILE"`
-	Domain          string `envconfig:"CONSOLE_NAIS_NAMESPACE_DOMAIN"`
-	TopicPrefix     string `envconfig:"CONSOLE_NAIS_NAMESPACE_TOPIC_PREFIX"`
-	ProjectID       string `envconfig:"CONSOLE_NAIS_NAMESPACE_PROJECT_ID"`
+	Enabled     bool   `envconfig:"CONSOLE_NAIS_NAMESPACE_ENABLED"`
+	Domain      string `envconfig:"CONSOLE_NAIS_NAMESPACE_DOMAIN"`
+	TopicPrefix string `envconfig:"CONSOLE_NAIS_NAMESPACE_TOPIC_PREFIX"`
+	ProjectID   string `envconfig:"CONSOLE_NAIS_NAMESPACE_PROJECT_ID"`
 }
 
 // User synchronizer
 type UserSync struct {
-	Enabled         bool   `envconfig:"CONSOLE_USERSYNC_ENABLED"`
-	CredentialsFile string `envconfig:"CONSOLE_USERSYNC_CREDENTIALS_FILE"`
-	DelegatedUser   string `envconfig:"CONSOLE_USERSYNC_DELEGATED_USER"`
-	Domain          string `envconfig:"CONSOLE_USERSYNC_DOMAIN"`
+	Enabled       bool   `envconfig:"CONSOLE_USERSYNC_ENABLED"`
+	DelegatedUser string `envconfig:"CONSOLE_USERSYNC_DELEGATED_USER"`
+	Domain        string `envconfig:"CONSOLE_USERSYNC_DOMAIN"`
 }
 
 type OAuth struct {
@@ -69,18 +65,19 @@ type OAuth struct {
 }
 
 type Config struct {
-	Azure         Azure
-	GitHub        GitHub
-	Google        Google
-	GCP           GCP
-	UserSync      UserSync
-	NaisDeploy    NaisDeploy
-	NaisNamespace NaisNamespace
-	OAuth         OAuth
-	AutoLoginUser string `envconfig:"CONSOLE_AUTO_LOGIN_USER"`
-	FrontendURL   string `envconfig:"CONSOLE_FRONTEND_URL"`
-	DatabaseURL   string `envconfig:"CONSOLE_DATABASE_URL"`
-	ListenAddress string `envconfig:"CONSOLE_LISTEN_ADDRESS"`
+	Azure              Azure
+	GitHub             GitHub
+	Google             Google
+	GCP                GCP
+	UserSync           UserSync
+	NaisDeploy         NaisDeploy
+	NaisNamespace      NaisNamespace
+	OAuth              OAuth
+	AutoLoginUser      string `envconfig:"CONSOLE_AUTO_LOGIN_USER"`
+	FrontendURL        string `envconfig:"CONSOLE_FRONTEND_URL"`
+	DatabaseURL        string `envconfig:"CONSOLE_DATABASE_URL"`
+	ListenAddress      string `envconfig:"CONSOLE_LISTEN_ADDRESS"`
+	GCPCredentialsFile string `envconfig:"CONSOLE_GCP_CREDENTIALS_FILE"`
 }
 
 func Defaults() *Config {

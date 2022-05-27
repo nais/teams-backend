@@ -51,7 +51,7 @@ func NewFromConfig(cfg *config.Config, db *gorm.DB, logger auditlogger.Logger) (
 		return nil, ErrNotEnabled
 	}
 
-	b, err := ioutil.ReadFile(cfg.UserSync.CredentialsFile)
+	b, err := ioutil.ReadFile(cfg.GCPCredentialsFile)
 	if err != nil {
 		return nil, fmt.Errorf("read google credentials file: %w", err)
 	}
