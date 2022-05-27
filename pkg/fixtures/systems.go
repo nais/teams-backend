@@ -18,22 +18,25 @@ import (
 	_ "github.com/nais/console/pkg/reconcilers/nais/namespace"
 )
 
-func EnsureSystemsExistInDatabase(ctx context.Context, db *gorm.DB) error {
+func EnsureSystemsExistInDatabase(ctx context.Context, db *gorm.DB) (map[string]*dbmodels.System, error) {
 	recs := registry.Reconcilers()
+	systems := make(map[string]*dbmodels.System)
 	for name := range recs {
-		sys := &dbmodels.System{
+		system := &dbmodels.System{
 			Name: name,
 		}
 
 		log.Infof(`Ensure system "%s" exists in the database...`, name)
-		tx := db.WithContext(ctx).FirstOrCreate(sys, "name = ?", name)
+		tx := db.WithContext(ctx).FirstOrCreate(system, "name = ?", name)
 
 		if tx.Error != nil {
-			return tx.Error
+			return nil, tx.Error
 		}
+
+		systems[name] = system
 	}
 
 	log.Infof("All systems have been added to the database.")
 
-	return nil
+	return systems, nil
 }

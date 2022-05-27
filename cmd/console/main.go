@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
 	"net/http"
 	"net/url"
 	"os"
@@ -62,17 +63,12 @@ func run() error {
 		return err
 	}
 
-	err = fixtures.EnsureSystemsExistInDatabase(ctx, db)
+	systems, err := fixtures.EnsureSystemsExistInDatabase(ctx, db)
 	if err != nil {
 		return err
 	}
 
 	err = fixtures.InsertRootUser(ctx, db)
-	if err != nil {
-		return err
-	}
-
-	sysEntries, err := systems(ctx, db)
 	if err != nil {
 		return err
 	}
@@ -83,7 +79,7 @@ func run() error {
 	trigger := make(chan *dbmodels.Team, maxQueueSize)
 	logger := auditlogger.New(logs)
 
-	recs, err := initReconcilers(db, cfg, logger, sysEntries)
+	recs, err := initReconcilers(db, cfg, logger, systems)
 	if err != nil {
 		return err
 	}
@@ -98,7 +94,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	handler := setupGraphAPI(db, sysEntries["console"], trigger)
+	handler := setupGraphAPI(db, systems[console_reconciler.Name], trigger)
 	srv, err := setupHTTPServer(cfg, db, handler, authhandler, store)
 	if err != nil {
 		return err
@@ -295,19 +291,6 @@ func setupLogging() {
 	})
 
 	log.SetLevel(log.DebugLevel)
-}
-
-func systems(ctx context.Context, db *gorm.DB) (map[string]*dbmodels.System, error) {
-	dbsystems := make([]*dbmodels.System, 0)
-	tx := db.WithContext(ctx).Find(&dbsystems)
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-	results := make(map[string]*dbmodels.System)
-	for _, sys := range dbsystems {
-		results[sys.Name] = sys
-	}
-	return results, nil
 }
 
 func initReconcilers(db *gorm.DB, cfg *config.Config, logger auditlogger.Logger, systems map[string]*dbmodels.System) (map[*dbmodels.System]reconcilers.Reconciler, error) {
