@@ -93,9 +93,7 @@ func (s *gitHubReconciler) Reconcile(ctx context.Context, in reconcilers.Input) 
 		return err
 	}
 
-	err = s.connectUsers(ctx, in, team)
-
-	return err
+	return s.connectUsers(ctx, in, team)
 }
 
 func (s *gitHubReconciler) getOrCreateTeam(ctx context.Context, in reconcilers.Input) (*github.Team, error) {
