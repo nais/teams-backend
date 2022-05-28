@@ -225,7 +225,7 @@ func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems ma
 	defer cancel()
 
 	synchronization := &dbmodels.Synchronization{}
-	tx := db.WithContext(ctx).Save(synchronization)
+	tx := db.WithContext(ctx).Create(synchronization)
 	if tx.Error != nil {
 		return fmt.Errorf("cannot create synchronization reference: %w", tx.Error)
 	}
