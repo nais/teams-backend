@@ -291,7 +291,8 @@ func (s *gitHubReconciler) lookupSSOUser(ctx context.Context, email string) (str
 
 	nodes := query.Organization.SamlIdentityProvider.ExternalIdentities.Nodes
 	if len(nodes) == 0 {
-		return "", fmt.Errorf("user not found")
+		// FIXME: This will halt the mapping of the rest of the users in the team
+		return "", fmt.Errorf("GitHub user not found for email '%s'", email)
 	}
 
 	return string(nodes[0].User.Login), nil
