@@ -86,9 +86,15 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		graphClient := github_team_reconciler.NewMockGraphClient(t)
 		reconciler := github_team_reconciler.New(logger, org, teamsService, graphClient)
 
-		expectedErr := fmt.Errorf("GetTeamBySlug failed")
+		expectedErr := fmt.Errorf("server raised error: 418: I'm a teapot: this is a body")
 		teamsService.On("GetTeamBySlug", mock.Anything, org, teamName).
-			Return(nil, nil, expectedErr).Once()
+			Return(nil, &github.Response{
+				Response: &http.Response{
+					StatusCode: http.StatusTeapot,
+					Status:     "418: I'm a teapot",
+					Body:       ioutil.NopCloser(strings.NewReader("this is a body")),
+				},
+			}, nil).Once()
 
 		err := reconciler.Reconcile(ctx, reconcilerInput)
 

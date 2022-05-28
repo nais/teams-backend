@@ -99,7 +99,7 @@ func (s *gitHubReconciler) Reconcile(ctx context.Context, in reconcilers.Input) 
 func (s *gitHubReconciler) getOrCreateTeam(ctx context.Context, in reconcilers.Input) (*github.Team, error) {
 	existingTeam, resp, err := s.teamsService.GetTeamBySlug(ctx, s.org, in.Team.Slug.String())
 
-	if err != nil {
+	if resp == nil {
 		return nil, err
 	}
 
