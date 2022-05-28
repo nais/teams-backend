@@ -13,7 +13,9 @@ import (
 type consoleReconciler struct{}
 
 const (
-	Name = "console"
+	Name             = "console"
+	OpReconcileStart = "console:reconcile:start"
+	OpReconcileEnd   = "console:reconcile:end"
 )
 
 func init() {

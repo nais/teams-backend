@@ -233,6 +233,10 @@ func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems ma
 	for key, team := range *teams {
 		teamErrors := 0
 
+		if team == nil || team.Slug == nil {
+			panic("BUG: refusing to reconcile team with empty slug")
+		}
+
 		for system, reconciler := range systems {
 			input := reconcilers.Input{
 				System:          system,
@@ -240,21 +244,17 @@ func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems ma
 				Team:            team,
 			}
 
-			if input.Team == nil || input.Team.Slug == nil {
-				panic("BUG: refusing to create team with empty slug")
-			}
-
-			log.Info(input.AuditLog(nil, true, "console:reconcile:start", "Starting reconcile"))
+			log.Info(input.AuditLog(nil, true, console_reconciler.OpReconcileStart, "Starting reconcile"))
 			err := reconciler.Reconcile(ctx, input)
 
 			switch er := err.(type) {
 			case nil:
-				log.Info(input.AuditLog(nil, true, "console:reconcile:end", "Successfully reconciled"))
+				log.Info(input.AuditLog(nil, true, console_reconciler.OpReconcileEnd, "Successfully reconciled"))
 			case *dbmodels.AuditLog:
 				er.Log().Error(er.Message)
 				teamErrors++
 			case error:
-				log.Error(input.AuditLog(nil, true, "console:reconcile:end", er.Error()))
+				log.Error(input.AuditLog(nil, true, console_reconciler.OpReconcileEnd, er.Error()))
 				teamErrors++
 			}
 		}
