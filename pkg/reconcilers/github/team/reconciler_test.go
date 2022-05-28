@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func TestAzureReconciler_Reconcile(t *testing.T) {
+func TestGitHubReconciler_Reconcile(t *testing.T) {
 	const teamName = "myteam"
 	teamSlug := dbmodels.Slug(teamName)
 
