@@ -46,7 +46,10 @@ const (
 	OpAddMembers    = "github:team:add-members"
 	OpDeleteMember  = "github:team:delete-member"
 	OpDeleteMembers = "github:team:delete-members"
+	OpMapSSOUser    = "github:team:map-sso-user"
 )
+
+var errGitHubUserNotFound = fmt.Errorf("GitHub user does not exist")
 
 func init() {
 	registry.Register(Name, NewFromConfig)
@@ -99,7 +102,7 @@ func (s *gitHubReconciler) Reconcile(ctx context.Context, in reconcilers.Input) 
 func (s *gitHubReconciler) getOrCreateTeam(ctx context.Context, in reconcilers.Input) (*github.Team, error) {
 	existingTeam, resp, err := s.teamsService.GetTeamBySlug(ctx, s.org, in.Team.Slug.String())
 
-	if resp == nil {
+	if resp == nil && err != nil {
 		return nil, err
 	}
 
@@ -248,6 +251,10 @@ func (s *gitHubReconciler) mapSSOUsers(ctx context.Context, in reconcilers.Input
 			continue
 		}
 		githubUsername, err := s.lookupSSOUser(ctx, *user.Email)
+		if err == errGitHubUserNotFound {
+			s.logger.UserLogf(in, OpMapSSOUser, user, "No GitHub user for email: %s", *user.Email)
+			continue
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -291,8 +298,7 @@ func (s *gitHubReconciler) lookupSSOUser(ctx context.Context, email string) (str
 
 	nodes := query.Organization.SamlIdentityProvider.ExternalIdentities.Nodes
 	if len(nodes) == 0 {
-		// FIXME: This will halt the mapping of the rest of the users in the team
-		return "", fmt.Errorf("GitHub user not found for email '%s'", email)
+		return "", errGitHubUserNotFound
 	}
 
 	return string(nodes[0].User.Login), nil
