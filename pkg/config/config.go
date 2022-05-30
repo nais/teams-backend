@@ -75,6 +75,8 @@ type Config struct {
 	FrontendURL   string `envconfig:"CONSOLE_FRONTEND_URL"`
 	DatabaseURL   string `envconfig:"CONSOLE_DATABASE_URL"`
 	ListenAddress string `envconfig:"CONSOLE_LISTEN_ADDRESS"`
+	LogFormat     string `envconfig:"CONSOLE_LOG_FORMAT"`
+	LogLevel      string `envconfig:"CONSOLE_LOG_LEVEL"`
 }
 
 func Defaults() *Config {
@@ -85,6 +87,8 @@ func Defaults() *Config {
 		NaisDeploy: NaisDeploy{
 			Endpoint: "http://localhost:8080/api/v1/provision",
 		},
+		LogFormat: "text",
+		LogLevel:  "DEBUG",
 	}
 }
 

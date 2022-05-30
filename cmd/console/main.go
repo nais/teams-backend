@@ -45,8 +45,6 @@ func main() {
 }
 
 func run() error {
-	setupLogging()
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -54,6 +52,12 @@ func run() error {
 	log.Infof("console.nais.io version %s built on %s", version.Version(), bt)
 
 	cfg, err := config.New()
+	if err != nil {
+		return err
+	}
+
+	err = setupLogging(cfg.LogFormat, cfg.LogLevel)
+
 	if err != nil {
 		return err
 	}
@@ -282,15 +286,29 @@ func setupAuthHandler(cfg *config.Config, store authn.SessionStore) (*authn.Hand
 	return handler, nil
 }
 
-func setupLogging() {
-	log.SetFormatter(&log.JSONFormatter{
-		TimestampFormat: time.RFC3339Nano,
-	})
-	log.SetFormatter(&log.TextFormatter{
-		TimestampFormat: time.RFC3339Nano,
-	})
+func setupLogging(format, level string) error {
+	switch format {
+	case "json":
+		log.SetFormatter(&log.JSONFormatter{
+			TimestampFormat: time.RFC3339Nano,
+		})
+	case "text":
+		log.SetFormatter(&log.TextFormatter{
+			TimestampFormat: time.RFC3339Nano,
+		})
+	default:
+		return fmt.Errorf("invalid log format: %s", format)
+	}
 
-	log.SetLevel(log.DebugLevel)
+	lvl, err := log.ParseLevel(level)
+
+	if err != nil {
+		return err
+	}
+
+	log.SetLevel(lvl)
+
+	return nil
 }
 
 func initReconcilers(db *gorm.DB, cfg *config.Config, logger auditlogger.Logger, systems map[string]*dbmodels.System) (map[*dbmodels.System]reconcilers.Reconciler, error) {
