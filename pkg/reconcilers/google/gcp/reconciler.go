@@ -53,7 +53,7 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, logger auditlogger.Logger) (
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
 
-	b, err := ioutil.ReadFile(cfg.GCPCredentialsFile)
+	b, err := ioutil.ReadFile(cfg.Google.CredentialsFile)
 	if err != nil {
 		return nil, fmt.Errorf("read google credentials file: %w", err)
 	}
@@ -66,7 +66,7 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, logger auditlogger.Logger) (
 		return nil, fmt.Errorf("initialize google credentials: %w", err)
 	}
 
-	return New(db, logger, cfg.GCP.Domain, cf, cfg.GCP.ProjectParentIDs), nil
+	return New(db, logger, cfg.Google.Domain, cf, cfg.GCP.ProjectParentIDs), nil
 }
 
 func (s *gcpReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {

@@ -9,16 +9,14 @@ CONSOLE_GITHUB_PRIVATE_KEY_PATH=filename
 CONSOLE_GOOGLE_ENABLED=false
 CONSOLE_GOOGLE_DELEGATED_USER=email
 CONSOLE_GOOGLE_DOMAIN=domain
+CONSOLE_GOOGLE_CREDENTIALS_FILE=filename
 
 # GCP reconciler
 CONSOLE_GCP_ENABLED=false
-CONSOLE_GCP_DOMAIN=domain
 CONSOLE_GCP_PROJECT_PARENT_IDS=prod:folder/357,dev:folder/864
 
 # Synchronize Google users to local database
 CONSOLE_USERSYNC_ENABLED=false
-CONSOLE_USERSYNC_DELEGATED_USER=email
-CONSOLE_USERSYNC_DOMAIN=domain
 
 # Enable single sign-on using OAuth2
 CONSOLE_OAUTH_CLIENT_ID=string
@@ -27,9 +25,5 @@ CONSOLE_OAUTH_REDIRECT_URL=string
 
 # Enable nais namespace reconciler
 CONSOLE_NAIS_NAMESPACE_ENABLED=false
-CONSOLE_NAIS_NAMESPACE_DOMAIN=domain
 CONSOLE_NAIS_NAMESPACE_TOPIC_PREFIX=string
 CONSOLE_NAIS_NAMESPACE_PROJECT_ID=string
-
-# GCP service account credentials file, used by all Google / GCP related operations
-CONSOLE_GCP_CREDENTIALS_FILE=filename

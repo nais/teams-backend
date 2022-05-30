@@ -51,7 +51,7 @@ func NewFromConfig(cfg *config.Config, db *gorm.DB, logger auditlogger.Logger) (
 		return nil, ErrNotEnabled
 	}
 
-	b, err := ioutil.ReadFile(cfg.GCPCredentialsFile)
+	b, err := ioutil.ReadFile(cfg.Google.CredentialsFile)
 	if err != nil {
 		return nil, fmt.Errorf("read google credentials file: %w", err)
 	}
@@ -65,9 +65,9 @@ func NewFromConfig(cfg *config.Config, db *gorm.DB, logger auditlogger.Logger) (
 		return nil, fmt.Errorf("initialize google credentials: %w", err)
 	}
 
-	cf.Subject = cfg.UserSync.DelegatedUser
+	cf.Subject = cfg.Google.DelegatedUser
 
-	return New(logger, db, cfg.UserSync.Domain, cf), nil
+	return New(logger, db, cfg.Google.Domain, cf), nil
 }
 
 func (s *userSynchronizer) FetchAll(ctx context.Context) error {
