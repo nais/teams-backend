@@ -4,6 +4,41 @@ Console is an API server for team creation and propagation to external systems.
 
 ADR: https://github.com/navikt/pig/blob/master/kubeops/adr/010-console-nais-io.md
 
+## Reconcilers
+
+Console uses reconcilers to sync team information to external systems, for instance GitHub or Azure AD. All reconcilers
+must be enabled via environment variables, and require different settings to work as expected. All configuration values
+is mentioned below.
+
+### GitHub
+
+To create teams on GitHub and sync members you will need the following environment variables set:
+
+#### `CONSOLE_GITHUB_ENABLED`
+
+Set to `true` to enable the reconciler.
+
+#### `CONSOLE_GITHUB_APP_ID`
+
+The application ID of the GitHub Application that Console will use when communicating with the GitHub APIs. The 
+application will need the following permissions:
+
+| Permission                  | Access         |
+|-----------------------------|----------------|
+| Organization administration | Read-only      |
+| Organization members        | Read and write |
+
+#### `CONSOLE_GITHUB_ORGANIZATION`
+
+The slug of the organization the app is installed on.
+
+#### `CONSOLE_GITHUB_APP_INSTALLATION_ID`
+
+The installation ID for the application when installed to the org.
+
+#### `CONSOLE_GITHUB_PRIVATE_KEY_PATH`
+
+Path to the private key file (PEM format).
 
 ## Local development
 
