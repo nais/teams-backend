@@ -52,6 +52,8 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		return nil, err
 	}
 
+	// FIXME: Add log entry for team creation?
+
 	team = r.teamWithAssociations(*team.ID)
 	r.trigger <- team
 
