@@ -10,7 +10,6 @@ type Azure struct {
 	ClientID     string `envconfig:"CONSOLE_AZURE_CLIENT_ID"`
 	ClientSecret string `envconfig:"CONSOLE_AZURE_CLIENT_SECRET"`
 	TenantID     string `envconfig:"CONSOLE_AZURE_TENANT_ID"`
-	RedirectURL  string `envconfig:"CONSOLE_AZURE_REDIRECT_URL"`
 }
 
 // GitHub reconciler
