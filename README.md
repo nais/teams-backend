@@ -18,6 +18,10 @@ To create teams on GitHub and sync members you will need the following environme
 
 Set to `true` to enable the reconciler.
 
+#### `CONSOLE_GITHUB_ORGANIZATION`
+
+The slug of the organization the app is installed on.
+
 #### `CONSOLE_GITHUB_APP_ID`
 
 The application ID of the GitHub Application that Console will use when communicating with the GitHub APIs. The 
@@ -27,10 +31,6 @@ application will need the following permissions:
 |-----------------------------|----------------|
 | Organization administration | Read-only      |
 | Organization members        | Read and write |
-
-#### `CONSOLE_GITHUB_ORGANIZATION`
-
-The slug of the organization the app is installed on.
 
 #### `CONSOLE_GITHUB_APP_INSTALLATION_ID`
 
