@@ -104,7 +104,8 @@ func (s *azureReconciler) connectUsers(ctx context.Context, grp *azureclient.Gro
 		}
 		member, err := s.client.GetUser(ctx, *user.Email)
 		if err != nil {
-			return s.logger.UserErrorf(in, OpAddMember, user, "add member '%s' to Azure group '%s': %s", *user.Email, grp.MailNickname, err)
+			s.logger.UserLogf(in, OpAddMember, user, "Unable to lookup user with email '%s' in Azure", *user.Email)
+			continue
 		}
 		err = s.client.AddMemberToGroup(ctx, grp, member)
 		if err != nil {

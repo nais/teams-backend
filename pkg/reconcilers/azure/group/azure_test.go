@@ -184,7 +184,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			},
 		})
 
-		assert.Error(t, err)
+		assert.NoError(t, err)
 		mockClient.AssertExpectations(t)
 	})
 
