@@ -40,6 +40,31 @@ The installation ID for the application when installed to the org.
 
 Path to the private key file (PEM format).
 
+### Azure AD
+
+To create groups in Azure AD and sync members you will need the following environment variables set:
+
+#### `CONSOLE_AZURE_ENABLED`
+
+Set to `true` to enable the reconciler.
+
+#### `CONSOLE_AZURE_CLIENT_ID`
+
+The client ID of the application registration. The app needs the following API permissions:
+
+| Permission                | Type        |
+|---------------------------|-------------|
+| Group.Create              | Application |
+| GroupMember.ReadWrite.All | Application |
+
+#### `CONSOLE_AZURE_CLIENT_SECRET`
+
+The client secret.
+
+#### `CONSOLE_AZURE_TENANT_ID`
+
+The tenant ID.
+
 ## Local development
 
 Console needs Go 1.18, and depends on a PostgreSQL database.
