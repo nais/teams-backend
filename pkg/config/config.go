@@ -34,7 +34,6 @@ type Google struct {
 type GCP struct {
 	Enabled          bool              `envconfig:"CONSOLE_GCP_ENABLED"`
 	ProjectParentIDs map[string]string `envconfig:"CONSOLE_GCP_PROJECT_PARENT_IDS"` // suffix is key, parentID is value
-
 }
 
 // Nais deploy reconciler
