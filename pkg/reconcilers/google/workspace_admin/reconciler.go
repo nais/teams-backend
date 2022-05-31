@@ -3,7 +3,7 @@ package google_workspace_admin_reconciler
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"github.com/nais/console/pkg/google_jwt"
 	"net/http"
 	"time"
 
@@ -12,7 +12,6 @@ import (
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/reconcilers/registry"
-	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/googleapi"
@@ -53,23 +52,13 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, logger auditlogger.Logger) (
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
 
-	b, err := ioutil.ReadFile(cfg.Google.CredentialsFile)
+	config, err := google_jwt.GetConfig(cfg.Google.CredentialsFile, cfg.Google.DelegatedUser)
+
 	if err != nil {
-		return nil, fmt.Errorf("read google credentials file: %w", err)
+		return nil, fmt.Errorf("get google jwt config: %w", err)
 	}
 
-	cf, err := google.JWTConfigFromJSON(
-		b,
-		admin_directory_v1.AdminDirectoryUserReadonlyScope,
-		admin_directory_v1.AdminDirectoryGroupScope,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("initialize google credentials: %w", err)
-	}
-
-	cf.Subject = cfg.Google.DelegatedUser
-
-	return New(logger, cfg.PartnerDomain, cf), nil
+	return New(logger, cfg.PartnerDomain, config), nil
 }
 
 func (s *gcpReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {
