@@ -4,7 +4,6 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
-// Azure reconciler
 type Azure struct {
 	Enabled      bool   `envconfig:"CONSOLE_AZURE_ENABLED"`
 	ClientID     string `envconfig:"CONSOLE_AZURE_CLIENT_ID"`
@@ -12,7 +11,6 @@ type Azure struct {
 	TenantID     string `envconfig:"CONSOLE_AZURE_TENANT_ID"`
 }
 
-// GitHub reconciler
 type GitHub struct {
 	Enabled           bool   `envconfig:"CONSOLE_GITHUB_ENABLED"`
 	AppID             int64  `envconfig:"CONSOLE_GITHUB_APP_ID"`
@@ -21,34 +19,29 @@ type GitHub struct {
 	PrivateKeyPath    string `envconfig:"CONSOLE_GITHUB_PRIVATE_KEY_PATH"`
 }
 
-// Google workspace admin reconciler
 type Google struct {
 	Enabled         bool   `envconfig:"CONSOLE_GOOGLE_ENABLED"`
 	DelegatedUser   string `envconfig:"CONSOLE_GOOGLE_DELEGATED_USER"`
 	CredentialsFile string `envconfig:"CONSOLE_GOOGLE_CREDENTIALS_FILE"`
 }
 
-// Google Cloud Platform reconciler
 type GCP struct {
 	Enabled          bool              `envconfig:"CONSOLE_GCP_ENABLED"`
 	ProjectParentIDs map[string]string `envconfig:"CONSOLE_GCP_PROJECT_PARENT_IDS"` // suffix is key, parentID is value
 }
 
-// Nais deploy reconciler
 type NaisDeploy struct {
 	Enabled      bool   `envconfig:"CONSOLE_NAIS_DEPLOY_ENABLED"`
 	Endpoint     string `envconfig:"CONSOLE_NAIS_DEPLOY_ENDPOINT"`
 	ProvisionKey string `envconfig:"CONSOLE_NAIS_DEPLOY_PROVISION_KEY"`
 }
 
-// Google Cloud Platform reconciler
 type NaisNamespace struct {
 	Enabled     bool   `envconfig:"CONSOLE_NAIS_NAMESPACE_ENABLED"`
 	TopicPrefix string `envconfig:"CONSOLE_NAIS_NAMESPACE_TOPIC_PREFIX"`
 	ProjectID   string `envconfig:"CONSOLE_NAIS_NAMESPACE_PROJECT_ID"`
 }
 
-// User synchronizer
 type UserSync struct {
 	Enabled bool `envconfig:"CONSOLE_USERSYNC_ENABLED"`
 }
@@ -85,8 +78,9 @@ func Defaults() *Config {
 		NaisDeploy: NaisDeploy{
 			Endpoint: "http://localhost:8080/api/v1/provision",
 		},
-		LogFormat: "text",
-		LogLevel:  "DEBUG",
+		PartnerDomain: "example.com",
+		LogFormat:     "text",
+		LogLevel:      "DEBUG",
 	}
 }
 
