@@ -32,6 +32,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 	defer close(ch)
 
 	const org = "my-organization"
+	const domain = "example.com"
 	const description = "this describes my organization"
 
 	const createLogin = "should-create"
@@ -63,7 +64,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 	t.Run("create everything from scratch", func(t *testing.T) {
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
 		graphClient := github_team_reconciler.NewMockGraphClient(t)
-		reconciler := github_team_reconciler.New(logger, org, teamsService, graphClient)
+		reconciler := github_team_reconciler.New(logger, org, domain, teamsService, graphClient)
 
 		configureGetTeamBySlug(teamsService, org, teamName)
 		configureCreateTeam(teamsService, org, teamName, description)
@@ -85,7 +86,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 	t.Run("GetTeamBySlug error", func(t *testing.T) {
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
 		graphClient := github_team_reconciler.NewMockGraphClient(t)
-		reconciler := github_team_reconciler.New(logger, org, teamsService, graphClient)
+		reconciler := github_team_reconciler.New(logger, org, domain, teamsService, graphClient)
 
 		expectedErr := fmt.Errorf("server raised error: 418: I'm a teapot: this is a body")
 		teamsService.On("GetTeamBySlug", mock.Anything, org, teamName).
@@ -107,7 +108,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 	t.Run("GetTeamBySlug client error", func(t *testing.T) {
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
 		graphClient := github_team_reconciler.NewMockGraphClient(t)
-		reconciler := github_team_reconciler.New(logger, org, teamsService, graphClient)
+		reconciler := github_team_reconciler.New(logger, org, domain, teamsService, graphClient)
 
 		expectedErr := fmt.Errorf("server raised error: 418: I'm a teapot: this is a body")
 		teamsService.On("GetTeamBySlug", mock.Anything, org, teamName).
@@ -129,7 +130,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 	t.Run("GetTeamBySlug team exists", func(t *testing.T) {
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
 		graphClient := github_team_reconciler.NewMockGraphClient(t)
-		reconciler := github_team_reconciler.New(logger, org, teamsService, graphClient)
+		reconciler := github_team_reconciler.New(logger, org, domain, teamsService, graphClient)
 
 		teamsService.On("GetTeamBySlug", mock.Anything, org, teamName).
 			Return(&github.Team{

@@ -20,26 +20,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type GraphClient interface {
-	Query(ctx context.Context, q interface{}, variables map[string]interface{}) error
-}
-
-type TeamsService interface {
-	AddTeamMembershipBySlug(ctx context.Context, org, slug, user string, opts *github.TeamAddTeamMembershipOptions) (*github.Membership, *github.Response, error)
-	CreateTeam(ctx context.Context, org string, team github.NewTeam) (*github.Team, *github.Response, error)
-	GetTeamBySlug(ctx context.Context, org, slug string) (*github.Team, *github.Response, error)
-	ListTeamMembersBySlug(ctx context.Context, org, slug string, opts *github.TeamListTeamMembersOptions) ([]*github.User, *github.Response, error)
-	RemoveTeamMembershipBySlug(ctx context.Context, org, slug, user string) (*github.Response, error)
-}
-
-// gitHubReconciler creates teams on GitHub and connects users to them.
-type gitHubReconciler struct {
-	logger       auditlogger.Logger
-	teamsService TeamsService
-	graphClient  GraphClient
-	org          string
-}
-
 const (
 	Name            = "github:team"
 	OpCreate        = "github:team:create"
@@ -56,10 +36,11 @@ func init() {
 	registry.Register(Name, NewFromConfig)
 }
 
-func New(logger auditlogger.Logger, org string, teamsService TeamsService, graphClient GraphClient) *gitHubReconciler {
+func New(logger auditlogger.Logger, org, domain string, teamsService TeamsService, graphClient GraphClient) *gitHubReconciler {
 	return &gitHubReconciler{
 		logger:       logger,
 		org:          org,
+		domain:       domain,
 		teamsService: teamsService,
 		graphClient:  graphClient,
 	}
@@ -88,7 +69,7 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, logger auditlogger.Logger) (
 	restClient := github.NewClient(httpClient)
 	graphClient := githubv4.NewClient(httpClient)
 
-	return New(logger, cfg.GitHub.Organization, restClient.Teams, graphClient), nil
+	return New(logger, cfg.GitHub.Organization, cfg.PartnerDomain, restClient.Teams, graphClient), nil
 }
 
 func (s *gitHubReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {
@@ -243,14 +224,10 @@ func extraMembers(members []*github.User, users []string) []string {
 
 // Return a mapping of user objects to GitHub usernames.
 func (s *gitHubReconciler) mapSSOUsers(ctx context.Context, in reconcilers.Input) (map[*dbmodels.User]string, error) {
-
-	// connect GitHub usernames with locally defined users.
 	userMap := make(map[*dbmodels.User]string)
+	localUsers := helpers.DomainUsers(in.Team.Users, s.domain)
 
-	for _, user := range in.Team.Users {
-		if user.Email == nil {
-			continue
-		}
+	for _, user := range localUsers {
 		githubUsername, err := s.lookupSSOUser(ctx, *user.Email)
 		if err == errGitHubUserNotFound {
 			s.logger.UserLogf(in, OpMapSSOUser, user, "No GitHub user for email: %s", *user.Email)
@@ -263,24 +240,6 @@ func (s *gitHubReconciler) mapSSOUsers(ctx context.Context, in reconcilers.Input
 	}
 
 	return userMap, nil
-}
-
-type LookupSSOUser struct {
-	Login githubv4.String
-}
-
-type LookupSSOUserNode struct {
-	User LookupSSOUser
-}
-
-type LookupSSOUserQuery struct {
-	Organization struct {
-		SamlIdentityProvider struct {
-			ExternalIdentities struct {
-				Nodes []LookupSSOUserNode
-			} `graphql:"externalIdentities(first: 1, userName: $username)"`
-		}
-	} `graphql:"organization(login: $org)"`
 }
 
 // Look up a GitHub username from an SSO e-mail address connected to that user account.
