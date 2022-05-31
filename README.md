@@ -65,6 +65,22 @@ The client secret.
 
 The tenant ID.
 
+### Google Workspace
+
+To create groups in Google Workspace and sync members you will need the following environment variables set:
+
+#### `CONSOLE_GOOGLE_ENABLED`
+
+Set to `true` to enable the reconciler.
+
+#### `CONSOLE_GOOGLE_DELEGATED_USER`
+
+A user account (email address) that has admin rights in the Google Workspace account.
+
+#### `CONSOLE_GOOGLE_CREDENTIALS_FILE`
+
+JSON file that contains the private key of the service account.
+
 ## Local development
 
 Console needs Go 1.18, and depends on a PostgreSQL database.
@@ -89,15 +105,16 @@ bin/console
 ### GCP
 * Create a service account
 * Enable Workspace Admin API
-* Enable `Security -> API Controls -> Domain-wide Delegation`
-* Add service account as API client with scopes:
-  * `https://www.googleapis.com/auth/admin.directory.group`
-  * `https://www.googleapis.com/auth/admin.directory.user.readonly`
 * Set up OAuth2 consent screen
   * Internal
 * Create OAuth2 client ID
   * Web application
-  * 
+
+### Google Workspace
+* Enable `Security -> API Controls -> Domain-wide Delegation`
+* Add service account as API client with scopes:
+  * `https://www.googleapis.com/auth/admin.directory.group`
+  * `https://www.googleapis.com/auth/admin.directory.user.readonly`
 
 ### Github
 * Set up single sign-on against tenant's IDP. SCIM is optional, but not required.
