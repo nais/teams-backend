@@ -2,6 +2,7 @@ package azure_group_reconciler
 
 import (
 	"context"
+	helpers "github.com/nais/console/pkg/console"
 	"strings"
 
 	"github.com/nais/console/pkg/auditlogger"
@@ -20,6 +21,7 @@ type azureReconciler struct {
 	logger auditlogger.Logger
 	oauth  clientcredentials.Config
 	client azureclient.Client
+	domain string
 }
 
 const (
@@ -35,11 +37,12 @@ func init() {
 	registry.Register(Name, NewFromConfig)
 }
 
-func New(logger auditlogger.Logger, oauth clientcredentials.Config, client azureclient.Client) *azureReconciler {
+func New(logger auditlogger.Logger, oauth clientcredentials.Config, client azureclient.Client, domain string) *azureReconciler {
 	return &azureReconciler{
 		logger: logger,
 		oauth:  oauth,
 		client: client,
+		domain: domain,
 	}
 }
 
@@ -59,7 +62,7 @@ func NewFromConfig(_ *gorm.DB, cfg *config.Config, logger auditlogger.Logger) (r
 		},
 	}
 
-	return New(logger, conf, azureclient.New(conf.Client(context.Background()))), nil
+	return New(logger, conf, azureclient.New(conf.Client(context.Background())), cfg.PartnerDomain), nil
 }
 
 func (s *azureReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {
@@ -84,8 +87,10 @@ func (s *azureReconciler) connectUsers(ctx context.Context, grp *azureclient.Gro
 		return s.logger.Errorf(in, OpAddMembers, "list existing members in Azure group: %s", err)
 	}
 
-	deleteMembers := extraMembers(members, in.Team.Users)
-	createUsers := missingUsers(members, in.Team.Users)
+	localMembers := helpers.DomainUsers(in.Team.Users, s.domain)
+
+	deleteMembers := extraMembers(members, localMembers)
+	createUsers := missingUsers(members, localMembers)
 
 	for _, member := range deleteMembers {
 		// FIXME: connect audit log with database user, if exists
