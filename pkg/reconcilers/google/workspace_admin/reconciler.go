@@ -115,28 +115,34 @@ func (s *gcpReconciler) getOrCreateGroup(groupsService *admin_directory_v1.Group
 }
 
 func (s *gcpReconciler) connectUsers(membersService *admin_directory_v1.MembersService, grp *admin_directory_v1.Group, in reconcilers.Input) error {
-	members, err := membersService.List(grp.Id).Do()
+	remoteMembers, err := membersService.List(grp.Id).Do()
 	if err != nil {
 		return s.logger.Errorf(in, OpAddMembers, "list existing members in Google Directory group: %s", err)
 	}
 
-	deleteMembers := extraMembers(members.Members, in.Team.Users)
-	createUsers := missingUsers(members.Members, in.Team.Users)
+	localMembers := helpers.DomainUsers(in.Team.Users, s.domain)
+
+	deleteMembers := extraMembers(remoteMembers.Members, localMembers)
+	createMembers := missingUsers(remoteMembers.Members, localMembers)
+	deleted := 0
+	created := 0
 
 	for _, member := range deleteMembers {
 		// FIXME: connect audit log with database user, if exists
 		err = membersService.Delete(grp.Id, member.Id).Do()
 		if err != nil {
-			return s.logger.UserErrorf(in, OpDeleteMember, nil, "delete member '%s' from Google Directory group '%s': %s", member.Email, grp.Email, err)
+			s.logger.UserErrorf(in, OpDeleteMember, nil, "delete member '%s' from Google Directory group '%s': %s", member.Email, grp.Email, err)
+			continue
 		}
+		deleted++
 		s.logger.UserLogf(in, OpDeleteMember, nil, "deleted member '%s' from Google Directory group '%s'", member.Email, grp.Email)
 	}
 
-	if len(deleteMembers) > 0 {
+	if deleted == len(deleteMembers) {
 		s.logger.Logf(in, OpDeleteMembers, "all unmanaged members successfully deleted from Google Directory group '%s'", grp.Email)
 	}
 
-	for _, user := range createUsers {
+	for _, user := range createMembers {
 		if user.Email == nil {
 			continue
 		}
@@ -145,12 +151,14 @@ func (s *gcpReconciler) connectUsers(membersService *admin_directory_v1.MembersS
 		}
 		_, err = membersService.Insert(grp.Id, member).Do()
 		if err != nil {
-			return s.logger.UserErrorf(in, OpAddMember, user, "add member '%s' to Google Directory group '%s': %s", member.Email, grp.Email, err)
+			s.logger.UserErrorf(in, OpAddMember, user, "add member '%s' to Google Directory group '%s': %s", member.Email, grp.Email, err)
+			continue
 		}
+		created++
 		s.logger.UserLogf(in, OpAddMember, user, "added member '%s' to Google Directory group '%s'", member.Email, grp.Email)
 	}
 
-	if len(createUsers) > 0 {
+	if created == len(createMembers) {
 		s.logger.Logf(in, OpAddMembers, "all members successfully added to Google Directory group '%s'", grp.Email)
 	}
 
