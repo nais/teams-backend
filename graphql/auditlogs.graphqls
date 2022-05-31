@@ -1,27 +1,66 @@
 extend type Query {
-    auditlogs(input: AuditLogInput!): AuditLogs! @auth
+    "Get a collection of audit log entries."
+    auditLogs(
+        "Input for filtering the query."
+        input: QueryAuditLogsInput!
+    ): AuditLogs! @auth
 }
 
-# Use-cases:
-# * List activity for team
-# * List activity for user
-#   * List things done by user
-#   * List things done to user
-# * List activity for system
-# * List activity for correlation ID
+"Audit log type."
+type AuditLog {
+    "ID of the log entry."
+    id: UUID!
 
-input AuditLogInput {
-    "Filter by team ID."
-    teamID: UUID
-    "Filter by user ID."
-    userID: UUID
-    "Filter by system ID."
-    systemID: UUID
-    "Filter by synchronization ID."
-    synchronizationID: UUID
+    "The related system."
+    system: System
+
+    "The related synchronization."
+    synchronization: Synchronization
+
+    "The related user."
+    user: User
+
+    "The related team."
+    team: Team
+
+    "String representation of the action performed."
+    action: String!
+
+    "Whether or not the action was successful."
+    success: Boolean!
+
+    "Log entry message."
+    message: String!
+
+    "Creation time of the log entry."
+    createdAt: Time
 }
 
+"Audit log collection."
 type AuditLogs {
+    "Object related to pagination of the collection."
     pagination: Pagination!
+
+    "The list of audit log entries in the collection."
     nodes: [AuditLog!]!
 }
+
+"Input for filtering a collection of audit log entries."
+input QueryAuditLogsInput {
+    "Pagination options."
+    pagination: PaginationInput
+
+    "Filter by team ID."
+    teamId: UUID
+
+    "Filter by user ID."
+    userId: UUID
+
+    "Filter by system ID."
+    systemId: UUID
+
+    "Filter by synchronization ID."
+    synchronizationId: UUID
+}
+
+

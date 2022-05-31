@@ -1,45 +1,7 @@
-"""
-Pagination metadata attached to all queries.
-"""
-type Pagination {
-    "Total number of results that matches the query."
-    results: Int!
-    "Which record number the returned dataset starts at."
-    offset: Int!
-    "Maximum number of records included in the dataset."
-    limit: Int!
-}
 type TeamRole {
     "ID of the rolebinding"
     id: UUID!
     name: String!
-}
-
-type User {
-    id: UUID!
-    email: String
-    name: String!
-    teams: [Team]!
-    roles(teamID: UUID!): [Role!]!
-    createdAt: Time
-}
-
-type Team {
-    id: UUID!
-    slug: Slug!
-    name: String!
-    purpose: String
-    users: [User!]!
-    metadata: [TeamMetadata!]!
-}
-
-# TODO
-type Role {
-    id: UUID!
-    name: String!
-    resource: String!
-    accessLevel: String!
-    permission: String!
 }
 
 # TODO
@@ -65,17 +27,4 @@ type System {
 # TODO
 type Synchronization {
     id: UUID!
-}
-
-# TODO
-type AuditLog {
-    id: UUID!
-    system: System
-    synchronization: Synchronization
-    user: User
-    team: Team
-    action: String!
-    success: Boolean!
-    message: String!
-    createdAt: Time
 }

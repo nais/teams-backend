@@ -10,7 +10,7 @@ import (
 	"github.com/nais/console/pkg/graph/model"
 )
 
-func (r *queryResolver) Auditlogs(ctx context.Context, input model.AuditLogInput) (*model.AuditLogs, error) {
+func (r *queryResolver) AuditLogs(ctx context.Context, input model.QueryAuditLogsInput) (*model.AuditLogs, error) {
 	var count int64
 	auditLogs := make([]*dbmodels.AuditLog, 0)
 	query := &dbmodels.AuditLog{

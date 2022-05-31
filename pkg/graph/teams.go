@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/dbmodels"
+	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/roles"
 	"gorm.io/gorm"
@@ -65,12 +66,12 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 	team := &dbmodels.Team{}
 	tx := r.db.WithContext(ctx)
 
-	tx.Find(&users, input.UserID)
+	tx.Find(&users, input.UserIds)
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
 
-	if len(users) != len(input.UserID) {
+	if len(users) != len(input.UserIds) {
 		return nil, fmt.Errorf("one or more non-existing user IDs given as parameters")
 	}
 
@@ -97,17 +98,17 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 	return team, nil
 }
 
-func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.AddUsersToTeamInput) (*dbmodels.Team, error) {
+func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.RemoveUsersFromTeamInput) (*dbmodels.Team, error) {
 	users := make([]*dbmodels.User, 0)
 	team := &dbmodels.Team{}
 	tx := r.db.WithContext(ctx)
 
-	tx.Find(&users, input.UserID)
+	tx.Find(&users, input.UserIds)
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
 
-	if len(users) != len(input.UserID) {
+	if len(users) != len(input.UserIds) {
 		return nil, fmt.Errorf("one or more non-existing user IDs given as parameters")
 	}
 
@@ -133,7 +134,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 	return team, nil
 }
 
-func (r *queryResolver) Teams(ctx context.Context, input *model.TeamsQueryInput) (*model.Teams, error) {
+func (r *queryResolver) Teams(ctx context.Context, input *model.QueryTeamsInput) (*model.Teams, error) {
 	// all models populated, check ACL now
 	err := authz.Allowed(ctx, r.console, nil, authz.AccessRead, ResourceTeams)
 	if err != nil {
@@ -172,3 +173,17 @@ func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team
 	}
 	return team, nil
 }
+
+func (r *teamResolver) Users(ctx context.Context, obj *dbmodels.Team) ([]*dbmodels.User, error) {
+	users := make([]*dbmodels.User, 0)
+	err := r.db.WithContext(ctx).Model(obj).Association("Users").Find(&users)
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+// Team returns generated.TeamResolver implementation.
+func (r *Resolver) Team() generated.TeamResolver { return &teamResolver{r} }
+
+type teamResolver struct{ *Resolver }

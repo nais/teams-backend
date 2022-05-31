@@ -1,44 +1,104 @@
 extend type Query {
-    "Search for teams."
-    teams(input: TeamsQueryInput): Teams! @auth
+    "Get a collection of teams."
+    teams(
+        input: QueryTeamsInput
+    ): Teams! @auth
 
-    "Get a specific team"
-    team(id: UUID!): Team! @auth
+    "Get a specific team."
+    team(
+        id: UUID!
+    ): Team! @auth
 }
 
 extend type Mutation {
     "Create a team, then return the created team."
-    createTeam(input: CreateTeamInput!): Team! @auth
+    createTeam(
+        "Input for creation of the new team."
+        input: CreateTeamInput!
+    ): Team! @auth
 
     "Add one or more users to a team, then return the team in question."
-    addUsersToTeam(input: AddUsersToTeamInput!): Team! @auth
+    addUsersToTeam(
+        "Input for adding users to a team."
+        input: AddUsersToTeamInput!
+    ): Team! @auth
 
     "Remove one or more users from a team, then return team in question."
-    removeUsersFromTeam(input: AddUsersToTeamInput!): Team! @auth
+    removeUsersFromTeam(
+        "Input for removing users from a team."
+        input: RemoveUsersFromTeamInput!
+    ): Team! @auth
 }
 
-"Query results for teams."
+"Team type."
+type Team {
+    "ID of the team."
+    id: UUID!
+
+    "Unique slug of the team."
+    slug: Slug!
+
+    "Display name of the team."
+    name: String!
+
+    "Purpose of the team."
+    purpose: String
+
+    "List of users in the team."
+    users: [User!]!
+
+    "Metadata attached to the team."
+    metadata: [TeamMetadata!]!
+}
+
+"Team collection."
 type Teams {
+    "Object related to pagination of the collection."
     pagination: Pagination!
+
+    "The list of team objects in the collection."
     nodes: [Team!]!
 }
 
-input TeamsQueryInput {
+"Input for filtering a collection of teams."
+input QueryTeamsInput {
+    "Pagination options."
     pagination: PaginationInput
-    id: UUID
+
+    "Filter by slug."
     slug: Slug
+
+    "Filter by name."
+    name: String
 }
 
+"Input for creating a new team."
 input CreateTeamInput {
+    "Team slug."
     slug: Slug!
+
+    "Team name."
     name: String!
+
+    "Team purpose."
     purpose: String
 }
 
+"Input for adding users to a team."
 input AddUsersToTeamInput {
-    "List of user IDs that should be added as members to the team."
-    userID: [UUID!]!
+    "List of user IDs that should be added to the team."
+    userIds: [UUID!]!
+
     "Team ID that should receive new users."
-    teamID: UUID!
+    teamId: UUID!
+}
+
+"Input for removing users from a team."
+input RemoveUsersFromTeamInput {
+    "List of user IDs that should be removed from the team."
+    userIds: [UUID!]!
+
+    "Team ID that should receive new users."
+    teamId: UUID!
 }
 

@@ -1,39 +1,87 @@
 extend type Query {
-    "Search for users."
-    users(input: UsersQueryInput): Users! @auth
+    "Get a collection of users."
+    users(
+        "Input for filtering the query."
+        input: QueryUsersInput
+    ): Users! @auth
 
-    "Get logged in user."
+    "The currently authenticated user."
     me: User! @auth
 }
 
 extend type Mutation {
-    "Create a user, then return the created user."
-    createUser(input: CreateUserInput!): User! @auth
+    "Create and return a new user."
+    createUser(
+        "Input for creation of the new user."
+        input: CreateUserInput!
+    ): User! @auth
 
-    "Update user information, then return the updated user."
-    updateUser(input: UpdateUserInput!): User! @auth
+    "Update an existing user, and return the updated user object."
+    updateUser(
+        "Input for updating the existing user."
+        input: UpdateUserInput!
+    ): User! @auth
 }
 
-"Query results for users."
+"User type."
+type User {
+    "Unique ID of the user."
+    id: UUID!
+
+    "The email address of the user."
+    email: String
+
+    "The name of the user."
+    name: String!
+
+    "List of teams the user is a member of."
+    teams: [Team!]!
+
+    "List of roles assigned to the user."
+    roles(teamId: UUID!): [Role!]! # FIXME: Something is not quite right with this property.
+
+    "Creation time of the user."
+    createdAt: Time
+}
+
+"User collection."
 type Users {
+    "Object related to pagination of the collection."
     pagination: Pagination!
+
+    "The list of user objects in the collection."
     nodes: [User!]!
 }
 
-input UsersQueryInput {
+"Input for filtering a collection of users."
+input QueryUsersInput {
+    "Pagination options."
     pagination: PaginationInput
-    id: UUID
+
+    "Filter by user email."
     email: String
+
+    "Filter by user name."
     name: String
 }
 
+"Input for creating a new user."
 input CreateUserInput {
+    "The email address of the new user. Must not already exist, if set."
     email: String
+
+    "The name of the new user."
     name: String!
 }
 
+"Input for updating an existing user."
 input UpdateUserInput {
+    "The ID of the existing user."
     id: UUID!
+
+    "The updated email address of the user."
     email: String
+
+    "The updated name of the user."
     name: String
 }

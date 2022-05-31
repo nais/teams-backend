@@ -7,78 +7,75 @@ import (
 	"github.com/nais/console/pkg/dbmodels"
 )
 
-// API key type
+// API key type.
 type APIKey struct {
-	// The API key
+	// The API key.
 	Apikey string `json:"apikey"`
 }
 
 // Input type for API key related operations.
 type APIKeyInput struct {
-	// ID of a user
-	UserID *uuid.UUID `json:"userID"`
+	// ID of a user.
+	UserID *uuid.UUID `json:"userId"`
 }
 
+// Input for adding users to a team.
 type AddUsersToTeamInput struct {
-	// List of user IDs that should be added as members to the team.
-	UserID []*uuid.UUID `json:"userID"`
+	// List of user IDs that should be added to the team.
+	UserIds []*uuid.UUID `json:"userIds"`
 	// Team ID that should receive new users.
-	TeamID *uuid.UUID `json:"teamID"`
+	TeamID *uuid.UUID `json:"teamId"`
 }
 
+// Input for (de)assigning a rule.
 type AssignRoleInput struct {
-	RoleID *uuid.UUID `json:"roleID"`
-	UserID *uuid.UUID `json:"userID"`
-	TeamID *uuid.UUID `json:"teamID"`
+	// The ID of the role.
+	RoleID *uuid.UUID `json:"roleId"`
+	// The ID of the user.
+	UserID *uuid.UUID `json:"userId"`
+	// The ID of the team.
+	TeamID *uuid.UUID `json:"teamId"`
 }
 
-type AuditLogInput struct {
-	// Filter by team ID.
-	TeamID *uuid.UUID `json:"teamID"`
-	// Filter by user ID.
-	UserID *uuid.UUID `json:"userID"`
-	// Filter by system ID.
-	SystemID *uuid.UUID `json:"systemID"`
-	// Filter by synchronization ID.
-	SynchronizationID *uuid.UUID `json:"synchronizationID"`
-}
-
+// Audit log collection.
 type AuditLogs struct {
-	Pagination *Pagination          `json:"pagination"`
-	Nodes      []*dbmodels.AuditLog `json:"nodes"`
+	// Object related to pagination of the collection.
+	Pagination *Pagination `json:"pagination"`
+	// The list of audit log entries in the collection.
+	Nodes []*dbmodels.AuditLog `json:"nodes"`
 }
 
-type CreateRoleInput struct {
-	SystemID    *uuid.UUID `json:"systemID"`
-	Resource    string     `json:"resource"`
-	AccessLevel string     `json:"accessLevel"`
-	Permission  string     `json:"permission"`
-}
-
+// Input for creating a new team.
 type CreateTeamInput struct {
-	Slug    *dbmodels.Slug `json:"slug"`
-	Name    string         `json:"name"`
-	Purpose *string        `json:"purpose"`
+	// Team slug.
+	Slug *dbmodels.Slug `json:"slug"`
+	// Team name.
+	Name string `json:"name"`
+	// Team purpose.
+	Purpose *string `json:"purpose"`
 }
 
+// Input for creating a new user.
 type CreateUserInput struct {
+	// The email address of the new user. Must not already exist, if set.
 	Email *string `json:"email"`
-	Name  string  `json:"name"`
+	// The name of the new user.
+	Name string `json:"name"`
 }
 
-// Pagination metadata attached to all queries.
+// Pagination metadata attached to queries resulting in a collection of data.
 type Pagination struct {
 	// Total number of results that matches the query.
 	Results int `json:"results"`
-	// Which record number the returned dataset starts at.
+	// Which record number the returned collection starts at.
 	Offset int `json:"offset"`
-	// Maximum number of records included in the dataset.
+	// Maximum number of records included in the collection.
 	Limit int `json:"limit"`
 }
 
-// When querying collections this input is used to control the page and the page size of the returned slice.
+// When querying collections this input is used to control the offset and the page size of the returned slice.
 //
-// Please note that collections are not stateful, so data added or created in between your paginated requests might not be reflected in the result set.
+// Please note that collections are not stateful, so data added or created in between your paginated requests might not be reflected in the returned result set.
 type PaginationInput struct {
 	// The offset to start fetching entries.
 	Offset int `json:"offset"`
@@ -86,9 +83,68 @@ type PaginationInput struct {
 	Limit int `json:"limit"`
 }
 
-// Query results for roles.
+// Input for filtering a collection of audit log entries.
+type QueryAuditLogsInput struct {
+	// Pagination options.
+	Pagination *PaginationInput `json:"pagination"`
+	// Filter by team ID.
+	TeamID *uuid.UUID `json:"teamId"`
+	// Filter by user ID.
+	UserID *uuid.UUID `json:"userId"`
+	// Filter by system ID.
+	SystemID *uuid.UUID `json:"systemId"`
+	// Filter by synchronization ID.
+	SynchronizationID *uuid.UUID `json:"synchronizationId"`
+}
+
+// Input for filtering a collection of roles.
+type QueryRolesInput struct {
+	// Pagination options.
+	Pagination *PaginationInput `json:"pagination"`
+	// Filter by role name.
+	Name *string `json:"name"`
+	// Filter by resource.
+	Resource *string `json:"resource"`
+	// Filter by access level.
+	AccessLevel *string `json:"accessLevel"`
+	// Filter by permission.
+	Permission *string `json:"permission"`
+}
+
+// Input for filtering a collection of teams.
+type QueryTeamsInput struct {
+	// Pagination options.
+	Pagination *PaginationInput `json:"pagination"`
+	// Filter by slug.
+	Slug *dbmodels.Slug `json:"slug"`
+	// Filter by name.
+	Name *string `json:"name"`
+}
+
+// Input for filtering a collection of users.
+type QueryUsersInput struct {
+	// Pagination options.
+	Pagination *PaginationInput `json:"pagination"`
+	// Filter by user email.
+	Email *string `json:"email"`
+	// Filter by user name.
+	Name *string `json:"name"`
+}
+
+// Input for removing users from a team.
+type RemoveUsersFromTeamInput struct {
+	// List of user IDs that should be removed from the team.
+	UserIds []*uuid.UUID `json:"userIds"`
+	// Team ID that should receive new users.
+	TeamID *uuid.UUID `json:"teamId"`
+}
+
+// Role collection.
 type Roles struct {
-	Roles []*dbmodels.Role `json:"roles"`
+	// Object related to pagination of the collection.
+	Pagination *Pagination `json:"pagination"`
+	// The list of roles in the collection.
+	Nodes []*dbmodels.Role `json:"nodes"`
 }
 
 type TeamRole struct {
@@ -97,41 +153,28 @@ type TeamRole struct {
 	Name string     `json:"name"`
 }
 
-// Query results for teams.
+// Team collection.
 type Teams struct {
-	Pagination *Pagination      `json:"pagination"`
-	Nodes      []*dbmodels.Team `json:"nodes"`
+	// Object related to pagination of the collection.
+	Pagination *Pagination `json:"pagination"`
+	// The list of team objects in the collection.
+	Nodes []*dbmodels.Team `json:"nodes"`
 }
 
-type TeamsQueryInput struct {
-	Pagination *PaginationInput `json:"pagination"`
-	ID         *uuid.UUID       `json:"id"`
-	Slug       *dbmodels.Slug   `json:"slug"`
-}
-
-type UpdateRoleInput struct {
-	ID          *uuid.UUID `json:"id"`
-	SystemID    *uuid.UUID `json:"systemID"`
-	Resource    *string    `json:"resource"`
-	AccessLevel *string    `json:"accessLevel"`
-	Permission  *string    `json:"permission"`
-}
-
+// Input for updating an existing user.
 type UpdateUserInput struct {
-	ID    *uuid.UUID `json:"id"`
-	Email *string    `json:"email"`
-	Name  *string    `json:"name"`
+	// The ID of the existing user.
+	ID *uuid.UUID `json:"id"`
+	// The updated email address of the user.
+	Email *string `json:"email"`
+	// The updated name of the user.
+	Name *string `json:"name"`
 }
 
-// Query results for users.
+// User collection.
 type Users struct {
-	Pagination *Pagination      `json:"pagination"`
-	Nodes      []*dbmodels.User `json:"nodes"`
-}
-
-type UsersQueryInput struct {
-	Pagination *PaginationInput `json:"pagination"`
-	ID         *uuid.UUID       `json:"id"`
-	Email      *string          `json:"email"`
-	Name       *string          `json:"name"`
+	// Object related to pagination of the collection.
+	Pagination *Pagination `json:"pagination"`
+	// The list of user objects in the collection.
+	Nodes []*dbmodels.User `json:"nodes"`
 }

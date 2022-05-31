@@ -1,9 +1,17 @@
-"""
-The query root of the Console GraphQL interface.
-"""
+"The query root of the Console GraphQL interface."
 type Query
 
-"""
-The root query for implementing GraphQL mutations.
-"""
+"The root query for implementing GraphQL mutations."
 type Mutation
+
+"Pagination metadata attached to queries resulting in a collection of data."
+type Pagination {
+    "Total number of results that matches the query."
+    results: Int!
+
+    "Which record number the returned collection starts at."
+    offset: Int!
+
+    "Maximum number of records included in the collection."
+    limit: Int!
+}

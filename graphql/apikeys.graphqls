@@ -6,26 +6,26 @@ extend type Mutation {
 
     The API key value can only be retrieved through this call, so be sure to save the return value.
     """
-    createAPIKey(input: APIKeyInput!): APIKey! @auth
+    createAPIKey(
+        "Input for creating the API key."
+        input: APIKeyInput!
+    ): APIKey! @auth
 
-    """
-    Delete any API keys associated with a user.
-    """
-    deleteAPIKey(input: APIKeyInput!): Boolean! @auth
+    "Delete any API keys associated with a user."
+    deleteAPIKey(
+        "Input for deleting the API key."
+        input: APIKeyInput!
+    ): Boolean! @auth
 }
 
-"""
-Input type for API key related operations.
-"""
-input APIKeyInput {
-    "ID of a user."
-    userID: UUID!
-}
-
-"""
-API key type
-"""
+"API key type."
 type APIKey {
     "The API key."
     apikey: String!
+}
+
+"Input type for API key related operations."
+input APIKeyInput {
+    "ID of a user."
+    userId: UUID!
 }

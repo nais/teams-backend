@@ -1,36 +1,76 @@
 extend type Query {
-    "Search for users."
-    roles: [Role!]! @auth
+    "Get a collection of users."
+    roles(
+        "Input for filtering the query."
+        input: QueryRolesInput
+    ): Roles! @auth
 }
 
 extend type Mutation {
-    assignRoleToUser(input: AssignRoleInput!): RoleBinding! @auth
-    removeRoleFromUser(input: AssignRoleInput!): Boolean! @auth
+    "Assign a role to a user."
+    assignRoleToUser(
+        input: AssignRoleInput!
+    ): RoleBinding! @auth
+
+    "Remove a role from a user."
+    removeRoleFromUser(
+        input: AssignRoleInput!
+    ): Boolean! @auth
 }
 
-"Query results for roles."
-type Roles {
-    roles: [Role!]!
-}
+"Role type."
+type Role {
+    "ID of the role."
+    id: UUID!
 
-input AssignRoleInput {
-    roleID: UUID!
-    userID: UUID!
-    teamID: UUID!
-}
+    "Name of the role."
+    name: String!
 
-input CreateRoleInput {
-    systemID: UUID!
+    "Resource of the role."
     resource: String!
+
+    "The access level of the role."
     accessLevel: String!
+
+    "The permission of the role."
     permission: String!
 }
 
-input UpdateRoleInput {
-    id: UUID!
-    systemID: UUID
+"Role collection."
+type Roles {
+    "Object related to pagination of the collection."
+    pagination: Pagination!
+
+    "The list of roles in the collection."
+    nodes: [Role!]!
+}
+
+"Input for filtering a collection of roles."
+input QueryRolesInput {
+    "Pagination options."
+    pagination: PaginationInput
+
+    "Filter by role name."
+    name: String
+
+    "Filter by resource."
     resource: String
+
+    "Filter by access level."
     accessLevel: String
+
+    "Filter by permission."
     permission: String
 }
 
+"Input for (de)assigning a rule."
+input AssignRoleInput {
+    "The ID of the role."
+    roleId: UUID!
+
+    "The ID of the user."
+    userId: UUID!
+
+    "The ID of the team."
+    teamId: UUID!
+}

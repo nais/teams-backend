@@ -27,7 +27,6 @@ func (r *mutationResolver) AssignRoleToUser(ctx context.Context, input model.Ass
 
 func (r *mutationResolver) RemoveRoleFromUser(ctx context.Context, input model.AssignRoleInput) (bool, error) {
 	rb := &dbmodels.RoleBinding{}
-
 	tx := r.db.WithContext(ctx).First(rb, "user_id = ? AND team_id = ? AND role_id = ?", input.UserID, input.TeamID, input.RoleID).Delete(rb)
 	if tx.Error != nil {
 		return false, tx.Error
@@ -35,11 +34,11 @@ func (r *mutationResolver) RemoveRoleFromUser(ctx context.Context, input model.A
 	return true, nil
 }
 
-func (r *queryResolver) Roles(ctx context.Context) ([]*dbmodels.Role, error) {
+func (r *queryResolver) Roles(ctx context.Context, input *model.QueryRolesInput) (*model.Roles, error) {
 	roles := make([]*dbmodels.Role, 0)
-	tx := r.db.WithContext(ctx).Find(&roles)
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-	return roles, nil
+	pagination, err := r.paginatedQuery(ctx, input, &dbmodels.Role{}, &roles)
+	return &model.Roles{
+		Pagination: pagination,
+		Nodes:      roles,
+	}, err
 }
