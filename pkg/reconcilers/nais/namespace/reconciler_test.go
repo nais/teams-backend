@@ -5,6 +5,7 @@ package nais_namespace_reconciler_test
 import (
 	"context"
 	"database/sql"
+	helpers "github.com/nais/console/pkg/console"
 	"testing"
 
 	"github.com/google/uuid"
@@ -55,7 +56,7 @@ func TestNaisNamespaceReconciler(t *testing.T) {
 			SystemState: []*dbmodels.SystemState{
 				{
 					SystemID:    &sysid,
-					Environment: strp("dev"),
+					Environment: helpers.Strp("dev"),
 					Key:         "google-project-id",
 					Value:       "this-is-the-google-project-id",
 				},
@@ -101,8 +102,4 @@ func setupDatabase() (*gorm.DB, error) {
 	}
 
 	return db, nil
-}
-
-func strp(s string) *string {
-	return &s
 }

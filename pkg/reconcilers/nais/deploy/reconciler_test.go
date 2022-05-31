@@ -54,7 +54,3 @@ func TestNaisDeployReconciler_Reconcile(t *testing.T) {
 
 	assert.NoError(t, err)
 }
-
-func strp(s string) *string {
-	return &s
-}

@@ -3,6 +3,7 @@ package github_team_reconciler_test
 import (
 	"context"
 	"fmt"
+	helpers "github.com/nais/console/pkg/console"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -44,14 +45,14 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		Synchronization: nil,
 		Team: &dbmodels.Team{
 			Slug:    &teamSlug,
-			Name:    strp(teamName),
-			Purpose: strp(description),
+			Name:    helpers.Strp(teamName),
+			Purpose: helpers.Strp(description),
 			Users: []*dbmodels.User{
 				{
-					Email: strp(createEmail),
+					Email: helpers.Strp(createEmail),
 				},
 				{
-					Email: strp(keepEmail),
+					Email: helpers.Strp(keepEmail),
 				},
 			},
 		},
@@ -132,7 +133,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 
 		teamsService.On("GetTeamBySlug", mock.Anything, org, teamName).
 			Return(&github.Team{
-				Slug: strp(teamName),
+				Slug: helpers.Strp(teamName),
 			}, &github.Response{
 				Response: &http.Response{
 					StatusCode: http.StatusOK,
@@ -198,7 +199,7 @@ func configureAddTeamMembershipBySlug(teamsService *github_team_reconciler.MockT
 		Return(
 			&github.Membership{
 				User: &github.User{
-					Login: strp(createLogin),
+					Login: helpers.Strp(createLogin),
 				},
 			},
 			&github.Response{
@@ -215,10 +216,10 @@ func configureListTeamMembersBySlug(teamsService *github_team_reconciler.MockTea
 		Return(
 			[]*github.User{
 				{
-					Login: strp(keepLogin),
+					Login: helpers.Strp(keepLogin),
 				},
 				{
-					Login: strp(removeLogin),
+					Login: helpers.Strp(removeLogin),
 				},
 			},
 			&github.Response{
@@ -234,11 +235,11 @@ func configureCreateTeam(teamsService *github_team_reconciler.MockTeamsService, 
 	return teamsService.On("CreateTeam", mock.Anything, org,
 		github.NewTeam{
 			Name:        teamName,
-			Description: strp(description),
+			Description: helpers.Strp(description),
 		}).
 		Return(
 			&github.Team{
-				Slug: strp(teamName),
+				Slug: helpers.Strp(teamName),
 			},
 			&github.Response{
 				Response: &http.Response{
@@ -256,8 +257,4 @@ func configureGetTeamBySlug(teamsService *github_team_reconciler.MockTeamsServic
 				StatusCode: http.StatusNotFound,
 			},
 		}, nil).Once()
-}
-
-func strp(s string) *string {
-	return &s
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
+	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/google_jwt"
 	"golang.org/x/oauth2/jwt"
@@ -84,8 +85,8 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 			stmt := s.db.First(localUser, "email = ?", remoteUser.PrimaryEmail)
 			if stmt.Error != nil {
 				localUser = &dbmodels.User{
-					Email: strp(remoteUser.PrimaryEmail),
-					Name:  strp(remoteUser.Name.FullName),
+					Email: helpers.Strp(remoteUser.PrimaryEmail),
+					Name:  helpers.Strp(remoteUser.Name.FullName),
 				}
 
 				tx = tx.Create(localUser)
@@ -123,8 +124,4 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 
 		return tx.Error
 	})
-}
-
-func strp(s string) *string {
-	return &s
 }

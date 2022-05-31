@@ -4,6 +4,7 @@ package google_gcp_reconciler_test
 
 import (
 	"context"
+	helpers "github.com/nais/console/pkg/console"
 	"testing"
 
 	"github.com/nais/console/pkg/config"
@@ -44,16 +45,12 @@ func TestGCPReconciler(t *testing.T) {
 	input := reconcilers.Input{
 		Team: &dbmodels.Team{
 			Slug:    &teamSlug,
-			Name:    strp("Hello, World!"),
-			Purpose: strp("you know it"),
+			Name:    helpers.Strp("Hello, World!"),
+			Purpose: helpers.Strp("you know it"),
 		},
 	}
 
 	err = rec.Reconcile(ctx, input)
 
 	assert.NoError(t, err)
-}
-
-func strp(s string) *string {
-	return &s
 }

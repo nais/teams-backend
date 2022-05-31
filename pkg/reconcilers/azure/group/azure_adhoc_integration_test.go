@@ -4,6 +4,7 @@ package azure_group_reconciler_test
 
 import (
 	"context"
+	helpers "github.com/nais/console/pkg/console"
 	"sync"
 	"testing"
 
@@ -37,9 +38,9 @@ func TestReconcile(t *testing.T) {
 		System:          nil,
 		Synchronization: nil,
 		Team: &dbmodels.Team{
-			Slug:    strp("foobarbaz"),
-			Name:    strp("test group, can be deleted"),
-			Purpose: strp("this is just a test"),
+			Slug:    helpers.Strp("foobarbaz"),
+			Name:    helpers.Strp("test group, can be deleted"),
+			Purpose: helpers.Strp("this is just a test"),
 			Users:   []*dbmodels.User{},
 		},
 	}

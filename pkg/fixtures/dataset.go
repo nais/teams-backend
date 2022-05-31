@@ -3,6 +3,7 @@ package fixtures
 import (
 	"context"
 	"fmt"
+	helpers "github.com/nais/console/pkg/console"
 	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
 
 	"github.com/google/uuid"
@@ -22,10 +23,6 @@ func pk(serial byte) dbmodels.Model {
 	return dbmodels.Model{
 		ID: serialuuid(serial),
 	}
-}
-
-func strp(s string) *string {
-	return &s
 }
 
 const (
@@ -58,8 +55,8 @@ func InsertRootUser(ctx context.Context, db *gorm.DB) error {
 
 		rootUser := &dbmodels.User{
 			Model: pk(idRootUser),
-			Email: strp(emailRootUser),
-			Name:  strp(nameRootUser),
+			Email: helpers.Strp(emailRootUser),
+			Name:  helpers.Strp(nameRootUser),
 		}
 
 		role := &dbmodels.Role{

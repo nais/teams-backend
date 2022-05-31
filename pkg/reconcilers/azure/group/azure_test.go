@@ -3,6 +3,7 @@ package azure_group_reconciler_test
 import (
 	"context"
 	"fmt"
+	helpers "github.com/nais/console/pkg/console"
 	"testing"
 	"time"
 
@@ -47,7 +48,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		Mail: "removeMember@example.com",
 	}
 	addUser := &dbmodels.User{
-		Email: strp("add@example.com"),
+		Email: helpers.Strp("add@example.com"),
 	}
 	keepUser := &dbmodels.User{
 		Email: &keepMember.Mail,
@@ -70,8 +71,8 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Synchronization: nil,
 			Team: &dbmodels.Team{
 				Slug:    &teamSlug,
-				Name:    strp(teamName),
-				Purpose: strp(teamName),
+				Name:    helpers.Strp(teamName),
+				Purpose: helpers.Strp(teamName),
 				Users: []*dbmodels.User{
 					addUser, keepUser,
 				},
@@ -94,8 +95,8 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Synchronization: nil,
 			Team: &dbmodels.Team{
 				Slug:    &teamSlug,
-				Name:    strp(teamName),
-				Purpose: strp(teamName),
+				Name:    helpers.Strp(teamName),
+				Purpose: helpers.Strp(teamName),
 				Users: []*dbmodels.User{
 					addUser, keepUser,
 				},
@@ -120,8 +121,8 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Synchronization: nil,
 			Team: &dbmodels.Team{
 				Slug:    &teamSlug,
-				Name:    strp(teamName),
-				Purpose: strp(teamName),
+				Name:    helpers.Strp(teamName),
+				Purpose: helpers.Strp(teamName),
 				Users: []*dbmodels.User{
 					addUser, keepUser,
 				},
@@ -148,8 +149,8 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Synchronization: nil,
 			Team: &dbmodels.Team{
 				Slug:    &teamSlug,
-				Name:    strp(teamName),
-				Purpose: strp(teamName),
+				Name:    helpers.Strp(teamName),
+				Purpose: helpers.Strp(teamName),
 				Users: []*dbmodels.User{
 					addUser, keepUser,
 				},
@@ -176,8 +177,8 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Synchronization: nil,
 			Team: &dbmodels.Team{
 				Slug:    &teamSlug,
-				Name:    strp(teamName),
-				Purpose: strp(teamName),
+				Name:    helpers.Strp(teamName),
+				Purpose: helpers.Strp(teamName),
 				Users: []*dbmodels.User{
 					addUser, keepUser,
 				},
@@ -207,8 +208,8 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Synchronization: nil,
 			Team: &dbmodels.Team{
 				Slug:    &teamSlug,
-				Name:    strp(teamName),
-				Purpose: strp(teamName),
+				Name:    helpers.Strp(teamName),
+				Purpose: helpers.Strp(teamName),
 				Users: []*dbmodels.User{
 					addUser, keepUser,
 				},
@@ -219,8 +220,4 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		mockClient.AssertExpectations(t)
 
 	})
-}
-
-func strp(s string) *string {
-	return &s
 }
