@@ -4,17 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
-
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/dbmodels"
+	"github.com/nais/console/pkg/google_jwt"
 	"golang.org/x/oauth2/jwt"
 	"gorm.io/gorm"
 
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/reconcilers"
-	"golang.org/x/oauth2/google"
 	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/option"
 )
@@ -51,26 +49,16 @@ func NewFromConfig(cfg *config.Config, db *gorm.DB, logger auditlogger.Logger) (
 		return nil, ErrNotEnabled
 	}
 
-	b, err := ioutil.ReadFile(cfg.Google.CredentialsFile)
-	if err != nil {
-		return nil, fmt.Errorf("read google credentials file: %w", err)
-	}
+	cf, err := google_jwt.GetConfig(cfg.Google.CredentialsFile, cfg.Google.DelegatedUser)
 
-	cf, err := google.JWTConfigFromJSON(
-		b,
-		admin_directory_v1.AdminDirectoryUserReadonlyScope,
-		admin_directory_v1.AdminDirectoryGroupScope,
-	)
 	if err != nil {
-		return nil, fmt.Errorf("initialize google credentials: %w", err)
+		return nil, fmt.Errorf("get google jwt config: %w", err)
 	}
-
-	cf.Subject = cfg.Google.DelegatedUser
 
 	return New(logger, db, cfg.PartnerDomain, cf), nil
 }
 
-func (s *userSynchronizer) FetchAll(ctx context.Context) error {
+func (s *userSynchronizer) Sync(ctx context.Context) error {
 	// dummy object for logging
 	in := reconcilers.Input{System: &dbmodels.System{}}
 
@@ -87,7 +75,7 @@ func (s *userSynchronizer) FetchAll(ctx context.Context) error {
 
 	userIds := make(map[uuid.UUID]struct{})
 
-	err = s.db.Transaction(func(tx *gorm.DB) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
 		// Loop over all remote users and create them locally.
 		// Existing users are ignored.
 		for _, remoteUser := range resp.Users {
@@ -135,8 +123,6 @@ func (s *userSynchronizer) FetchAll(ctx context.Context) error {
 
 		return tx.Error
 	})
-
-	return err
 }
 
 func strp(s string) *string {

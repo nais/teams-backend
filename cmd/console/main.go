@@ -158,11 +158,11 @@ func run() error {
 	usersyncer, err := usersync.NewFromConfig(cfg, db, logger)
 	if err != nil {
 		userSyncTimer.Stop()
-		if err == usersync.ErrNotEnabled {
-			log.Warnf("User synchronization disabled: %s", err)
-		} else {
+		if err != usersync.ErrNotEnabled {
 			return err
 		}
+
+		log.Warnf("User synchronization disabled: %s", err)
 	}
 
 	for ctx.Err() == nil {
@@ -200,7 +200,7 @@ func run() error {
 			log.Infof("Starting user synchronization...")
 
 			ctx, cancel := context.WithTimeout(ctx, time.Second*30)
-			err = usersyncer.FetchAll(ctx)
+			err = usersyncer.Sync(ctx)
 			cancel()
 
 			switch er := err.(type) {
