@@ -69,7 +69,7 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, logger auditlogger.Logger) (
 
 	cf.Subject = cfg.Google.DelegatedUser
 
-	return New(logger, cfg.Google.Domain, cf), nil
+	return New(logger, cfg.PartnerDomain, cf), nil
 }
 
 func (s *gcpReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {

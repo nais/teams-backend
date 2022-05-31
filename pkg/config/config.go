@@ -25,7 +25,6 @@ type GitHub struct {
 type Google struct {
 	Enabled         bool   `envconfig:"CONSOLE_GOOGLE_ENABLED"`
 	DelegatedUser   string `envconfig:"CONSOLE_GOOGLE_DELEGATED_USER"`
-	Domain          string `envconfig:"CONSOLE_GOOGLE_DOMAIN"`
 	CredentialsFile string `envconfig:"CONSOLE_GOOGLE_CREDENTIALS_FILE"`
 }
 
@@ -69,6 +68,7 @@ type Config struct {
 	NaisDeploy    NaisDeploy
 	NaisNamespace NaisNamespace
 	OAuth         OAuth
+	PartnerDomain string `envconfig:"CONSOLE_PARTNER_DOMAIN"`
 	AutoLoginUser string `envconfig:"CONSOLE_AUTO_LOGIN_USER"`
 	FrontendURL   string `envconfig:"CONSOLE_FRONTEND_URL"`
 	DatabaseURL   string `envconfig:"CONSOLE_DATABASE_URL"`

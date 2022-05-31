@@ -66,7 +66,7 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, logger auditlogger.Logger) (
 		return nil, fmt.Errorf("initialize google credentials: %w", err)
 	}
 
-	return New(db, logger, cfg.Google.Domain, cf, cfg.GCP.ProjectParentIDs), nil
+	return New(db, logger, cfg.PartnerDomain, cf, cfg.GCP.ProjectParentIDs), nil
 }
 
 func (s *gcpReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {

@@ -67,7 +67,7 @@ func NewFromConfig(cfg *config.Config, db *gorm.DB, logger auditlogger.Logger) (
 
 	cf.Subject = cfg.Google.DelegatedUser
 
-	return New(logger, db, cfg.Google.Domain, cf), nil
+	return New(logger, db, cfg.PartnerDomain, cf), nil
 }
 
 func (s *userSynchronizer) FetchAll(ctx context.Context) error {
