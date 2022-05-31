@@ -1,0 +1,4 @@
+"""
+Require authentication for all requests with this directive.
+"""
+directive @auth on FIELD_DEFINITION

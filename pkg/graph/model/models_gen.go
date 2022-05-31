@@ -7,11 +7,15 @@ import (
 	"github.com/nais/console/pkg/dbmodels"
 )
 
+// API key type
 type APIKey struct {
+	// The API key
 	Apikey string `json:"apikey"`
 }
 
+// Input type for API key related operations.
 type APIKeyInput struct {
+	// ID of a user
 	UserID *uuid.UUID `json:"userID"`
 }
 
@@ -72,10 +76,14 @@ type Pagination struct {
 	Limit int `json:"limit"`
 }
 
-// Specify pagination options.
+// When querying collections this input is used to control the page and the page size of the returned slice.
+//
+// Please note that collections are not stateful, so data added or created in between your paginated requests might not be reflected in the result set.
 type PaginationInput struct {
+	// The offset to start fetching entries.
 	Offset int `json:"offset"`
-	Limit  int `json:"limit"`
+	// Number of entries per page.
+	Limit int `json:"limit"`
 }
 
 // Query results for roles.

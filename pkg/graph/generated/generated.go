@@ -814,10 +814,21 @@ var sources = []*ast.Source{
     deleteAPIKey(input: APIKeyInput!): Boolean! @auth
 }
 
+"""
+Input type for API key related operations.
+"""
 input APIKeyInput {
+    "ID of a user"
     userID: UUID!
 }
-`, BuiltIn: false},
+
+"""
+API key type
+"""
+type APIKey {
+    "The API key"
+    apikey: String!
+}`, BuiltIn: false},
 	{Name: "../../../graphql/auditlogs.graphqls", Input: `extend type Query {
     auditlogs(input: AuditLogInput!): AuditLogs! @auth
 }
@@ -846,6 +857,22 @@ type AuditLogs {
     nodes: [AuditLog!]!
 }
 `, BuiltIn: false},
+	{Name: "../../../graphql/directives.graphqls", Input: `"""
+Require authentication for all requests with this directive.
+"""
+directive @auth on FIELD_DEFINITION`, BuiltIn: false},
+	{Name: "../../../graphql/inputs.graphqls", Input: `"""
+When querying collections this input is used to control the page and the page size of the returned slice.
+
+Please note that collections are not stateful, so data added or created in between your paginated requests might not be reflected in the result set.
+"""
+input PaginationInput {
+    "The offset to start fetching entries."
+    offset: Int! = 0
+
+    "Number of entries per page."
+    limit: Int! = 10
+}`, BuiltIn: false},
 	{Name: "../../../graphql/roles.graphqls", Input: `extend type Query {
     "Search for users."
     roles: [Role!]! @auth
@@ -883,29 +910,34 @@ input UpdateRoleInput {
 }
 
 `, BuiltIn: false},
-	{Name: "../../../graphql/schema.graphqls", Input: `# console.nais.io
-# https://gqlgen.com/getting-started/
-
+	{Name: "../../../graphql/scalars.graphqls", Input: `"""
+Scalar value representing a UUID based on RFC 4122.
+"""
 scalar UUID
+
+"""
+Scalar value representing a time.
+"""
 scalar Time
 
-"Slugs must contain only lowercase letters and dashes, and must be between 3 and 20 characters. Slugs must start and end with a lowercase letter."
-scalar Slug
+"""
+Slugs must contain only lowercase letters and dashes, and must be between 3 and 20 characters. Slugs must start and end with a lowercase letter.
 
+Examples of valid slugs:
+
+- ` + "`" + `some-value` + "`" + `
+- ` + "`" + `someothervalue` + "`" + `
+"""
+scalar Slug`, BuiltIn: false},
+	{Name: "../../../graphql/schema.graphqls", Input: `"""
+The query root of the Console GraphQL interface.
+"""
 type Query
 
-type Mutation
-
-"Require authentication for all requests with this directive."
-directive @auth on FIELD_DEFINITION
-
-"Specify pagination options."
-input PaginationInput {
-    offset: Int! = 0
-    limit: Int! = 10
-}
-
-`, BuiltIn: false},
+"""
+The root query for implementing GraphQL mutations.
+"""
+type Mutation`, BuiltIn: false},
 	{Name: "../../../graphql/teams.graphqls", Input: `extend type Query {
     "Search for teams."
     teams(input: TeamsQueryInput): Teams! @auth
@@ -1007,11 +1039,6 @@ type RoleBinding {
 type TeamMetadata {
     key: String!
     value: String
-}
-
-# TODO
-type APIKey {
-    apikey: String!
 }
 
 # TODO

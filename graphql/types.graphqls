@@ -57,11 +57,6 @@ type TeamMetadata {
 }
 
 # TODO
-type APIKey {
-    apikey: String!
-}
-
-# TODO
 type System {
     id: UUID!
     name: String!

@@ -1,22 +1,9 @@
-# console.nais.io
-# https://gqlgen.com/getting-started/
-
-scalar UUID
-scalar Time
-
-"Slugs must contain only lowercase letters and dashes, and must be between 3 and 20 characters. Slugs must start and end with a lowercase letter."
-scalar Slug
-
+"""
+The query root of the Console GraphQL interface.
+"""
 type Query
 
+"""
+The root query for implementing GraphQL mutations.
+"""
 type Mutation
-
-"Require authentication for all requests with this directive."
-directive @auth on FIELD_DEFINITION
-
-"Specify pagination options."
-input PaginationInput {
-    offset: Int! = 0
-    limit: Int! = 10
-}
-
