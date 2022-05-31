@@ -78,13 +78,6 @@ type PaginationInput struct {
 	Limit  int `json:"limit"`
 }
 
-type QueryUserInput struct {
-	Pagination *PaginationInput `json:"pagination"`
-	ID         *uuid.UUID       `json:"id"`
-	Email      *string          `json:"email"`
-	Name       *string          `json:"name"`
-}
-
 // Query results for roles.
 type Roles struct {
 	Roles []*dbmodels.Role `json:"roles"`
@@ -100,6 +93,12 @@ type TeamRole struct {
 type Teams struct {
 	Pagination *Pagination      `json:"pagination"`
 	Nodes      []*dbmodels.Team `json:"nodes"`
+}
+
+type TeamsQueryInput struct {
+	Pagination *PaginationInput `json:"pagination"`
+	ID         *uuid.UUID       `json:"id"`
+	Slug       *dbmodels.Slug   `json:"slug"`
 }
 
 type UpdateRoleInput struct {
@@ -120,4 +119,11 @@ type UpdateUserInput struct {
 type Users struct {
 	Pagination *Pagination      `json:"pagination"`
 	Nodes      []*dbmodels.User `json:"nodes"`
+}
+
+type UsersQueryInput struct {
+	Pagination *PaginationInput `json:"pagination"`
+	ID         *uuid.UUID       `json:"id"`
+	Email      *string          `json:"email"`
+	Name       *string          `json:"name"`
 }

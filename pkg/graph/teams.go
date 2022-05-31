@@ -133,26 +133,19 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 	return team, nil
 }
 
-func (r *queryResolver) Teams(ctx context.Context) (*model.Teams, error) {
+func (r *queryResolver) Teams(ctx context.Context, input *model.TeamsQueryInput) (*model.Teams, error) {
 	// all models populated, check ACL now
 	err := authz.Allowed(ctx, r.console, nil, authz.AccessRead, ResourceTeams)
 	if err != nil {
 		return nil, err
 	}
 
-	var count int64
 	teams := make([]*dbmodels.Team, 0)
-	tx := r.db.WithContext(ctx).Preload("Users").Order("name").Find(&teams)
-	tx.Count(&count)
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
+	pagination, err := r.paginatedQuery(ctx, input, &dbmodels.Team{}, &teams)
 	return &model.Teams{
-		Pagination: &model.Pagination{
-			Results: int(count),
-		},
-		Nodes: teams,
-	}, nil
+		Pagination: pagination,
+		Nodes:      teams,
+	}, err
 }
 
 func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team, error) {

@@ -1,6 +1,6 @@
 extend type Query {
     "Search for teams."
-    teams: Teams! @auth
+    teams(input: TeamsQueryInput): Teams! @auth
 
     "Get a specific team"
     team(id: UUID!): Team! @auth
@@ -21,6 +21,12 @@ extend type Mutation {
 type Teams {
     pagination: Pagination!
     nodes: [Team!]!
+}
+
+input TeamsQueryInput {
+    pagination: PaginationInput
+    id: UUID
+    slug: Slug
 }
 
 input CreateTeamInput {

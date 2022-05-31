@@ -32,7 +32,7 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, input model.UpdateUse
 	return u, err
 }
 
-func (r *queryResolver) Users(ctx context.Context, input *model.QueryUserInput) (*model.Users, error) {
+func (r *queryResolver) Users(ctx context.Context, input *model.UsersQueryInput) (*model.Users, error) {
 	users := make([]*dbmodels.User, 0)
 	pagination, err := r.paginatedQuery(ctx, input, &dbmodels.User{}, &users)
 	return &model.Users{

@@ -1,6 +1,7 @@
 extend type Query {
     "Search for users."
-    users(input: QueryUserInput): Users! @auth
+    users(input: UsersQueryInput): Users! @auth
+
     "Get logged in user."
     me: User! @auth
 }
@@ -19,7 +20,7 @@ type Users {
     nodes: [User!]!
 }
 
-input QueryUserInput {
+input UsersQueryInput {
     pagination: PaginationInput
     id: UUID
     email: String
@@ -36,4 +37,3 @@ input UpdateUserInput {
     email: String
     name: String
 }
-

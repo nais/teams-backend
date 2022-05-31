@@ -15,7 +15,7 @@ var fallbackPagination = &PaginationInput{
 	Limit:  10,
 }
 
-func (in *QueryUserInput) GetQuery() interface{} {
+func (in *UsersQueryInput) GetQuery() interface{} {
 	if in == nil {
 		return &dbmodels.User{}
 	}
@@ -28,7 +28,26 @@ func (in *QueryUserInput) GetQuery() interface{} {
 	}
 }
 
-func (in *QueryUserInput) GetPagination() *PaginationInput {
+func (in *UsersQueryInput) GetPagination() *PaginationInput {
+	if in == nil || in.Pagination == nil {
+		return fallbackPagination
+	}
+	return in.Pagination
+}
+
+func (in *TeamsQueryInput) GetQuery() interface{} {
+	if in == nil {
+		return &dbmodels.Team{}
+	}
+	return &dbmodels.Team{
+		Model: dbmodels.Model{
+			ID: in.ID,
+		},
+		Slug: in.Slug,
+	}
+}
+
+func (in *TeamsQueryInput) GetPagination() *PaginationInput {
 	if in == nil || in.Pagination == nil {
 		return fallbackPagination
 	}

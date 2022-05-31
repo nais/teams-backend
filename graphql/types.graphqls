@@ -19,7 +19,7 @@ type User {
     id: UUID!
     email: String
     name: String!
-    teams: Teams!
+    teams: [Team]!
     roles(teamID: UUID!): [Role!]!
     createdAt: Time
 }
