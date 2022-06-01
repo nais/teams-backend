@@ -95,7 +95,7 @@ type ComplexityRoot struct {
 		Roles     func(childComplexity int, input *model.QueryRolesInput) int
 		Team      func(childComplexity int, id *uuid.UUID) int
 		Teams     func(childComplexity int, input *model.QueryTeamsInput) int
-		Users     func(childComplexity int, input *model.QueryUsersInput) int
+		Users     func(childComplexity int, input *model.QueryUsersInput, order *model.QueryUsersOrderInput) int
 	}
 
 	Role struct {
@@ -182,7 +182,7 @@ type QueryResolver interface {
 	Roles(ctx context.Context, input *model.QueryRolesInput) (*model.Roles, error)
 	Teams(ctx context.Context, input *model.QueryTeamsInput) (*model.Teams, error)
 	Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team, error)
-	Users(ctx context.Context, input *model.QueryUsersInput) (*model.Users, error)
+	Users(ctx context.Context, input *model.QueryUsersInput, order *model.QueryUsersOrderInput) (*model.Users, error)
 	Me(ctx context.Context) (*dbmodels.User, error)
 }
 type TeamResolver interface {
@@ -486,7 +486,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Users(childComplexity, args["input"].(*model.QueryUsersInput)), true
+		return e.complexity.Query.Users(childComplexity, args["input"].(*model.QueryUsersInput), args["order"].(*model.QueryUsersOrderInput)), true
 
 	case "Role.accessLevel":
 		if e.complexity.Role.AccessLevel == nil {
@@ -749,6 +749,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputQueryRolesInput,
 		ec.unmarshalInputQueryTeamsInput,
 		ec.unmarshalInputQueryUsersInput,
+		ec.unmarshalInputQueryUsersOrderInput,
 		ec.unmarshalInputRemoveUsersFromTeamInput,
 		ec.unmarshalInputUpdateUserInput,
 	)
@@ -1030,6 +1031,15 @@ type Pagination {
 
     "Maximum number of records included in the collection."
     limit: Int!
+}
+
+"Direction of the ordering."
+enum OrderDirection {
+    "Order ascending."
+    ASC
+
+    "Order descending."
+    DESC
 }`, BuiltIn: false},
 	{Name: "../../../graphql/teams.graphqls", Input: `extend type Query {
     "Get a collection of teams."
@@ -1171,6 +1181,9 @@ type Synchronization {
     users(
         "Input for filtering the query."
         input: QueryUsersInput
+
+        "Input for ordering the collection. If omitted the collection will be sorted by the name of the user in ascending order."
+        order: QueryUsersOrderInput
     ): Users! @auth
 
     "The currently authenticated user."
@@ -1233,6 +1246,15 @@ input QueryUsersInput {
     name: String
 }
 
+"Input for ordering a collection of users."
+input QueryUsersOrderInput {
+    "Field to order by."
+    field: UserOrderField!
+
+    "Order direction."
+    direction: OrderDirection!
+}
+
 "Input for creating a new user."
 input CreateUserInput {
     "The email address of the new user. Must not already exist, if set."
@@ -1252,6 +1274,18 @@ input UpdateUserInput {
 
     "The updated name of the user."
     name: String
+}
+
+"Fields to order the collection by."
+enum UserOrderField {
+    "Order by name."
+    name
+
+    "Order by email address."
+    email
+
+    "Order by creation time."
+    createdAt
 }`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
@@ -1482,6 +1516,15 @@ func (ec *executionContext) field_Query_users_args(ctx context.Context, rawArgs 
 		}
 	}
 	args["input"] = arg0
+	var arg1 *model.QueryUsersOrderInput
+	if tmp, ok := rawArgs["order"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("order"))
+		arg1, err = ec.unmarshalOQueryUsersOrderInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryUsersOrderInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["order"] = arg1
 	return args, nil
 }
 
@@ -3355,7 +3398,7 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Users(rctx, fc.Args["input"].(*model.QueryUsersInput))
+			return ec.resolvers.Query().Users(rctx, fc.Args["input"].(*model.QueryUsersInput), fc.Args["order"].(*model.QueryUsersOrderInput))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -7429,6 +7472,37 @@ func (ec *executionContext) unmarshalInputQueryUsersInput(ctx context.Context, o
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputQueryUsersOrderInput(ctx context.Context, obj interface{}) (model.QueryUsersOrderInput, error) {
+	var it model.QueryUsersOrderInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	for k, v := range asMap {
+		switch k {
+		case "field":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
+			it.Field, err = ec.unmarshalNUserOrderField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserOrderField(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "direction":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
+			it.Direction, err = ec.unmarshalNOrderDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐOrderDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputRemoveUsersFromTeamInput(ctx context.Context, obj interface{}) (model.RemoveUsersFromTeamInput, error) {
 	var it model.RemoveUsersFromTeamInput
 	asMap := map[string]interface{}{}
@@ -8917,6 +8991,16 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 	return res
 }
 
+func (ec *executionContext) unmarshalNOrderDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐOrderDirection(ctx context.Context, v interface{}) (model.OrderDirection, error) {
+	var res model.OrderDirection
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNOrderDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐOrderDirection(ctx context.Context, sel ast.SelectionSet, v model.OrderDirection) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) marshalNPagination2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPagination(ctx context.Context, sel ast.SelectionSet, v *model.Pagination) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -9318,6 +9402,16 @@ func (ec *executionContext) marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkg�
 	return ec._User(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNUserOrderField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserOrderField(ctx context.Context, v interface{}) (model.UserOrderField, error) {
+	var res model.UserOrderField
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNUserOrderField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserOrderField(ctx context.Context, sel ast.SelectionSet, v model.UserOrderField) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) marshalNUsers2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUsers(ctx context.Context, sel ast.SelectionSet, v model.Users) graphql.Marshaler {
 	return ec._Users(ctx, sel, &v)
 }
@@ -9640,6 +9734,14 @@ func (ec *executionContext) unmarshalOQueryUsersInput2ᚖgithubᚗcomᚋnaisᚋc
 		return nil, nil
 	}
 	res, err := ec.unmarshalInputQueryUsersInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOQueryUsersOrderInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryUsersOrderInput(ctx context.Context, v interface{}) (*model.QueryUsersOrderInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputQueryUsersOrderInput(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 

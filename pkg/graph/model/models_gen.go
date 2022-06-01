@@ -3,6 +3,10 @@
 package model
 
 import (
+	"fmt"
+	"io"
+	"strconv"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/dbmodels"
 )
@@ -131,6 +135,14 @@ type QueryUsersInput struct {
 	Name *string `json:"name"`
 }
 
+// Input for ordering a collection of users.
+type QueryUsersOrderInput struct {
+	// Field to order by.
+	Field UserOrderField `json:"field"`
+	// Order direction.
+	Direction OrderDirection `json:"direction"`
+}
+
 // Input for removing users from a team.
 type RemoveUsersFromTeamInput struct {
 	// List of user IDs that should be removed from the team.
@@ -177,4 +189,95 @@ type Users struct {
 	Pagination *Pagination `json:"pagination"`
 	// The list of user objects in the collection.
 	Nodes []*dbmodels.User `json:"nodes"`
+}
+
+// Direction of the ordering.
+type OrderDirection string
+
+const (
+	// Order ascending.
+	OrderDirectionAsc OrderDirection = "ASC"
+	// Order descending.
+	OrderDirectionDesc OrderDirection = "DESC"
+)
+
+var AllOrderDirection = []OrderDirection{
+	OrderDirectionAsc,
+	OrderDirectionDesc,
+}
+
+func (e OrderDirection) IsValid() bool {
+	switch e {
+	case OrderDirectionAsc, OrderDirectionDesc:
+		return true
+	}
+	return false
+}
+
+func (e OrderDirection) String() string {
+	return string(e)
+}
+
+func (e *OrderDirection) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = OrderDirection(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid OrderDirection", str)
+	}
+	return nil
+}
+
+func (e OrderDirection) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+// Fields to order the collection by.
+type UserOrderField string
+
+const (
+	// Order by name.
+	UserOrderFieldName UserOrderField = "name"
+	// Order by email address.
+	UserOrderFieldEmail UserOrderField = "email"
+	// Order by creation time.
+	UserOrderFieldCreatedAt UserOrderField = "createdAt"
+)
+
+var AllUserOrderField = []UserOrderField{
+	UserOrderFieldName,
+	UserOrderFieldEmail,
+	UserOrderFieldCreatedAt,
+}
+
+func (e UserOrderField) IsValid() bool {
+	switch e {
+	case UserOrderFieldName, UserOrderFieldEmail, UserOrderFieldCreatedAt:
+		return true
+	}
+	return false
+}
+
+func (e UserOrderField) String() string {
+	return string(e)
+}
+
+func (e *UserOrderField) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = UserOrderField(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid UserOrderField", str)
+	}
+	return nil
+}
+
+func (e UserOrderField) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
 }

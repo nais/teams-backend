@@ -15,3 +15,12 @@ type Pagination {
     "Maximum number of records included in the collection."
     limit: Int!
 }
+
+"Direction of the ordering."
+enum OrderDirection {
+    "Order ascending."
+    ASC
+
+    "Order descending."
+    DESC
+}

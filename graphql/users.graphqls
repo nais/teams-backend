@@ -3,6 +3,9 @@ extend type Query {
     users(
         "Input for filtering the query."
         input: QueryUsersInput
+
+        "Input for ordering the collection. If omitted the collection will be sorted by the name of the user in ascending order."
+        order: QueryUsersOrderInput
     ): Users! @auth
 
     "The currently authenticated user."
@@ -65,6 +68,15 @@ input QueryUsersInput {
     name: String
 }
 
+"Input for ordering a collection of users."
+input QueryUsersOrderInput {
+    "Field to order by."
+    field: UserOrderField!
+
+    "Order direction."
+    direction: OrderDirection!
+}
+
 "Input for creating a new user."
 input CreateUserInput {
     "The email address of the new user. Must not already exist, if set."
@@ -84,4 +96,16 @@ input UpdateUserInput {
 
     "The updated name of the user."
     name: String
+}
+
+"Fields to order the collection by."
+enum UserOrderField {
+    "Order by name."
+    name
+
+    "Order by email address."
+    email
+
+    "Order by creation time."
+    createdAt
 }

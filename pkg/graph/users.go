@@ -34,9 +34,17 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, input model.UpdateUse
 	return u, err
 }
 
-func (r *queryResolver) Users(ctx context.Context, input *model.QueryUsersInput) (*model.Users, error) {
+func (r *queryResolver) Users(ctx context.Context, input *model.QueryUsersInput, order *model.QueryUsersOrderInput) (*model.Users, error) {
 	users := make([]*dbmodels.User, 0)
-	pagination, err := r.paginatedQuery(ctx, input, &dbmodels.User{}, &users)
+
+	if order == nil {
+		order = &model.QueryUsersOrderInput{
+			Field:     model.UserOrderFieldName,
+			Direction: model.OrderDirectionAsc,
+		}
+	}
+	pagination, err := r.paginatedQuery(ctx, input, order, &dbmodels.User{}, &users)
+
 	return &model.Users{
 		Pagination: pagination,
 		Nodes:      users,

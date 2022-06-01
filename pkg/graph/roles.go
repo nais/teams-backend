@@ -36,7 +36,11 @@ func (r *mutationResolver) RemoveRoleFromUser(ctx context.Context, input model.A
 
 func (r *queryResolver) Roles(ctx context.Context, input *model.QueryRolesInput) (*model.Roles, error) {
 	roles := make([]*dbmodels.Role, 0)
-	pagination, err := r.paginatedQuery(ctx, input, &dbmodels.Role{}, &roles)
+	order := &model.GenericOrder{
+		Field:     "name",
+		Direction: "ASC",
+	}
+	pagination, err := r.paginatedQuery(ctx, input, order, &dbmodels.Role{}, &roles)
 	return &model.Roles{
 		Pagination: pagination,
 		Nodes:      roles,

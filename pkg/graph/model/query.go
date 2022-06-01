@@ -14,6 +14,23 @@ var fallbackPagination = &PaginationInput{
 	Limit:  10,
 }
 
+type QueryOrder interface {
+	GetOrderString() string
+}
+
+type GenericOrder struct {
+	Field     string
+	Direction string
+}
+
+func (order GenericOrder) GetOrderString() string {
+	return order.Field + " " + order.Direction
+}
+
+func (order QueryUsersOrderInput) GetOrderString() string {
+	return string(order.Field) + " " + string(order.Direction)
+}
+
 func (in *QueryUsersInput) GetQuery() interface{} {
 	if in == nil {
 		return &dbmodels.User{}

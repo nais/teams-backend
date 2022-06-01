@@ -43,8 +43,7 @@ func (r *Resolver) createDB(ctx context.Context, obj Model) error {
 	if tx.Error != nil {
 		return tx.Error
 	}
-	tx.Find(obj)
-	return tx.Error
+	return tx.Find(obj).Error
 }
 
 // Update an object in the database, attaching the current user in metadata.
@@ -58,29 +57,24 @@ func (r *Resolver) updateDB(ctx context.Context, obj Model) error {
 	if tx.RowsAffected == 0 {
 		return fmt.Errorf("no such %T", obj)
 	}
-	tx.Find(obj)
-	return tx.Error
+	return tx.Find(obj).Error
 }
 
 // Run a query to get data from the database. Populates `collection` and returns pagination metadata.
-func (r *Resolver) paginatedQuery(ctx context.Context, input model.Query, dbmodel interface{}, collection interface{}) (*model.Pagination, error) {
-	query := input.GetQuery()
-	tx := r.db.WithContext(ctx).Model(dbmodel).Where(query)
-	pagination := r.withPagination(input, tx)
-	tx.Find(collection)
-	return pagination, tx.Error
+func (r *Resolver) paginatedQuery(ctx context.Context, input model.Query, order model.QueryOrder, dbmodel interface{}, collection interface{}) (*model.Pagination, error) {
+	tx := r.db.WithContext(ctx).Model(dbmodel).Where(input.GetQuery()).Order(order.GetOrderString())
+	pagination, tx := r.withPagination(input.GetPagination(), tx)
+	return pagination, tx.Find(collection).Error
 }
 
 // Limit a query by its pagination parameters, count number of rows in dataset, and return pagination metadata.
-func (r *Resolver) withPagination(input model.Query, tx *gorm.DB) *model.Pagination {
+func (r *Resolver) withPagination(pagination *model.PaginationInput, tx *gorm.DB) (*model.Pagination, *gorm.DB) {
 	var count int64
-	in := input.GetPagination()
-	tx.Count(&count)
-	tx.Limit(in.Limit)
-	tx.Offset(in.Offset)
+	tx = tx.Count(&count).Limit(pagination.Limit).Offset(pagination.Offset)
+
 	return &model.Pagination{
 		Results: int(count),
-		Offset:  in.Offset,
-		Limit:   in.Limit,
-	}
+		Offset:  pagination.Offset,
+		Limit:   pagination.Limit,
+	}, tx
 }

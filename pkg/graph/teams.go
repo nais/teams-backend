@@ -142,7 +142,11 @@ func (r *queryResolver) Teams(ctx context.Context, input *model.QueryTeamsInput)
 	}
 
 	teams := make([]*dbmodels.Team, 0)
-	pagination, err := r.paginatedQuery(ctx, input, &dbmodels.Team{}, &teams)
+	order := &model.GenericOrder{
+		Field:     "name",
+		Direction: "ASC",
+	}
+	pagination, err := r.paginatedQuery(ctx, input, order, &dbmodels.Team{}, &teams)
 	return &model.Teams{
 		Pagination: pagination,
 		Nodes:      teams,
