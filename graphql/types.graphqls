@@ -19,12 +19,6 @@ type TeamMetadata {
 }
 
 # TODO
-type System {
-    id: UUID!
-    name: String!
-}
-
-# TODO
 type Synchronization {
     id: UUID!
 }

@@ -21,4 +21,20 @@ func TestSortInputs(t *testing.T) {
 		}
 		assert.Equal(t, "name ASC", order.GetOrderString())
 	})
+
+	t.Run("Audit logs sorting", func(t *testing.T) {
+		order := QueryAuditLogsSortInput{
+			Field:     "name",
+			Direction: "ASC",
+		}
+		assert.Equal(t, "name ASC", order.GetOrderString())
+	})
+
+	t.Run("System sorting", func(t *testing.T) {
+		order := QuerySystemsSortInput{
+			Field:     "name",
+			Direction: "ASC",
+		}
+		assert.Equal(t, "name ASC", order.GetOrderString())
+	})
 }

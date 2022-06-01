@@ -123,6 +123,22 @@ type QueryRolesInput struct {
 	Permission *string `json:"permission"`
 }
 
+// Input for filtering a collection of systems.
+type QuerySystemsInput struct {
+	// Pagination options.
+	Pagination *PaginationInput `json:"pagination"`
+	// Filter by system name.
+	Name *string `json:"name"`
+}
+
+// Input for sorting a collection of systems.
+type QuerySystemsSortInput struct {
+	// Field to sort by.
+	Field SystemSortField `json:"field"`
+	// Sort direction.
+	Direction SortDirection `json:"direction"`
+}
+
 // Input for filtering a collection of teams.
 type QueryTeamsInput struct {
 	// Pagination options.
@@ -173,6 +189,14 @@ type Roles struct {
 	Pagination *Pagination `json:"pagination"`
 	// The list of roles in the collection.
 	Nodes []*dbmodels.Role `json:"nodes"`
+}
+
+// System collection.
+type Systems struct {
+	// Object related to pagination of the collection.
+	Pagination *Pagination `json:"pagination"`
+	// The list of system objects in the collection.
+	Nodes []*dbmodels.System `json:"nodes"`
 }
 
 type TeamRole struct {
@@ -289,6 +313,47 @@ func (e *SortDirection) UnmarshalGQL(v interface{}) error {
 }
 
 func (e SortDirection) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+// Fields to sort the collection by.
+type SystemSortField string
+
+const (
+	// Sort by name.
+	SystemSortFieldName SystemSortField = "name"
+)
+
+var AllSystemSortField = []SystemSortField{
+	SystemSortFieldName,
+}
+
+func (e SystemSortField) IsValid() bool {
+	switch e {
+	case SystemSortFieldName:
+		return true
+	}
+	return false
+}
+
+func (e SystemSortField) String() string {
+	return string(e)
+}
+
+func (e *SystemSortField) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = SystemSortField(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid SystemSortField", str)
+	}
+	return nil
+}
+
+func (e SystemSortField) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 

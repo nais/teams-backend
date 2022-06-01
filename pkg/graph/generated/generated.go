@@ -94,6 +94,7 @@ type ComplexityRoot struct {
 		AuditLogs func(childComplexity int, input *model.QueryAuditLogsInput, sort *model.QueryAuditLogsSortInput) int
 		Me        func(childComplexity int) int
 		Roles     func(childComplexity int, input *model.QueryRolesInput) int
+		Systems   func(childComplexity int, input *model.QuerySystemsInput, sort *model.QuerySystemsSortInput) int
 		Team      func(childComplexity int, id *uuid.UUID) int
 		Teams     func(childComplexity int, input *model.QueryTeamsInput, sort *model.QueryTeamsSortInput) int
 		Users     func(childComplexity int, input *model.QueryUsersInput, sort *model.QueryUsersSortInput) int
@@ -126,6 +127,11 @@ type ComplexityRoot struct {
 	System struct {
 		ID   func(childComplexity int) int
 		Name func(childComplexity int) int
+	}
+
+	Systems struct {
+		Nodes      func(childComplexity int) int
+		Pagination func(childComplexity int) int
 	}
 
 	Team struct {
@@ -187,6 +193,7 @@ type MutationResolver interface {
 type QueryResolver interface {
 	AuditLogs(ctx context.Context, input *model.QueryAuditLogsInput, sort *model.QueryAuditLogsSortInput) (*model.AuditLogs, error)
 	Roles(ctx context.Context, input *model.QueryRolesInput) (*model.Roles, error)
+	Systems(ctx context.Context, input *model.QuerySystemsInput, sort *model.QuerySystemsSortInput) (*model.Systems, error)
 	Teams(ctx context.Context, input *model.QueryTeamsInput, sort *model.QueryTeamsSortInput) (*model.Teams, error)
 	Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team, error)
 	Users(ctx context.Context, input *model.QueryUsersInput, sort *model.QueryUsersSortInput) (*model.Users, error)
@@ -459,6 +466,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Roles(childComplexity, args["input"].(*model.QueryRolesInput)), true
 
+	case "Query.systems":
+		if e.complexity.Query.Systems == nil {
+			break
+		}
+
+		args, err := ec.field_Query_systems_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Systems(childComplexity, args["input"].(*model.QuerySystemsInput), args["sort"].(*model.QuerySystemsSortInput)), true
+
 	case "Query.team":
 		if e.complexity.Query.Team == nil {
 			break
@@ -592,6 +611,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.System.Name(childComplexity), true
+
+	case "Systems.nodes":
+		if e.complexity.Systems.Nodes == nil {
+			break
+		}
+
+		return e.complexity.Systems.Nodes(childComplexity), true
+
+	case "Systems.pagination":
+		if e.complexity.Systems.Pagination == nil {
+			break
+		}
+
+		return e.complexity.Systems.Pagination(childComplexity), true
 
 	case "Team.id":
 		if e.complexity.Team.ID == nil {
@@ -755,6 +788,8 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputQueryAuditLogsInput,
 		ec.unmarshalInputQueryAuditLogsSortInput,
 		ec.unmarshalInputQueryRolesInput,
+		ec.unmarshalInputQuerySystemsInput,
+		ec.unmarshalInputQuerySystemsSortInput,
 		ec.unmarshalInputQueryTeamsInput,
 		ec.unmarshalInputQueryTeamsSortInput,
 		ec.unmarshalInputQueryUsersInput,
@@ -1066,6 +1101,58 @@ enum SortDirection {
     "Order descending."
     DESC
 }`, BuiltIn: false},
+	{Name: "../../../graphql/systems.graphqls", Input: `extend type Query {
+    "Get a collection of systems."
+    systems(
+        "Input for filtering the query."
+        input: QuerySystemsInput
+
+        "Input for sorting the collection. If omitted the collection will be sorted by the name of the system in ascending order."
+        sort: QuerySystemsSortInput
+    ): Systems! @auth
+}
+
+"System type."
+type System {
+    "Unique ID of the system."
+    id: UUID!
+
+    "Name of the system."
+    name: String!
+}
+
+"System collection."
+type Systems {
+    "Object related to pagination of the collection."
+    pagination: Pagination!
+
+    "The list of system objects in the collection."
+    nodes: [System!]!
+}
+
+"Input for filtering a collection of systems."
+input QuerySystemsInput {
+    "Pagination options."
+    pagination: PaginationInput
+
+    "Filter by system name."
+    name: String
+}
+
+"Input for sorting a collection of systems."
+input QuerySystemsSortInput {
+    "Field to sort by."
+    field: SystemSortField!
+
+    "Sort direction."
+    direction: SortDirection!
+}
+
+"Fields to sort the collection by."
+enum SystemSortField {
+    "Sort by name."
+    name
+}`, BuiltIn: false},
 	{Name: "../../../graphql/teams.graphqls", Input: `extend type Query {
     "Get a collection of teams."
     teams(
@@ -1212,12 +1299,6 @@ type RoleBinding {
 type TeamMetadata {
     key: String!
     value: String
-}
-
-# TODO
-type System {
-    id: UUID!
-    name: String!
 }
 
 # TODO
@@ -1528,6 +1609,30 @@ func (ec *executionContext) field_Query_roles_args(ctx context.Context, rawArgs 
 		}
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_systems_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *model.QuerySystemsInput
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalOQuerySystemsInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQuerySystemsInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	var arg1 *model.QuerySystemsSortInput
+	if tmp, ok := rawArgs["sort"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sort"))
+		arg1, err = ec.unmarshalOQuerySystemsSortInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQuerySystemsSortInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["sort"] = arg1
 	return args, nil
 }
 
@@ -3279,6 +3384,87 @@ func (ec *executionContext) fieldContext_Query_roles(ctx context.Context, field 
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_systems(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_systems(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().Systems(rctx, fc.Args["input"].(*model.QuerySystemsInput), fc.Args["sort"].(*model.QuerySystemsSortInput))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Auth == nil {
+				return nil, errors.New("directive auth is not implemented")
+			}
+			return ec.directives.Auth(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.Systems); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/graph/model.Systems`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Systems)
+	fc.Result = res
+	return ec.marshalNSystems2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSystems(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_systems(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "pagination":
+				return ec.fieldContext_Systems_pagination(ctx, field)
+			case "nodes":
+				return ec.fieldContext_Systems_nodes(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Systems", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_systems_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_teams(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query_teams(ctx, field)
 	if err != nil {
@@ -4402,6 +4588,108 @@ func (ec *executionContext) fieldContext_System_name(ctx context.Context, field 
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Systems_pagination(ctx context.Context, field graphql.CollectedField, obj *model.Systems) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Systems_pagination(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Pagination, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Pagination)
+	fc.Result = res
+	return ec.marshalNPagination2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPagination(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Systems_pagination(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Systems",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "results":
+				return ec.fieldContext_Pagination_results(ctx, field)
+			case "offset":
+				return ec.fieldContext_Pagination_offset(ctx, field)
+			case "limit":
+				return ec.fieldContext_Pagination_limit(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Pagination", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Systems_nodes(ctx context.Context, field graphql.CollectedField, obj *model.Systems) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Systems_nodes(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Nodes, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*dbmodels.System)
+	fc.Result = res
+	return ec.marshalNSystem2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSystemᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Systems_nodes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Systems",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_System_id(ctx, field)
+			case "name":
+				return ec.fieldContext_System_name(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type System", field.Name)
 		},
 	}
 	return fc, nil
@@ -7491,6 +7779,68 @@ func (ec *executionContext) unmarshalInputQueryRolesInput(ctx context.Context, o
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputQuerySystemsInput(ctx context.Context, obj interface{}) (model.QuerySystemsInput, error) {
+	var it model.QuerySystemsInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	for k, v := range asMap {
+		switch k {
+		case "pagination":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pagination"))
+			it.Pagination, err = ec.unmarshalOPaginationInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPaginationInput(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "name":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			it.Name, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputQuerySystemsSortInput(ctx context.Context, obj interface{}) (model.QuerySystemsSortInput, error) {
+	var it model.QuerySystemsSortInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	for k, v := range asMap {
+		switch k {
+		case "field":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
+			it.Field, err = ec.unmarshalNSystemSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSystemSortField(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "direction":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
+			it.Direction, err = ec.unmarshalNSortDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSortDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputQueryTeamsInput(ctx context.Context, obj interface{}) (model.QueryTeamsInput, error) {
 	var it model.QueryTeamsInput
 	asMap := map[string]interface{}{}
@@ -8111,6 +8461,29 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			out.Concurrently(i, func() graphql.Marshaler {
 				return rrm(innerCtx)
 			})
+		case "systems":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_systems(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
 		case "teams":
 			field := field
 
@@ -8408,6 +8781,41 @@ func (ec *executionContext) _System(ctx context.Context, sel ast.SelectionSet, o
 		case "name":
 
 			out.Values[i] = ec._System_name(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var systemsImplementors = []string{"Systems"}
+
+func (ec *executionContext) _Systems(ctx context.Context, sel ast.SelectionSet, obj *model.Systems) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, systemsImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Systems")
+		case "pagination":
+
+			out.Values[i] = ec._Systems_pagination(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "nodes":
+
+			out.Values[i] = ec._Systems_nodes(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -9345,6 +9753,84 @@ func (ec *executionContext) marshalNString2ᚖstring(ctx context.Context, sel as
 	return res
 }
 
+func (ec *executionContext) marshalNSystem2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSystemᚄ(ctx context.Context, sel ast.SelectionSet, v []*dbmodels.System) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNSystem2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSystem(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNSystem2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSystem(ctx context.Context, sel ast.SelectionSet, v *dbmodels.System) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._System(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNSystemSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSystemSortField(ctx context.Context, v interface{}) (model.SystemSortField, error) {
+	var res model.SystemSortField
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNSystemSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSystemSortField(ctx context.Context, sel ast.SelectionSet, v model.SystemSortField) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) marshalNSystems2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSystems(ctx context.Context, sel ast.SelectionSet, v model.Systems) graphql.Marshaler {
+	return ec._Systems(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNSystems2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSystems(ctx context.Context, sel ast.SelectionSet, v *model.Systems) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Systems(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNTeam2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐTeam(ctx context.Context, sel ast.SelectionSet, v dbmodels.Team) graphql.Marshaler {
 	return ec._Team(ctx, sel, &v)
 }
@@ -9929,6 +10415,22 @@ func (ec *executionContext) unmarshalOQueryRolesInput2ᚖgithubᚗcomᚋnaisᚋc
 		return nil, nil
 	}
 	res, err := ec.unmarshalInputQueryRolesInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOQuerySystemsInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQuerySystemsInput(ctx context.Context, v interface{}) (*model.QuerySystemsInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputQuerySystemsInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOQuerySystemsSortInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQuerySystemsSortInput(ctx context.Context, v interface{}) (*model.QuerySystemsSortInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputQuerySystemsSortInput(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
