@@ -217,12 +217,6 @@ type Systems struct {
 	Nodes []*dbmodels.System `json:"nodes"`
 }
 
-type TeamRole struct {
-	// ID of the rolebinding
-	ID   *uuid.UUID `json:"id"`
-	Name string     `json:"name"`
-}
-
 // Team collection.
 type Teams struct {
 	// Object related to pagination of the collection.

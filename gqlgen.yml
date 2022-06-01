@@ -78,3 +78,11 @@ models:
         resolver: true
       team:
         resolver: true
+  RoleBinding:
+    fields:
+      role:
+        resolver: true
+      user:
+        resolver: true
+      team:
+        resolver: true

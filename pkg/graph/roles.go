@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/nais/console/pkg/dbmodels"
+	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
 )
 
@@ -48,3 +49,38 @@ func (r *queryResolver) Roles(ctx context.Context, input *model.QueryRolesInput,
 		Nodes:      roles,
 	}, err
 }
+
+func (r *roleBindingResolver) Role(ctx context.Context, obj *dbmodels.RoleBinding) (*dbmodels.Role, error) {
+	var role *dbmodels.Role
+	err := r.db.Model(&obj).Association("Role").Find(&role)
+	if err != nil {
+		return nil, err
+	}
+	return role, nil
+}
+
+func (r *roleBindingResolver) User(ctx context.Context, obj *dbmodels.RoleBinding) (*dbmodels.User, error) {
+	var user *dbmodels.User
+	err := r.db.Model(&obj).Association("User").Find(&user)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func (r *roleBindingResolver) Team(ctx context.Context, obj *dbmodels.RoleBinding) (*dbmodels.Team, error) {
+	if obj.TeamID == nil {
+		return nil, nil
+	}
+	var team *dbmodels.Team
+	err := r.db.Model(&obj).Association("Team").Find(&team)
+	if err != nil {
+		return nil, err
+	}
+	return team, nil
+}
+
+// RoleBinding returns generated.RoleBindingResolver implementation.
+func (r *Resolver) RoleBinding() generated.RoleBindingResolver { return &roleBindingResolver{r} }
+
+type roleBindingResolver struct{ *Resolver }
