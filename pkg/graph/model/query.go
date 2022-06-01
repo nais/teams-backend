@@ -55,6 +55,7 @@ func (in *QueryTeamsInput) GetQuery() interface{} {
 	}
 	return &dbmodels.Team{
 		Slug: in.Slug,
+		Name: in.Name,
 	}
 }
 
