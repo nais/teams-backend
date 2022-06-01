@@ -1,0 +1,5 @@
+"Synchronization type."
+type Synchronization {
+    "ID of the synchronization."
+    id: UUID!
+}
