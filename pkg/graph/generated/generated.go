@@ -936,18 +936,6 @@ enum AuditLogSortField {
 }`, BuiltIn: false},
 	{Name: "../../../graphql/directives.graphqls", Input: `"Require authentication for all requests with this directive."
 directive @auth on FIELD_DEFINITION`, BuiltIn: false},
-	{Name: "../../../graphql/inputs.graphqls", Input: `"""
-When querying collections this input is used to control the offset and the page size of the returned slice.
-
-Please note that collections are not stateful, so data added or created in between your paginated requests might not be reflected in the returned result set.
-"""
-input PaginationInput {
-    "The offset to start fetching entries."
-    offset: Int! = 0
-
-    "Number of entries per page."
-    limit: Int! = 10
-}`, BuiltIn: false},
 	{Name: "../../../graphql/roles.graphqls", Input: `extend type Query {
     "Get a collection of users."
     roles(
@@ -1055,6 +1043,19 @@ type Pagination {
 
     "Maximum number of records included in the collection."
     limit: Int!
+}
+
+"""
+When querying collections this input is used to control the offset and the page size of the returned slice.
+
+Please note that collections are not stateful, so data added or created in between your paginated requests might not be reflected in the returned result set.
+"""
+input PaginationInput {
+    "The offset to start fetching entries."
+    offset: Int! = 0
+
+    "Number of entries per page."
+    limit: Int! = 10
 }
 
 "Direction of the ordering."
