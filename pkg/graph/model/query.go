@@ -60,7 +60,7 @@ func (in *QueryTeamsInput) GetQuery() interface{} {
 
 func (in *QueryAuditLogsInput) GetQuery() interface{} {
 	if in == nil {
-		return &dbmodels.Team{}
+		return &dbmodels.AuditLog{}
 	}
 	return &dbmodels.AuditLog{
 		TeamID:            in.TeamID,
