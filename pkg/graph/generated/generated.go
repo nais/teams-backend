@@ -94,8 +94,8 @@ type ComplexityRoot struct {
 		Me        func(childComplexity int) int
 		Roles     func(childComplexity int, input *model.QueryRolesInput) int
 		Team      func(childComplexity int, id *uuid.UUID) int
-		Teams     func(childComplexity int, input *model.QueryTeamsInput) int
-		Users     func(childComplexity int, input *model.QueryUsersInput, order *model.QueryUsersOrderInput) int
+		Teams     func(childComplexity int, input *model.QueryTeamsInput, sort *model.QueryTeamsSortInput) int
+		Users     func(childComplexity int, input *model.QueryUsersInput, sort *model.QueryUsersSortInput) int
 	}
 
 	Role struct {
@@ -180,9 +180,9 @@ type MutationResolver interface {
 type QueryResolver interface {
 	AuditLogs(ctx context.Context, input model.QueryAuditLogsInput) (*model.AuditLogs, error)
 	Roles(ctx context.Context, input *model.QueryRolesInput) (*model.Roles, error)
-	Teams(ctx context.Context, input *model.QueryTeamsInput) (*model.Teams, error)
+	Teams(ctx context.Context, input *model.QueryTeamsInput, sort *model.QueryTeamsSortInput) (*model.Teams, error)
 	Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team, error)
-	Users(ctx context.Context, input *model.QueryUsersInput, order *model.QueryUsersOrderInput) (*model.Users, error)
+	Users(ctx context.Context, input *model.QueryUsersInput, sort *model.QueryUsersSortInput) (*model.Users, error)
 	Me(ctx context.Context) (*dbmodels.User, error)
 }
 type TeamResolver interface {
@@ -474,7 +474,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Teams(childComplexity, args["input"].(*model.QueryTeamsInput)), true
+		return e.complexity.Query.Teams(childComplexity, args["input"].(*model.QueryTeamsInput), args["sort"].(*model.QueryTeamsSortInput)), true
 
 	case "Query.users":
 		if e.complexity.Query.Users == nil {
@@ -486,7 +486,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Users(childComplexity, args["input"].(*model.QueryUsersInput), args["order"].(*model.QueryUsersOrderInput)), true
+		return e.complexity.Query.Users(childComplexity, args["input"].(*model.QueryUsersInput), args["sort"].(*model.QueryUsersSortInput)), true
 
 	case "Role.accessLevel":
 		if e.complexity.Role.AccessLevel == nil {
@@ -748,8 +748,9 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputQueryAuditLogsInput,
 		ec.unmarshalInputQueryRolesInput,
 		ec.unmarshalInputQueryTeamsInput,
+		ec.unmarshalInputQueryTeamsSortInput,
 		ec.unmarshalInputQueryUsersInput,
-		ec.unmarshalInputQueryUsersOrderInput,
+		ec.unmarshalInputQueryUsersSortInput,
 		ec.unmarshalInputRemoveUsersFromTeamInput,
 		ec.unmarshalInputUpdateUserInput,
 	)
@@ -1034,7 +1035,7 @@ type Pagination {
 }
 
 "Direction of the ordering."
-enum OrderDirection {
+enum SortDirection {
     "Order ascending."
     ASC
 
@@ -1044,7 +1045,11 @@ enum OrderDirection {
 	{Name: "../../../graphql/teams.graphqls", Input: `extend type Query {
     "Get a collection of teams."
     teams(
+        "Input for filtering the query."
         input: QueryTeamsInput
+
+        "Input for sorting the collection. If omitted the collection will be sorted by the name of the team in ascending order."
+        sort: QueryTeamsSortInput
     ): Teams! @auth
 
     "Get a specific team."
@@ -1115,6 +1120,15 @@ input QueryTeamsInput {
     name: String
 }
 
+"Input for sorting a collection of teams."
+input QueryTeamsSortInput {
+    "Field to sort by."
+    field: TeamSortField!
+
+    "Sort direction."
+    direction: SortDirection!
+}
+
 "Input for creating a new team."
 input CreateTeamInput {
     "Team slug."
@@ -1145,7 +1159,17 @@ input RemoveUsersFromTeamInput {
     teamId: UUID!
 }
 
-`, BuiltIn: false},
+"Fields to sort the collection by."
+enum TeamSortField {
+    "Sort by name."
+    name
+
+    "Sort by slug."
+    slug
+
+    "Sort by creation time."
+    createdAt
+}`, BuiltIn: false},
 	{Name: "../../../graphql/types.graphqls", Input: `type TeamRole {
     "ID of the rolebinding"
     id: UUID!
@@ -1182,8 +1206,8 @@ type Synchronization {
         "Input for filtering the query."
         input: QueryUsersInput
 
-        "Input for ordering the collection. If omitted the collection will be sorted by the name of the user in ascending order."
-        order: QueryUsersOrderInput
+        "Input for sorting the collection. If omitted the collection will be sorted by the name of the user in ascending order."
+        sort: QueryUsersSortInput
     ): Users! @auth
 
     "The currently authenticated user."
@@ -1246,13 +1270,13 @@ input QueryUsersInput {
     name: String
 }
 
-"Input for ordering a collection of users."
-input QueryUsersOrderInput {
-    "Field to order by."
-    field: UserOrderField!
+"Input for sorting a collection of users."
+input QueryUsersSortInput {
+    "Field to sort by."
+    field: UserSortField!
 
-    "Order direction."
-    direction: OrderDirection!
+    "Sort direction."
+    direction: SortDirection!
 }
 
 "Input for creating a new user."
@@ -1276,15 +1300,15 @@ input UpdateUserInput {
     name: String
 }
 
-"Fields to order the collection by."
-enum UserOrderField {
-    "Order by name."
+"Fields to sort the collection by."
+enum UserSortField {
+    "Sort by name."
     name
 
-    "Order by email address."
+    "Sort by email address."
     email
 
-    "Order by creation time."
+    "Sort by creation time."
     createdAt
 }`, BuiltIn: false},
 }
@@ -1501,6 +1525,15 @@ func (ec *executionContext) field_Query_teams_args(ctx context.Context, rawArgs 
 		}
 	}
 	args["input"] = arg0
+	var arg1 *model.QueryTeamsSortInput
+	if tmp, ok := rawArgs["sort"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sort"))
+		arg1, err = ec.unmarshalOQueryTeamsSortInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryTeamsSortInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["sort"] = arg1
 	return args, nil
 }
 
@@ -1516,15 +1549,15 @@ func (ec *executionContext) field_Query_users_args(ctx context.Context, rawArgs 
 		}
 	}
 	args["input"] = arg0
-	var arg1 *model.QueryUsersOrderInput
-	if tmp, ok := rawArgs["order"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("order"))
-		arg1, err = ec.unmarshalOQueryUsersOrderInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryUsersOrderInput(ctx, tmp)
+	var arg1 *model.QueryUsersSortInput
+	if tmp, ok := rawArgs["sort"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sort"))
+		arg1, err = ec.unmarshalOQueryUsersSortInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryUsersSortInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["order"] = arg1
+	args["sort"] = arg1
 	return args, nil
 }
 
@@ -3228,7 +3261,7 @@ func (ec *executionContext) _Query_teams(ctx context.Context, field graphql.Coll
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Teams(rctx, fc.Args["input"].(*model.QueryTeamsInput))
+			return ec.resolvers.Query().Teams(rctx, fc.Args["input"].(*model.QueryTeamsInput), fc.Args["sort"].(*model.QueryTeamsSortInput))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -3398,7 +3431,7 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Users(rctx, fc.Args["input"].(*model.QueryUsersInput), fc.Args["order"].(*model.QueryUsersOrderInput))
+			return ec.resolvers.Query().Users(rctx, fc.Args["input"].(*model.QueryUsersInput), fc.Args["sort"].(*model.QueryUsersSortInput))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -7433,6 +7466,37 @@ func (ec *executionContext) unmarshalInputQueryTeamsInput(ctx context.Context, o
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputQueryTeamsSortInput(ctx context.Context, obj interface{}) (model.QueryTeamsSortInput, error) {
+	var it model.QueryTeamsSortInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	for k, v := range asMap {
+		switch k {
+		case "field":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
+			it.Field, err = ec.unmarshalNTeamSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamSortField(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "direction":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
+			it.Direction, err = ec.unmarshalNSortDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSortDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputQueryUsersInput(ctx context.Context, obj interface{}) (model.QueryUsersInput, error) {
 	var it model.QueryUsersInput
 	asMap := map[string]interface{}{}
@@ -7472,8 +7536,8 @@ func (ec *executionContext) unmarshalInputQueryUsersInput(ctx context.Context, o
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputQueryUsersOrderInput(ctx context.Context, obj interface{}) (model.QueryUsersOrderInput, error) {
-	var it model.QueryUsersOrderInput
+func (ec *executionContext) unmarshalInputQueryUsersSortInput(ctx context.Context, obj interface{}) (model.QueryUsersSortInput, error) {
+	var it model.QueryUsersSortInput
 	asMap := map[string]interface{}{}
 	for k, v := range obj.(map[string]interface{}) {
 		asMap[k] = v
@@ -7485,7 +7549,7 @@ func (ec *executionContext) unmarshalInputQueryUsersOrderInput(ctx context.Conte
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
-			it.Field, err = ec.unmarshalNUserOrderField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserOrderField(ctx, v)
+			it.Field, err = ec.unmarshalNUserSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserSortField(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -7493,7 +7557,7 @@ func (ec *executionContext) unmarshalInputQueryUsersOrderInput(ctx context.Conte
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
-			it.Direction, err = ec.unmarshalNOrderDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐOrderDirection(ctx, v)
+			it.Direction, err = ec.unmarshalNSortDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSortDirection(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -8991,16 +9055,6 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 	return res
 }
 
-func (ec *executionContext) unmarshalNOrderDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐOrderDirection(ctx context.Context, v interface{}) (model.OrderDirection, error) {
-	var res model.OrderDirection
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNOrderDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐOrderDirection(ctx context.Context, sel ast.SelectionSet, v model.OrderDirection) graphql.Marshaler {
-	return v
-}
-
 func (ec *executionContext) marshalNPagination2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPagination(ctx context.Context, sel ast.SelectionSet, v *model.Pagination) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -9122,6 +9176,16 @@ func (ec *executionContext) marshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkg�
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNSortDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSortDirection(ctx context.Context, v interface{}) (model.SortDirection, error) {
+	var res model.SortDirection
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNSortDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSortDirection(ctx context.Context, sel ast.SelectionSet, v model.SortDirection) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
@@ -9272,6 +9336,16 @@ func (ec *executionContext) marshalNTeamMetadata2ᚖgithubᚗcomᚋnaisᚋconsol
 	return ec._TeamMetadata(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNTeamSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamSortField(ctx context.Context, v interface{}) (model.TeamSortField, error) {
+	var res model.TeamSortField
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNTeamSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamSortField(ctx context.Context, sel ast.SelectionSet, v model.TeamSortField) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) marshalNTeams2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeams(ctx context.Context, sel ast.SelectionSet, v model.Teams) graphql.Marshaler {
 	return ec._Teams(ctx, sel, &v)
 }
@@ -9402,13 +9476,13 @@ func (ec *executionContext) marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkg�
 	return ec._User(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNUserOrderField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserOrderField(ctx context.Context, v interface{}) (model.UserOrderField, error) {
-	var res model.UserOrderField
+func (ec *executionContext) unmarshalNUserSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserSortField(ctx context.Context, v interface{}) (model.UserSortField, error) {
+	var res model.UserSortField
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNUserOrderField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserOrderField(ctx context.Context, sel ast.SelectionSet, v model.UserOrderField) graphql.Marshaler {
+func (ec *executionContext) marshalNUserSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserSortField(ctx context.Context, sel ast.SelectionSet, v model.UserSortField) graphql.Marshaler {
 	return v
 }
 
@@ -9729,6 +9803,14 @@ func (ec *executionContext) unmarshalOQueryTeamsInput2ᚖgithubᚗcomᚋnaisᚋc
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalOQueryTeamsSortInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryTeamsSortInput(ctx context.Context, v interface{}) (*model.QueryTeamsSortInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputQueryTeamsSortInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalOQueryUsersInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryUsersInput(ctx context.Context, v interface{}) (*model.QueryUsersInput, error) {
 	if v == nil {
 		return nil, nil
@@ -9737,11 +9819,11 @@ func (ec *executionContext) unmarshalOQueryUsersInput2ᚖgithubᚗcomᚋnaisᚋc
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) unmarshalOQueryUsersOrderInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryUsersOrderInput(ctx context.Context, v interface{}) (*model.QueryUsersOrderInput, error) {
+func (ec *executionContext) unmarshalOQueryUsersSortInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryUsersSortInput(ctx context.Context, v interface{}) (*model.QueryUsersSortInput, error) {
 	if v == nil {
 		return nil, nil
 	}
-	res, err := ec.unmarshalInputQueryUsersOrderInput(ctx, v)
+	res, err := ec.unmarshalInputQueryUsersSortInput(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 

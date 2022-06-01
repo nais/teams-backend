@@ -34,16 +34,16 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, input model.UpdateUse
 	return u, err
 }
 
-func (r *queryResolver) Users(ctx context.Context, input *model.QueryUsersInput, order *model.QueryUsersOrderInput) (*model.Users, error) {
+func (r *queryResolver) Users(ctx context.Context, input *model.QueryUsersInput, sort *model.QueryUsersSortInput) (*model.Users, error) {
 	users := make([]*dbmodels.User, 0)
 
-	if order == nil {
-		order = &model.QueryUsersOrderInput{
-			Field:     model.UserOrderFieldName,
-			Direction: model.OrderDirectionAsc,
+	if sort == nil {
+		sort = &model.QueryUsersSortInput{
+			Field:     model.UserSortFieldName,
+			Direction: model.SortDirectionAsc,
 		}
 	}
-	pagination, err := r.paginatedQuery(ctx, input, order, &dbmodels.User{}, &users)
+	pagination, err := r.paginatedQuery(ctx, input, sort, &dbmodels.User{}, &users)
 
 	return &model.Users{
 		Pagination: pagination,

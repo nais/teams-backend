@@ -134,7 +134,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 	return team, nil
 }
 
-func (r *queryResolver) Teams(ctx context.Context, input *model.QueryTeamsInput) (*model.Teams, error) {
+func (r *queryResolver) Teams(ctx context.Context, input *model.QueryTeamsInput, sort *model.QueryTeamsSortInput) (*model.Teams, error) {
 	// all models populated, check ACL now
 	err := authz.Allowed(ctx, r.console, nil, authz.AccessRead, ResourceTeams)
 	if err != nil {
@@ -142,11 +142,13 @@ func (r *queryResolver) Teams(ctx context.Context, input *model.QueryTeamsInput)
 	}
 
 	teams := make([]*dbmodels.Team, 0)
-	order := &model.GenericOrder{
-		Field:     "name",
-		Direction: "ASC",
+	if sort == nil {
+		sort = &model.QueryTeamsSortInput{
+			Field:     model.TeamSortFieldName,
+			Direction: model.SortDirectionAsc,
+		}
 	}
-	pagination, err := r.paginatedQuery(ctx, input, order, &dbmodels.Team{}, &teams)
+	pagination, err := r.paginatedQuery(ctx, input, sort, &dbmodels.Team{}, &teams)
 	return &model.Teams{
 		Pagination: pagination,
 		Nodes:      teams,

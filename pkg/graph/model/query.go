@@ -27,7 +27,11 @@ func (order GenericOrder) GetOrderString() string {
 	return order.Field + " " + order.Direction
 }
 
-func (order QueryUsersOrderInput) GetOrderString() string {
+func (order QueryUsersSortInput) GetOrderString() string {
+	return string(order.Field) + " " + string(order.Direction)
+}
+
+func (order QueryTeamsSortInput) GetOrderString() string {
 	return string(order.Field) + " " + string(order.Direction)
 }
 

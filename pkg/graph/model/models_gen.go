@@ -125,6 +125,14 @@ type QueryTeamsInput struct {
 	Name *string `json:"name"`
 }
 
+// Input for sorting a collection of teams.
+type QueryTeamsSortInput struct {
+	// Field to sort by.
+	Field TeamSortField `json:"field"`
+	// Sort direction.
+	Direction SortDirection `json:"direction"`
+}
+
 // Input for filtering a collection of users.
 type QueryUsersInput struct {
 	// Pagination options.
@@ -135,12 +143,12 @@ type QueryUsersInput struct {
 	Name *string `json:"name"`
 }
 
-// Input for ordering a collection of users.
-type QueryUsersOrderInput struct {
-	// Field to order by.
-	Field UserOrderField `json:"field"`
-	// Order direction.
-	Direction OrderDirection `json:"direction"`
+// Input for sorting a collection of users.
+type QueryUsersSortInput struct {
+	// Field to sort by.
+	Field UserSortField `json:"field"`
+	// Sort direction.
+	Direction SortDirection `json:"direction"`
 }
 
 // Input for removing users from a team.
@@ -192,92 +200,139 @@ type Users struct {
 }
 
 // Direction of the ordering.
-type OrderDirection string
+type SortDirection string
 
 const (
 	// Order ascending.
-	OrderDirectionAsc OrderDirection = "ASC"
+	SortDirectionAsc SortDirection = "ASC"
 	// Order descending.
-	OrderDirectionDesc OrderDirection = "DESC"
+	SortDirectionDesc SortDirection = "DESC"
 )
 
-var AllOrderDirection = []OrderDirection{
-	OrderDirectionAsc,
-	OrderDirectionDesc,
+var AllSortDirection = []SortDirection{
+	SortDirectionAsc,
+	SortDirectionDesc,
 }
 
-func (e OrderDirection) IsValid() bool {
+func (e SortDirection) IsValid() bool {
 	switch e {
-	case OrderDirectionAsc, OrderDirectionDesc:
+	case SortDirectionAsc, SortDirectionDesc:
 		return true
 	}
 	return false
 }
 
-func (e OrderDirection) String() string {
+func (e SortDirection) String() string {
 	return string(e)
 }
 
-func (e *OrderDirection) UnmarshalGQL(v interface{}) error {
+func (e *SortDirection) UnmarshalGQL(v interface{}) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
 	}
 
-	*e = OrderDirection(str)
+	*e = SortDirection(str)
 	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid OrderDirection", str)
+		return fmt.Errorf("%s is not a valid SortDirection", str)
 	}
 	return nil
 }
 
-func (e OrderDirection) MarshalGQL(w io.Writer) {
+func (e SortDirection) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
-// Fields to order the collection by.
-type UserOrderField string
+// Fields to sort the collection by.
+type TeamSortField string
 
 const (
-	// Order by name.
-	UserOrderFieldName UserOrderField = "name"
-	// Order by email address.
-	UserOrderFieldEmail UserOrderField = "email"
-	// Order by creation time.
-	UserOrderFieldCreatedAt UserOrderField = "createdAt"
+	// Sort by name.
+	TeamSortFieldName TeamSortField = "name"
+	// Sort by slug.
+	TeamSortFieldSlug TeamSortField = "slug"
+	// Sort by creation time.
+	TeamSortFieldCreatedAt TeamSortField = "createdAt"
 )
 
-var AllUserOrderField = []UserOrderField{
-	UserOrderFieldName,
-	UserOrderFieldEmail,
-	UserOrderFieldCreatedAt,
+var AllTeamSortField = []TeamSortField{
+	TeamSortFieldName,
+	TeamSortFieldSlug,
+	TeamSortFieldCreatedAt,
 }
 
-func (e UserOrderField) IsValid() bool {
+func (e TeamSortField) IsValid() bool {
 	switch e {
-	case UserOrderFieldName, UserOrderFieldEmail, UserOrderFieldCreatedAt:
+	case TeamSortFieldName, TeamSortFieldSlug, TeamSortFieldCreatedAt:
 		return true
 	}
 	return false
 }
 
-func (e UserOrderField) String() string {
+func (e TeamSortField) String() string {
 	return string(e)
 }
 
-func (e *UserOrderField) UnmarshalGQL(v interface{}) error {
+func (e *TeamSortField) UnmarshalGQL(v interface{}) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
 	}
 
-	*e = UserOrderField(str)
+	*e = TeamSortField(str)
 	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid UserOrderField", str)
+		return fmt.Errorf("%s is not a valid TeamSortField", str)
 	}
 	return nil
 }
 
-func (e UserOrderField) MarshalGQL(w io.Writer) {
+func (e TeamSortField) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+// Fields to sort the collection by.
+type UserSortField string
+
+const (
+	// Sort by name.
+	UserSortFieldName UserSortField = "name"
+	// Sort by email address.
+	UserSortFieldEmail UserSortField = "email"
+	// Sort by creation time.
+	UserSortFieldCreatedAt UserSortField = "createdAt"
+)
+
+var AllUserSortField = []UserSortField{
+	UserSortFieldName,
+	UserSortFieldEmail,
+	UserSortFieldCreatedAt,
+}
+
+func (e UserSortField) IsValid() bool {
+	switch e {
+	case UserSortFieldName, UserSortFieldEmail, UserSortFieldCreatedAt:
+		return true
+	}
+	return false
+}
+
+func (e UserSortField) String() string {
+	return string(e)
+}
+
+func (e *UserSortField) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = UserSortField(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid UserSortField", str)
+	}
+	return nil
+}
+
+func (e UserSortField) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }

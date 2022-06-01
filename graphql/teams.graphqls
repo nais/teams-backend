@@ -1,7 +1,11 @@
 extend type Query {
     "Get a collection of teams."
     teams(
+        "Input for filtering the query."
         input: QueryTeamsInput
+
+        "Input for sorting the collection. If omitted the collection will be sorted by the name of the team in ascending order."
+        sort: QueryTeamsSortInput
     ): Teams! @auth
 
     "Get a specific team."
@@ -72,6 +76,15 @@ input QueryTeamsInput {
     name: String
 }
 
+"Input for sorting a collection of teams."
+input QueryTeamsSortInput {
+    "Field to sort by."
+    field: TeamSortField!
+
+    "Sort direction."
+    direction: SortDirection!
+}
+
 "Input for creating a new team."
 input CreateTeamInput {
     "Team slug."
@@ -102,3 +115,14 @@ input RemoveUsersFromTeamInput {
     teamId: UUID!
 }
 
+"Fields to sort the collection by."
+enum TeamSortField {
+    "Sort by name."
+    name
+
+    "Sort by slug."
+    slug
+
+    "Sort by creation time."
+    createdAt
+}

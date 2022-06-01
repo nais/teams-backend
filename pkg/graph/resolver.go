@@ -61,8 +61,8 @@ func (r *Resolver) updateDB(ctx context.Context, obj Model) error {
 }
 
 // Run a query to get data from the database. Populates `collection` and returns pagination metadata.
-func (r *Resolver) paginatedQuery(ctx context.Context, input model.Query, order model.QueryOrder, dbmodel interface{}, collection interface{}) (*model.Pagination, error) {
-	tx := r.db.WithContext(ctx).Model(dbmodel).Where(input.GetQuery()).Order(order.GetOrderString())
+func (r *Resolver) paginatedQuery(ctx context.Context, input model.Query, sort model.QueryOrder, dbmodel interface{}, collection interface{}) (*model.Pagination, error) {
+	tx := r.db.WithContext(ctx).Model(dbmodel).Where(input.GetQuery()).Order(sort.GetOrderString())
 	pagination, tx := r.withPagination(input.GetPagination(), tx)
 	return pagination, tx.Find(collection).Error
 }

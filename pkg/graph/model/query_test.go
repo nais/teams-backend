@@ -5,10 +5,20 @@ import (
 	"testing"
 )
 
-func TestQueryUsersOrderInput_GetOrderString(t *testing.T) {
-	order := QueryUsersOrderInput{
-		Field:     "name",
-		Direction: "ASC",
-	}
-	assert.Equal(t, "name ASC", order.GetOrderString())
+func TestSortInputs(t *testing.T) {
+	t.Run("Users sorting", func(t *testing.T) {
+		order := QueryUsersSortInput{
+			Field:     "name",
+			Direction: "ASC",
+		}
+		assert.Equal(t, "name ASC", order.GetOrderString())
+	})
+
+	t.Run("Teams sorting", func(t *testing.T) {
+		order := QueryTeamsSortInput{
+			Field:     "name",
+			Direction: "ASC",
+		}
+		assert.Equal(t, "name ASC", order.GetOrderString())
+	})
 }
