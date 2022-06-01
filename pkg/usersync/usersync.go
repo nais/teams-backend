@@ -61,6 +61,7 @@ func NewFromConfig(cfg *config.Config, db *gorm.DB, logger auditlogger.Logger) (
 
 func (s *userSynchronizer) Sync(ctx context.Context) error {
 	// dummy object for logging
+	// FIXME: We should probably have a system for the user sync? Use the main console system for this perhaps?
 	in := reconcilers.Input{System: &dbmodels.System{}}
 
 	client := s.config.Client(ctx)

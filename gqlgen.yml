@@ -70,3 +70,9 @@ models:
     fields:
       system:
         resolver: true
+      synchronization:
+        resolver: true
+      user:
+        resolver: true
+      team:
+        resolver: true

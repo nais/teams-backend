@@ -12,12 +12,51 @@ import (
 )
 
 func (r *auditLogResolver) System(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.System, error) {
+	if obj.SystemID == nil {
+		return nil, nil
+	}
 	var system *dbmodels.System
 	err := r.db.Model(&obj).Association("System").Find(&system)
 	if err != nil {
 		return nil, err
 	}
 	return system, nil
+}
+
+func (r *auditLogResolver) Synchronization(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.Synchronization, error) {
+	if obj.SynchronizationID == nil {
+		return nil, nil
+	}
+	var synchronization *dbmodels.Synchronization
+	err := r.db.Model(&obj).Association("Synchronization").Find(&synchronization)
+	if err != nil {
+		return nil, err
+	}
+	return synchronization, nil
+}
+
+func (r *auditLogResolver) User(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.User, error) {
+	if obj.UserID == nil {
+		return nil, nil
+	}
+	var user *dbmodels.User
+	err := r.db.Model(&obj).Association("User").Find(&user)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func (r *auditLogResolver) Team(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.Team, error) {
+	if obj.TeamID == nil {
+		return nil, nil
+	}
+	var team *dbmodels.Team
+	err := r.db.Model(&obj).Association("Team").Find(&team)
+	if err != nil {
+		return nil, err
+	}
+	return team, nil
 }
 
 func (r *queryResolver) AuditLogs(ctx context.Context, input *model.QueryAuditLogsInput, sort *model.QueryAuditLogsSortInput) (*model.AuditLogs, error) {
