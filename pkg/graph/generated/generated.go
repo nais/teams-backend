@@ -151,12 +151,12 @@ type ComplexityRoot struct {
 	}
 
 	User struct {
-		CreatedAt func(childComplexity int) int
-		Email     func(childComplexity int) int
-		ID        func(childComplexity int) int
-		Name      func(childComplexity int) int
-		Roles     func(childComplexity int, teamID *uuid.UUID) int
-		Teams     func(childComplexity int) int
+		CreatedAt    func(childComplexity int) int
+		Email        func(childComplexity int) int
+		ID           func(childComplexity int) int
+		Name         func(childComplexity int) int
+		RoleBindings func(childComplexity int, teamID *uuid.UUID) int
+		Teams        func(childComplexity int) int
 	}
 
 	Users struct {
@@ -203,7 +203,7 @@ type TeamResolver interface {
 }
 type UserResolver interface {
 	Teams(ctx context.Context, obj *dbmodels.User) ([]*dbmodels.Team, error)
-	Roles(ctx context.Context, obj *dbmodels.User, teamID *uuid.UUID) ([]*dbmodels.Role, error)
+	RoleBindings(ctx context.Context, obj *dbmodels.User, teamID *uuid.UUID) ([]*dbmodels.RoleBinding, error)
 }
 
 type executableSchema struct {
@@ -721,17 +721,17 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.User.Name(childComplexity), true
 
-	case "User.roles":
-		if e.complexity.User.Roles == nil {
+	case "User.roleBindings":
+		if e.complexity.User.RoleBindings == nil {
 			break
 		}
 
-		args, err := ec.field_User_roles_args(context.TODO(), rawArgs)
+		args, err := ec.field_User_roleBindings_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.User.Roles(childComplexity, args["teamId"].(*uuid.UUID)), true
+		return e.complexity.User.RoleBindings(childComplexity, args["teamId"].(*uuid.UUID)), true
 
 	case "User.teams":
 		if e.complexity.User.Teams == nil {
@@ -1374,8 +1374,11 @@ type User {
     "List of teams the user is a member of."
     teams: [Team!]!
 
-    "List of roles assigned to the user."
-    roles(teamId: UUID!): [Role!]! # FIXME: Something is not quite right with this property.
+    "List of role bindings assigned to the user."
+    roleBindings(
+        "Fetch role bindings for this team only."
+        teamId: UUID
+    ): [RoleBinding!]!
 
     "Creation time of the user."
     createdAt: Time
@@ -1750,13 +1753,13 @@ func (ec *executionContext) field_Query_users_args(ctx context.Context, rawArgs 
 	return args, nil
 }
 
-func (ec *executionContext) field_User_roles_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_User_roleBindings_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 *uuid.UUID
 	if tmp, ok := rawArgs["teamId"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamId"))
-		arg0, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
+		arg0, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2027,8 +2030,8 @@ func (ec *executionContext) fieldContext_AuditLog_user(ctx context.Context, fiel
 				return ec.fieldContext_User_name(ctx, field)
 			case "teams":
 				return ec.fieldContext_User_teams(ctx, field)
-			case "roles":
-				return ec.fieldContext_User_roles(ctx, field)
+			case "roleBindings":
+				return ec.fieldContext_User_roleBindings(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_User_createdAt(ctx, field)
 			}
@@ -3030,8 +3033,8 @@ func (ec *executionContext) fieldContext_Mutation_createUser(ctx context.Context
 				return ec.fieldContext_User_name(ctx, field)
 			case "teams":
 				return ec.fieldContext_User_teams(ctx, field)
-			case "roles":
-				return ec.fieldContext_User_roles(ctx, field)
+			case "roleBindings":
+				return ec.fieldContext_User_roleBindings(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_User_createdAt(ctx, field)
 			}
@@ -3119,8 +3122,8 @@ func (ec *executionContext) fieldContext_Mutation_updateUser(ctx context.Context
 				return ec.fieldContext_User_name(ctx, field)
 			case "teams":
 				return ec.fieldContext_User_teams(ctx, field)
-			case "roles":
-				return ec.fieldContext_User_roles(ctx, field)
+			case "roleBindings":
+				return ec.fieldContext_User_roleBindings(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_User_createdAt(ctx, field)
 			}
@@ -3834,8 +3837,8 @@ func (ec *executionContext) fieldContext_Query_user(ctx context.Context, field g
 				return ec.fieldContext_User_name(ctx, field)
 			case "teams":
 				return ec.fieldContext_User_teams(ctx, field)
-			case "roles":
-				return ec.fieldContext_User_roles(ctx, field)
+			case "roleBindings":
+				return ec.fieldContext_User_roleBindings(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_User_createdAt(ctx, field)
 			}
@@ -3923,8 +3926,8 @@ func (ec *executionContext) fieldContext_Query_me(ctx context.Context, field gra
 				return ec.fieldContext_User_name(ctx, field)
 			case "teams":
 				return ec.fieldContext_User_teams(ctx, field)
-			case "roles":
-				return ec.fieldContext_User_roles(ctx, field)
+			case "roleBindings":
+				return ec.fieldContext_User_roleBindings(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_User_createdAt(ctx, field)
 			}
@@ -4430,8 +4433,8 @@ func (ec *executionContext) fieldContext_RoleBinding_user(ctx context.Context, f
 				return ec.fieldContext_User_name(ctx, field)
 			case "teams":
 				return ec.fieldContext_User_teams(ctx, field)
-			case "roles":
-				return ec.fieldContext_User_roles(ctx, field)
+			case "roleBindings":
+				return ec.fieldContext_User_roleBindings(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_User_createdAt(ctx, field)
 			}
@@ -5058,8 +5061,8 @@ func (ec *executionContext) fieldContext_Team_users(ctx context.Context, field g
 				return ec.fieldContext_User_name(ctx, field)
 			case "teams":
 				return ec.fieldContext_User_teams(ctx, field)
-			case "roles":
-				return ec.fieldContext_User_roles(ctx, field)
+			case "roleBindings":
+				return ec.fieldContext_User_roleBindings(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_User_createdAt(ctx, field)
 			}
@@ -5407,8 +5410,8 @@ func (ec *executionContext) fieldContext_User_teams(ctx context.Context, field g
 	return fc, nil
 }
 
-func (ec *executionContext) _User_roles(ctx context.Context, field graphql.CollectedField, obj *dbmodels.User) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_User_roles(ctx, field)
+func (ec *executionContext) _User_roleBindings(ctx context.Context, field graphql.CollectedField, obj *dbmodels.User) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_User_roleBindings(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -5421,7 +5424,7 @@ func (ec *executionContext) _User_roles(ctx context.Context, field graphql.Colle
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.User().Roles(rctx, obj, fc.Args["teamId"].(*uuid.UUID))
+		return ec.resolvers.User().RoleBindings(rctx, obj, fc.Args["teamId"].(*uuid.UUID))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5433,12 +5436,12 @@ func (ec *executionContext) _User_roles(ctx context.Context, field graphql.Colle
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*dbmodels.Role)
+	res := resTmp.([]*dbmodels.RoleBinding)
 	fc.Result = res
-	return ec.marshalNRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐRoleᚄ(ctx, field.Selections, res)
+	return ec.marshalNRoleBinding2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐRoleBindingᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_User_roles(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_User_roleBindings(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "User",
 		Field:      field,
@@ -5447,17 +5450,15 @@ func (ec *executionContext) fieldContext_User_roles(ctx context.Context, field g
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
-				return ec.fieldContext_Role_id(ctx, field)
-			case "name":
-				return ec.fieldContext_Role_name(ctx, field)
-			case "resource":
-				return ec.fieldContext_Role_resource(ctx, field)
-			case "accessLevel":
-				return ec.fieldContext_Role_accessLevel(ctx, field)
-			case "permission":
-				return ec.fieldContext_Role_permission(ctx, field)
+				return ec.fieldContext_RoleBinding_id(ctx, field)
+			case "role":
+				return ec.fieldContext_RoleBinding_role(ctx, field)
+			case "user":
+				return ec.fieldContext_RoleBinding_user(ctx, field)
+			case "team":
+				return ec.fieldContext_RoleBinding_team(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Role", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type RoleBinding", field.Name)
 		},
 	}
 	defer func() {
@@ -5467,7 +5468,7 @@ func (ec *executionContext) fieldContext_User_roles(ctx context.Context, field g
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_User_roles_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_User_roleBindings_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -5614,8 +5615,8 @@ func (ec *executionContext) fieldContext_Users_nodes(ctx context.Context, field 
 				return ec.fieldContext_User_name(ctx, field)
 			case "teams":
 				return ec.fieldContext_User_teams(ctx, field)
-			case "roles":
-				return ec.fieldContext_User_roles(ctx, field)
+			case "roleBindings":
+				return ec.fieldContext_User_roleBindings(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_User_createdAt(ctx, field)
 			}
@@ -9093,7 +9094,7 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 				return innerFunc(ctx)
 
 			})
-		case "roles":
+		case "roleBindings":
 			field := field
 
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
@@ -9102,7 +9103,7 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._User_roles(ctx, field, obj)
+				res = ec._User_roleBindings(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -9708,6 +9709,50 @@ func (ec *executionContext) marshalNRole2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkg�
 
 func (ec *executionContext) marshalNRoleBinding2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐRoleBinding(ctx context.Context, sel ast.SelectionSet, v dbmodels.RoleBinding) graphql.Marshaler {
 	return ec._RoleBinding(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNRoleBinding2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐRoleBindingᚄ(ctx context.Context, sel ast.SelectionSet, v []*dbmodels.RoleBinding) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNRoleBinding2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐRoleBinding(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) marshalNRoleBinding2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐRoleBinding(ctx context.Context, sel ast.SelectionSet, v *dbmodels.RoleBinding) graphql.Marshaler {

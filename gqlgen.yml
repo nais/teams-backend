@@ -68,6 +68,8 @@ models:
     fields:
       teams:
         resolver: true
+      roleBindings:
+        resolver: true
   AuditLog:
     fields:
       system:

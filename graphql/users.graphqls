@@ -46,8 +46,11 @@ type User {
     "List of teams the user is a member of."
     teams: [Team!]!
 
-    "List of roles assigned to the user."
-    roles(teamId: UUID!): [Role!]! # FIXME: Something is not quite right with this property.
+    "List of role bindings assigned to the user."
+    roleBindings(
+        "Fetch role bindings for this team only."
+        teamId: UUID
+    ): [RoleBinding!]!
 
     "Creation time of the user."
     createdAt: Time

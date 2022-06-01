@@ -73,20 +73,18 @@ func (r *userResolver) Teams(ctx context.Context, obj *dbmodels.User) ([]*dbmode
 	return teams, nil
 }
 
-func (r *userResolver) Roles(ctx context.Context, obj *dbmodels.User, teamID *uuid.UUID) ([]*dbmodels.Role, error) {
+func (r *userResolver) RoleBindings(ctx context.Context, obj *dbmodels.User, teamID *uuid.UUID) ([]*dbmodels.RoleBinding, error) {
 	roleBindings := make([]*dbmodels.RoleBinding, 0)
-	roles := make([]*dbmodels.Role, 0)
-
-	tx := r.db.WithContext(ctx).Model(&dbmodels.RoleBinding{}).Preload("Role").Find(&roleBindings, "user_id = ? AND team_id = ?", obj.ID, *teamID)
-	if tx.Error != nil {
-		return nil, tx.Error
+	team := &dbmodels.Team{
+		Model: dbmodels.Model{
+			ID: teamID,
+		},
 	}
-
-	for _, rb := range roleBindings {
-		roles = append(roles, rb.Role)
+	err := r.db.WithContext(ctx).Model(obj).Where(team).Association("RoleBindings").Find(&roleBindings)
+	if err != nil {
+		return nil, err
 	}
-
-	return roles, nil
+	return roleBindings, nil
 }
 
 // User returns generated.UserResolver implementation.
