@@ -79,7 +79,7 @@ type ComplexityRoot struct {
 		CreateTeam          func(childComplexity int, input model.CreateTeamInput) int
 		CreateUser          func(childComplexity int, input model.CreateUserInput) int
 		DeleteAPIKey        func(childComplexity int, input model.APIKeyInput) int
-		RemoveRoleFromUser  func(childComplexity int, input model.AssignRoleInput) int
+		RemoveRoleFromUser  func(childComplexity int, input model.RemoveRoleInput) int
 		RemoveUsersFromTeam func(childComplexity int, input model.RemoveUsersFromTeamInput) int
 		UpdateUser          func(childComplexity int, input model.UpdateUserInput) int
 	}
@@ -93,7 +93,7 @@ type ComplexityRoot struct {
 	Query struct {
 		AuditLogs func(childComplexity int, input *model.QueryAuditLogsInput, sort *model.QueryAuditLogsSortInput) int
 		Me        func(childComplexity int) int
-		Roles     func(childComplexity int, input *model.QueryRolesInput) int
+		Roles     func(childComplexity int, input *model.QueryRolesInput, sort *model.QueryRolesSortInput) int
 		Systems   func(childComplexity int, input *model.QuerySystemsInput, sort *model.QuerySystemsSortInput) int
 		Team      func(childComplexity int, id *uuid.UUID) int
 		Teams     func(childComplexity int, input *model.QueryTeamsInput, sort *model.QueryTeamsSortInput) int
@@ -183,7 +183,7 @@ type MutationResolver interface {
 	CreateAPIKey(ctx context.Context, input model.APIKeyInput) (*model.APIKey, error)
 	DeleteAPIKey(ctx context.Context, input model.APIKeyInput) (bool, error)
 	AssignRoleToUser(ctx context.Context, input model.AssignRoleInput) (*dbmodels.RoleBinding, error)
-	RemoveRoleFromUser(ctx context.Context, input model.AssignRoleInput) (bool, error)
+	RemoveRoleFromUser(ctx context.Context, input model.RemoveRoleInput) (bool, error)
 	CreateTeam(ctx context.Context, input model.CreateTeamInput) (*dbmodels.Team, error)
 	AddUsersToTeam(ctx context.Context, input model.AddUsersToTeamInput) (*dbmodels.Team, error)
 	RemoveUsersFromTeam(ctx context.Context, input model.RemoveUsersFromTeamInput) (*dbmodels.Team, error)
@@ -192,7 +192,7 @@ type MutationResolver interface {
 }
 type QueryResolver interface {
 	AuditLogs(ctx context.Context, input *model.QueryAuditLogsInput, sort *model.QueryAuditLogsSortInput) (*model.AuditLogs, error)
-	Roles(ctx context.Context, input *model.QueryRolesInput) (*model.Roles, error)
+	Roles(ctx context.Context, input *model.QueryRolesInput, sort *model.QueryRolesSortInput) (*model.Roles, error)
 	Systems(ctx context.Context, input *model.QuerySystemsInput, sort *model.QuerySystemsSortInput) (*model.Systems, error)
 	Teams(ctx context.Context, input *model.QueryTeamsInput, sort *model.QueryTeamsSortInput) (*model.Teams, error)
 	Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team, error)
@@ -388,7 +388,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.RemoveRoleFromUser(childComplexity, args["input"].(model.AssignRoleInput)), true
+		return e.complexity.Mutation.RemoveRoleFromUser(childComplexity, args["input"].(model.RemoveRoleInput)), true
 
 	case "Mutation.removeUsersFromTeam":
 		if e.complexity.Mutation.RemoveUsersFromTeam == nil {
@@ -464,7 +464,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Roles(childComplexity, args["input"].(*model.QueryRolesInput)), true
+		return e.complexity.Query.Roles(childComplexity, args["input"].(*model.QueryRolesInput), args["sort"].(*model.QueryRolesSortInput)), true
 
 	case "Query.systems":
 		if e.complexity.Query.Systems == nil {
@@ -788,12 +788,14 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputQueryAuditLogsInput,
 		ec.unmarshalInputQueryAuditLogsSortInput,
 		ec.unmarshalInputQueryRolesInput,
+		ec.unmarshalInputQueryRolesSortInput,
 		ec.unmarshalInputQuerySystemsInput,
 		ec.unmarshalInputQuerySystemsSortInput,
 		ec.unmarshalInputQueryTeamsInput,
 		ec.unmarshalInputQueryTeamsSortInput,
 		ec.unmarshalInputQueryUsersInput,
 		ec.unmarshalInputQueryUsersSortInput,
+		ec.unmarshalInputRemoveRoleInput,
 		ec.unmarshalInputRemoveUsersFromTeamInput,
 		ec.unmarshalInputUpdateUserInput,
 	)
@@ -976,18 +978,23 @@ directive @auth on FIELD_DEFINITION`, BuiltIn: false},
     roles(
         "Input for filtering the query."
         input: QueryRolesInput
+
+        "Input for sorting the collection. If omitted the collection will be sorted by the name of the role in ascending order."
+        sort: QueryRolesSortInput
     ): Roles! @auth
 }
 
 extend type Mutation {
     "Assign a role to a user."
     assignRoleToUser(
+        "Input for assigning a role to a user."
         input: AssignRoleInput!
     ): RoleBinding! @auth
 
     "Remove a role from a user."
     removeRoleFromUser(
-        input: AssignRoleInput!
+        "Input for removing a role from a user."
+        input: RemoveRoleInput!
     ): Boolean! @auth
 }
 
@@ -1036,7 +1043,16 @@ input QueryRolesInput {
     permission: String
 }
 
-"Input for (de)assigning a rule."
+"Input for sorting a collection of roles."
+input QueryRolesSortInput {
+    "Field to sort by."
+    field: RoleSortField!
+
+    "Sort direction."
+    direction: SortDirection!
+}
+
+"Input for assigning a rule."
 input AssignRoleInput {
     "The ID of the role."
     roleId: UUID!
@@ -1046,6 +1062,24 @@ input AssignRoleInput {
 
     "The ID of the team."
     teamId: UUID!
+}
+
+"Input for removing a rule."
+input RemoveRoleInput {
+    "The ID of the role."
+    roleId: UUID!
+
+    "The ID of the user."
+    userId: UUID!
+
+    "The ID of the team."
+    teamId: UUID!
+}
+
+"Fields to sort the collection by."
+enum RoleSortField {
+    "Sort by name."
+    name
 }`, BuiltIn: false},
 	{Name: "../../../graphql/scalars.graphqls", Input: `"Scalar value representing a UUID based on RFC 4122."
 scalar UUID
@@ -1516,10 +1550,10 @@ func (ec *executionContext) field_Mutation_deleteAPIKey_args(ctx context.Context
 func (ec *executionContext) field_Mutation_removeRoleFromUser_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.AssignRoleInput
+	var arg0 model.RemoveRoleInput
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNAssignRoleInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAssignRoleInput(ctx, tmp)
+		arg0, err = ec.unmarshalNRemoveRoleInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRemoveRoleInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1609,6 +1643,15 @@ func (ec *executionContext) field_Query_roles_args(ctx context.Context, rawArgs 
 		}
 	}
 	args["input"] = arg0
+	var arg1 *model.QueryRolesSortInput
+	if tmp, ok := rawArgs["sort"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sort"))
+		arg1, err = ec.unmarshalOQueryRolesSortInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryRolesSortInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["sort"] = arg1
 	return args, nil
 }
 
@@ -2585,7 +2628,7 @@ func (ec *executionContext) _Mutation_removeRoleFromUser(ctx context.Context, fi
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().RemoveRoleFromUser(rctx, fc.Args["input"].(model.AssignRoleInput))
+			return ec.resolvers.Mutation().RemoveRoleFromUser(rctx, fc.Args["input"].(model.RemoveRoleInput))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -3318,7 +3361,7 @@ func (ec *executionContext) _Query_roles(ctx context.Context, field graphql.Coll
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Roles(rctx, fc.Args["input"].(*model.QueryRolesInput))
+			return ec.resolvers.Query().Roles(rctx, fc.Args["input"].(*model.QueryRolesInput), fc.Args["sort"].(*model.QueryRolesSortInput))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -7779,6 +7822,37 @@ func (ec *executionContext) unmarshalInputQueryRolesInput(ctx context.Context, o
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputQueryRolesSortInput(ctx context.Context, obj interface{}) (model.QueryRolesSortInput, error) {
+	var it model.QueryRolesSortInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	for k, v := range asMap {
+		switch k {
+		case "field":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
+			it.Field, err = ec.unmarshalNRoleSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRoleSortField(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "direction":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
+			it.Direction, err = ec.unmarshalNSortDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSortDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputQuerySystemsInput(ctx context.Context, obj interface{}) (model.QuerySystemsInput, error) {
 	var it model.QuerySystemsInput
 	asMap := map[string]interface{}{}
@@ -7972,6 +8046,45 @@ func (ec *executionContext) unmarshalInputQueryUsersSortInput(ctx context.Contex
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
 			it.Direction, err = ec.unmarshalNSortDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSortDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputRemoveRoleInput(ctx context.Context, obj interface{}) (model.RemoveRoleInput, error) {
+	var it model.RemoveRoleInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	for k, v := range asMap {
+		switch k {
+		case "roleId":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("roleId"))
+			it.RoleID, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "userId":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
+			it.UserID, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "teamId":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamId"))
+			it.TeamID, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -9599,6 +9712,11 @@ func (ec *executionContext) marshalNPagination2ᚖgithubᚗcomᚋnaisᚋconsole�
 	return ec._Pagination(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNRemoveRoleInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRemoveRoleInput(ctx context.Context, v interface{}) (model.RemoveRoleInput, error) {
+	res, err := ec.unmarshalInputRemoveRoleInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalNRemoveUsersFromTeamInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRemoveUsersFromTeamInput(ctx context.Context, v interface{}) (model.RemoveUsersFromTeamInput, error) {
 	res, err := ec.unmarshalInputRemoveUsersFromTeamInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -9670,6 +9788,16 @@ func (ec *executionContext) marshalNRoleBinding2ᚖgithubᚗcomᚋnaisᚋconsole
 		return graphql.Null
 	}
 	return ec._RoleBinding(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNRoleSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRoleSortField(ctx context.Context, v interface{}) (model.RoleSortField, error) {
+	var res model.RoleSortField
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNRoleSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRoleSortField(ctx context.Context, sel ast.SelectionSet, v model.RoleSortField) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) marshalNRoles2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRoles(ctx context.Context, sel ast.SelectionSet, v model.Roles) graphql.Marshaler {
@@ -10415,6 +10543,14 @@ func (ec *executionContext) unmarshalOQueryRolesInput2ᚖgithubᚗcomᚋnaisᚋc
 		return nil, nil
 	}
 	res, err := ec.unmarshalInputQueryRolesInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOQueryRolesSortInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryRolesSortInput(ctx context.Context, v interface{}) (*model.QueryRolesSortInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputQueryRolesSortInput(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 

@@ -25,7 +25,7 @@ func (r *mutationResolver) AssignRoleToUser(ctx context.Context, input model.Ass
 	return rb, nil
 }
 
-func (r *mutationResolver) RemoveRoleFromUser(ctx context.Context, input model.AssignRoleInput) (bool, error) {
+func (r *mutationResolver) RemoveRoleFromUser(ctx context.Context, input model.RemoveRoleInput) (bool, error) {
 	rb := &dbmodels.RoleBinding{}
 	tx := r.db.WithContext(ctx).First(rb, "user_id = ? AND team_id = ? AND role_id = ?", input.UserID, input.TeamID, input.RoleID).Delete(rb)
 	if tx.Error != nil {
@@ -34,13 +34,15 @@ func (r *mutationResolver) RemoveRoleFromUser(ctx context.Context, input model.A
 	return true, nil
 }
 
-func (r *queryResolver) Roles(ctx context.Context, input *model.QueryRolesInput) (*model.Roles, error) {
+func (r *queryResolver) Roles(ctx context.Context, input *model.QueryRolesInput, sort *model.QueryRolesSortInput) (*model.Roles, error) {
 	roles := make([]*dbmodels.Role, 0)
-	order := &model.GenericOrder{
-		Field:     "name",
-		Direction: "ASC",
+	if sort == nil {
+		sort = &model.QueryRolesSortInput{
+			Field:     model.RoleSortFieldName,
+			Direction: model.SortDirectionAsc,
+		}
 	}
-	pagination, err := r.paginatedQuery(ctx, input, order, &dbmodels.Role{}, &roles)
+	pagination, err := r.paginatedQuery(ctx, input, sort, &dbmodels.Role{}, &roles)
 	return &model.Roles{
 		Pagination: pagination,
 		Nodes:      roles,

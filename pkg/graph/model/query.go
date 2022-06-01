@@ -18,15 +18,6 @@ type QueryOrder interface {
 	GetOrderString() string
 }
 
-type GenericOrder struct {
-	Field     string
-	Direction string
-}
-
-func (order GenericOrder) GetOrderString() string {
-	return order.Field + " " + order.Direction
-}
-
 func (order QueryUsersSortInput) GetOrderString() string {
 	return string(order.Field) + " " + string(order.Direction)
 }
@@ -40,6 +31,10 @@ func (order QueryAuditLogsSortInput) GetOrderString() string {
 }
 
 func (order QuerySystemsSortInput) GetOrderString() string {
+	return string(order.Field) + " " + string(order.Direction)
+}
+
+func (order QueryRolesSortInput) GetOrderString() string {
 	return string(order.Field) + " " + string(order.Direction)
 }
 

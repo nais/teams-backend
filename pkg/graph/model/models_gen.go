@@ -31,7 +31,7 @@ type AddUsersToTeamInput struct {
 	TeamID *uuid.UUID `json:"teamId"`
 }
 
-// Input for (de)assigning a rule.
+// Input for assigning a rule.
 type AssignRoleInput struct {
 	// The ID of the role.
 	RoleID *uuid.UUID `json:"roleId"`
@@ -123,6 +123,14 @@ type QueryRolesInput struct {
 	Permission *string `json:"permission"`
 }
 
+// Input for sorting a collection of roles.
+type QueryRolesSortInput struct {
+	// Field to sort by.
+	Field RoleSortField `json:"field"`
+	// Sort direction.
+	Direction SortDirection `json:"direction"`
+}
+
 // Input for filtering a collection of systems.
 type QuerySystemsInput struct {
 	// Pagination options.
@@ -173,6 +181,16 @@ type QueryUsersSortInput struct {
 	Field UserSortField `json:"field"`
 	// Sort direction.
 	Direction SortDirection `json:"direction"`
+}
+
+// Input for removing a rule.
+type RemoveRoleInput struct {
+	// The ID of the role.
+	RoleID *uuid.UUID `json:"roleId"`
+	// The ID of the user.
+	UserID *uuid.UUID `json:"userId"`
+	// The ID of the team.
+	TeamID *uuid.UUID `json:"teamId"`
 }
 
 // Input for removing users from a team.
@@ -269,6 +287,47 @@ func (e *AuditLogSortField) UnmarshalGQL(v interface{}) error {
 }
 
 func (e AuditLogSortField) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+// Fields to sort the collection by.
+type RoleSortField string
+
+const (
+	// Sort by name.
+	RoleSortFieldName RoleSortField = "name"
+)
+
+var AllRoleSortField = []RoleSortField{
+	RoleSortFieldName,
+}
+
+func (e RoleSortField) IsValid() bool {
+	switch e {
+	case RoleSortFieldName:
+		return true
+	}
+	return false
+}
+
+func (e RoleSortField) String() string {
+	return string(e)
+}
+
+func (e *RoleSortField) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = RoleSortField(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid RoleSortField", str)
+	}
+	return nil
+}
+
+func (e RoleSortField) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
