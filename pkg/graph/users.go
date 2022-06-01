@@ -51,6 +51,15 @@ func (r *queryResolver) Users(ctx context.Context, input *model.QueryUsersInput,
 	}, err
 }
 
+func (r *queryResolver) User(ctx context.Context, id *uuid.UUID) (*dbmodels.User, error) {
+	user := &dbmodels.User{}
+	tx := r.db.WithContext(ctx).Where("id = ?", id).First(user)
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+	return user, nil
+}
+
 func (r *queryResolver) Me(ctx context.Context) (*dbmodels.User, error) {
 	return authz.UserFromContext(ctx), nil
 }

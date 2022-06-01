@@ -8,6 +8,12 @@ extend type Query {
         sort: QueryUsersSortInput
     ): Users! @auth
 
+    "Get a specific user."
+    user(
+        "ID of the user."
+        id: UUID!
+    ): User! @auth
+
     "The currently authenticated user."
     me: User! @auth
 }
