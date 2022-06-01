@@ -14,8 +14,6 @@ type AuditLog {
     "ID of the log entry."
     id: UUID!
 
-    systemId: UUID
-
     "The related system."
     system: System
 

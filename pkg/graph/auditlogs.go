@@ -7,8 +7,18 @@ import (
 	"context"
 
 	"github.com/nais/console/pkg/dbmodels"
+	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
 )
+
+func (r *auditLogResolver) System(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.System, error) {
+	var system *dbmodels.System
+	err := r.db.Model(&obj).Association("System").Find(&system)
+	if err != nil {
+		return nil, err
+	}
+	return system, nil
+}
 
 func (r *queryResolver) AuditLogs(ctx context.Context, input *model.QueryAuditLogsInput, sort *model.QueryAuditLogsSortInput) (*model.AuditLogs, error) {
 	auditLogs := make([]*dbmodels.AuditLog, 0)
@@ -25,3 +35,8 @@ func (r *queryResolver) AuditLogs(ctx context.Context, input *model.QueryAuditLo
 		Nodes:      auditLogs,
 	}, err
 }
+
+// AuditLog returns generated.AuditLogResolver implementation.
+func (r *Resolver) AuditLog() generated.AuditLogResolver { return &auditLogResolver{r} }
+
+type auditLogResolver struct{ *Resolver }

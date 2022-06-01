@@ -39,6 +39,7 @@ type Config struct {
 }
 
 type ResolverRoot interface {
+	AuditLog() AuditLogResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
 	Team() TeamResolver
@@ -62,7 +63,6 @@ type ComplexityRoot struct {
 		Success         func(childComplexity int) int
 		Synchronization func(childComplexity int) int
 		System          func(childComplexity int) int
-		SystemID        func(childComplexity int) int
 		Team            func(childComplexity int) int
 		User            func(childComplexity int) int
 	}
@@ -167,6 +167,9 @@ type ComplexityRoot struct {
 	}
 }
 
+type AuditLogResolver interface {
+	System(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.System, error)
+}
 type MutationResolver interface {
 	CreateAPIKey(ctx context.Context, input model.APIKeyInput) (*model.APIKey, error)
 	DeleteAPIKey(ctx context.Context, input model.APIKeyInput) (bool, error)
@@ -264,13 +267,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.AuditLog.System(childComplexity), true
-
-	case "AuditLog.systemId":
-		if e.complexity.AuditLog.SystemID == nil {
-			break
-		}
-
-		return e.complexity.AuditLog.SystemID(childComplexity), true
 
 	case "AuditLog.team":
 		if e.complexity.AuditLog.Team == nil {
@@ -868,8 +864,6 @@ input APIKeyInput {
 type AuditLog {
     "ID of the log entry."
     id: UUID!
-
-    systemId: UUID
 
     "The related system."
     system: System
@@ -1737,47 +1731,6 @@ func (ec *executionContext) fieldContext_AuditLog_id(ctx context.Context, field 
 	return fc, nil
 }
 
-func (ec *executionContext) _AuditLog_systemId(ctx context.Context, field graphql.CollectedField, obj *dbmodels.AuditLog) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_AuditLog_systemId(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.SystemID, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*uuid.UUID)
-	fc.Result = res
-	return ec.marshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_AuditLog_systemId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "AuditLog",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type UUID does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _AuditLog_system(ctx context.Context, field graphql.CollectedField, obj *dbmodels.AuditLog) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_AuditLog_system(ctx, field)
 	if err != nil {
@@ -1792,7 +1745,7 @@ func (ec *executionContext) _AuditLog_system(ctx context.Context, field graphql.
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.System, nil
+		return ec.resolvers.AuditLog().System(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1810,8 +1763,8 @@ func (ec *executionContext) fieldContext_AuditLog_system(ctx context.Context, fi
 	fc = &graphql.FieldContext{
 		Object:     "AuditLog",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
@@ -2246,8 +2199,6 @@ func (ec *executionContext) fieldContext_AuditLogs_nodes(ctx context.Context, fi
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_AuditLog_id(ctx, field)
-			case "systemId":
-				return ec.fieldContext_AuditLog_systemId(ctx, field)
 			case "system":
 				return ec.fieldContext_AuditLog_system(ctx, field)
 			case "synchronization":
@@ -7797,16 +7748,25 @@ func (ec *executionContext) _AuditLog(ctx context.Context, sel ast.SelectionSet,
 			out.Values[i] = ec._AuditLog_id(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
-		case "systemId":
-
-			out.Values[i] = ec._AuditLog_systemId(ctx, field, obj)
-
 		case "system":
+			field := field
 
-			out.Values[i] = ec._AuditLog_system(ctx, field, obj)
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuditLog_system(ctx, field, obj)
+				return res
+			}
 
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
 		case "synchronization":
 
 			out.Values[i] = ec._AuditLog_synchronization(ctx, field, obj)
@@ -7824,21 +7784,21 @@ func (ec *executionContext) _AuditLog(ctx context.Context, sel ast.SelectionSet,
 			out.Values[i] = ec._AuditLog_action(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "success":
 
 			out.Values[i] = ec._AuditLog_success(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "message":
 
 			out.Values[i] = ec._AuditLog_message(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "createdAt":
 

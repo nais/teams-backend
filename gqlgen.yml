@@ -66,3 +66,7 @@ models:
     fields:
       teams:
         resolver: true
+  AuditLog:
+    fields:
+      system:
+        resolver: true
