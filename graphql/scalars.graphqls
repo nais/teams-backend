@@ -13,3 +13,10 @@ Examples of valid slugs:
 - `someothervalue`
 """
 scalar Slug
+
+"""
+A collection of key => value pairs.
+
+If no entries exist in the collection an empty object is returned.
+"""
+scalar Map

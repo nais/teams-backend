@@ -11,14 +11,3 @@ type RoleBinding {
     user: User
     team: Team
 }
-
-# TODO
-type TeamMetadata {
-    key: String!
-    value: String
-}
-
-# TODO
-type Synchronization {
-    id: UUID!
-}

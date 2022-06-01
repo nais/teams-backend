@@ -51,8 +51,8 @@ type Team {
     "List of users in the team."
     users: [User!]!
 
-    "Metadata attached to the team."
-    metadata: [TeamMetadata!]!
+    "Metadata attached to the team as a key => value map."
+    metadata: Map
 }
 
 "Team collection."

@@ -62,6 +62,8 @@ models:
     fields:
       users:
         resolver: true
+      metadata:
+        resolver: true
   User:
     fields:
       teams:

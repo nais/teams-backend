@@ -189,6 +189,22 @@ func (r *teamResolver) Users(ctx context.Context, obj *dbmodels.Team) ([]*dbmode
 	return users, nil
 }
 
+func (r *teamResolver) Metadata(ctx context.Context, obj *dbmodels.Team) (map[string]interface{}, error) {
+	metadata := make([]*dbmodels.TeamMetadata, 0)
+	err := r.db.WithContext(ctx).Model(obj).Association("Metadata").Find(&metadata)
+	if err != nil {
+		return nil, err
+	}
+
+	kv := make(map[string]interface{})
+
+	for _, pair := range metadata {
+		kv[pair.Key] = pair.Value
+	}
+
+	return kv, nil
+}
+
 // Team returns generated.TeamResolver implementation.
 func (r *Resolver) Team() generated.TeamResolver { return &teamResolver{r} }
 
