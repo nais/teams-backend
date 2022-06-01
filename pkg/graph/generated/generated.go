@@ -62,6 +62,7 @@ type ComplexityRoot struct {
 		Success         func(childComplexity int) int
 		Synchronization func(childComplexity int) int
 		System          func(childComplexity int) int
+		SystemID        func(childComplexity int) int
 		Team            func(childComplexity int) int
 		User            func(childComplexity int) int
 	}
@@ -90,7 +91,7 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		AuditLogs func(childComplexity int, input model.QueryAuditLogsInput) int
+		AuditLogs func(childComplexity int, input *model.QueryAuditLogsInput, sort *model.QueryAuditLogsSortInput) int
 		Me        func(childComplexity int) int
 		Roles     func(childComplexity int, input *model.QueryRolesInput) int
 		Team      func(childComplexity int, id *uuid.UUID) int
@@ -178,7 +179,7 @@ type MutationResolver interface {
 	UpdateUser(ctx context.Context, input model.UpdateUserInput) (*dbmodels.User, error)
 }
 type QueryResolver interface {
-	AuditLogs(ctx context.Context, input model.QueryAuditLogsInput) (*model.AuditLogs, error)
+	AuditLogs(ctx context.Context, input *model.QueryAuditLogsInput, sort *model.QueryAuditLogsSortInput) (*model.AuditLogs, error)
 	Roles(ctx context.Context, input *model.QueryRolesInput) (*model.Roles, error)
 	Teams(ctx context.Context, input *model.QueryTeamsInput, sort *model.QueryTeamsSortInput) (*model.Teams, error)
 	Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team, error)
@@ -263,6 +264,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.AuditLog.System(childComplexity), true
+
+	case "AuditLog.systemId":
+		if e.complexity.AuditLog.SystemID == nil {
+			break
+		}
+
+		return e.complexity.AuditLog.SystemID(childComplexity), true
 
 	case "AuditLog.team":
 		if e.complexity.AuditLog.Team == nil {
@@ -431,7 +439,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.AuditLogs(childComplexity, args["input"].(model.QueryAuditLogsInput)), true
+		return e.complexity.Query.AuditLogs(childComplexity, args["input"].(*model.QueryAuditLogsInput), args["sort"].(*model.QueryAuditLogsSortInput)), true
 
 	case "Query.me":
 		if e.complexity.Query.Me == nil {
@@ -746,6 +754,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputCreateUserInput,
 		ec.unmarshalInputPaginationInput,
 		ec.unmarshalInputQueryAuditLogsInput,
+		ec.unmarshalInputQueryAuditLogsSortInput,
 		ec.unmarshalInputQueryRolesInput,
 		ec.unmarshalInputQueryTeamsInput,
 		ec.unmarshalInputQueryTeamsSortInput,
@@ -848,7 +857,10 @@ input APIKeyInput {
     "Get a collection of audit log entries."
     auditLogs(
         "Input for filtering the query."
-        input: QueryAuditLogsInput!
+        input: QueryAuditLogsInput
+
+        "Input for sorting the collection. If omitted the collection will be sorted by the creation time in descending order."
+        sort: QueryAuditLogsSortInput
     ): AuditLogs! @auth
 }
 
@@ -856,6 +868,8 @@ input APIKeyInput {
 type AuditLog {
     "ID of the log entry."
     id: UUID!
+
+    systemId: UUID
 
     "The related system."
     system: System
@@ -909,8 +923,20 @@ input QueryAuditLogsInput {
     synchronizationId: UUID
 }
 
+"Input for sorting a collection of audit log entries."
+input QueryAuditLogsSortInput {
+    "Field to sort by."
+    field: AuditLogSortField!
 
-`, BuiltIn: false},
+    "Sort direction."
+    direction: SortDirection!
+}
+
+"Fields to sort the collection by."
+enum AuditLogSortField {
+    "Sort by creation time."
+    created_at
+}`, BuiltIn: false},
 	{Name: "../../../graphql/directives.graphqls", Input: `"Require authentication for all requests with this directive."
 directive @auth on FIELD_DEFINITION`, BuiltIn: false},
 	{Name: "../../../graphql/inputs.graphqls", Input: `"""
@@ -1168,7 +1194,7 @@ enum TeamSortField {
     slug
 
     "Sort by creation time."
-    createdAt
+    created_at
 }`, BuiltIn: false},
 	{Name: "../../../graphql/types.graphqls", Input: `type TeamRole {
     "ID of the rolebinding"
@@ -1309,7 +1335,7 @@ enum UserSortField {
     email
 
     "Sort by creation time."
-    createdAt
+    created_at
 }`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
@@ -1471,15 +1497,24 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 func (ec *executionContext) field_Query_auditLogs_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.QueryAuditLogsInput
+	var arg0 *model.QueryAuditLogsInput
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNQueryAuditLogsInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryAuditLogsInput(ctx, tmp)
+		arg0, err = ec.unmarshalOQueryAuditLogsInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryAuditLogsInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
 	args["input"] = arg0
+	var arg1 *model.QueryAuditLogsSortInput
+	if tmp, ok := rawArgs["sort"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sort"))
+		arg1, err = ec.unmarshalOQueryAuditLogsSortInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryAuditLogsSortInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["sort"] = arg1
 	return args, nil
 }
 
@@ -1690,6 +1725,47 @@ func (ec *executionContext) _AuditLog_id(ctx context.Context, field graphql.Coll
 }
 
 func (ec *executionContext) fieldContext_AuditLog_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AuditLog",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type UUID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _AuditLog_systemId(ctx context.Context, field graphql.CollectedField, obj *dbmodels.AuditLog) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_AuditLog_systemId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SystemID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*uuid.UUID)
+	fc.Result = res
+	return ec.marshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_AuditLog_systemId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "AuditLog",
 		Field:      field,
@@ -2170,6 +2246,8 @@ func (ec *executionContext) fieldContext_AuditLogs_nodes(ctx context.Context, fi
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_AuditLog_id(ctx, field)
+			case "systemId":
+				return ec.fieldContext_AuditLog_systemId(ctx, field)
 			case "system":
 				return ec.fieldContext_AuditLog_system(ctx, field)
 			case "synchronization":
@@ -3099,7 +3177,7 @@ func (ec *executionContext) _Query_auditLogs(ctx context.Context, field graphql.
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().AuditLogs(rctx, fc.Args["input"].(model.QueryAuditLogsInput))
+			return ec.resolvers.Query().AuditLogs(rctx, fc.Args["input"].(*model.QueryAuditLogsInput), fc.Args["sort"].(*model.QueryAuditLogsSortInput))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -7372,6 +7450,37 @@ func (ec *executionContext) unmarshalInputQueryAuditLogsInput(ctx context.Contex
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputQueryAuditLogsSortInput(ctx context.Context, obj interface{}) (model.QueryAuditLogsSortInput, error) {
+	var it model.QueryAuditLogsSortInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	for k, v := range asMap {
+		switch k {
+		case "field":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
+			it.Field, err = ec.unmarshalNAuditLogSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAuditLogSortField(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "direction":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
+			it.Direction, err = ec.unmarshalNSortDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSortDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputQueryRolesInput(ctx context.Context, obj interface{}) (model.QueryRolesInput, error) {
 	var it model.QueryRolesInput
 	asMap := map[string]interface{}{}
@@ -7690,6 +7799,10 @@ func (ec *executionContext) _AuditLog(ctx context.Context, sel ast.SelectionSet,
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "systemId":
+
+			out.Values[i] = ec._AuditLog_systemId(ctx, field, obj)
+
 		case "system":
 
 			out.Values[i] = ec._AuditLog_system(ctx, field, obj)
@@ -9001,6 +9114,16 @@ func (ec *executionContext) marshalNAuditLog2ᚖgithubᚗcomᚋnaisᚋconsoleᚋ
 	return ec._AuditLog(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNAuditLogSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAuditLogSortField(ctx context.Context, v interface{}) (model.AuditLogSortField, error) {
+	var res model.AuditLogSortField
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNAuditLogSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAuditLogSortField(ctx context.Context, sel ast.SelectionSet, v model.AuditLogSortField) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) marshalNAuditLogs2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAuditLogs(ctx context.Context, sel ast.SelectionSet, v model.AuditLogs) graphql.Marshaler {
 	return ec._AuditLogs(ctx, sel, &v)
 }
@@ -9063,11 +9186,6 @@ func (ec *executionContext) marshalNPagination2ᚖgithubᚗcomᚋnaisᚋconsole�
 		return graphql.Null
 	}
 	return ec._Pagination(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalNQueryAuditLogsInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryAuditLogsInput(ctx context.Context, v interface{}) (model.QueryAuditLogsInput, error) {
-	res, err := ec.unmarshalInputQueryAuditLogsInput(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNRemoveUsersFromTeamInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRemoveUsersFromTeamInput(ctx context.Context, v interface{}) (model.RemoveUsersFromTeamInput, error) {
@@ -9784,6 +9902,22 @@ func (ec *executionContext) unmarshalOPaginationInput2ᚖgithubᚗcomᚋnaisᚋc
 		return nil, nil
 	}
 	res, err := ec.unmarshalInputPaginationInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOQueryAuditLogsInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryAuditLogsInput(ctx context.Context, v interface{}) (*model.QueryAuditLogsInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputQueryAuditLogsInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOQueryAuditLogsSortInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryAuditLogsSortInput(ctx context.Context, v interface{}) (*model.QueryAuditLogsSortInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputQueryAuditLogsSortInput(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 

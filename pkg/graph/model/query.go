@@ -35,6 +35,10 @@ func (order QueryTeamsSortInput) GetOrderString() string {
 	return string(order.Field) + " " + string(order.Direction)
 }
 
+func (order QueryAuditLogsSortInput) GetOrderString() string {
+	return string(order.Field) + " " + string(order.Direction)
+}
+
 func (in *QueryUsersInput) GetQuery() interface{} {
 	if in == nil {
 		return &dbmodels.User{}
@@ -51,6 +55,18 @@ func (in *QueryTeamsInput) GetQuery() interface{} {
 	}
 	return &dbmodels.Team{
 		Slug: in.Slug,
+	}
+}
+
+func (in *QueryAuditLogsInput) GetQuery() interface{} {
+	if in == nil {
+		return &dbmodels.Team{}
+	}
+	return &dbmodels.AuditLog{
+		TeamID:            in.TeamID,
+		UserID:            in.UserID,
+		SystemID:          in.SystemID,
+		SynchronizationID: in.SynchronizationID,
 	}
 }
 
@@ -81,6 +97,13 @@ func (in *QueryTeamsInput) GetPagination() *PaginationInput {
 }
 
 func (in *QueryRolesInput) GetPagination() *PaginationInput {
+	if in == nil || in.Pagination == nil {
+		return fallbackPagination
+	}
+	return in.Pagination
+}
+
+func (in *QueryAuditLogsInput) GetPagination() *PaginationInput {
 	if in == nil || in.Pagination == nil {
 		return fallbackPagination
 	}

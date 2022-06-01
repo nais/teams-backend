@@ -107,5 +107,5 @@ enum UserSortField {
     email
 
     "Sort by creation time."
-    createdAt
+    created_at
 }

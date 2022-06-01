@@ -124,5 +124,5 @@ enum TeamSortField {
     slug
 
     "Sort by creation time."
-    createdAt
+    created_at
 }

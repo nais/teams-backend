@@ -101,6 +101,14 @@ type QueryAuditLogsInput struct {
 	SynchronizationID *uuid.UUID `json:"synchronizationId"`
 }
 
+// Input for sorting a collection of audit log entries.
+type QueryAuditLogsSortInput struct {
+	// Field to sort by.
+	Field AuditLogSortField `json:"field"`
+	// Sort direction.
+	Direction SortDirection `json:"direction"`
+}
+
 // Input for filtering a collection of roles.
 type QueryRolesInput struct {
 	// Pagination options.
@@ -199,6 +207,47 @@ type Users struct {
 	Nodes []*dbmodels.User `json:"nodes"`
 }
 
+// Fields to sort the collection by.
+type AuditLogSortField string
+
+const (
+	// Sort by creation time.
+	AuditLogSortFieldCreatedAt AuditLogSortField = "created_at"
+)
+
+var AllAuditLogSortField = []AuditLogSortField{
+	AuditLogSortFieldCreatedAt,
+}
+
+func (e AuditLogSortField) IsValid() bool {
+	switch e {
+	case AuditLogSortFieldCreatedAt:
+		return true
+	}
+	return false
+}
+
+func (e AuditLogSortField) String() string {
+	return string(e)
+}
+
+func (e *AuditLogSortField) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = AuditLogSortField(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid AuditLogSortField", str)
+	}
+	return nil
+}
+
+func (e AuditLogSortField) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
 // Direction of the ordering.
 type SortDirection string
 
@@ -252,7 +301,7 @@ const (
 	// Sort by slug.
 	TeamSortFieldSlug TeamSortField = "slug"
 	// Sort by creation time.
-	TeamSortFieldCreatedAt TeamSortField = "createdAt"
+	TeamSortFieldCreatedAt TeamSortField = "created_at"
 )
 
 var AllTeamSortField = []TeamSortField{
@@ -299,7 +348,7 @@ const (
 	// Sort by email address.
 	UserSortFieldEmail UserSortField = "email"
 	// Sort by creation time.
-	UserSortFieldCreatedAt UserSortField = "createdAt"
+	UserSortFieldCreatedAt UserSortField = "created_at"
 )
 
 var AllUserSortField = []UserSortField{

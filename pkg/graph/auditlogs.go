@@ -10,27 +10,18 @@ import (
 	"github.com/nais/console/pkg/graph/model"
 )
 
-func (r *queryResolver) AuditLogs(ctx context.Context, input model.QueryAuditLogsInput) (*model.AuditLogs, error) {
-	var count int64
+func (r *queryResolver) AuditLogs(ctx context.Context, input *model.QueryAuditLogsInput, sort *model.QueryAuditLogsSortInput) (*model.AuditLogs, error) {
 	auditLogs := make([]*dbmodels.AuditLog, 0)
-	query := &dbmodels.AuditLog{
-		SystemID:          input.SystemID,
-		SynchronizationID: input.SynchronizationID,
-		UserID:            input.UserID,
-		TeamID:            input.TeamID,
+
+	if sort == nil {
+		sort = &model.QueryAuditLogsSortInput{
+			Field:     model.AuditLogSortFieldCreatedAt,
+			Direction: model.SortDirectionDesc,
+		}
 	}
-	tx := r.db.WithContext(ctx).
-		Where(query).
-		Order("created_at DESC").
-		Find(&auditLogs)
-	tx.Count(&count)
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
+	pagination, err := r.paginatedQuery(ctx, input, sort, &dbmodels.AuditLog{}, &auditLogs)
 	return &model.AuditLogs{
-		Pagination: &model.Pagination{
-			Results: int(count),
-		},
-		Nodes: auditLogs,
-	}, nil
+		Pagination: pagination,
+		Nodes:      auditLogs,
+	}, err
 }
