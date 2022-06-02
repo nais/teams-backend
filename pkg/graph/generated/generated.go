@@ -137,12 +137,13 @@ type ComplexityRoot struct {
 	}
 
 	Team struct {
-		ID       func(childComplexity int) int
-		Metadata func(childComplexity int) int
-		Name     func(childComplexity int) int
-		Purpose  func(childComplexity int) int
-		Slug     func(childComplexity int) int
-		Users    func(childComplexity int) int
+		CreatedAt func(childComplexity int) int
+		ID        func(childComplexity int) int
+		Metadata  func(childComplexity int) int
+		Name      func(childComplexity int) int
+		Purpose   func(childComplexity int) int
+		Slug      func(childComplexity int) int
+		Users     func(childComplexity int) int
 	}
 
 	Teams struct {
@@ -636,6 +637,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Systems.PageInfo(childComplexity), true
+
+	case "Team.createdAt":
+		if e.complexity.Team.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.Team.CreatedAt(childComplexity), true
 
 	case "Team.id":
 		if e.complexity.Team.ID == nil {
@@ -1256,6 +1264,9 @@ type Team {
 
     "Metadata attached to the team as a key => value map."
     metadata: Map
+
+    "Creation time of the team."
+    createdAt: Time
 }
 
 "Team collection."
@@ -2134,6 +2145,8 @@ func (ec *executionContext) fieldContext_AuditLog_team(ctx context.Context, fiel
 				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Team_createdAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -2815,6 +2828,8 @@ func (ec *executionContext) fieldContext_Mutation_createTeam(ctx context.Context
 				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Team_createdAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -2904,6 +2919,8 @@ func (ec *executionContext) fieldContext_Mutation_addUsersToTeam(ctx context.Con
 				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Team_createdAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -2993,6 +3010,8 @@ func (ec *executionContext) fieldContext_Mutation_removeUsersFromTeam(ctx contex
 				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Team_createdAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3716,6 +3735,8 @@ func (ec *executionContext) fieldContext_Query_team(ctx context.Context, field g
 				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Team_createdAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -4537,6 +4558,8 @@ func (ec *executionContext) fieldContext_RoleBinding_team(ctx context.Context, f
 				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Team_createdAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -5158,6 +5181,47 @@ func (ec *executionContext) fieldContext_Team_metadata(ctx context.Context, fiel
 	return fc, nil
 }
 
+func (ec *executionContext) _Team_createdAt(ctx context.Context, field graphql.CollectedField, obj *dbmodels.Team) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Team_createdAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalOTime2timeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Team_createdAt(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Team",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Teams_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.Teams) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Teams_pageInfo(ctx, field)
 	if err != nil {
@@ -5261,6 +5325,8 @@ func (ec *executionContext) fieldContext_Teams_nodes(ctx context.Context, field 
 				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Team_createdAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -5448,6 +5514,8 @@ func (ec *executionContext) fieldContext_User_teams(ctx context.Context, field g
 				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Team_createdAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -9005,6 +9073,10 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 				return innerFunc(ctx)
 
 			})
+		case "createdAt":
+
+			out.Values[i] = ec._Team_createdAt(ctx, field, obj)
+
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
