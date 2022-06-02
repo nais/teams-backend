@@ -97,7 +97,7 @@ type ComplexityRoot struct {
 		Roles     func(childComplexity int, pagination *model.Pagination, query *model.RolesQuery, sort *model.RolesSort) int
 		Systems   func(childComplexity int, pagination *model.Pagination, query *model.SystemsQuery, sort *model.SystemsSort) int
 		Team      func(childComplexity int, id *uuid.UUID) int
-		Teams     func(childComplexity int, pagination *model.Pagination, input *model.TeamsQuery, sort *model.TeamsSort) int
+		Teams     func(childComplexity int, pagination *model.Pagination, query *model.TeamsQuery, sort *model.TeamsSort) int
 		User      func(childComplexity int, id *uuid.UUID) int
 		Users     func(childComplexity int, pagination *model.Pagination, query *model.UsersQuery, sort *model.UsersSort) int
 	}
@@ -186,7 +186,7 @@ type QueryResolver interface {
 	AuditLogs(ctx context.Context, pagination *model.Pagination, query *model.AuditLogsQuery, sort *model.AuditLogsSort) (*model.AuditLogs, error)
 	Roles(ctx context.Context, pagination *model.Pagination, query *model.RolesQuery, sort *model.RolesSort) (*model.Roles, error)
 	Systems(ctx context.Context, pagination *model.Pagination, query *model.SystemsQuery, sort *model.SystemsSort) (*model.Systems, error)
-	Teams(ctx context.Context, pagination *model.Pagination, input *model.TeamsQuery, sort *model.TeamsSort) (*model.Teams, error)
+	Teams(ctx context.Context, pagination *model.Pagination, query *model.TeamsQuery, sort *model.TeamsSort) (*model.Teams, error)
 	Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team, error)
 	Users(ctx context.Context, pagination *model.Pagination, query *model.UsersQuery, sort *model.UsersSort) (*model.Users, error)
 	User(ctx context.Context, id *uuid.UUID) (*dbmodels.User, error)
@@ -499,7 +499,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Teams(childComplexity, args["pagination"].(*model.Pagination), args["input"].(*model.TeamsQuery), args["sort"].(*model.TeamsSort)), true
+		return e.complexity.Query.Teams(childComplexity, args["pagination"].(*model.Pagination), args["query"].(*model.TeamsQuery), args["sort"].(*model.TeamsSort)), true
 
 	case "Query.user":
 		if e.complexity.Query.User == nil {
@@ -1204,7 +1204,7 @@ enum SystemSortField {
         pagination: Pagination
 
         "Input for filtering the query."
-        input: TeamsQuery
+        query: TeamsQuery
 
         "Input for sorting the collection. If omitted the collection will be sorted by the name of the team in ascending order."
         sort: TeamsSort
@@ -1730,14 +1730,14 @@ func (ec *executionContext) field_Query_teams_args(ctx context.Context, rawArgs 
 	}
 	args["pagination"] = arg0
 	var arg1 *model.TeamsQuery
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+	if tmp, ok := rawArgs["query"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("query"))
 		arg1, err = ec.unmarshalOTeamsQuery2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamsQuery(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg1
+	args["query"] = arg1
 	var arg2 *model.TeamsSort
 	if tmp, ok := rawArgs["sort"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sort"))
@@ -3579,7 +3579,7 @@ func (ec *executionContext) _Query_teams(ctx context.Context, field graphql.Coll
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Teams(rctx, fc.Args["pagination"].(*model.Pagination), fc.Args["input"].(*model.TeamsQuery), fc.Args["sort"].(*model.TeamsSort))
+			return ec.resolvers.Query().Teams(rctx, fc.Args["pagination"].(*model.Pagination), fc.Args["query"].(*model.TeamsQuery), fc.Args["sort"].(*model.TeamsSort))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
