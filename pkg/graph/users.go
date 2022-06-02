@@ -75,12 +75,10 @@ func (r *userResolver) Teams(ctx context.Context, obj *dbmodels.User) ([]*dbmode
 
 func (r *userResolver) RoleBindings(ctx context.Context, obj *dbmodels.User, teamID *uuid.UUID) ([]*dbmodels.RoleBinding, error) {
 	roleBindings := make([]*dbmodels.RoleBinding, 0)
-	team := &dbmodels.Team{
-		Model: dbmodels.Model{
-			ID: teamID,
-		},
+	where := &dbmodels.RoleBinding{
+		TeamID: teamID,
 	}
-	err := r.db.WithContext(ctx).Model(obj).Where(team).Association("RoleBindings").Find(&roleBindings)
+	err := r.db.WithContext(ctx).Model(obj).Where(where).Association("RoleBindings").Find(&roleBindings)
 	if err != nil {
 		return nil, err
 	}
