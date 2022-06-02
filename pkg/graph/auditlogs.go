@@ -59,19 +59,19 @@ func (r *auditLogResolver) Team(ctx context.Context, obj *dbmodels.AuditLog) (*d
 	return team, nil
 }
 
-func (r *queryResolver) AuditLogs(ctx context.Context, input *model.QueryAuditLogsInput, sort *model.QueryAuditLogsSortInput) (*model.AuditLogs, error) {
+func (r *queryResolver) AuditLogs(ctx context.Context, pagination *model.Pagination, query *model.AuditLogsQuery, sort *model.AuditLogsSort) (*model.AuditLogs, error) {
 	auditLogs := make([]*dbmodels.AuditLog, 0)
 
 	if sort == nil {
-		sort = &model.QueryAuditLogsSortInput{
+		sort = &model.AuditLogsSort{
 			Field:     model.AuditLogSortFieldCreatedAt,
 			Direction: model.SortDirectionDesc,
 		}
 	}
-	pagination, err := r.paginatedQuery(ctx, input, sort, &dbmodels.AuditLog{}, &auditLogs)
+	pageInfo, err := r.paginatedQuery(ctx, pagination, query, sort, &dbmodels.AuditLog{}, &auditLogs)
 	return &model.AuditLogs{
-		Pagination: pagination,
-		Nodes:      auditLogs,
+		PageInfo: pageInfo,
+		Nodes:    auditLogs,
 	}, err
 }
 

@@ -1,11 +1,14 @@
 extend type Query {
     "Get a collection of users."
     users(
+        "Pagination options."
+        pagination: Pagination
+
         "Input for filtering the query."
-        input: QueryUsersInput
+        query: UsersQuery
 
         "Input for sorting the collection. If omitted the collection will be sorted by the name of the user in ascending order."
-        sort: QueryUsersSortInput
+        sort: UsersSort
     ): Users! @auth
 
     "Get a specific user."
@@ -59,17 +62,14 @@ type User {
 "User collection."
 type Users {
     "Object related to pagination of the collection."
-    pagination: Pagination!
+    pageInfo: PageInfo!
 
     "The list of user objects in the collection."
     nodes: [User!]!
 }
 
 "Input for filtering a collection of users."
-input QueryUsersInput {
-    "Pagination options."
-    pagination: PaginationInput
-
+input UsersQuery {
     "Filter by user email."
     email: String
 
@@ -78,7 +78,7 @@ input QueryUsersInput {
 }
 
 "Input for sorting a collection of users."
-input QueryUsersSortInput {
+input UsersSort {
     "Field to sort by."
     field: UserSortField!
 

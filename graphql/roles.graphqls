@@ -1,11 +1,14 @@
 extend type Query {
     "Get a collection of users."
     roles(
+        "Pagination options."
+        pagination: Pagination
+
         "Input for filtering the query."
-        input: QueryRolesInput
+        query: RolesQuery
 
         "Input for sorting the collection. If omitted the collection will be sorted by the name of the role in ascending order."
-        sort: QueryRolesSortInput
+        sort: RolesSort
     ): Roles! @auth
 }
 
@@ -59,17 +62,14 @@ type Role {
 "Role collection."
 type Roles {
     "Object related to pagination of the collection."
-    pagination: Pagination!
+    pageInfo: PageInfo!
 
     "The list of roles in the collection."
     nodes: [Role!]!
 }
 
 "Input for filtering a collection of roles."
-input QueryRolesInput {
-    "Pagination options."
-    pagination: PaginationInput
-
+input RolesQuery {
     "Filter by role name."
     name: String
 
@@ -84,7 +84,7 @@ input QueryRolesInput {
 }
 
 "Input for sorting a collection of roles."
-input QueryRolesSortInput {
+input RolesSort {
     "Field to sort by."
     field: RoleSortField!
 

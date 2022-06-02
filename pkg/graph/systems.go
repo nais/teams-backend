@@ -10,19 +10,19 @@ import (
 	"github.com/nais/console/pkg/graph/model"
 )
 
-func (r *queryResolver) Systems(ctx context.Context, input *model.QuerySystemsInput, sort *model.QuerySystemsSortInput) (*model.Systems, error) {
+func (r *queryResolver) Systems(ctx context.Context, pagination *model.Pagination, query *model.SystemsQuery, sort *model.SystemsSort) (*model.Systems, error) {
 	systems := make([]*dbmodels.System, 0)
 
 	if sort == nil {
-		sort = &model.QuerySystemsSortInput{
+		sort = &model.SystemsSort{
 			Field:     model.SystemSortFieldName,
 			Direction: model.SortDirectionAsc,
 		}
 	}
-	pagination, err := r.paginatedQuery(ctx, input, sort, &dbmodels.User{}, &systems)
+	pageInfo, err := r.paginatedQuery(ctx, pagination, query, sort, &dbmodels.User{}, &systems)
 
 	return &model.Systems{
-		Pagination: pagination,
-		Nodes:      systems,
+		PageInfo: pageInfo,
+		Nodes:    systems,
 	}, err
 }

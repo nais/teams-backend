@@ -1,11 +1,14 @@
 extend type Query {
     "Get a collection of audit log entries."
     auditLogs(
+        "Pagination options."
+        pagination: Pagination
+
         "Input for filtering the query."
-        input: QueryAuditLogsInput
+        query: AuditLogsQuery
 
         "Input for sorting the collection. If omitted the collection will be sorted by the creation time in descending order."
-        sort: QueryAuditLogsSortInput
+        sort: AuditLogsSort
     ): AuditLogs! @auth
 }
 
@@ -42,17 +45,14 @@ type AuditLog {
 "Audit log collection."
 type AuditLogs {
     "Object related to pagination of the collection."
-    pagination: Pagination!
+    pageInfo: PageInfo!
 
     "The list of audit log entries in the collection."
     nodes: [AuditLog!]!
 }
 
 "Input for filtering a collection of audit log entries."
-input QueryAuditLogsInput {
-    "Pagination options."
-    pagination: PaginationInput
-
+input AuditLogsQuery {
     "Filter by team ID."
     teamId: UUID
 
@@ -67,7 +67,7 @@ input QueryAuditLogsInput {
 }
 
 "Input for sorting a collection of audit log entries."
-input QueryAuditLogsSortInput {
+input AuditLogsSort {
     "Field to sort by."
     field: AuditLogSortField!
 

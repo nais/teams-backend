@@ -1,11 +1,14 @@
 extend type Query {
     "Get a collection of systems."
     systems(
+        "Pagination options."
+        pagination: Pagination
+
         "Input for filtering the query."
-        input: QuerySystemsInput
+        query: SystemsQuery
 
         "Input for sorting the collection. If omitted the collection will be sorted by the name of the system in ascending order."
-        sort: QuerySystemsSortInput
+        sort: SystemsSort
     ): Systems! @auth
 }
 
@@ -21,23 +24,20 @@ type System {
 "System collection."
 type Systems {
     "Object related to pagination of the collection."
-    pagination: Pagination!
+    pageInfo: PageInfo!
 
     "The list of system objects in the collection."
     nodes: [System!]!
 }
 
 "Input for filtering a collection of systems."
-input QuerySystemsInput {
-    "Pagination options."
-    pagination: PaginationInput
-
+input SystemsQuery {
     "Filter by system name."
     name: String
 }
 
 "Input for sorting a collection of systems."
-input QuerySystemsSortInput {
+input SystemsSort {
     "Field to sort by."
     field: SystemSortField!
 

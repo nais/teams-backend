@@ -35,18 +35,18 @@ func (r *mutationResolver) RemoveRoleFromUser(ctx context.Context, input model.R
 	return true, nil
 }
 
-func (r *queryResolver) Roles(ctx context.Context, input *model.QueryRolesInput, sort *model.QueryRolesSortInput) (*model.Roles, error) {
+func (r *queryResolver) Roles(ctx context.Context, pagination *model.Pagination, query *model.RolesQuery, sort *model.RolesSort) (*model.Roles, error) {
 	roles := make([]*dbmodels.Role, 0)
 	if sort == nil {
-		sort = &model.QueryRolesSortInput{
+		sort = &model.RolesSort{
 			Field:     model.RoleSortFieldName,
 			Direction: model.SortDirectionAsc,
 		}
 	}
-	pagination, err := r.paginatedQuery(ctx, input, sort, &dbmodels.Role{}, &roles)
+	pageInfo, err := r.paginatedQuery(ctx, pagination, query, sort, &dbmodels.Role{}, &roles)
 	return &model.Roles{
-		Pagination: pagination,
-		Nodes:      roles,
+		PageInfo: pageInfo,
+		Nodes:    roles,
 	}, err
 }
 

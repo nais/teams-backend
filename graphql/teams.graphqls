@@ -1,11 +1,14 @@
 extend type Query {
     "Get a collection of teams."
     teams(
+        "Pagination options."
+        pagination: Pagination
+
         "Input for filtering the query."
-        input: QueryTeamsInput
+        input: TeamsQuery
 
         "Input for sorting the collection. If omitted the collection will be sorted by the name of the team in ascending order."
-        sort: QueryTeamsSortInput
+        sort: TeamsSort
     ): Teams! @auth
 
     "Get a specific team."
@@ -59,17 +62,14 @@ type Team {
 "Team collection."
 type Teams {
     "Object related to pagination of the collection."
-    pagination: Pagination!
+    pageInfo: PageInfo!
 
     "The list of team objects in the collection."
     nodes: [Team!]!
 }
 
 "Input for filtering a collection of teams."
-input QueryTeamsInput {
-    "Pagination options."
-    pagination: PaginationInput
-
+input TeamsQuery {
     "Filter by slug."
     slug: Slug
 
@@ -78,7 +78,7 @@ input QueryTeamsInput {
 }
 
 "Input for sorting a collection of teams."
-input QueryTeamsSortInput {
+input TeamsSort {
     "Field to sort by."
     field: TeamSortField!
 

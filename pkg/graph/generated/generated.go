@@ -69,8 +69,8 @@ type ComplexityRoot struct {
 	}
 
 	AuditLogs struct {
-		Nodes      func(childComplexity int) int
-		Pagination func(childComplexity int) int
+		Nodes    func(childComplexity int) int
+		PageInfo func(childComplexity int) int
 	}
 
 	Mutation struct {
@@ -85,21 +85,21 @@ type ComplexityRoot struct {
 		UpdateUser          func(childComplexity int, input model.UpdateUserInput) int
 	}
 
-	Pagination struct {
+	PageInfo struct {
 		Limit   func(childComplexity int) int
 		Offset  func(childComplexity int) int
 		Results func(childComplexity int) int
 	}
 
 	Query struct {
-		AuditLogs func(childComplexity int, input *model.QueryAuditLogsInput, sort *model.QueryAuditLogsSortInput) int
+		AuditLogs func(childComplexity int, pagination *model.Pagination, query *model.AuditLogsQuery, sort *model.AuditLogsSort) int
 		Me        func(childComplexity int) int
-		Roles     func(childComplexity int, input *model.QueryRolesInput, sort *model.QueryRolesSortInput) int
-		Systems   func(childComplexity int, input *model.QuerySystemsInput, sort *model.QuerySystemsSortInput) int
+		Roles     func(childComplexity int, pagination *model.Pagination, query *model.RolesQuery, sort *model.RolesSort) int
+		Systems   func(childComplexity int, pagination *model.Pagination, query *model.SystemsQuery, sort *model.SystemsSort) int
 		Team      func(childComplexity int, id *uuid.UUID) int
-		Teams     func(childComplexity int, input *model.QueryTeamsInput, sort *model.QueryTeamsSortInput) int
+		Teams     func(childComplexity int, pagination *model.Pagination, input *model.TeamsQuery, sort *model.TeamsSort) int
 		User      func(childComplexity int, id *uuid.UUID) int
-		Users     func(childComplexity int, input *model.QueryUsersInput, sort *model.QueryUsersSortInput) int
+		Users     func(childComplexity int, pagination *model.Pagination, query *model.UsersQuery, sort *model.UsersSort) int
 	}
 
 	Role struct {
@@ -118,8 +118,8 @@ type ComplexityRoot struct {
 	}
 
 	Roles struct {
-		Nodes      func(childComplexity int) int
-		Pagination func(childComplexity int) int
+		Nodes    func(childComplexity int) int
+		PageInfo func(childComplexity int) int
 	}
 
 	Synchronization struct {
@@ -132,8 +132,8 @@ type ComplexityRoot struct {
 	}
 
 	Systems struct {
-		Nodes      func(childComplexity int) int
-		Pagination func(childComplexity int) int
+		Nodes    func(childComplexity int) int
+		PageInfo func(childComplexity int) int
 	}
 
 	Team struct {
@@ -146,8 +146,8 @@ type ComplexityRoot struct {
 	}
 
 	Teams struct {
-		Nodes      func(childComplexity int) int
-		Pagination func(childComplexity int) int
+		Nodes    func(childComplexity int) int
+		PageInfo func(childComplexity int) int
 	}
 
 	User struct {
@@ -160,8 +160,8 @@ type ComplexityRoot struct {
 	}
 
 	Users struct {
-		Nodes      func(childComplexity int) int
-		Pagination func(childComplexity int) int
+		Nodes    func(childComplexity int) int
+		PageInfo func(childComplexity int) int
 	}
 }
 
@@ -183,12 +183,12 @@ type MutationResolver interface {
 	UpdateUser(ctx context.Context, input model.UpdateUserInput) (*dbmodels.User, error)
 }
 type QueryResolver interface {
-	AuditLogs(ctx context.Context, input *model.QueryAuditLogsInput, sort *model.QueryAuditLogsSortInput) (*model.AuditLogs, error)
-	Roles(ctx context.Context, input *model.QueryRolesInput, sort *model.QueryRolesSortInput) (*model.Roles, error)
-	Systems(ctx context.Context, input *model.QuerySystemsInput, sort *model.QuerySystemsSortInput) (*model.Systems, error)
-	Teams(ctx context.Context, input *model.QueryTeamsInput, sort *model.QueryTeamsSortInput) (*model.Teams, error)
+	AuditLogs(ctx context.Context, pagination *model.Pagination, query *model.AuditLogsQuery, sort *model.AuditLogsSort) (*model.AuditLogs, error)
+	Roles(ctx context.Context, pagination *model.Pagination, query *model.RolesQuery, sort *model.RolesSort) (*model.Roles, error)
+	Systems(ctx context.Context, pagination *model.Pagination, query *model.SystemsQuery, sort *model.SystemsSort) (*model.Systems, error)
+	Teams(ctx context.Context, pagination *model.Pagination, input *model.TeamsQuery, sort *model.TeamsSort) (*model.Teams, error)
 	Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team, error)
-	Users(ctx context.Context, input *model.QueryUsersInput, sort *model.QueryUsersSortInput) (*model.Users, error)
+	Users(ctx context.Context, pagination *model.Pagination, query *model.UsersQuery, sort *model.UsersSort) (*model.Users, error)
 	User(ctx context.Context, id *uuid.UUID) (*dbmodels.User, error)
 	Me(ctx context.Context) (*dbmodels.User, error)
 }
@@ -298,12 +298,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.AuditLogs.Nodes(childComplexity), true
 
-	case "AuditLogs.pagination":
-		if e.complexity.AuditLogs.Pagination == nil {
+	case "AuditLogs.pageInfo":
+		if e.complexity.AuditLogs.PageInfo == nil {
 			break
 		}
 
-		return e.complexity.AuditLogs.Pagination(childComplexity), true
+		return e.complexity.AuditLogs.PageInfo(childComplexity), true
 
 	case "Mutation.addUsersToTeam":
 		if e.complexity.Mutation.AddUsersToTeam == nil {
@@ -413,26 +413,26 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.UpdateUser(childComplexity, args["input"].(model.UpdateUserInput)), true
 
-	case "Pagination.limit":
-		if e.complexity.Pagination.Limit == nil {
+	case "PageInfo.limit":
+		if e.complexity.PageInfo.Limit == nil {
 			break
 		}
 
-		return e.complexity.Pagination.Limit(childComplexity), true
+		return e.complexity.PageInfo.Limit(childComplexity), true
 
-	case "Pagination.offset":
-		if e.complexity.Pagination.Offset == nil {
+	case "PageInfo.offset":
+		if e.complexity.PageInfo.Offset == nil {
 			break
 		}
 
-		return e.complexity.Pagination.Offset(childComplexity), true
+		return e.complexity.PageInfo.Offset(childComplexity), true
 
-	case "Pagination.results":
-		if e.complexity.Pagination.Results == nil {
+	case "PageInfo.results":
+		if e.complexity.PageInfo.Results == nil {
 			break
 		}
 
-		return e.complexity.Pagination.Results(childComplexity), true
+		return e.complexity.PageInfo.Results(childComplexity), true
 
 	case "Query.auditLogs":
 		if e.complexity.Query.AuditLogs == nil {
@@ -444,7 +444,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.AuditLogs(childComplexity, args["input"].(*model.QueryAuditLogsInput), args["sort"].(*model.QueryAuditLogsSortInput)), true
+		return e.complexity.Query.AuditLogs(childComplexity, args["pagination"].(*model.Pagination), args["query"].(*model.AuditLogsQuery), args["sort"].(*model.AuditLogsSort)), true
 
 	case "Query.me":
 		if e.complexity.Query.Me == nil {
@@ -463,7 +463,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Roles(childComplexity, args["input"].(*model.QueryRolesInput), args["sort"].(*model.QueryRolesSortInput)), true
+		return e.complexity.Query.Roles(childComplexity, args["pagination"].(*model.Pagination), args["query"].(*model.RolesQuery), args["sort"].(*model.RolesSort)), true
 
 	case "Query.systems":
 		if e.complexity.Query.Systems == nil {
@@ -475,7 +475,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Systems(childComplexity, args["input"].(*model.QuerySystemsInput), args["sort"].(*model.QuerySystemsSortInput)), true
+		return e.complexity.Query.Systems(childComplexity, args["pagination"].(*model.Pagination), args["query"].(*model.SystemsQuery), args["sort"].(*model.SystemsSort)), true
 
 	case "Query.team":
 		if e.complexity.Query.Team == nil {
@@ -499,7 +499,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Teams(childComplexity, args["input"].(*model.QueryTeamsInput), args["sort"].(*model.QueryTeamsSortInput)), true
+		return e.complexity.Query.Teams(childComplexity, args["pagination"].(*model.Pagination), args["input"].(*model.TeamsQuery), args["sort"].(*model.TeamsSort)), true
 
 	case "Query.user":
 		if e.complexity.Query.User == nil {
@@ -523,7 +523,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Users(childComplexity, args["input"].(*model.QueryUsersInput), args["sort"].(*model.QueryUsersSortInput)), true
+		return e.complexity.Query.Users(childComplexity, args["pagination"].(*model.Pagination), args["query"].(*model.UsersQuery), args["sort"].(*model.UsersSort)), true
 
 	case "Role.accessLevel":
 		if e.complexity.Role.AccessLevel == nil {
@@ -595,12 +595,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Roles.Nodes(childComplexity), true
 
-	case "Roles.pagination":
-		if e.complexity.Roles.Pagination == nil {
+	case "Roles.pageInfo":
+		if e.complexity.Roles.PageInfo == nil {
 			break
 		}
 
-		return e.complexity.Roles.Pagination(childComplexity), true
+		return e.complexity.Roles.PageInfo(childComplexity), true
 
 	case "Synchronization.id":
 		if e.complexity.Synchronization.ID == nil {
@@ -630,12 +630,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Systems.Nodes(childComplexity), true
 
-	case "Systems.pagination":
-		if e.complexity.Systems.Pagination == nil {
+	case "Systems.pageInfo":
+		if e.complexity.Systems.PageInfo == nil {
 			break
 		}
 
-		return e.complexity.Systems.Pagination(childComplexity), true
+		return e.complexity.Systems.PageInfo(childComplexity), true
 
 	case "Team.id":
 		if e.complexity.Team.ID == nil {
@@ -686,12 +686,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Teams.Nodes(childComplexity), true
 
-	case "Teams.pagination":
-		if e.complexity.Teams.Pagination == nil {
+	case "Teams.pageInfo":
+		if e.complexity.Teams.PageInfo == nil {
 			break
 		}
 
-		return e.complexity.Teams.Pagination(childComplexity), true
+		return e.complexity.Teams.PageInfo(childComplexity), true
 
 	case "User.createdAt":
 		if e.complexity.User.CreatedAt == nil {
@@ -747,12 +747,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Users.Nodes(childComplexity), true
 
-	case "Users.pagination":
-		if e.complexity.Users.Pagination == nil {
+	case "Users.pageInfo":
+		if e.complexity.Users.PageInfo == nil {
 			break
 		}
 
-		return e.complexity.Users.Pagination(childComplexity), true
+		return e.complexity.Users.PageInfo(childComplexity), true
 
 	}
 	return 0, false
@@ -765,22 +765,22 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputAPIKeyInput,
 		ec.unmarshalInputAddUsersToTeamInput,
 		ec.unmarshalInputAssignRoleInput,
+		ec.unmarshalInputAuditLogsQuery,
+		ec.unmarshalInputAuditLogsSort,
 		ec.unmarshalInputCreateTeamInput,
 		ec.unmarshalInputCreateUserInput,
-		ec.unmarshalInputPaginationInput,
-		ec.unmarshalInputQueryAuditLogsInput,
-		ec.unmarshalInputQueryAuditLogsSortInput,
-		ec.unmarshalInputQueryRolesInput,
-		ec.unmarshalInputQueryRolesSortInput,
-		ec.unmarshalInputQuerySystemsInput,
-		ec.unmarshalInputQuerySystemsSortInput,
-		ec.unmarshalInputQueryTeamsInput,
-		ec.unmarshalInputQueryTeamsSortInput,
-		ec.unmarshalInputQueryUsersInput,
-		ec.unmarshalInputQueryUsersSortInput,
+		ec.unmarshalInputPagination,
 		ec.unmarshalInputRemoveRoleInput,
 		ec.unmarshalInputRemoveUsersFromTeamInput,
+		ec.unmarshalInputRolesQuery,
+		ec.unmarshalInputRolesSort,
+		ec.unmarshalInputSystemsQuery,
+		ec.unmarshalInputSystemsSort,
+		ec.unmarshalInputTeamsQuery,
+		ec.unmarshalInputTeamsSort,
 		ec.unmarshalInputUpdateUserInput,
+		ec.unmarshalInputUsersQuery,
+		ec.unmarshalInputUsersSort,
 	)
 	first := true
 
@@ -875,11 +875,14 @@ input APIKeyInput {
 	{Name: "../../../graphql/auditlogs.graphqls", Input: `extend type Query {
     "Get a collection of audit log entries."
     auditLogs(
+        "Pagination options."
+        pagination: Pagination
+
         "Input for filtering the query."
-        input: QueryAuditLogsInput
+        query: AuditLogsQuery
 
         "Input for sorting the collection. If omitted the collection will be sorted by the creation time in descending order."
-        sort: QueryAuditLogsSortInput
+        sort: AuditLogsSort
     ): AuditLogs! @auth
 }
 
@@ -916,17 +919,14 @@ type AuditLog {
 "Audit log collection."
 type AuditLogs {
     "Object related to pagination of the collection."
-    pagination: Pagination!
+    pageInfo: PageInfo!
 
     "The list of audit log entries in the collection."
     nodes: [AuditLog!]!
 }
 
 "Input for filtering a collection of audit log entries."
-input QueryAuditLogsInput {
-    "Pagination options."
-    pagination: PaginationInput
-
+input AuditLogsQuery {
     "Filter by team ID."
     teamId: UUID
 
@@ -941,7 +941,7 @@ input QueryAuditLogsInput {
 }
 
 "Input for sorting a collection of audit log entries."
-input QueryAuditLogsSortInput {
+input AuditLogsSort {
     "Field to sort by."
     field: AuditLogSortField!
 
@@ -959,11 +959,14 @@ directive @auth on FIELD_DEFINITION`, BuiltIn: false},
 	{Name: "../../../graphql/roles.graphqls", Input: `extend type Query {
     "Get a collection of users."
     roles(
+        "Pagination options."
+        pagination: Pagination
+
         "Input for filtering the query."
-        input: QueryRolesInput
+        query: RolesQuery
 
         "Input for sorting the collection. If omitted the collection will be sorted by the name of the role in ascending order."
-        sort: QueryRolesSortInput
+        sort: RolesSort
     ): Roles! @auth
 }
 
@@ -1017,17 +1020,14 @@ type Role {
 "Role collection."
 type Roles {
     "Object related to pagination of the collection."
-    pagination: Pagination!
+    pageInfo: PageInfo!
 
     "The list of roles in the collection."
     nodes: [Role!]!
 }
 
 "Input for filtering a collection of roles."
-input QueryRolesInput {
-    "Pagination options."
-    pagination: PaginationInput
-
+input RolesQuery {
     "Filter by role name."
     name: String
 
@@ -1042,7 +1042,7 @@ input QueryRolesInput {
 }
 
 "Input for sorting a collection of roles."
-input QueryRolesSortInput {
+input RolesSort {
     "Field to sort by."
     field: RoleSortField!
 
@@ -1108,7 +1108,7 @@ type Query
 type Mutation
 
 "Pagination metadata attached to queries resulting in a collection of data."
-type Pagination {
+type PageInfo {
     "Total number of results that matches the query."
     results: Int!
 
@@ -1124,7 +1124,7 @@ When querying collections this input is used to control the offset and the page 
 
 Please note that collections are not stateful, so data added or created in between your paginated requests might not be reflected in the returned result set.
 """
-input PaginationInput {
+input Pagination {
     "The offset to start fetching entries."
     offset: Int! = 0
 
@@ -1132,12 +1132,12 @@ input PaginationInput {
     limit: Int! = 10
 }
 
-"Direction of the ordering."
+"Direction of the sort."
 enum SortDirection {
-    "Order ascending."
+    "Sort ascending."
     ASC
 
-    "Order descending."
+    "Sort descending."
     DESC
 }`, BuiltIn: false},
 	{Name: "../../../graphql/synchronizations.graphqls", Input: `"Synchronization type."
@@ -1148,11 +1148,14 @@ type Synchronization {
 	{Name: "../../../graphql/systems.graphqls", Input: `extend type Query {
     "Get a collection of systems."
     systems(
+        "Pagination options."
+        pagination: Pagination
+
         "Input for filtering the query."
-        input: QuerySystemsInput
+        query: SystemsQuery
 
         "Input for sorting the collection. If omitted the collection will be sorted by the name of the system in ascending order."
-        sort: QuerySystemsSortInput
+        sort: SystemsSort
     ): Systems! @auth
 }
 
@@ -1168,23 +1171,20 @@ type System {
 "System collection."
 type Systems {
     "Object related to pagination of the collection."
-    pagination: Pagination!
+    pageInfo: PageInfo!
 
     "The list of system objects in the collection."
     nodes: [System!]!
 }
 
 "Input for filtering a collection of systems."
-input QuerySystemsInput {
-    "Pagination options."
-    pagination: PaginationInput
-
+input SystemsQuery {
     "Filter by system name."
     name: String
 }
 
 "Input for sorting a collection of systems."
-input QuerySystemsSortInput {
+input SystemsSort {
     "Field to sort by."
     field: SystemSortField!
 
@@ -1200,11 +1200,14 @@ enum SystemSortField {
 	{Name: "../../../graphql/teams.graphqls", Input: `extend type Query {
     "Get a collection of teams."
     teams(
+        "Pagination options."
+        pagination: Pagination
+
         "Input for filtering the query."
-        input: QueryTeamsInput
+        input: TeamsQuery
 
         "Input for sorting the collection. If omitted the collection will be sorted by the name of the team in ascending order."
-        sort: QueryTeamsSortInput
+        sort: TeamsSort
     ): Teams! @auth
 
     "Get a specific team."
@@ -1258,17 +1261,14 @@ type Team {
 "Team collection."
 type Teams {
     "Object related to pagination of the collection."
-    pagination: Pagination!
+    pageInfo: PageInfo!
 
     "The list of team objects in the collection."
     nodes: [Team!]!
 }
 
 "Input for filtering a collection of teams."
-input QueryTeamsInput {
-    "Pagination options."
-    pagination: PaginationInput
-
+input TeamsQuery {
     "Filter by slug."
     slug: Slug
 
@@ -1277,7 +1277,7 @@ input QueryTeamsInput {
 }
 
 "Input for sorting a collection of teams."
-input QueryTeamsSortInput {
+input TeamsSort {
     "Field to sort by."
     field: TeamSortField!
 
@@ -1329,11 +1329,14 @@ enum TeamSortField {
 	{Name: "../../../graphql/users.graphqls", Input: `extend type Query {
     "Get a collection of users."
     users(
+        "Pagination options."
+        pagination: Pagination
+
         "Input for filtering the query."
-        input: QueryUsersInput
+        query: UsersQuery
 
         "Input for sorting the collection. If omitted the collection will be sorted by the name of the user in ascending order."
-        sort: QueryUsersSortInput
+        sort: UsersSort
     ): Users! @auth
 
     "Get a specific user."
@@ -1387,17 +1390,14 @@ type User {
 "User collection."
 type Users {
     "Object related to pagination of the collection."
-    pagination: Pagination!
+    pageInfo: PageInfo!
 
     "The list of user objects in the collection."
     nodes: [User!]!
 }
 
 "Input for filtering a collection of users."
-input QueryUsersInput {
-    "Pagination options."
-    pagination: PaginationInput
-
+input UsersQuery {
     "Filter by user email."
     email: String
 
@@ -1406,7 +1406,7 @@ input QueryUsersInput {
 }
 
 "Input for sorting a collection of users."
-input QueryUsersSortInput {
+input UsersSort {
     "Field to sort by."
     field: UserSortField!
 
@@ -1606,72 +1606,99 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 func (ec *executionContext) field_Query_auditLogs_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *model.QueryAuditLogsInput
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalOQueryAuditLogsInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryAuditLogsInput(ctx, tmp)
+	var arg0 *model.Pagination
+	if tmp, ok := rawArgs["pagination"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pagination"))
+		arg0, err = ec.unmarshalOPagination2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPagination(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
-	var arg1 *model.QueryAuditLogsSortInput
+	args["pagination"] = arg0
+	var arg1 *model.AuditLogsQuery
+	if tmp, ok := rawArgs["query"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("query"))
+		arg1, err = ec.unmarshalOAuditLogsQuery2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAuditLogsQuery(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["query"] = arg1
+	var arg2 *model.AuditLogsSort
 	if tmp, ok := rawArgs["sort"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sort"))
-		arg1, err = ec.unmarshalOQueryAuditLogsSortInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryAuditLogsSortInput(ctx, tmp)
+		arg2, err = ec.unmarshalOAuditLogsSort2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAuditLogsSort(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["sort"] = arg1
+	args["sort"] = arg2
 	return args, nil
 }
 
 func (ec *executionContext) field_Query_roles_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *model.QueryRolesInput
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalOQueryRolesInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryRolesInput(ctx, tmp)
+	var arg0 *model.Pagination
+	if tmp, ok := rawArgs["pagination"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pagination"))
+		arg0, err = ec.unmarshalOPagination2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPagination(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
-	var arg1 *model.QueryRolesSortInput
+	args["pagination"] = arg0
+	var arg1 *model.RolesQuery
+	if tmp, ok := rawArgs["query"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("query"))
+		arg1, err = ec.unmarshalORolesQuery2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRolesQuery(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["query"] = arg1
+	var arg2 *model.RolesSort
 	if tmp, ok := rawArgs["sort"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sort"))
-		arg1, err = ec.unmarshalOQueryRolesSortInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryRolesSortInput(ctx, tmp)
+		arg2, err = ec.unmarshalORolesSort2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRolesSort(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["sort"] = arg1
+	args["sort"] = arg2
 	return args, nil
 }
 
 func (ec *executionContext) field_Query_systems_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *model.QuerySystemsInput
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalOQuerySystemsInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQuerySystemsInput(ctx, tmp)
+	var arg0 *model.Pagination
+	if tmp, ok := rawArgs["pagination"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pagination"))
+		arg0, err = ec.unmarshalOPagination2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPagination(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
-	var arg1 *model.QuerySystemsSortInput
+	args["pagination"] = arg0
+	var arg1 *model.SystemsQuery
+	if tmp, ok := rawArgs["query"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("query"))
+		arg1, err = ec.unmarshalOSystemsQuery2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSystemsQuery(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["query"] = arg1
+	var arg2 *model.SystemsSort
 	if tmp, ok := rawArgs["sort"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sort"))
-		arg1, err = ec.unmarshalOQuerySystemsSortInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQuerySystemsSortInput(ctx, tmp)
+		arg2, err = ec.unmarshalOSystemsSort2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSystemsSort(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["sort"] = arg1
+	args["sort"] = arg2
 	return args, nil
 }
 
@@ -1693,24 +1720,33 @@ func (ec *executionContext) field_Query_team_args(ctx context.Context, rawArgs m
 func (ec *executionContext) field_Query_teams_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *model.QueryTeamsInput
+	var arg0 *model.Pagination
+	if tmp, ok := rawArgs["pagination"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pagination"))
+		arg0, err = ec.unmarshalOPagination2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPagination(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["pagination"] = arg0
+	var arg1 *model.TeamsQuery
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalOQueryTeamsInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryTeamsInput(ctx, tmp)
+		arg1, err = ec.unmarshalOTeamsQuery2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamsQuery(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
-	var arg1 *model.QueryTeamsSortInput
+	args["input"] = arg1
+	var arg2 *model.TeamsSort
 	if tmp, ok := rawArgs["sort"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sort"))
-		arg1, err = ec.unmarshalOQueryTeamsSortInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryTeamsSortInput(ctx, tmp)
+		arg2, err = ec.unmarshalOTeamsSort2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamsSort(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["sort"] = arg1
+	args["sort"] = arg2
 	return args, nil
 }
 
@@ -1732,24 +1768,33 @@ func (ec *executionContext) field_Query_user_args(ctx context.Context, rawArgs m
 func (ec *executionContext) field_Query_users_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *model.QueryUsersInput
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalOQueryUsersInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryUsersInput(ctx, tmp)
+	var arg0 *model.Pagination
+	if tmp, ok := rawArgs["pagination"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pagination"))
+		arg0, err = ec.unmarshalOPagination2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPagination(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
-	var arg1 *model.QueryUsersSortInput
+	args["pagination"] = arg0
+	var arg1 *model.UsersQuery
+	if tmp, ok := rawArgs["query"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("query"))
+		arg1, err = ec.unmarshalOUsersQuery2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUsersQuery(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["query"] = arg1
+	var arg2 *model.UsersSort
 	if tmp, ok := rawArgs["sort"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sort"))
-		arg1, err = ec.unmarshalOQueryUsersSortInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryUsersSortInput(ctx, tmp)
+		arg2, err = ec.unmarshalOUsersSort2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUsersSort(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["sort"] = arg1
+	args["sort"] = arg2
 	return args, nil
 }
 
@@ -2269,8 +2314,8 @@ func (ec *executionContext) fieldContext_AuditLog_createdAt(ctx context.Context,
 	return fc, nil
 }
 
-func (ec *executionContext) _AuditLogs_pagination(ctx context.Context, field graphql.CollectedField, obj *model.AuditLogs) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_AuditLogs_pagination(ctx, field)
+func (ec *executionContext) _AuditLogs_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.AuditLogs) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_AuditLogs_pageInfo(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -2283,7 +2328,7 @@ func (ec *executionContext) _AuditLogs_pagination(ctx context.Context, field gra
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Pagination, nil
+		return obj.PageInfo, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2295,12 +2340,12 @@ func (ec *executionContext) _AuditLogs_pagination(ctx context.Context, field gra
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Pagination)
+	res := resTmp.(*model.PageInfo)
 	fc.Result = res
-	return ec.marshalNPagination2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPagination(ctx, field.Selections, res)
+	return ec.marshalNPageInfo2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPageInfo(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_AuditLogs_pagination(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_AuditLogs_pageInfo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "AuditLogs",
 		Field:      field,
@@ -2309,13 +2354,13 @@ func (ec *executionContext) fieldContext_AuditLogs_pagination(ctx context.Contex
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "results":
-				return ec.fieldContext_Pagination_results(ctx, field)
+				return ec.fieldContext_PageInfo_results(ctx, field)
 			case "offset":
-				return ec.fieldContext_Pagination_offset(ctx, field)
+				return ec.fieldContext_PageInfo_offset(ctx, field)
 			case "limit":
-				return ec.fieldContext_Pagination_limit(ctx, field)
+				return ec.fieldContext_PageInfo_limit(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Pagination", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
 		},
 	}
 	return fc, nil
@@ -3144,8 +3189,8 @@ func (ec *executionContext) fieldContext_Mutation_updateUser(ctx context.Context
 	return fc, nil
 }
 
-func (ec *executionContext) _Pagination_results(ctx context.Context, field graphql.CollectedField, obj *model.Pagination) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Pagination_results(ctx, field)
+func (ec *executionContext) _PageInfo_results(ctx context.Context, field graphql.CollectedField, obj *model.PageInfo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PageInfo_results(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -3175,9 +3220,9 @@ func (ec *executionContext) _Pagination_results(ctx context.Context, field graph
 	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Pagination_results(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_PageInfo_results(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Pagination",
+		Object:     "PageInfo",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -3188,8 +3233,8 @@ func (ec *executionContext) fieldContext_Pagination_results(ctx context.Context,
 	return fc, nil
 }
 
-func (ec *executionContext) _Pagination_offset(ctx context.Context, field graphql.CollectedField, obj *model.Pagination) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Pagination_offset(ctx, field)
+func (ec *executionContext) _PageInfo_offset(ctx context.Context, field graphql.CollectedField, obj *model.PageInfo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PageInfo_offset(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -3219,9 +3264,9 @@ func (ec *executionContext) _Pagination_offset(ctx context.Context, field graphq
 	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Pagination_offset(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_PageInfo_offset(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Pagination",
+		Object:     "PageInfo",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -3232,8 +3277,8 @@ func (ec *executionContext) fieldContext_Pagination_offset(ctx context.Context, 
 	return fc, nil
 }
 
-func (ec *executionContext) _Pagination_limit(ctx context.Context, field graphql.CollectedField, obj *model.Pagination) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Pagination_limit(ctx, field)
+func (ec *executionContext) _PageInfo_limit(ctx context.Context, field graphql.CollectedField, obj *model.PageInfo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PageInfo_limit(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -3263,9 +3308,9 @@ func (ec *executionContext) _Pagination_limit(ctx context.Context, field graphql
 	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Pagination_limit(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_PageInfo_limit(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Pagination",
+		Object:     "PageInfo",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -3291,7 +3336,7 @@ func (ec *executionContext) _Query_auditLogs(ctx context.Context, field graphql.
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().AuditLogs(rctx, fc.Args["input"].(*model.QueryAuditLogsInput), fc.Args["sort"].(*model.QueryAuditLogsSortInput))
+			return ec.resolvers.Query().AuditLogs(rctx, fc.Args["pagination"].(*model.Pagination), fc.Args["query"].(*model.AuditLogsQuery), fc.Args["sort"].(*model.AuditLogsSort))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -3335,8 +3380,8 @@ func (ec *executionContext) fieldContext_Query_auditLogs(ctx context.Context, fi
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "pagination":
-				return ec.fieldContext_AuditLogs_pagination(ctx, field)
+			case "pageInfo":
+				return ec.fieldContext_AuditLogs_pageInfo(ctx, field)
 			case "nodes":
 				return ec.fieldContext_AuditLogs_nodes(ctx, field)
 			}
@@ -3372,7 +3417,7 @@ func (ec *executionContext) _Query_roles(ctx context.Context, field graphql.Coll
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Roles(rctx, fc.Args["input"].(*model.QueryRolesInput), fc.Args["sort"].(*model.QueryRolesSortInput))
+			return ec.resolvers.Query().Roles(rctx, fc.Args["pagination"].(*model.Pagination), fc.Args["query"].(*model.RolesQuery), fc.Args["sort"].(*model.RolesSort))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -3416,8 +3461,8 @@ func (ec *executionContext) fieldContext_Query_roles(ctx context.Context, field 
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "pagination":
-				return ec.fieldContext_Roles_pagination(ctx, field)
+			case "pageInfo":
+				return ec.fieldContext_Roles_pageInfo(ctx, field)
 			case "nodes":
 				return ec.fieldContext_Roles_nodes(ctx, field)
 			}
@@ -3453,7 +3498,7 @@ func (ec *executionContext) _Query_systems(ctx context.Context, field graphql.Co
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Systems(rctx, fc.Args["input"].(*model.QuerySystemsInput), fc.Args["sort"].(*model.QuerySystemsSortInput))
+			return ec.resolvers.Query().Systems(rctx, fc.Args["pagination"].(*model.Pagination), fc.Args["query"].(*model.SystemsQuery), fc.Args["sort"].(*model.SystemsSort))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -3497,8 +3542,8 @@ func (ec *executionContext) fieldContext_Query_systems(ctx context.Context, fiel
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "pagination":
-				return ec.fieldContext_Systems_pagination(ctx, field)
+			case "pageInfo":
+				return ec.fieldContext_Systems_pageInfo(ctx, field)
 			case "nodes":
 				return ec.fieldContext_Systems_nodes(ctx, field)
 			}
@@ -3534,7 +3579,7 @@ func (ec *executionContext) _Query_teams(ctx context.Context, field graphql.Coll
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Teams(rctx, fc.Args["input"].(*model.QueryTeamsInput), fc.Args["sort"].(*model.QueryTeamsSortInput))
+			return ec.resolvers.Query().Teams(rctx, fc.Args["pagination"].(*model.Pagination), fc.Args["input"].(*model.TeamsQuery), fc.Args["sort"].(*model.TeamsSort))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -3578,8 +3623,8 @@ func (ec *executionContext) fieldContext_Query_teams(ctx context.Context, field 
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "pagination":
-				return ec.fieldContext_Teams_pagination(ctx, field)
+			case "pageInfo":
+				return ec.fieldContext_Teams_pageInfo(ctx, field)
 			case "nodes":
 				return ec.fieldContext_Teams_nodes(ctx, field)
 			}
@@ -3704,7 +3749,7 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Users(rctx, fc.Args["input"].(*model.QueryUsersInput), fc.Args["sort"].(*model.QueryUsersSortInput))
+			return ec.resolvers.Query().Users(rctx, fc.Args["pagination"].(*model.Pagination), fc.Args["query"].(*model.UsersQuery), fc.Args["sort"].(*model.UsersSort))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -3748,8 +3793,8 @@ func (ec *executionContext) fieldContext_Query_users(ctx context.Context, field 
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "pagination":
-				return ec.fieldContext_Users_pagination(ctx, field)
+			case "pageInfo":
+				return ec.fieldContext_Users_pageInfo(ctx, field)
 			case "nodes":
 				return ec.fieldContext_Users_nodes(ctx, field)
 			}
@@ -4499,8 +4544,8 @@ func (ec *executionContext) fieldContext_RoleBinding_team(ctx context.Context, f
 	return fc, nil
 }
 
-func (ec *executionContext) _Roles_pagination(ctx context.Context, field graphql.CollectedField, obj *model.Roles) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Roles_pagination(ctx, field)
+func (ec *executionContext) _Roles_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.Roles) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Roles_pageInfo(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -4513,7 +4558,7 @@ func (ec *executionContext) _Roles_pagination(ctx context.Context, field graphql
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Pagination, nil
+		return obj.PageInfo, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4525,12 +4570,12 @@ func (ec *executionContext) _Roles_pagination(ctx context.Context, field graphql
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Pagination)
+	res := resTmp.(*model.PageInfo)
 	fc.Result = res
-	return ec.marshalNPagination2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPagination(ctx, field.Selections, res)
+	return ec.marshalNPageInfo2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPageInfo(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Roles_pagination(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Roles_pageInfo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Roles",
 		Field:      field,
@@ -4539,13 +4584,13 @@ func (ec *executionContext) fieldContext_Roles_pagination(ctx context.Context, f
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "results":
-				return ec.fieldContext_Pagination_results(ctx, field)
+				return ec.fieldContext_PageInfo_results(ctx, field)
 			case "offset":
-				return ec.fieldContext_Pagination_offset(ctx, field)
+				return ec.fieldContext_PageInfo_offset(ctx, field)
 			case "limit":
-				return ec.fieldContext_Pagination_limit(ctx, field)
+				return ec.fieldContext_PageInfo_limit(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Pagination", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
 		},
 	}
 	return fc, nil
@@ -4739,8 +4784,8 @@ func (ec *executionContext) fieldContext_System_name(ctx context.Context, field 
 	return fc, nil
 }
 
-func (ec *executionContext) _Systems_pagination(ctx context.Context, field graphql.CollectedField, obj *model.Systems) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Systems_pagination(ctx, field)
+func (ec *executionContext) _Systems_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.Systems) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Systems_pageInfo(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -4753,7 +4798,7 @@ func (ec *executionContext) _Systems_pagination(ctx context.Context, field graph
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Pagination, nil
+		return obj.PageInfo, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4765,12 +4810,12 @@ func (ec *executionContext) _Systems_pagination(ctx context.Context, field graph
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Pagination)
+	res := resTmp.(*model.PageInfo)
 	fc.Result = res
-	return ec.marshalNPagination2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPagination(ctx, field.Selections, res)
+	return ec.marshalNPageInfo2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPageInfo(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Systems_pagination(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Systems_pageInfo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Systems",
 		Field:      field,
@@ -4779,13 +4824,13 @@ func (ec *executionContext) fieldContext_Systems_pagination(ctx context.Context,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "results":
-				return ec.fieldContext_Pagination_results(ctx, field)
+				return ec.fieldContext_PageInfo_results(ctx, field)
 			case "offset":
-				return ec.fieldContext_Pagination_offset(ctx, field)
+				return ec.fieldContext_PageInfo_offset(ctx, field)
 			case "limit":
-				return ec.fieldContext_Pagination_limit(ctx, field)
+				return ec.fieldContext_PageInfo_limit(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Pagination", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
 		},
 	}
 	return fc, nil
@@ -5113,8 +5158,8 @@ func (ec *executionContext) fieldContext_Team_metadata(ctx context.Context, fiel
 	return fc, nil
 }
 
-func (ec *executionContext) _Teams_pagination(ctx context.Context, field graphql.CollectedField, obj *model.Teams) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Teams_pagination(ctx, field)
+func (ec *executionContext) _Teams_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.Teams) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Teams_pageInfo(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -5127,7 +5172,7 @@ func (ec *executionContext) _Teams_pagination(ctx context.Context, field graphql
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Pagination, nil
+		return obj.PageInfo, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5139,12 +5184,12 @@ func (ec *executionContext) _Teams_pagination(ctx context.Context, field graphql
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Pagination)
+	res := resTmp.(*model.PageInfo)
 	fc.Result = res
-	return ec.marshalNPagination2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPagination(ctx, field.Selections, res)
+	return ec.marshalNPageInfo2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPageInfo(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Teams_pagination(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Teams_pageInfo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Teams",
 		Field:      field,
@@ -5153,13 +5198,13 @@ func (ec *executionContext) fieldContext_Teams_pagination(ctx context.Context, f
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "results":
-				return ec.fieldContext_Pagination_results(ctx, field)
+				return ec.fieldContext_PageInfo_results(ctx, field)
 			case "offset":
-				return ec.fieldContext_Pagination_offset(ctx, field)
+				return ec.fieldContext_PageInfo_offset(ctx, field)
 			case "limit":
-				return ec.fieldContext_Pagination_limit(ctx, field)
+				return ec.fieldContext_PageInfo_limit(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Pagination", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
 		},
 	}
 	return fc, nil
@@ -5516,8 +5561,8 @@ func (ec *executionContext) fieldContext_User_createdAt(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Users_pagination(ctx context.Context, field graphql.CollectedField, obj *model.Users) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Users_pagination(ctx, field)
+func (ec *executionContext) _Users_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.Users) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Users_pageInfo(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -5530,7 +5575,7 @@ func (ec *executionContext) _Users_pagination(ctx context.Context, field graphql
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Pagination, nil
+		return obj.PageInfo, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5542,12 +5587,12 @@ func (ec *executionContext) _Users_pagination(ctx context.Context, field graphql
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Pagination)
+	res := resTmp.(*model.PageInfo)
 	fc.Result = res
-	return ec.marshalNPagination2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPagination(ctx, field.Selections, res)
+	return ec.marshalNPageInfo2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPageInfo(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Users_pagination(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Users_pageInfo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Users",
 		Field:      field,
@@ -5556,13 +5601,13 @@ func (ec *executionContext) fieldContext_Users_pagination(ctx context.Context, f
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "results":
-				return ec.fieldContext_Pagination_results(ctx, field)
+				return ec.fieldContext_PageInfo_results(ctx, field)
 			case "offset":
-				return ec.fieldContext_Pagination_offset(ctx, field)
+				return ec.fieldContext_PageInfo_offset(ctx, field)
 			case "limit":
-				return ec.fieldContext_Pagination_limit(ctx, field)
+				return ec.fieldContext_PageInfo_limit(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Pagination", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
 		},
 	}
 	return fc, nil
@@ -7492,6 +7537,84 @@ func (ec *executionContext) unmarshalInputAssignRoleInput(ctx context.Context, o
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputAuditLogsQuery(ctx context.Context, obj interface{}) (model.AuditLogsQuery, error) {
+	var it model.AuditLogsQuery
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	for k, v := range asMap {
+		switch k {
+		case "teamId":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamId"))
+			it.TeamID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "userId":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
+			it.UserID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "systemId":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("systemId"))
+			it.SystemID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "synchronizationId":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("synchronizationId"))
+			it.SynchronizationID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputAuditLogsSort(ctx context.Context, obj interface{}) (model.AuditLogsSort, error) {
+	var it model.AuditLogsSort
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	for k, v := range asMap {
+		switch k {
+		case "field":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
+			it.Field, err = ec.unmarshalNAuditLogSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAuditLogSortField(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "direction":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
+			it.Direction, err = ec.unmarshalNSortDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSortDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputCreateTeamInput(ctx context.Context, obj interface{}) (model.CreateTeamInput, error) {
 	var it model.CreateTeamInput
 	asMap := map[string]interface{}{}
@@ -7562,8 +7685,8 @@ func (ec *executionContext) unmarshalInputCreateUserInput(ctx context.Context, o
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputPaginationInput(ctx context.Context, obj interface{}) (model.PaginationInput, error) {
-	var it model.PaginationInput
+func (ec *executionContext) unmarshalInputPagination(ctx context.Context, obj interface{}) (model.Pagination, error) {
+	var it model.Pagination
 	asMap := map[string]interface{}{}
 	for k, v := range obj.(map[string]interface{}) {
 		asMap[k] = v
@@ -7591,380 +7714,6 @@ func (ec *executionContext) unmarshalInputPaginationInput(ctx context.Context, o
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
 			it.Limit, err = ec.unmarshalNInt2int(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputQueryAuditLogsInput(ctx context.Context, obj interface{}) (model.QueryAuditLogsInput, error) {
-	var it model.QueryAuditLogsInput
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "pagination":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pagination"))
-			it.Pagination, err = ec.unmarshalOPaginationInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPaginationInput(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "teamId":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamId"))
-			it.TeamID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "userId":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
-			it.UserID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "systemId":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("systemId"))
-			it.SystemID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "synchronizationId":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("synchronizationId"))
-			it.SynchronizationID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputQueryAuditLogsSortInput(ctx context.Context, obj interface{}) (model.QueryAuditLogsSortInput, error) {
-	var it model.QueryAuditLogsSortInput
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "field":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
-			it.Field, err = ec.unmarshalNAuditLogSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAuditLogSortField(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "direction":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
-			it.Direction, err = ec.unmarshalNSortDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSortDirection(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputQueryRolesInput(ctx context.Context, obj interface{}) (model.QueryRolesInput, error) {
-	var it model.QueryRolesInput
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "pagination":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pagination"))
-			it.Pagination, err = ec.unmarshalOPaginationInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPaginationInput(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-			it.Name, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "resource":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resource"))
-			it.Resource, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "accessLevel":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("accessLevel"))
-			it.AccessLevel, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "permission":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("permission"))
-			it.Permission, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputQueryRolesSortInput(ctx context.Context, obj interface{}) (model.QueryRolesSortInput, error) {
-	var it model.QueryRolesSortInput
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "field":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
-			it.Field, err = ec.unmarshalNRoleSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRoleSortField(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "direction":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
-			it.Direction, err = ec.unmarshalNSortDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSortDirection(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputQuerySystemsInput(ctx context.Context, obj interface{}) (model.QuerySystemsInput, error) {
-	var it model.QuerySystemsInput
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "pagination":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pagination"))
-			it.Pagination, err = ec.unmarshalOPaginationInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPaginationInput(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-			it.Name, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputQuerySystemsSortInput(ctx context.Context, obj interface{}) (model.QuerySystemsSortInput, error) {
-	var it model.QuerySystemsSortInput
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "field":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
-			it.Field, err = ec.unmarshalNSystemSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSystemSortField(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "direction":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
-			it.Direction, err = ec.unmarshalNSortDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSortDirection(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputQueryTeamsInput(ctx context.Context, obj interface{}) (model.QueryTeamsInput, error) {
-	var it model.QueryTeamsInput
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "pagination":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pagination"))
-			it.Pagination, err = ec.unmarshalOPaginationInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPaginationInput(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "slug":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-			it.Slug, err = ec.unmarshalOSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSlug(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-			it.Name, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputQueryTeamsSortInput(ctx context.Context, obj interface{}) (model.QueryTeamsSortInput, error) {
-	var it model.QueryTeamsSortInput
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "field":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
-			it.Field, err = ec.unmarshalNTeamSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamSortField(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "direction":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
-			it.Direction, err = ec.unmarshalNSortDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSortDirection(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputQueryUsersInput(ctx context.Context, obj interface{}) (model.QueryUsersInput, error) {
-	var it model.QueryUsersInput
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "pagination":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pagination"))
-			it.Pagination, err = ec.unmarshalOPaginationInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPaginationInput(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "email":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("email"))
-			it.Email, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-			it.Name, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputQueryUsersSortInput(ctx context.Context, obj interface{}) (model.QueryUsersSortInput, error) {
-	var it model.QueryUsersSortInput
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "field":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
-			it.Field, err = ec.unmarshalNUserSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserSortField(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "direction":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
-			it.Direction, err = ec.unmarshalNSortDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSortDirection(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -8044,6 +7793,200 @@ func (ec *executionContext) unmarshalInputRemoveUsersFromTeamInput(ctx context.C
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputRolesQuery(ctx context.Context, obj interface{}) (model.RolesQuery, error) {
+	var it model.RolesQuery
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	for k, v := range asMap {
+		switch k {
+		case "name":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			it.Name, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "resource":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resource"))
+			it.Resource, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "accessLevel":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("accessLevel"))
+			it.AccessLevel, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "permission":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("permission"))
+			it.Permission, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputRolesSort(ctx context.Context, obj interface{}) (model.RolesSort, error) {
+	var it model.RolesSort
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	for k, v := range asMap {
+		switch k {
+		case "field":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
+			it.Field, err = ec.unmarshalNRoleSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRoleSortField(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "direction":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
+			it.Direction, err = ec.unmarshalNSortDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSortDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputSystemsQuery(ctx context.Context, obj interface{}) (model.SystemsQuery, error) {
+	var it model.SystemsQuery
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	for k, v := range asMap {
+		switch k {
+		case "name":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			it.Name, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputSystemsSort(ctx context.Context, obj interface{}) (model.SystemsSort, error) {
+	var it model.SystemsSort
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	for k, v := range asMap {
+		switch k {
+		case "field":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
+			it.Field, err = ec.unmarshalNSystemSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSystemSortField(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "direction":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
+			it.Direction, err = ec.unmarshalNSortDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSortDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputTeamsQuery(ctx context.Context, obj interface{}) (model.TeamsQuery, error) {
+	var it model.TeamsQuery
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	for k, v := range asMap {
+		switch k {
+		case "slug":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
+			it.Slug, err = ec.unmarshalOSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSlug(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "name":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			it.Name, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputTeamsSort(ctx context.Context, obj interface{}) (model.TeamsSort, error) {
+	var it model.TeamsSort
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	for k, v := range asMap {
+		switch k {
+		case "field":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
+			it.Field, err = ec.unmarshalNTeamSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamSortField(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "direction":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
+			it.Direction, err = ec.unmarshalNSortDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSortDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputUpdateUserInput(ctx context.Context, obj interface{}) (model.UpdateUserInput, error) {
 	var it model.UpdateUserInput
 	asMap := map[string]interface{}{}
@@ -8074,6 +8017,68 @@ func (ec *executionContext) unmarshalInputUpdateUserInput(ctx context.Context, o
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
 			it.Name, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputUsersQuery(ctx context.Context, obj interface{}) (model.UsersQuery, error) {
+	var it model.UsersQuery
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	for k, v := range asMap {
+		switch k {
+		case "email":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("email"))
+			it.Email, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "name":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			it.Name, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputUsersSort(ctx context.Context, obj interface{}) (model.UsersSort, error) {
+	var it model.UsersSort
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	for k, v := range asMap {
+		switch k {
+		case "field":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
+			it.Field, err = ec.unmarshalNUserSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserSortField(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "direction":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
+			it.Direction, err = ec.unmarshalNSortDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSortDirection(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -8250,9 +8255,9 @@ func (ec *executionContext) _AuditLogs(ctx context.Context, sel ast.SelectionSet
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("AuditLogs")
-		case "pagination":
+		case "pageInfo":
 
-			out.Values[i] = ec._AuditLogs_pagination(ctx, field, obj)
+			out.Values[i] = ec._AuditLogs_pageInfo(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -8386,33 +8391,33 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 	return out
 }
 
-var paginationImplementors = []string{"Pagination"}
+var pageInfoImplementors = []string{"PageInfo"}
 
-func (ec *executionContext) _Pagination(ctx context.Context, sel ast.SelectionSet, obj *model.Pagination) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, paginationImplementors)
+func (ec *executionContext) _PageInfo(ctx context.Context, sel ast.SelectionSet, obj *model.PageInfo) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, pageInfoImplementors)
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
 	for i, field := range fields {
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("Pagination")
+			out.Values[i] = graphql.MarshalString("PageInfo")
 		case "results":
 
-			out.Values[i] = ec._Pagination_results(ctx, field, obj)
+			out.Values[i] = ec._PageInfo_results(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
 		case "offset":
 
-			out.Values[i] = ec._Pagination_offset(ctx, field, obj)
+			out.Values[i] = ec._PageInfo_offset(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
 		case "limit":
 
-			out.Values[i] = ec._Pagination_limit(ctx, field, obj)
+			out.Values[i] = ec._PageInfo_limit(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -8805,9 +8810,9 @@ func (ec *executionContext) _Roles(ctx context.Context, sel ast.SelectionSet, ob
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Roles")
-		case "pagination":
+		case "pageInfo":
 
-			out.Values[i] = ec._Roles_pagination(ctx, field, obj)
+			out.Values[i] = ec._Roles_pageInfo(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -8903,9 +8908,9 @@ func (ec *executionContext) _Systems(ctx context.Context, sel ast.SelectionSet, 
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Systems")
-		case "pagination":
+		case "pageInfo":
 
-			out.Values[i] = ec._Systems_pagination(ctx, field, obj)
+			out.Values[i] = ec._Systems_pageInfo(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -9021,9 +9026,9 @@ func (ec *executionContext) _Teams(ctx context.Context, sel ast.SelectionSet, ob
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Teams")
-		case "pagination":
+		case "pageInfo":
 
-			out.Values[i] = ec._Teams_pagination(ctx, field, obj)
+			out.Values[i] = ec._Teams_pageInfo(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -9139,9 +9144,9 @@ func (ec *executionContext) _Users(ctx context.Context, sel ast.SelectionSet, ob
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Users")
-		case "pagination":
+		case "pageInfo":
 
-			out.Values[i] = ec._Users_pagination(ctx, field, obj)
+			out.Values[i] = ec._Users_pageInfo(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -9629,14 +9634,14 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 	return res
 }
 
-func (ec *executionContext) marshalNPagination2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPagination(ctx context.Context, sel ast.SelectionSet, v *model.Pagination) graphql.Marshaler {
+func (ec *executionContext) marshalNPageInfo2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPageInfo(ctx context.Context, sel ast.SelectionSet, v *model.PageInfo) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
 		}
 		return graphql.Null
 	}
-	return ec._Pagination(ctx, sel, v)
+	return ec._PageInfo(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNRemoveRoleInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRemoveRoleInput(ctx context.Context, v interface{}) (model.RemoveRoleInput, error) {
@@ -10409,6 +10414,22 @@ func (ec *executionContext) marshalN__TypeKind2string(ctx context.Context, sel a
 	return res
 }
 
+func (ec *executionContext) unmarshalOAuditLogsQuery2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAuditLogsQuery(ctx context.Context, v interface{}) (*model.AuditLogsQuery, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputAuditLogsQuery(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOAuditLogsSort2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAuditLogsSort(ctx context.Context, v interface{}) (*model.AuditLogsSort, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputAuditLogsSort(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalOBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
 	res, err := graphql.UnmarshalBoolean(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -10451,91 +10472,27 @@ func (ec *executionContext) marshalOMap2map(ctx context.Context, sel ast.Selecti
 	return res
 }
 
-func (ec *executionContext) unmarshalOPaginationInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPaginationInput(ctx context.Context, v interface{}) (*model.PaginationInput, error) {
+func (ec *executionContext) unmarshalOPagination2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPagination(ctx context.Context, v interface{}) (*model.Pagination, error) {
 	if v == nil {
 		return nil, nil
 	}
-	res, err := ec.unmarshalInputPaginationInput(ctx, v)
+	res, err := ec.unmarshalInputPagination(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) unmarshalOQueryAuditLogsInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryAuditLogsInput(ctx context.Context, v interface{}) (*model.QueryAuditLogsInput, error) {
+func (ec *executionContext) unmarshalORolesQuery2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRolesQuery(ctx context.Context, v interface{}) (*model.RolesQuery, error) {
 	if v == nil {
 		return nil, nil
 	}
-	res, err := ec.unmarshalInputQueryAuditLogsInput(ctx, v)
+	res, err := ec.unmarshalInputRolesQuery(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) unmarshalOQueryAuditLogsSortInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryAuditLogsSortInput(ctx context.Context, v interface{}) (*model.QueryAuditLogsSortInput, error) {
+func (ec *executionContext) unmarshalORolesSort2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRolesSort(ctx context.Context, v interface{}) (*model.RolesSort, error) {
 	if v == nil {
 		return nil, nil
 	}
-	res, err := ec.unmarshalInputQueryAuditLogsSortInput(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalOQueryRolesInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryRolesInput(ctx context.Context, v interface{}) (*model.QueryRolesInput, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputQueryRolesInput(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalOQueryRolesSortInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryRolesSortInput(ctx context.Context, v interface{}) (*model.QueryRolesSortInput, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputQueryRolesSortInput(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalOQuerySystemsInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQuerySystemsInput(ctx context.Context, v interface{}) (*model.QuerySystemsInput, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputQuerySystemsInput(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalOQuerySystemsSortInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQuerySystemsSortInput(ctx context.Context, v interface{}) (*model.QuerySystemsSortInput, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputQuerySystemsSortInput(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalOQueryTeamsInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryTeamsInput(ctx context.Context, v interface{}) (*model.QueryTeamsInput, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputQueryTeamsInput(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalOQueryTeamsSortInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryTeamsSortInput(ctx context.Context, v interface{}) (*model.QueryTeamsSortInput, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputQueryTeamsSortInput(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalOQueryUsersInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryUsersInput(ctx context.Context, v interface{}) (*model.QueryUsersInput, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputQueryUsersInput(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalOQueryUsersSortInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐQueryUsersSortInput(ctx context.Context, v interface{}) (*model.QueryUsersSortInput, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputQueryUsersSortInput(ctx, v)
+	res, err := ec.unmarshalInputRolesSort(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
@@ -10585,11 +10542,43 @@ func (ec *executionContext) marshalOSystem2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpk
 	return ec._System(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalOSystemsQuery2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSystemsQuery(ctx context.Context, v interface{}) (*model.SystemsQuery, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputSystemsQuery(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOSystemsSort2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSystemsSort(ctx context.Context, v interface{}) (*model.SystemsSort, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputSystemsSort(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalOTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐTeam(ctx context.Context, sel ast.SelectionSet, v *dbmodels.Team) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._Team(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOTeamsQuery2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamsQuery(ctx context.Context, v interface{}) (*model.TeamsQuery, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputTeamsQuery(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOTeamsSort2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamsSort(ctx context.Context, v interface{}) (*model.TeamsSort, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputTeamsSort(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalOTime2timeᚐTime(ctx context.Context, v interface{}) (time.Time, error) {
@@ -10623,6 +10612,22 @@ func (ec *executionContext) marshalOUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkg�
 		return graphql.Null
 	}
 	return ec._User(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOUsersQuery2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUsersQuery(ctx context.Context, v interface{}) (*model.UsersQuery, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputUsersQuery(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOUsersSort2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUsersSort(ctx context.Context, v interface{}) (*model.UsersSort, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputUsersSort(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {

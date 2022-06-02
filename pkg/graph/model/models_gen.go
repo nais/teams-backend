@@ -44,9 +44,29 @@ type AssignRoleInput struct {
 // Audit log collection.
 type AuditLogs struct {
 	// Object related to pagination of the collection.
-	Pagination *Pagination `json:"pagination"`
+	PageInfo *PageInfo `json:"pageInfo"`
 	// The list of audit log entries in the collection.
 	Nodes []*dbmodels.AuditLog `json:"nodes"`
+}
+
+// Input for filtering a collection of audit log entries.
+type AuditLogsQuery struct {
+	// Filter by team ID.
+	TeamID *uuid.UUID `json:"teamId"`
+	// Filter by user ID.
+	UserID *uuid.UUID `json:"userId"`
+	// Filter by system ID.
+	SystemID *uuid.UUID `json:"systemId"`
+	// Filter by synchronization ID.
+	SynchronizationID *uuid.UUID `json:"synchronizationId"`
+}
+
+// Input for sorting a collection of audit log entries.
+type AuditLogsSort struct {
+	// Field to sort by.
+	Field AuditLogSortField `json:"field"`
+	// Sort direction.
+	Direction SortDirection `json:"direction"`
 }
 
 // Input for creating a new team.
@@ -68,7 +88,7 @@ type CreateUserInput struct {
 }
 
 // Pagination metadata attached to queries resulting in a collection of data.
-type Pagination struct {
+type PageInfo struct {
 	// Total number of results that matches the query.
 	Results int `json:"results"`
 	// Which record number the returned collection starts at.
@@ -80,107 +100,11 @@ type Pagination struct {
 // When querying collections this input is used to control the offset and the page size of the returned slice.
 //
 // Please note that collections are not stateful, so data added or created in between your paginated requests might not be reflected in the returned result set.
-type PaginationInput struct {
+type Pagination struct {
 	// The offset to start fetching entries.
 	Offset int `json:"offset"`
 	// Number of entries per page.
 	Limit int `json:"limit"`
-}
-
-// Input for filtering a collection of audit log entries.
-type QueryAuditLogsInput struct {
-	// Pagination options.
-	Pagination *PaginationInput `json:"pagination"`
-	// Filter by team ID.
-	TeamID *uuid.UUID `json:"teamId"`
-	// Filter by user ID.
-	UserID *uuid.UUID `json:"userId"`
-	// Filter by system ID.
-	SystemID *uuid.UUID `json:"systemId"`
-	// Filter by synchronization ID.
-	SynchronizationID *uuid.UUID `json:"synchronizationId"`
-}
-
-// Input for sorting a collection of audit log entries.
-type QueryAuditLogsSortInput struct {
-	// Field to sort by.
-	Field AuditLogSortField `json:"field"`
-	// Sort direction.
-	Direction SortDirection `json:"direction"`
-}
-
-// Input for filtering a collection of roles.
-type QueryRolesInput struct {
-	// Pagination options.
-	Pagination *PaginationInput `json:"pagination"`
-	// Filter by role name.
-	Name *string `json:"name"`
-	// Filter by resource.
-	Resource *string `json:"resource"`
-	// Filter by access level.
-	AccessLevel *string `json:"accessLevel"`
-	// Filter by permission.
-	Permission *string `json:"permission"`
-}
-
-// Input for sorting a collection of roles.
-type QueryRolesSortInput struct {
-	// Field to sort by.
-	Field RoleSortField `json:"field"`
-	// Sort direction.
-	Direction SortDirection `json:"direction"`
-}
-
-// Input for filtering a collection of systems.
-type QuerySystemsInput struct {
-	// Pagination options.
-	Pagination *PaginationInput `json:"pagination"`
-	// Filter by system name.
-	Name *string `json:"name"`
-}
-
-// Input for sorting a collection of systems.
-type QuerySystemsSortInput struct {
-	// Field to sort by.
-	Field SystemSortField `json:"field"`
-	// Sort direction.
-	Direction SortDirection `json:"direction"`
-}
-
-// Input for filtering a collection of teams.
-type QueryTeamsInput struct {
-	// Pagination options.
-	Pagination *PaginationInput `json:"pagination"`
-	// Filter by slug.
-	Slug *dbmodels.Slug `json:"slug"`
-	// Filter by name.
-	Name *string `json:"name"`
-}
-
-// Input for sorting a collection of teams.
-type QueryTeamsSortInput struct {
-	// Field to sort by.
-	Field TeamSortField `json:"field"`
-	// Sort direction.
-	Direction SortDirection `json:"direction"`
-}
-
-// Input for filtering a collection of users.
-type QueryUsersInput struct {
-	// Pagination options.
-	Pagination *PaginationInput `json:"pagination"`
-	// Filter by user email.
-	Email *string `json:"email"`
-	// Filter by user name.
-	Name *string `json:"name"`
-}
-
-// Input for sorting a collection of users.
-type QueryUsersSortInput struct {
-	// Field to sort by.
-	Field UserSortField `json:"field"`
-	// Sort direction.
-	Direction SortDirection `json:"direction"`
 }
 
 // Input for removing a rule.
@@ -204,25 +128,75 @@ type RemoveUsersFromTeamInput struct {
 // Role collection.
 type Roles struct {
 	// Object related to pagination of the collection.
-	Pagination *Pagination `json:"pagination"`
+	PageInfo *PageInfo `json:"pageInfo"`
 	// The list of roles in the collection.
 	Nodes []*dbmodels.Role `json:"nodes"`
+}
+
+// Input for filtering a collection of roles.
+type RolesQuery struct {
+	// Filter by role name.
+	Name *string `json:"name"`
+	// Filter by resource.
+	Resource *string `json:"resource"`
+	// Filter by access level.
+	AccessLevel *string `json:"accessLevel"`
+	// Filter by permission.
+	Permission *string `json:"permission"`
+}
+
+// Input for sorting a collection of roles.
+type RolesSort struct {
+	// Field to sort by.
+	Field RoleSortField `json:"field"`
+	// Sort direction.
+	Direction SortDirection `json:"direction"`
 }
 
 // System collection.
 type Systems struct {
 	// Object related to pagination of the collection.
-	Pagination *Pagination `json:"pagination"`
+	PageInfo *PageInfo `json:"pageInfo"`
 	// The list of system objects in the collection.
 	Nodes []*dbmodels.System `json:"nodes"`
+}
+
+// Input for filtering a collection of systems.
+type SystemsQuery struct {
+	// Filter by system name.
+	Name *string `json:"name"`
+}
+
+// Input for sorting a collection of systems.
+type SystemsSort struct {
+	// Field to sort by.
+	Field SystemSortField `json:"field"`
+	// Sort direction.
+	Direction SortDirection `json:"direction"`
 }
 
 // Team collection.
 type Teams struct {
 	// Object related to pagination of the collection.
-	Pagination *Pagination `json:"pagination"`
+	PageInfo *PageInfo `json:"pageInfo"`
 	// The list of team objects in the collection.
 	Nodes []*dbmodels.Team `json:"nodes"`
+}
+
+// Input for filtering a collection of teams.
+type TeamsQuery struct {
+	// Filter by slug.
+	Slug *dbmodels.Slug `json:"slug"`
+	// Filter by name.
+	Name *string `json:"name"`
+}
+
+// Input for sorting a collection of teams.
+type TeamsSort struct {
+	// Field to sort by.
+	Field TeamSortField `json:"field"`
+	// Sort direction.
+	Direction SortDirection `json:"direction"`
 }
 
 // Input for updating an existing user.
@@ -238,9 +212,25 @@ type UpdateUserInput struct {
 // User collection.
 type Users struct {
 	// Object related to pagination of the collection.
-	Pagination *Pagination `json:"pagination"`
+	PageInfo *PageInfo `json:"pageInfo"`
 	// The list of user objects in the collection.
 	Nodes []*dbmodels.User `json:"nodes"`
+}
+
+// Input for filtering a collection of users.
+type UsersQuery struct {
+	// Filter by user email.
+	Email *string `json:"email"`
+	// Filter by user name.
+	Name *string `json:"name"`
+}
+
+// Input for sorting a collection of users.
+type UsersSort struct {
+	// Field to sort by.
+	Field UserSortField `json:"field"`
+	// Sort direction.
+	Direction SortDirection `json:"direction"`
 }
 
 // Fields to sort the collection by.
@@ -325,13 +315,13 @@ func (e RoleSortField) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
-// Direction of the ordering.
+// Direction of the sort.
 type SortDirection string
 
 const (
-	// Order ascending.
+	// Sort ascending.
 	SortDirectionAsc SortDirection = "ASC"
-	// Order descending.
+	// Sort descending.
 	SortDirectionDesc SortDirection = "DESC"
 )
 

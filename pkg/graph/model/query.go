@@ -6,39 +6,33 @@ import (
 
 type Query interface {
 	GetQuery() interface{}
-	GetPagination() *PaginationInput
-}
-
-var fallbackPagination = &PaginationInput{
-	Offset: 0,
-	Limit:  10,
 }
 
 type QueryOrder interface {
 	GetOrderString() string
 }
 
-func (order QueryUsersSortInput) GetOrderString() string {
+func (order UsersSort) GetOrderString() string {
 	return string(order.Field) + " " + string(order.Direction)
 }
 
-func (order QueryTeamsSortInput) GetOrderString() string {
+func (order TeamsSort) GetOrderString() string {
 	return string(order.Field) + " " + string(order.Direction)
 }
 
-func (order QueryAuditLogsSortInput) GetOrderString() string {
+func (order AuditLogsSort) GetOrderString() string {
 	return string(order.Field) + " " + string(order.Direction)
 }
 
-func (order QuerySystemsSortInput) GetOrderString() string {
+func (order SystemsSort) GetOrderString() string {
 	return string(order.Field) + " " + string(order.Direction)
 }
 
-func (order QueryRolesSortInput) GetOrderString() string {
+func (order RolesSort) GetOrderString() string {
 	return string(order.Field) + " " + string(order.Direction)
 }
 
-func (in *QueryUsersInput) GetQuery() interface{} {
+func (in *UsersQuery) GetQuery() interface{} {
 	if in == nil {
 		return &dbmodels.User{}
 	}
@@ -48,7 +42,7 @@ func (in *QueryUsersInput) GetQuery() interface{} {
 	}
 }
 
-func (in *QueryTeamsInput) GetQuery() interface{} {
+func (in *TeamsQuery) GetQuery() interface{} {
 	if in == nil {
 		return &dbmodels.Team{}
 	}
@@ -58,7 +52,7 @@ func (in *QueryTeamsInput) GetQuery() interface{} {
 	}
 }
 
-func (in *QuerySystemsInput) GetQuery() interface{} {
+func (in *SystemsQuery) GetQuery() interface{} {
 	if in == nil {
 		return &dbmodels.System{}
 	}
@@ -67,7 +61,7 @@ func (in *QuerySystemsInput) GetQuery() interface{} {
 	}
 }
 
-func (in *QueryAuditLogsInput) GetQuery() interface{} {
+func (in *AuditLogsQuery) GetQuery() interface{} {
 	if in == nil {
 		return &dbmodels.AuditLog{}
 	}
@@ -79,7 +73,7 @@ func (in *QueryAuditLogsInput) GetQuery() interface{} {
 	}
 }
 
-func (in *QueryRolesInput) GetQuery() interface{} {
+func (in *RolesQuery) GetQuery() interface{} {
 	if in == nil {
 		return &dbmodels.Role{}
 	}
@@ -89,39 +83,4 @@ func (in *QueryRolesInput) GetQuery() interface{} {
 		AccessLevel: *in.AccessLevel,
 		Permission:  *in.Permission,
 	}
-}
-
-func (in *QueryUsersInput) GetPagination() *PaginationInput {
-	if in == nil || in.Pagination == nil {
-		return fallbackPagination
-	}
-	return in.Pagination
-}
-
-func (in *QueryTeamsInput) GetPagination() *PaginationInput {
-	if in == nil || in.Pagination == nil {
-		return fallbackPagination
-	}
-	return in.Pagination
-}
-
-func (in *QueryRolesInput) GetPagination() *PaginationInput {
-	if in == nil || in.Pagination == nil {
-		return fallbackPagination
-	}
-	return in.Pagination
-}
-
-func (in *QueryAuditLogsInput) GetPagination() *PaginationInput {
-	if in == nil || in.Pagination == nil {
-		return fallbackPagination
-	}
-	return in.Pagination
-}
-
-func (in *QuerySystemsInput) GetPagination() *PaginationInput {
-	if in == nil || in.Pagination == nil {
-		return fallbackPagination
-	}
-	return in.Pagination
 }

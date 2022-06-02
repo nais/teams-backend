@@ -61,18 +61,24 @@ func (r *Resolver) updateDB(ctx context.Context, obj Model) error {
 }
 
 // Run a query to get data from the database. Populates `collection` and returns pagination metadata.
-func (r *Resolver) paginatedQuery(ctx context.Context, input model.Query, sort model.QueryOrder, dbmodel interface{}, collection interface{}) (*model.Pagination, error) {
-	tx := r.db.WithContext(ctx).Model(dbmodel).Where(input.GetQuery()).Order(sort.GetOrderString())
-	pagination, tx := r.withPagination(input.GetPagination(), tx)
-	return pagination, tx.Find(collection).Error
+func (r *Resolver) paginatedQuery(ctx context.Context, pagination *model.Pagination, query model.Query, sort model.QueryOrder, dbmodel interface{}, collection interface{}) (*model.PageInfo, error) {
+	if pagination == nil {
+		pagination = &model.Pagination{
+			Offset: 0,
+			Limit:  10,
+		}
+	}
+	tx := r.db.WithContext(ctx).Model(dbmodel).Where(query.GetQuery()).Order(sort.GetOrderString())
+	pageInfo, tx := r.withPagination(pagination, tx)
+	return pageInfo, tx.Find(collection).Error
 }
 
 // Limit a query by its pagination parameters, count number of rows in dataset, and return pagination metadata.
-func (r *Resolver) withPagination(pagination *model.PaginationInput, tx *gorm.DB) (*model.Pagination, *gorm.DB) {
+func (r *Resolver) withPagination(pagination *model.Pagination, tx *gorm.DB) (*model.PageInfo, *gorm.DB) {
 	var count int64
 	tx = tx.Count(&count).Limit(pagination.Limit).Offset(pagination.Offset)
 
-	return &model.Pagination{
+	return &model.PageInfo{
 		Results: int(count),
 		Offset:  pagination.Offset,
 		Limit:   pagination.Limit,

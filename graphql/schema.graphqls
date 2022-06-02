@@ -5,7 +5,7 @@ type Query
 type Mutation
 
 "Pagination metadata attached to queries resulting in a collection of data."
-type Pagination {
+type PageInfo {
     "Total number of results that matches the query."
     results: Int!
 
@@ -21,7 +21,7 @@ When querying collections this input is used to control the offset and the page 
 
 Please note that collections are not stateful, so data added or created in between your paginated requests might not be reflected in the returned result set.
 """
-input PaginationInput {
+input Pagination {
     "The offset to start fetching entries."
     offset: Int! = 0
 
@@ -29,11 +29,11 @@ input PaginationInput {
     limit: Int! = 10
 }
 
-"Direction of the ordering."
+"Direction of the sort."
 enum SortDirection {
-    "Order ascending."
+    "Sort ascending."
     ASC
 
-    "Order descending."
+    "Sort descending."
     DESC
 }

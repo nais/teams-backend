@@ -7,7 +7,7 @@ import (
 
 func TestSortInputs(t *testing.T) {
 	t.Run("Users sorting", func(t *testing.T) {
-		order := QueryUsersSortInput{
+		order := UsersSort{
 			Field:     "name",
 			Direction: "ASC",
 		}
@@ -15,7 +15,7 @@ func TestSortInputs(t *testing.T) {
 	})
 
 	t.Run("Teams sorting", func(t *testing.T) {
-		order := QueryTeamsSortInput{
+		order := TeamsSort{
 			Field:     "name",
 			Direction: "ASC",
 		}
@@ -23,7 +23,7 @@ func TestSortInputs(t *testing.T) {
 	})
 
 	t.Run("Audit logs sorting", func(t *testing.T) {
-		order := QueryAuditLogsSortInput{
+		order := AuditLogsSort{
 			Field:     "name",
 			Direction: "ASC",
 		}
@@ -31,7 +31,7 @@ func TestSortInputs(t *testing.T) {
 	})
 
 	t.Run("System sorting", func(t *testing.T) {
-		order := QuerySystemsSortInput{
+		order := SystemsSort{
 			Field:     "name",
 			Direction: "ASC",
 		}
