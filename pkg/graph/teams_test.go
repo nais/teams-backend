@@ -84,5 +84,4 @@ func TestQueryResolver_Teams(t *testing.T) {
 		assert.Equal(t, "b", teams.Nodes[1].Slug.String())
 		assert.Equal(t, "a", teams.Nodes[2].Slug.String())
 	})
-
 }

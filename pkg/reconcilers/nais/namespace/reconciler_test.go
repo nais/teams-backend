@@ -4,22 +4,20 @@ package nais_namespace_reconciler_test
 
 import (
 	"context"
-	"database/sql"
 	helpers "github.com/nais/console/pkg/console"
+	"github.com/nais/console/pkg/test"
 	"testing"
 
 	"github.com/google/uuid"
-	sqliteGo "github.com/mattn/go-sqlite3"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers"
 	nais_namespace_reconciler "github.com/nais/console/pkg/reconcilers/nais/namespace"
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 )
 
+// FIXME: Test is currently failing
 func TestNaisNamespaceReconciler(t *testing.T) {
 	ctx := context.Background()
 
@@ -32,10 +30,7 @@ func TestNaisNamespaceReconciler(t *testing.T) {
 		panic(err)
 	}
 
-	db, err := setupDatabase()
-	if err != nil {
-		panic(err)
-	}
+	db := test.GetTestDB()
 
 	rec, err := nais_namespace_reconciler.NewFromConfig(db, cfg, logger)
 	if err != nil {
@@ -65,41 +60,4 @@ func TestNaisNamespaceReconciler(t *testing.T) {
 	})
 
 	assert.NoError(t, err)
-}
-
-func setupDatabase() (*gorm.DB, error) {
-	sql.Register("sqlite3_extended",
-		&sqliteGo.SQLiteDriver{
-			ConnectHook: func(conn *sqliteGo.SQLiteConn) error {
-				err := conn.RegisterFunc(
-					"uuid_generate_v4",
-					func(arguments ...interface{}) (string, error) {
-						u, err := uuid.NewUUID()
-						if err != nil {
-							return "", err
-						}
-						return u.String(), nil
-					},
-					true,
-				)
-				return err
-			},
-		},
-	)
-
-	db, err := gorm.Open(
-		sqlite.Open(":memory:"),
-		&gorm.Config{},
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	err = dbmodels.Migrate(db)
-	if err != nil {
-		return nil, err
-	}
-
-	return db, nil
 }

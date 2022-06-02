@@ -1,60 +1,22 @@
 package middleware
 
 import (
-	"database/sql"
+	helpers "github.com/nais/console/pkg/console"
+	"github.com/nais/console/pkg/test"
 	"testing"
 
-	"github.com/google/uuid"
-	sqliteGo "github.com/mattn/go-sqlite3"
 	"github.com/nais/console/pkg/dbmodels"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
-func setupDatabase() (*gorm.DB, error) {
-	sql.Register("sqlite3_extended",
-		&sqliteGo.SQLiteDriver{
-			ConnectHook: func(conn *sqliteGo.SQLiteConn) error {
-				err := conn.RegisterFunc(
-					"uuid_generate_v4",
-					func(arguments ...interface{}) (string, error) {
-						u, err := uuid.NewUUID()
-						if err != nil {
-							return "", err
-						}
-						return u.String(), nil
-					},
-					true,
-				)
-				return err
-			},
-		},
-	)
-
-	db, err := gorm.Open(
-		sqlite.Open(":memory:"),
-		&gorm.Config{},
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	err = dbmodels.Migrate(db)
-	if err != nil {
-		return nil, err
-	}
-
-	return db, nil
-}
-
 func setupFixtures(db *gorm.DB) error {
+	db.AutoMigrate(&dbmodels.User{})
 	return db.Transaction(func(tx *gorm.DB) error {
 		tx.Create(&dbmodels.User{
 			Model:        dbmodels.Model{},
 			SoftDeletes:  dbmodels.SoftDeletes{},
-			Email:        nil,
-			Name:         nil,
+			Email:        helpers.Strp("user@example.com"),
+			Name:         helpers.Strp("User Name"),
 			Teams:        nil,
 			RoleBindings: nil,
 		})
@@ -63,15 +25,12 @@ func setupFixtures(db *gorm.DB) error {
 }
 
 func TestApiKeyAuthentication(t *testing.T) {
-	db, err := setupDatabase()
+	db := test.GetTestDB()
+	err := setupFixtures(db)
 	if err != nil {
 		panic(err)
 	}
 
-	err = setupFixtures(db)
-	if err != nil {
-		panic(err)
-	}
-
+	// FIXME: Do some actual testing
 	_ = db
 }
