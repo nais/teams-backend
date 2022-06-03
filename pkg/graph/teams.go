@@ -205,6 +205,15 @@ func (r *teamResolver) Metadata(ctx context.Context, obj *dbmodels.Team) (map[st
 	return kv, nil
 }
 
+func (r *teamResolver) AuditLogs(ctx context.Context, obj *dbmodels.Team) ([]*dbmodels.AuditLog, error) {
+	auditLogs := make([]*dbmodels.AuditLog, 0)
+	err := r.db.WithContext(ctx).Model(obj).Association("AuditLogs").Find(&auditLogs)
+	if err != nil {
+		return nil, err
+	}
+	return auditLogs, nil
+}
+
 // Team returns generated.TeamResolver implementation.
 func (r *Resolver) Team() generated.TeamResolver { return &teamResolver{r} }
 

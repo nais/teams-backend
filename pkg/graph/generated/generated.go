@@ -137,6 +137,7 @@ type ComplexityRoot struct {
 	}
 
 	Team struct {
+		AuditLogs func(childComplexity int) int
 		CreatedAt func(childComplexity int) int
 		ID        func(childComplexity int) int
 		Metadata  func(childComplexity int) int
@@ -201,6 +202,7 @@ type RoleBindingResolver interface {
 type TeamResolver interface {
 	Users(ctx context.Context, obj *dbmodels.Team) ([]*dbmodels.User, error)
 	Metadata(ctx context.Context, obj *dbmodels.Team) (map[string]interface{}, error)
+	AuditLogs(ctx context.Context, obj *dbmodels.Team) ([]*dbmodels.AuditLog, error)
 }
 type UserResolver interface {
 	Teams(ctx context.Context, obj *dbmodels.User) ([]*dbmodels.Team, error)
@@ -637,6 +639,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Systems.PageInfo(childComplexity), true
+
+	case "Team.auditLogs":
+		if e.complexity.Team.AuditLogs == nil {
+			break
+		}
+
+		return e.complexity.Team.AuditLogs(childComplexity), true
 
 	case "Team.createdAt":
 		if e.complexity.Team.CreatedAt == nil {
@@ -1264,6 +1273,9 @@ type Team {
 
     "Metadata attached to the team as a key => value map."
     metadata: Map
+
+    "Audit logs for this team."
+    auditLogs: [AuditLog!]!
 
     "Creation time of the team."
     createdAt: Time
@@ -2145,6 +2157,8 @@ func (ec *executionContext) fieldContext_AuditLog_team(ctx context.Context, fiel
 				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
+			case "auditLogs":
+				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Team_createdAt(ctx, field)
 			}
@@ -2828,6 +2842,8 @@ func (ec *executionContext) fieldContext_Mutation_createTeam(ctx context.Context
 				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
+			case "auditLogs":
+				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Team_createdAt(ctx, field)
 			}
@@ -2919,6 +2935,8 @@ func (ec *executionContext) fieldContext_Mutation_addUsersToTeam(ctx context.Con
 				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
+			case "auditLogs":
+				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Team_createdAt(ctx, field)
 			}
@@ -3010,6 +3028,8 @@ func (ec *executionContext) fieldContext_Mutation_removeUsersFromTeam(ctx contex
 				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
+			case "auditLogs":
+				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Team_createdAt(ctx, field)
 			}
@@ -3735,6 +3755,8 @@ func (ec *executionContext) fieldContext_Query_team(ctx context.Context, field g
 				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
+			case "auditLogs":
+				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Team_createdAt(ctx, field)
 			}
@@ -4558,6 +4580,8 @@ func (ec *executionContext) fieldContext_RoleBinding_team(ctx context.Context, f
 				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
+			case "auditLogs":
+				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Team_createdAt(ctx, field)
 			}
@@ -5181,6 +5205,70 @@ func (ec *executionContext) fieldContext_Team_metadata(ctx context.Context, fiel
 	return fc, nil
 }
 
+func (ec *executionContext) _Team_auditLogs(ctx context.Context, field graphql.CollectedField, obj *dbmodels.Team) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Team_auditLogs(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Team().AuditLogs(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*dbmodels.AuditLog)
+	fc.Result = res
+	return ec.marshalNAuditLog2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐAuditLogᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Team_auditLogs(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Team",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_AuditLog_id(ctx, field)
+			case "system":
+				return ec.fieldContext_AuditLog_system(ctx, field)
+			case "synchronization":
+				return ec.fieldContext_AuditLog_synchronization(ctx, field)
+			case "user":
+				return ec.fieldContext_AuditLog_user(ctx, field)
+			case "team":
+				return ec.fieldContext_AuditLog_team(ctx, field)
+			case "action":
+				return ec.fieldContext_AuditLog_action(ctx, field)
+			case "success":
+				return ec.fieldContext_AuditLog_success(ctx, field)
+			case "message":
+				return ec.fieldContext_AuditLog_message(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_AuditLog_createdAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type AuditLog", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Team_createdAt(ctx context.Context, field graphql.CollectedField, obj *dbmodels.Team) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Team_createdAt(ctx, field)
 	if err != nil {
@@ -5325,6 +5413,8 @@ func (ec *executionContext) fieldContext_Teams_nodes(ctx context.Context, field 
 				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
+			case "auditLogs":
+				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Team_createdAt(ctx, field)
 			}
@@ -5514,6 +5604,8 @@ func (ec *executionContext) fieldContext_User_teams(ctx context.Context, field g
 				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
+			case "auditLogs":
+				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Team_createdAt(ctx, field)
 			}
@@ -9066,6 +9158,26 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 					}
 				}()
 				res = ec._Team_metadata(ctx, field, obj)
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
+		case "auditLogs":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Team_auditLogs(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
 				return res
 			}
 

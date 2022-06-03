@@ -41,6 +41,7 @@ type Team struct {
 	SystemState []*SystemState  `json:"-"`
 	Users       []*User         `json:"-" gorm:"many2many:users_teams"`
 	Systems     []*System       `json:"-" gorm:"many2many:systems_teams"`
+	AuditLogs   []*AuditLog     `json:"-" gorm:"foreignKey:TeamID"`
 }
 
 type User struct {

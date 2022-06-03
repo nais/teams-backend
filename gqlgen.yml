@@ -64,6 +64,8 @@ models:
         resolver: true
       metadata:
         resolver: true
+      auditLogs:
+        resolver: true
   User:
     fields:
       teams:

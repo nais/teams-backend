@@ -58,6 +58,9 @@ type Team {
     "Metadata attached to the team as a key => value map."
     metadata: Map
 
+    "Audit logs for this team."
+    auditLogs: [AuditLog!]!
+
     "Creation time of the team."
     createdAt: Time
 }

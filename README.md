@@ -103,12 +103,26 @@ bin/console
 ## Bootstrapping other systems
 
 ### GCP
-* Create a service account
-* Enable Workspace Admin API
-* Set up OAuth2 consent screen
-  * Internal
-* Create OAuth2 client ID
-  * Web application
+* Create a service account (Automatically done by [nais/nais-terraform-modules](https://github.com/nais/nais-terraform-modules))
+* Enable Workspace Admin API (Automatically done by [nais/nais-terraform-modules](https://github.com/nais/nais-terraform-modules))
+* Set up OAuth2 consent screen in the nais-management project in the tenant org:
+  ```
+  gcloud alpha iap oauth-brands create \
+  --application_title=Console \
+  --support_email=SUPPORT_EMAIL \
+  --project=PROJECT_ID
+  ```
+* Create OAuth2 client ID:
+  ```
+  gcloud alpha iap oauth-clients create \
+  projects/PROJECT_ID/brands/BRAND-ID \
+  --display_name=Console
+  ``` 
+* 
+  * Type: Web application
+  * Name: Console
+  * Authorized redirect URIs:
+    * http://localhost:3000/oauth2/callback
 
 ### Google Workspace
 * Enable `Security -> API Controls -> Domain-wide Delegation`
