@@ -5,5 +5,6 @@ import (
 )
 
 var (
-	ManageTeam = &uuid.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xa, 0}
+	TeamManagerID = &uuid.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xa, 0}
+	TeamReaderID  = &uuid.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xb, 0}
 )

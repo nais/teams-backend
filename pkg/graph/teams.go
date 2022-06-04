@@ -35,7 +35,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		// Assign creator as administrator for team
 		rolebinding := &dbmodels.RoleBinding{
 			TeamID: team.ID,
-			RoleID: roles.ManageTeam,
+			RoleID: roles.TeamManagerID,
 			User:   authz.UserFromContext(ctx),
 		}
 

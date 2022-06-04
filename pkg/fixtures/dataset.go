@@ -10,7 +10,7 @@ import (
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph"
-	"github.com/nais/console/pkg/roles"
+	default_roles "github.com/nais/console/pkg/roles"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
@@ -59,20 +59,31 @@ func InsertRootUser(ctx context.Context, db *gorm.DB) error {
 			Name:  helpers.Strp(nameRootUser),
 		}
 
-		role := &dbmodels.Role{
-			Model:       dbmodels.Model{ID: roles.ManageTeam},
-			SystemID:    console.ID,
-			Name:        "Team manager",
-			Description: "Allows a user to update the contents of a team.",
-			Resource:    string(graph.ResourceTeams),
-			AccessLevel: authz.AccessReadWrite,
-			Permission:  authz.PermissionAllow,
+		roles := []*dbmodels.Role{
+			{
+				Model:       dbmodels.Model{ID: default_roles.TeamManagerID},
+				SystemID:    console.ID,
+				Name:        "Team manager",
+				Description: "Allows a user to update the contents of a team.",
+				Resource:    string(graph.ResourceTeams),
+				AccessLevel: authz.AccessReadWrite,
+				Permission:  authz.PermissionAllow,
+			},
+			{
+				Model:       dbmodels.Model{ID: default_roles.TeamReaderID},
+				SystemID:    console.ID,
+				Name:        "Team reader",
+				Description: "Allows a user to read the contents of a team.",
+				Resource:    string(graph.ResourceTeams),
+				AccessLevel: authz.AccessRead,
+				Permission:  authz.PermissionAllow,
+			},
 		}
 
 		roleBinding := &dbmodels.RoleBinding{
 			Model:  pk(idRootRoleBinding),
 			UserID: serialuuid(idRootUser),
-			RoleID: roles.ManageTeam,
+			RoleID: default_roles.TeamManagerID,
 		}
 
 		apikey := &dbmodels.ApiKey{
@@ -81,7 +92,7 @@ func InsertRootUser(ctx context.Context, db *gorm.DB) error {
 		}
 
 		tx.Create(rootUser)
-		tx.Create(role)
+		tx.Create(roles)
 		tx.Create(roleBinding)
 		tx.Create(apikey)
 

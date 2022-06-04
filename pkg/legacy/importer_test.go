@@ -81,7 +81,7 @@ func TestImportTeamsFromLegacyAzure(t *testing.T) {
 				tx.FirstOrCreate(owner, "email = ?", *owner.Email)
 				log.Debugf("Created user %s", *owner.Email)
 				rb := &dbmodels.RoleBinding{
-					RoleID: roles.ManageTeam,
+					RoleID: roles.TeamManagerID,
 					TeamID: team.ID,
 					UserID: owner.ID,
 				}
