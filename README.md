@@ -103,8 +103,8 @@ bin/console
 ## Bootstrapping other systems
 
 ### GCP
-* Create a service account (Automatically done by [nais/nais-terraform-modules](https://github.com/nais/nais-terraform-modules))
-* Enable Workspace Admin API (Automatically done by [nais/nais-terraform-modules](https://github.com/nais/nais-terraform-modules))
+* Create a service account (automated via [nais/nais-terraform-modules](https://github.com/nais/nais-terraform-modules))
+* Enable Workspace Admin API (automated via [nais/nais-terraform-modules](https://github.com/nais/nais-terraform-modules))
 * Set up OAuth2 consent screen in the nais-management project in the tenant org:
   ```
   gcloud alpha iap oauth-brands create \
