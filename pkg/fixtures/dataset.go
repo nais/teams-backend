@@ -62,13 +62,14 @@ func InsertRootUser(ctx context.Context, db *gorm.DB) error {
 		role := &dbmodels.Role{
 			Model:       dbmodels.Model{ID: roles.ManageTeam},
 			SystemID:    console.ID,
-			Name:        "Manage team",
+			Name:        "Team manager",
+			Description: "Allows a user to update the contents of a team.",
 			Resource:    string(graph.ResourceTeams),
 			AccessLevel: authz.AccessReadWrite,
 			Permission:  authz.PermissionAllow,
 		}
 
-		rolebinding := &dbmodels.RoleBinding{
+		roleBinding := &dbmodels.RoleBinding{
 			Model:  pk(idRootRoleBinding),
 			UserID: serialuuid(idRootUser),
 			RoleID: roles.ManageTeam,
@@ -81,7 +82,7 @@ func InsertRootUser(ctx context.Context, db *gorm.DB) error {
 
 		tx.Create(rootUser)
 		tx.Create(role)
-		tx.Create(rolebinding)
+		tx.Create(roleBinding)
 		tx.Create(apikey)
 
 		return tx.Error

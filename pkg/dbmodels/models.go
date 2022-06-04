@@ -92,6 +92,7 @@ type Role struct {
 	System       *System        `gorm:"not null"`
 	SystemID     *uuid.UUID     `gorm:"not null; index"`
 	Name         string         `gorm:"uniqueIndex; not null"`
+	Description  string         `gorm:""`
 	Resource     string         `gorm:"not null"` // sub-resource at system (maybe not needed if systems are namespaced, e.g. gcp:buckets)
 	AccessLevel  string         `gorm:"not null"` // read, write, R/W, other combinations per system
 	Permission   string         `gorm:"not null"` // allow/deny

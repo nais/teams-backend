@@ -104,6 +104,7 @@ type ComplexityRoot struct {
 
 	Role struct {
 		AccessLevel func(childComplexity int) int
+		Description func(childComplexity int) int
 		ID          func(childComplexity int) int
 		Name        func(childComplexity int) int
 		Permission  func(childComplexity int) int
@@ -534,6 +535,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Role.AccessLevel(childComplexity), true
+
+	case "Role.description":
+		if e.complexity.Role.Description == nil {
+			break
+		}
+
+		return e.complexity.Role.Description(childComplexity), true
 
 	case "Role.id":
 		if e.complexity.Role.ID == nil {
@@ -1023,6 +1031,9 @@ type Role {
 
     "Name of the role."
     name: String!
+
+    "Description of the role."
+    description: String
 
     "Resource of the role."
     resource: String!
@@ -4242,6 +4253,47 @@ func (ec *executionContext) fieldContext_Role_name(ctx context.Context, field gr
 	return fc, nil
 }
 
+func (ec *executionContext) _Role_description(ctx context.Context, field graphql.CollectedField, obj *dbmodels.Role) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Role_description(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Description, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Role_description(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Role",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Role_resource(ctx context.Context, field graphql.CollectedField, obj *dbmodels.Role) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Role_resource(ctx, field)
 	if err != nil {
@@ -4461,6 +4513,8 @@ func (ec *executionContext) fieldContext_RoleBinding_role(ctx context.Context, f
 				return ec.fieldContext_Role_id(ctx, field)
 			case "name":
 				return ec.fieldContext_Role_name(ctx, field)
+			case "description":
+				return ec.fieldContext_Role_description(ctx, field)
 			case "resource":
 				return ec.fieldContext_Role_resource(ctx, field)
 			case "accessLevel":
@@ -4686,6 +4740,8 @@ func (ec *executionContext) fieldContext_Roles_nodes(ctx context.Context, field 
 				return ec.fieldContext_Role_id(ctx, field)
 			case "name":
 				return ec.fieldContext_Role_name(ctx, field)
+			case "description":
+				return ec.fieldContext_Role_description(ctx, field)
 			case "resource":
 				return ec.fieldContext_Role_resource(ctx, field)
 			case "accessLevel":
@@ -8843,6 +8899,10 @@ func (ec *executionContext) _Role(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "description":
+
+			out.Values[i] = ec._Role_description(ctx, field, obj)
+
 		case "resource":
 
 			out.Values[i] = ec._Role_resource(ctx, field, obj)
@@ -10693,6 +10753,16 @@ func (ec *executionContext) marshalOSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkg�
 		return graphql.Null
 	}
 	res := dbmodels.MarshalSlug(v)
+	return res
+}
+
+func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {
+	res, err := graphql.UnmarshalString(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOString2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
+	res := graphql.MarshalString(v)
 	return res
 }
 

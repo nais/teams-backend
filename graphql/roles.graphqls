@@ -49,6 +49,9 @@ type Role {
     "Name of the role."
     name: String!
 
+    "Description of the role."
+    description: String
+
     "Resource of the role."
     resource: String!
 
