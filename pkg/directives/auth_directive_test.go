@@ -55,7 +55,7 @@ func TestAuth(t *testing.T) {
 			panic("Should not be executed")
 		}
 		_, err := auth(context.Background(), obj, nextHandler)
-		assert.EqualError(t, err, "this endpoint requires authentication")
+		assert.EqualError(t, err, "this endpoint requires an authenticated user")
 	})
 
 	t.Run("Unknown user in context", func(t *testing.T) {

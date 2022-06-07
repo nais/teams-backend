@@ -18,7 +18,7 @@ func Auth(db *gorm.DB) Directive {
 	return func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error) {
 		user := authz.UserFromContext(ctx)
 		if user == nil {
-			return nil, fmt.Errorf("this endpoint requires authentication")
+			return nil, fmt.Errorf("this endpoint requires an authenticated user")
 		}
 
 		roleBindings, err := loadUserRoleBindings(db, user)
