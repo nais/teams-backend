@@ -42,6 +42,7 @@ type ResolverRoot interface {
 	AuditLog() AuditLogResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
+	Role() RoleResolver
 	RoleBinding() RoleBindingResolver
 	Team() TeamResolver
 	User() UserResolver
@@ -109,6 +110,7 @@ type ComplexityRoot struct {
 		Name        func(childComplexity int) int
 		Permission  func(childComplexity int) int
 		Resource    func(childComplexity int) int
+		System      func(childComplexity int) int
 	}
 
 	RoleBinding struct {
@@ -194,6 +196,9 @@ type QueryResolver interface {
 	Users(ctx context.Context, pagination *model.Pagination, query *model.UsersQuery, sort *model.UsersSort) (*model.Users, error)
 	User(ctx context.Context, id *uuid.UUID) (*dbmodels.User, error)
 	Me(ctx context.Context) (*dbmodels.User, error)
+}
+type RoleResolver interface {
+	System(ctx context.Context, obj *dbmodels.Role) (*dbmodels.System, error)
 }
 type RoleBindingResolver interface {
 	Role(ctx context.Context, obj *dbmodels.RoleBinding) (*dbmodels.Role, error)
@@ -570,6 +575,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Role.Resource(childComplexity), true
+
+	case "Role.system":
+		if e.complexity.Role.System == nil {
+			break
+		}
+
+		return e.complexity.Role.System(childComplexity), true
 
 	case "RoleBinding.id":
 		if e.complexity.RoleBinding.ID == nil {
@@ -1031,6 +1043,9 @@ type Role {
 
     "Name of the role."
     name: String!
+
+    "The connected system."
+    system: System!
 
     "Description of the role."
     description: String
@@ -4253,6 +4268,56 @@ func (ec *executionContext) fieldContext_Role_name(ctx context.Context, field gr
 	return fc, nil
 }
 
+func (ec *executionContext) _Role_system(ctx context.Context, field graphql.CollectedField, obj *dbmodels.Role) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Role_system(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Role().System(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*dbmodels.System)
+	fc.Result = res
+	return ec.marshalNSystem2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSystem(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Role_system(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Role",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_System_id(ctx, field)
+			case "name":
+				return ec.fieldContext_System_name(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type System", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Role_description(ctx context.Context, field graphql.CollectedField, obj *dbmodels.Role) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Role_description(ctx, field)
 	if err != nil {
@@ -4513,6 +4578,8 @@ func (ec *executionContext) fieldContext_RoleBinding_role(ctx context.Context, f
 				return ec.fieldContext_Role_id(ctx, field)
 			case "name":
 				return ec.fieldContext_Role_name(ctx, field)
+			case "system":
+				return ec.fieldContext_Role_system(ctx, field)
 			case "description":
 				return ec.fieldContext_Role_description(ctx, field)
 			case "resource":
@@ -4740,6 +4807,8 @@ func (ec *executionContext) fieldContext_Roles_nodes(ctx context.Context, field 
 				return ec.fieldContext_Role_id(ctx, field)
 			case "name":
 				return ec.fieldContext_Role_name(ctx, field)
+			case "system":
+				return ec.fieldContext_Role_system(ctx, field)
 			case "description":
 				return ec.fieldContext_Role_description(ctx, field)
 			case "resource":
@@ -8890,15 +8959,35 @@ func (ec *executionContext) _Role(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = ec._Role_id(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "name":
 
 			out.Values[i] = ec._Role_name(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
+		case "system":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Role_system(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
 		case "description":
 
 			out.Values[i] = ec._Role_description(ctx, field, obj)
@@ -8908,21 +8997,21 @@ func (ec *executionContext) _Role(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = ec._Role_resource(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "accessLevel":
 
 			out.Values[i] = ec._Role_accessLevel(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "permission":
 
 			out.Values[i] = ec._Role_permission(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -10103,6 +10192,10 @@ func (ec *executionContext) marshalNString2ᚖstring(ctx context.Context, sel as
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNSystem2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSystem(ctx context.Context, sel ast.SelectionSet, v dbmodels.System) graphql.Marshaler {
+	return ec._System(ctx, sel, &v)
 }
 
 func (ec *executionContext) marshalNSystem2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSystemᚄ(ctx context.Context, sel ast.SelectionSet, v []*dbmodels.System) graphql.Marshaler {

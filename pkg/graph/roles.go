@@ -50,6 +50,15 @@ func (r *queryResolver) Roles(ctx context.Context, pagination *model.Pagination,
 	}, err
 }
 
+func (r *roleResolver) System(ctx context.Context, obj *dbmodels.Role) (*dbmodels.System, error) {
+	var system *dbmodels.System
+	err := r.db.Model(&obj).Association("System").Find(&system)
+	if err != nil {
+		return nil, err
+	}
+	return system, nil
+}
+
 func (r *roleBindingResolver) Role(ctx context.Context, obj *dbmodels.RoleBinding) (*dbmodels.Role, error) {
 	var role *dbmodels.Role
 	err := r.db.Model(&obj).Association("Role").Find(&role)
@@ -80,7 +89,11 @@ func (r *roleBindingResolver) Team(ctx context.Context, obj *dbmodels.RoleBindin
 	return team, nil
 }
 
+// Role returns generated.RoleResolver implementation.
+func (r *Resolver) Role() generated.RoleResolver { return &roleResolver{r} }
+
 // RoleBinding returns generated.RoleBindingResolver implementation.
 func (r *Resolver) RoleBinding() generated.RoleBindingResolver { return &roleBindingResolver{r} }
 
+type roleResolver struct{ *Resolver }
 type roleBindingResolver struct{ *Resolver }

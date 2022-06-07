@@ -90,3 +90,7 @@ models:
         resolver: true
       team:
         resolver: true
+  Role:
+    fields:
+      system:
+        resolver: true

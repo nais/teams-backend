@@ -49,6 +49,9 @@ type Role {
     "Name of the role."
     name: String!
 
+    "The connected system."
+    system: System!
+
     "Description of the role."
     description: String
 
