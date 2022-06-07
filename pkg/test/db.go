@@ -6,6 +6,7 @@ import (
 	sqliteGo "github.com/mattn/go-sqlite3"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 const (
@@ -46,6 +47,8 @@ func GetTestDB() *gorm.DB {
 		DriverName: driverName,
 		DSN:        dsn,
 		Conn:       conn,
+	}, &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
 	})
 
 	return db
