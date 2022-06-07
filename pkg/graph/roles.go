@@ -13,6 +13,11 @@ import (
 )
 
 func (r *mutationResolver) AssignRoleToUser(ctx context.Context, input model.AssignRoleInput) (*dbmodels.RoleBinding, error) {
+	err := authz.Authorized(ctx, r.console, nil, authz.AccessLevelUpdate, authz.ResourceRoles)
+	if err != nil {
+		return nil, err
+	}
+
 	rb := &dbmodels.RoleBinding{
 		UserID: input.UserID,
 		RoleID: input.RoleID,
@@ -28,6 +33,11 @@ func (r *mutationResolver) AssignRoleToUser(ctx context.Context, input model.Ass
 }
 
 func (r *mutationResolver) RemoveRoleFromUser(ctx context.Context, input model.RemoveRoleInput) (bool, error) {
+	err := authz.Authorized(ctx, r.console, nil, authz.AccessLevelUpdate, authz.ResourceRoles)
+	if err != nil {
+		return false, err
+	}
+
 	rb := &dbmodels.RoleBinding{}
 	tx := r.db.WithContext(ctx).First(rb, "user_id = ? AND team_id = ? AND role_id = ?", input.UserID, input.TeamID, input.RoleID).Delete(rb)
 	if tx.Error != nil {
