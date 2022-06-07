@@ -12,8 +12,8 @@ import (
 
 type Directive func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
 
-// Make sure there is an authenticated user making this request.
-// Also fetches all roles connected to that user, either solo or through a team, and puts them into the context.
+// Auth Make sure there is an authenticated user making this request.
+// Also fetches all roles connected to that user and puts them into the context.
 func Auth(db *gorm.DB) Directive {
 	return func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error) {
 		user := authz.UserFromContext(ctx)
@@ -32,12 +32,10 @@ func Auth(db *gorm.DB) Directive {
 }
 
 func loadUserRoleBindings(db *gorm.DB, user *dbmodels.User) ([]*dbmodels.RoleBinding, error) {
-	u := &dbmodels.User{}
-
-	tx := db.Preload("RoleBindings").Preload("RoleBindings.Role").Find(u, "id = ?", user.ID)
+	newUser := &dbmodels.User{}
+	tx := db.Where("ID = ?", user.ID).Preload("RoleBindings").Preload("RoleBindings.Role").Preload("RoleBindings.Role.System").First(newUser)
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
-
-	return u.RoleBindings, nil
+	return newUser.RoleBindings, nil
 }
