@@ -21,14 +21,25 @@ func newUUID(arguments ...interface{}) (string, error) {
 	return u.String(), nil
 }
 
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
+}
+
 func GetTestDB() *gorm.DB {
-	sql.Register(driverName,
-		&sqliteGo.SQLiteDriver{
-			ConnectHook: func(conn *sqliteGo.SQLiteConn) error {
-				return conn.RegisterFunc("uuid_generate_v4", newUUID, true)
+	if !stringInSlice(driverName, sql.Drivers()) {
+		sql.Register(driverName,
+			&sqliteGo.SQLiteDriver{
+				ConnectHook: func(conn *sqliteGo.SQLiteConn) error {
+					return conn.RegisterFunc("uuid_generate_v4", newUUID, true)
+				},
 			},
-		},
-	)
+		)
+	}
 
 	conn, _ := sql.Open(driverName, dsn)
 	db, _ := gorm.Open(sqlite.Dialector{
