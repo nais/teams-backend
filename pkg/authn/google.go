@@ -33,12 +33,12 @@ func NewGoogle(clientID, clientSecret, redirectURL string) *Google {
 	return g
 }
 
-func (a *Google) setupOAuth2() {
-	a.Config = oauth2.Config{
-		ClientID:     a.clientID,
-		ClientSecret: a.clientSecret,
-		Endpoint:     a.provider.Endpoint(),
-		RedirectURL:  a.redirectURL,
+func (g *Google) setupOAuth2() {
+	g.Config = oauth2.Config{
+		ClientID:     g.clientID,
+		ClientSecret: g.clientSecret,
+		Endpoint:     g.provider.Endpoint(),
+		RedirectURL:  g.redirectURL,
 		Scopes:       []string{oidc.ScopeOpenID, "profile", "email"},
 	}
 }
