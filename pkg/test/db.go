@@ -44,9 +44,7 @@ func GetTestDB() *gorm.DB {
 
 	conn, _ := sql.Open(driverName, dsn)
 	db, _ := gorm.Open(sqlite.Dialector{
-		DriverName: driverName,
-		DSN:        dsn,
-		Conn:       conn,
+		Conn: conn,
 	}, &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
