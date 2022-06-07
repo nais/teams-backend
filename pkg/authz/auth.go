@@ -4,66 +4,67 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/nais/console/pkg/dbmodels"
 )
 
-var userCtxKey = &contextKey{"user"}
-var roleBindingsCtxKey = &contextKey{"rolebindings"}
-
-type contextKey struct {
-	name string
-}
-
 const (
-	AccessRead      = "read"
-	AccessReadWrite = "readwrite"
-	AccessCreate    = "create"
+	userContextKey     = "user"
+	roleBindingsCtxKey = "roleBindings"
+
+	AccessLevelCreate AccessLevel = "C"
+	AccessLevelRead   AccessLevel = "R"
+	AccessLevelUpdate AccessLevel = "U"
+	AccessLevelDelete AccessLevel = "D"
 
 	PermissionAllow = "allow"
 	PermissionDeny  = "deny"
+
+	ResourceTeams Resource = "teams"
+	ResourceRoles Resource = "roles"
 )
 
+type AccessLevel string
 type Resource string
 
 func (r Resource) Format(args ...interface{}) Resource {
 	return Resource(fmt.Sprintf(string(r), args...))
 }
 
-// Finds any authenticated user from the context. Requires that a middleware authenticator has set the user.
+// ContextWithUser Return a context with a user module stored.
+func ContextWithUser(ctx context.Context, user *dbmodels.User) context.Context {
+	return context.WithValue(ctx, userContextKey, user)
+}
+
+// ContextWithRoleBindings Insert user/team roles into a context
+func ContextWithRoleBindings(ctx context.Context, roleBindings []*dbmodels.RoleBinding) context.Context {
+	return context.WithValue(ctx, roleBindingsCtxKey, roleBindings)
+}
+
+// UserFromContext Finds any authenticated user from the context. Requires that a middleware has stored a user in the first place.
 func UserFromContext(ctx context.Context) *dbmodels.User {
-	user, _ := ctx.Value(userCtxKey).(*dbmodels.User)
+	user, _ := ctx.Value(userContextKey).(*dbmodels.User)
 	return user
 }
 
-// Insert a user object into a context.
-func ContextWithUser(ctx context.Context, user *dbmodels.User) context.Context {
-	return context.WithValue(ctx, userCtxKey, user)
-}
-
-// Finds any authenticated user from the context. Requires that a middleware authenticator has set the user.
+// RoleBindingsFromContext Finds any authenticated user from the context. Requires that a middleware authenticator has set the user.
 func RoleBindingsFromContext(ctx context.Context) []*dbmodels.RoleBinding {
 	roles, _ := ctx.Value(roleBindingsCtxKey).([]*dbmodels.RoleBinding)
 	return roles
 }
 
-// Insert user/team roles into a context
-func ContextWithRoleBindings(ctx context.Context, roles []*dbmodels.RoleBinding) context.Context {
-	return context.WithValue(ctx, roleBindingsCtxKey, roles)
+// Authorized Check if the user currently stored in the context is au
+func Authorized(ctx context.Context, system *dbmodels.System, team *dbmodels.Team, requiredAccessLevel AccessLevel, resource Resource) error {
+	return RoleBindingsAreAuthorized(RoleBindingsFromContext(ctx), system, team, requiredAccessLevel, resource)
 }
 
-func Allowed(ctx context.Context, system *dbmodels.System, team *dbmodels.Team, accessLevel string, resources ...Resource) error {
-	return AllowedRoles(RoleBindingsFromContext(ctx), system, team, accessLevel, resources...)
-}
-
-// Check if the roles defined in the access control list allow read or write access to one or more specific system resources.
+// RoleBindingsAreAuthorized Check if the roles defined in the access control list have the necessary access level for the specified resource
 // Returns nil if action is allowed, or an error if denied.
 //
 // The first matching rule wins out, but note that DENY rules are prioritized before ALLOW rules.
-func AllowedRoles(roleBindings []*dbmodels.RoleBinding, system *dbmodels.System, team *dbmodels.Team, accessLevel string, resources ...Resource) error {
-
-	//goland:noinspection GoErrorStringFormat
-	unauthorized := fmt.Errorf("YOU DIDN'T SAY THE MAGIC WORD!")
+func RoleBindingsAreAuthorized(roleBindings []*dbmodels.RoleBinding, system *dbmodels.System, team *dbmodels.Team, requiredAccessLevel AccessLevel, resource Resource) error {
+	unauthorized := fmt.Errorf("unauthorized")
 
 	// Sort 'deny' roles before 'allow' so that we can fail fast.
 	sort.Slice(roleBindings, func(i, j int) bool {
@@ -71,28 +72,34 @@ func AllowedRoles(roleBindings []*dbmodels.RoleBinding, system *dbmodels.System,
 	})
 
 	for _, roleBinding := range roleBindings {
-
-		// Skip unmatching systems
+		// ignore role binding if systems does not match
 		if *roleBinding.Role.SystemID != *system.ID {
 			continue
 		}
 
-		// If a team permission is needed, check that the rolebinding team matches, or is set to nil (global permission).
+		// ignore role binding if resource does not match
+		if Resource(roleBinding.Role.Resource) != resource {
+			continue
+		}
+
+		// if the role binding is for a specific team, and the check does not require a team, ignore it
+		if team == nil && roleBinding.Team != nil {
+			continue
+		}
+
+		// if a team is required, check if the role binding matches that team, or if it is set globally
 		if team != nil && roleBinding.Team != nil && *roleBinding.Team.ID != *team.ID {
 			continue
 		}
 
-		for _, resource := range resources {
-			// Skip unmatching resources
-			if Resource(roleBinding.Role.Resource) != resource {
-				continue
-			}
+		// At this point, the role we are working with is pointing directly to the resource in question.
+		requiredLevel := hasRequiredAccessLevel(AccessLevel(roleBinding.Role.AccessLevel), requiredAccessLevel)
 
-			// At this point, the role we are working with is pointing directly to the resource in question.
-			if roleBinding.Role.Permission == PermissionDeny || !hasAccessLevel(accessLevel, roleBinding.Role.AccessLevel) {
-				return unauthorized
-			}
+		if roleBinding.Role.Permission == PermissionDeny && requiredLevel {
+			return unauthorized
+		}
 
+		if roleBinding.Role.Permission == PermissionAllow && requiredLevel {
 			return nil
 		}
 	}
@@ -100,13 +107,6 @@ func AllowedRoles(roleBindings []*dbmodels.RoleBinding, system *dbmodels.System,
 	return unauthorized
 }
 
-func hasAccessLevel(needed, have string) bool {
-	switch needed {
-	case AccessRead:
-		return have == AccessRead || have == AccessReadWrite
-	case AccessReadWrite, AccessCreate:
-		return have == needed
-	default:
-		return false
-	}
+func hasRequiredAccessLevel(hasAccessLevel, requiredAccessLevel AccessLevel) bool {
+	return strings.Contains(string(hasAccessLevel), string(requiredAccessLevel))
 }

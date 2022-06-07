@@ -6,6 +6,7 @@ package graph
 import (
 	"context"
 
+	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
@@ -36,6 +37,11 @@ func (r *mutationResolver) RemoveRoleFromUser(ctx context.Context, input model.R
 }
 
 func (r *queryResolver) Roles(ctx context.Context, pagination *model.Pagination, query *model.RolesQuery, sort *model.RolesSort) (*model.Roles, error) {
+	err := authz.Authorized(ctx, r.console, nil, authz.AccessLevelRead, authz.ResourceRoles)
+	if err != nil {
+		return nil, err
+	}
+
 	roles := make([]*dbmodels.Role, 0)
 	if sort == nil {
 		sort = &model.RolesSort{

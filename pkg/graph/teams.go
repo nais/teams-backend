@@ -12,12 +12,11 @@ import (
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
-	"github.com/nais/console/pkg/roles"
 	"gorm.io/gorm"
 )
 
 func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*dbmodels.Team, error) {
-	err := authz.Allowed(ctx, r.console, nil, authz.AccessReadWrite, ResourceTeams, ResourceCreateTeam)
+	err := authz.Authorized(ctx, r.console, nil, authz.AccessLevelCreate, authz.ResourceTeams)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +34,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		// Assign creator as administrator for team
 		rolebinding := &dbmodels.RoleBinding{
 			TeamID: team.ID,
-			RoleID: roles.TeamManagerID,
+			RoleID: dbmodels.TeamEditorRoleID,
 			User:   authz.UserFromContext(ctx),
 		}
 
@@ -81,7 +80,7 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 	}
 
 	// all models populated, check ACL now
-	err := authz.Allowed(ctx, r.console, team, authz.AccessReadWrite, ResourceTeams)
+	err := authz.Authorized(ctx, r.console, team, authz.AccessLevelUpdate, authz.ResourceTeams)
 
 	if err != nil {
 		return nil, err
@@ -118,7 +117,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 	}
 
 	// all models populated, check ACL now
-	err := authz.Allowed(ctx, r.console, team, authz.AccessReadWrite, ResourceTeams)
+	err := authz.Authorized(ctx, r.console, team, authz.AccessLevelUpdate, authz.ResourceTeams)
 	if err != nil {
 		return nil, err
 	}
@@ -135,8 +134,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 }
 
 func (r *queryResolver) Teams(ctx context.Context, pagination *model.Pagination, query *model.TeamsQuery, sort *model.TeamsSort) (*model.Teams, error) {
-	// all models populated, check ACL now
-	err := authz.Allowed(ctx, r.console, nil, authz.AccessRead, ResourceTeams)
+	err := authz.Authorized(ctx, r.console, nil, authz.AccessLevelRead, authz.ResourceTeams)
 	if err != nil {
 		return nil, err
 	}
@@ -163,14 +161,14 @@ func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team
 		return nil, tx.Error
 	}
 
-	err := authz.Allowed(ctx, r.console, team, authz.AccessRead, ResourceTeams)
+	err := authz.Authorized(ctx, r.console, team, authz.AccessLevelRead, authz.ResourceTeams)
 	if err != nil {
 		return nil, err
 	}
 
 	err = r.db.WithContext(ctx).Model(team).
 		Preload("RoleBindings", "team_id = ?", team.ID).
-		Preload("RoleBindings.Role", "resource = ?", ResourceTeams).
+		Preload("RoleBindings.Role", "resource = ?", authz.ResourceTeams).
 		Preload("RoleBindings.Role.System").
 		Association("Users").
 		Find(&team.Users)

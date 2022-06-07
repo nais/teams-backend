@@ -1,23 +1,52 @@
 package authz_test
 
 import (
-	"testing"
-
+	"context"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/authz"
+	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
+
+func TestContextWithUser(t *testing.T) {
+	ctx := context.Background()
+	assert.Nil(t, authz.UserFromContext(ctx))
+
+	user := &dbmodels.User{
+		Email: helpers.Strp("mail@example.com"),
+		Name:  helpers.Strp("User Name"),
+	}
+
+	ctx = authz.ContextWithUser(ctx, user)
+	assert.Equal(t, user, authz.UserFromContext(ctx))
+}
+
+func TestContextWithRoleBindings(t *testing.T) {
+	ctx := context.Background()
+	assert.Nil(t, authz.RoleBindingsFromContext(ctx))
+
+	roleBindings := []*dbmodels.RoleBinding{
+		{
+			User: &dbmodels.User{
+				Email: helpers.Strp("mail1@example.com"),
+			},
+		},
+		{
+			User: &dbmodels.User{
+				Email: helpers.Strp("mail2@example.com"),
+			},
+		},
+	}
+
+	ctx = authz.ContextWithRoleBindings(ctx, roleBindings)
+	assert.Equal(t, roleBindings, authz.RoleBindingsFromContext(ctx))
+}
 
 func TestSimpleAllowDeny(t *testing.T) {
 	unusedSystem := uuid.New()
 	systemID := uuid.New()
-
-	const (
-		allowReadableResource = "should_allow_read"
-		allowWritableResource = "should_allow_write"
-	)
-
 	system := &dbmodels.System{
 		Model: dbmodels.Model{
 			ID: &systemID,
@@ -25,37 +54,32 @@ func TestSimpleAllowDeny(t *testing.T) {
 	}
 
 	// We do not need to set any user or team references on these roles,
-	// as roles are prefetched before they are sent to the Allowed() function.
+	// as roles are prefetched before they are sent to the Authorized() function.
 	roles := []*dbmodels.Role{
 		{
 			SystemID:    &unusedSystem,
-			Resource:    allowReadableResource,
-			AccessLevel: authz.AccessRead,
+			Resource:    "teams",
+			AccessLevel: string(authz.AccessLevelRead),
 			Permission:  authz.PermissionDeny,
 		},
 		{
 			SystemID:    &systemID,
-			Resource:    allowReadableResource,
-			AccessLevel: authz.AccessRead,
+			Resource:    "teams",
+			AccessLevel: string(authz.AccessLevelRead),
 			Permission:  authz.PermissionAllow,
 		},
 		{
 			SystemID:    &systemID,
-			Resource:    allowWritableResource,
-			AccessLevel: authz.AccessReadWrite,
+			Resource:    "roles",
+			AccessLevel: string(authz.AccessLevelCreate),
 			Permission:  authz.PermissionAllow,
 		},
 	}
 
-	rolebindings := makeRoleBindings(roles)
+	roleBindings := makeRoleBindings(roles)
 
-	// Read access should allow both read and readwrite permissions
-	assert.NoError(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessRead, allowReadableResource))
-	assert.NoError(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessRead, allowWritableResource))
-
-	// Write access should apply only to readwrite permission
-	assert.NoError(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessReadWrite, allowWritableResource))
-	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessReadWrite, allowReadableResource))
+	assert.NoError(t, authz.RoleBindingsAreAuthorized(roleBindings, system, nil, authz.AccessLevelRead, "teams"))
+	assert.EqualError(t, authz.RoleBindingsAreAuthorized(roleBindings, system, nil, authz.AccessLevelCreate, "teams"), "unauthorized")
 }
 
 // Roles MUST be defined for any resource to be accessible.
@@ -68,126 +92,74 @@ func TestDefaultDeny(t *testing.T) {
 		},
 	}
 
-	rolebindings := make([]*dbmodels.RoleBinding, 0)
+	roleBindings := make([]*dbmodels.RoleBinding, 0)
 
-	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessRead, "you"))
-	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessRead, "shall"))
-	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessReadWrite, "not"))
-	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessReadWrite, "pass"))
+	assert.EqualError(t, authz.RoleBindingsAreAuthorized(roleBindings, system, nil, authz.AccessLevelCreate, "you"), "unauthorized")
+	assert.EqualError(t, authz.RoleBindingsAreAuthorized(roleBindings, system, nil, authz.AccessLevelRead, "shall"), "unauthorized")
+	assert.EqualError(t, authz.RoleBindingsAreAuthorized(roleBindings, system, nil, authz.AccessLevelUpdate, "not"), "unauthorized")
+	assert.EqualError(t, authz.RoleBindingsAreAuthorized(roleBindings, system, nil, authz.AccessLevelDelete, "pass"), "unauthorized")
 }
 
 // Check that an explicit DENY for a resource overrules an explicit ALLOW.
 func TestAllowDenyOrdering(t *testing.T) {
 	systemID := uuid.New()
-
-	const resource = "myresource"
-
 	system := &dbmodels.System{
 		Model: dbmodels.Model{
 			ID: &systemID,
 		},
 	}
-
 	roles := []*dbmodels.Role{
 		{
 			SystemID:    &systemID,
-			Resource:    resource,
-			AccessLevel: authz.AccessRead,
+			Resource:    "teams",
+			AccessLevel: string(authz.AccessLevelRead),
 			Permission:  authz.PermissionAllow,
 		},
 		{
 			SystemID:    &systemID,
-			Resource:    resource,
-			AccessLevel: authz.AccessRead,
+			Resource:    "teams",
+			AccessLevel: string(authz.AccessLevelRead),
 			Permission:  authz.PermissionDeny,
 		},
 	}
-
-	rolebindings := makeRoleBindings(roles)
-
-	// Access should be denied to both read and write
-	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessRead, resource))
-	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessReadWrite, resource))
+	roleBindings := makeRoleBindings(roles)
+	assert.EqualError(t, authz.RoleBindingsAreAuthorized(roleBindings, system, nil, authz.AccessLevelRead, "teams"), "unauthorized")
 }
 
-// Check that denied reads for a resource overrules allowed writes.
+// Check that denied reads for a resource does not overrule allowed writes.
 func TestExplicitDeny(t *testing.T) {
 	systemID := uuid.New()
-
-	const resource = "myresource"
-
 	system := &dbmodels.System{
 		Model: dbmodels.Model{
 			ID: &systemID,
 		},
 	}
-
 	roles := []*dbmodels.Role{
 		{
 			SystemID:    &systemID,
-			Resource:    resource,
-			AccessLevel: authz.AccessReadWrite,
+			Resource:    "teams",
+			AccessLevel: string(authz.AccessLevelCreate),
 			Permission:  authz.PermissionAllow,
 		},
 		{
 			SystemID:    &systemID,
-			Resource:    resource,
-			AccessLevel: authz.AccessRead,
+			Resource:    "teams",
+			AccessLevel: string(authz.AccessLevelRead),
 			Permission:  authz.PermissionDeny,
 		},
 	}
-
-	rolebindings := makeRoleBindings(roles)
-
-	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessRead, resource))
-	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessReadWrite, resource))
-}
-
-// When checking access for multiple resources, fail fast if any of them are denied.
-func TestAnyDenyWins(t *testing.T) {
-	systemID := uuid.New()
-
-	const firstResource = "first_resource"
-	const secondResource = "second_resource"
-
-	system := &dbmodels.System{
-		Model: dbmodels.Model{
-			ID: &systemID,
-		},
-	}
-
-	roles := []*dbmodels.Role{
-		{
-			SystemID:    &systemID,
-			Resource:    firstResource,
-			AccessLevel: authz.AccessReadWrite,
-			Permission:  authz.PermissionAllow,
-		},
-		{
-			SystemID:    &systemID,
-			Resource:    secondResource,
-			AccessLevel: authz.AccessRead,
-			Permission:  authz.PermissionDeny,
-		},
-	}
-
-	rolebindings := makeRoleBindings(roles)
-
-	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessRead, firstResource, secondResource))
-	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessReadWrite, firstResource, secondResource))
-
-	// Switch ordering
-	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessRead, secondResource, firstResource))
-	assert.Error(t, authz.AllowedRoles(rolebindings, system, nil, authz.AccessReadWrite, secondResource, firstResource))
+	roleBindings := makeRoleBindings(roles)
+	assert.EqualError(t, authz.RoleBindingsAreAuthorized(roleBindings, system, nil, authz.AccessLevelRead, "teams"), "unauthorized")
+	assert.NoError(t, authz.RoleBindingsAreAuthorized(roleBindings, system, nil, authz.AccessLevelCreate, "teams"))
 }
 
 func makeRoleBindings(roles []*dbmodels.Role) []*dbmodels.RoleBinding {
-	rolebindings := make([]*dbmodels.RoleBinding, 0)
+	roleBindings := make([]*dbmodels.RoleBinding, 0)
 	for _, role := range roles {
 		rb := &dbmodels.RoleBinding{
 			Role: role,
 		}
-		rolebindings = append(rolebindings, rb)
+		roleBindings = append(roleBindings, rb)
 	}
-	return rolebindings
+	return roleBindings
 }

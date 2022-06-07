@@ -14,12 +14,13 @@ import (
 	"github.com/nais/console/pkg/dbmodels"
 )
 
-func getContextWithAddedRole(system *dbmodels.System, resource authz.Resource, accessLevel string) context.Context {
+func getContextWithAddedRoleBinding(system *dbmodels.System, resource authz.Resource, accessLevel authz.AccessLevel, permission string) context.Context {
 	roles := []*dbmodels.RoleBinding{
 		{
 			Role: &dbmodels.Role{
 				Resource:    string(resource),
-				AccessLevel: accessLevel,
+				AccessLevel: string(accessLevel),
+				Permission:  permission,
 				SystemID:    system.ID,
 			},
 		},
@@ -59,7 +60,7 @@ func TestQueryResolver_Teams(t *testing.T) {
 	ch := make(chan *dbmodels.Team, 100)
 	system := getSystem()
 
-	ctx := getContextWithAddedRole(system, graph.ResourceTeams, authz.AccessRead)
+	ctx := getContextWithAddedRoleBinding(system, authz.ResourceTeams, authz.AccessLevelRead, authz.PermissionAllow)
 	resolver := graph.NewResolver(db, system, ch).Query()
 
 	t.Run("No filter or sort", func(t *testing.T) {
@@ -84,4 +85,10 @@ func TestQueryResolver_Teams(t *testing.T) {
 		assert.Equal(t, "b", teams.Nodes[1].Slug.String())
 		assert.Equal(t, "a", teams.Nodes[2].Slug.String())
 	})
+}
+
+func TestQueryResolver_TeamsNoPermission(t *testing.T) {
+	resolver := graph.NewResolver(test.GetTestDB(), getSystem(), make(chan *dbmodels.Team, 100)).Query()
+	_, err := resolver.Teams(context.Background(), nil, nil, nil)
+	assert.EqualError(t, err, "unauthorized")
 }

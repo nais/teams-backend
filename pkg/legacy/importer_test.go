@@ -12,7 +12,6 @@ import (
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/legacy"
-	"github.com/nais/console/pkg/roles"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
