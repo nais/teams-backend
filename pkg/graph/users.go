@@ -5,12 +5,14 @@ package graph
 
 import (
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
+	"gorm.io/gorm"
 )
 
 func (r *mutationResolver) CreateUser(ctx context.Context, input model.CreateUserInput) (*dbmodels.User, error) {
@@ -83,6 +85,19 @@ func (r *userResolver) RoleBindings(ctx context.Context, obj *dbmodels.User, tea
 		return nil, err
 	}
 	return roleBindings, nil
+}
+
+func (r *userResolver) HasAPIKey(ctx context.Context, obj *dbmodels.User) (bool, error) {
+	apiKey := &dbmodels.ApiKey{}
+	err := r.db.WithContext(ctx).Where("user_id = ?", obj.ID).First(&apiKey).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
 }
 
 // User returns generated.UserResolver implementation.
