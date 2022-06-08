@@ -19,29 +19,32 @@ func (r *mutationResolver) CreateAPIKey(ctx context.Context, input model.APIKeyI
 	if err != nil {
 		return nil, err
 	}
+
 	key := &dbmodels.ApiKey{
 		APIKey: base64.RawURLEncoding.EncodeToString(buf),
 		UserID: *input.UserID,
 	}
 	err = r.db.Transaction(func(tx *gorm.DB) error {
-		tx.Delete(&dbmodels.ApiKey{}, "user_id = ?", key.UserID)
-		tx.Create(key)
-		return tx.Error
+		err = tx.Where("user_id = ?", key.UserID).Delete(&dbmodels.ApiKey{}).Error
+		if err != nil {
+			return err
+		}
+		return tx.Create(key).Error
 	})
+
 	if err != nil {
 		return nil, err
 	}
+
 	return &model.APIKey{
 		APIKey: key.APIKey,
 	}, nil
 }
 
 func (r *mutationResolver) DeleteAPIKey(ctx context.Context, input model.APIKeyInput) (bool, error) {
-	keys := make([]*dbmodels.ApiKey, 0)
-	tx := r.db.Find(&keys, "user_id = ?", input.UserID)
-	if tx.Error != nil {
-		return false, tx.Error
+	err := r.db.WithContext(ctx).Where("user_id = ?", input.UserID).Delete(&dbmodels.ApiKey{}).Error
+	if err != nil {
+		return false, err
 	}
-	tx = r.db.Delete(keys)
-	return tx.Error == nil, tx.Error
+	return true, nil
 }
