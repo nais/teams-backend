@@ -9,6 +9,8 @@ import (
 	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/google_jwt"
+	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
+	"github.com/nais/console/pkg/roles"
 	"golang.org/x/oauth2/jwt"
 	"gorm.io/gorm"
 
@@ -59,15 +61,37 @@ func NewFromConfig(cfg *config.Config, db *gorm.DB, logger auditlogger.Logger) (
 	return New(logger, db, cfg.PartnerDomain, cf), nil
 }
 
+// Sync Fetch all users from the partner and add them as local users in Console. If a user already exists in Console
+// the local user will remain untouched. After all users have been added we will also remove all local users that
+// matches the partner domain that does not exist in the Google Directory.
+// All new users will be grated two roles: "Team Creator" and "Team viewer"
 func (s *userSynchronizer) Sync(ctx context.Context) error {
-	// dummy object for logging
-	// FIXME: We should probably have a system for the user sync? Use the main console system for this perhaps?
-	in := reconcilers.Input{System: &dbmodels.System{}}
+	tx := s.db.WithContext(ctx)
+
+	system := &dbmodels.System{}
+	err := tx.Where("name = ?", console_reconciler.Name).First(system).Error
+	if err != nil {
+		return err
+	}
+
+	in := reconcilers.Input{System: system}
+
+	teamCreator := &dbmodels.Role{}
+	err = tx.Where("name = ?", roles.TeamCreator).First(teamCreator).Error
+	if err != nil {
+		return s.logger.Errorf(in, OpCreate, "role not found %s: %w", roles.TeamCreator, err)
+	}
+
+	teamViewer := &dbmodels.Role{}
+	err = tx.Where("name = ?", roles.TeamViewer).First(teamViewer).Error
+	if err != nil {
+		return s.logger.Errorf(in, OpCreate, "role not found %s: %w", roles.TeamViewer, err)
+	}
 
 	client := s.config.Client(ctx)
 	srv, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
-		return fmt.Errorf("retrieve directory client: %w", err)
+		return s.logger.Errorf(in, OpListRemote, "retrieve directory client: %w", err)
 	}
 
 	resp, err := srv.Users.List().Domain(s.domain).Do()
@@ -77,36 +101,42 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 
 	userIds := make(map[uuid.UUID]struct{})
 
-	return s.db.Transaction(func(tx *gorm.DB) error {
-		// Loop over all remote users and create them locally.
-		// Existing users are ignored.
+	return tx.Transaction(func(tx *gorm.DB) error {
 		for _, remoteUser := range resp.Users {
 			localUser := &dbmodels.User{}
 
-			stmt := s.db.First(localUser, "email = ?", remoteUser.PrimaryEmail)
-			if stmt.Error != nil {
+			err = tx.Where("email = ?", remoteUser.PrimaryEmail).First(localUser).Error
+			if errors.Is(err, gorm.ErrRecordNotFound) {
 				localUser = &dbmodels.User{
 					Email: helpers.Strp(remoteUser.PrimaryEmail),
 					Name:  helpers.Strp(remoteUser.Name.FullName),
+					RoleBindings: []*dbmodels.RoleBinding{
+						{
+							RoleID: teamCreator.ID,
+						},
+						{
+							RoleID: teamViewer.ID,
+						},
+					},
 				}
 
-				tx = tx.Create(localUser)
-				if tx.Error != nil {
-					return s.logger.Errorf(in, OpCreate, "create local user %s: %w", remoteUser.PrimaryEmail, tx.Error)
+				err = tx.Create(localUser).Error
+				if err != nil {
+					return s.logger.Errorf(in, OpCreate, "create local user %s: %w", remoteUser.PrimaryEmail, err)
 				}
 
 				s.logger.UserLogf(in, OpCreate, localUser, "Local user created")
+
 			}
 
 			userIds[*localUser.ID] = struct{}{}
 		}
 
-		// Delete all local users with e-mail addresses that are not a part of the directory.
 		localUsers := make([]*dbmodels.User, 0)
 		domainEmails := "%@" + s.domain
-		tx = tx.Find(&localUsers, "email LIKE ?", domainEmails)
-		if tx.Error != nil {
-			return s.logger.Errorf(in, OpListLocal, "list local users: %w", tx.Error)
+		err = tx.Where("email LIKE ?", domainEmails).Find(&localUsers).Error
+		if err != nil {
+			return s.logger.Errorf(in, OpListLocal, "list local users: %w", err)
 		}
 
 		for _, localUser := range localUsers {
@@ -115,14 +145,14 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 				continue
 			}
 
-			tx = tx.Delete(localUser)
-			if tx.Error != nil {
-				return s.logger.Errorf(in, OpDelete, "delete local user %s: %w", *localUser.Email, tx.Error)
+			err = tx.Delete(localUser).Error
+			if err != nil {
+				return s.logger.Errorf(in, OpDelete, "delete local user %s: %w", *localUser.Email, err)
 			}
 
 			s.logger.UserLogf(in, OpDelete, localUser, "Local user deleted")
 		}
 
-		return tx.Error
+		return nil
 	})
 }
