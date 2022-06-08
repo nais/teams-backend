@@ -72,7 +72,7 @@ type Config struct {
 
 func Defaults() *Config {
 	return &Config{
-		DatabaseURL:   "postgres://console:console@localhost:5432/console?sslmode=disable",
+		DatabaseURL:   "postgres://console:console@localhost:3002/console?sslmode=disable",
 		FrontendURL:   "http://localhost:3001",
 		ListenAddress: "127.0.0.1:3000",
 		NaisDeploy: NaisDeploy{
