@@ -94,12 +94,12 @@ func run() error {
 	log.Infof("Initialized %d reconcilers.", len(recs))
 
 	store := authn.NewStore()
-	authhandler, err := setupAuthHandler(cfg, store)
+	authHandler, err := setupAuthHandler(cfg, store)
 	if err != nil {
 		return err
 	}
 	handler := setupGraphAPI(db, systems[console_reconciler.Name], trigger)
-	srv, err := setupHTTPServer(cfg, db, handler, authhandler, store)
+	srv, err := setupHTTPServer(cfg, db, handler, authHandler, store)
 	if err != nil {
 		return err
 	}
@@ -155,7 +155,7 @@ func run() error {
 
 	// User synchronizer
 	userSyncTimer := time.NewTimer(1 * time.Second)
-	usersyncer, err := usersync.NewFromConfig(cfg, db, logger)
+	userSyncer, err := usersync.NewFromConfig(cfg, db, logger)
 	if err != nil {
 		userSyncTimer.Stop()
 		if err != usersync.ErrNotEnabled {
@@ -200,7 +200,7 @@ func run() error {
 			log.Infof("Starting user synchronization...")
 
 			ctx, cancel := context.WithTimeout(ctx, time.Second*30)
-			err = usersyncer.Sync(ctx)
+			err = userSyncer.Sync(ctx)
 			cancel()
 
 			switch er := err.(type) {
