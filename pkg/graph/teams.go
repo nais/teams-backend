@@ -162,27 +162,18 @@ func (r *queryResolver) Teams(ctx context.Context, pagination *model.Pagination,
 }
 
 func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team, error) {
+	tx := r.db.WithContext(ctx)
 	team := &dbmodels.Team{}
-
-	tx := r.db.WithContext(ctx).Where("id = ?", id).First(team)
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-
-	err := authz.Authorized(ctx, r.console, team, authz.AccessLevelRead, authz.ResourceTeams)
+	err := tx.Where("id = ?", id).First(team).Error
 	if err != nil {
 		return nil, err
 	}
 
-	err = r.db.WithContext(ctx).Model(team).
-		Preload("RoleBindings", "team_id = ?", team.ID).
-		Preload("RoleBindings.Role", "resource = ?", authz.ResourceTeams).
-		Preload("RoleBindings.Role.System").
-		Association("Users").
-		Find(&team.Users)
+	err = authz.Authorized(ctx, r.console, team, authz.AccessLevelRead, authz.ResourceTeams)
 	if err != nil {
 		return nil, err
 	}
+
 	return team, nil
 }
 
