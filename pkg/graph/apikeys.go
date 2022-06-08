@@ -32,7 +32,7 @@ func (r *mutationResolver) CreateAPIKey(ctx context.Context, input model.APIKeyI
 		return nil, err
 	}
 	return &model.APIKey{
-		Apikey: key.APIKey,
+		APIKey: key.APIKey,
 	}, nil
 }
 

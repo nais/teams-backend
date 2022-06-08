@@ -21,7 +21,7 @@ extend type Mutation {
 "API key type."
 type APIKey {
     "The API key."
-    apikey: String!
+    APIKey: String!
 }
 
 "Input type for API key related operations."

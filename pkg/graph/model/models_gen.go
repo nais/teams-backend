@@ -14,7 +14,7 @@ import (
 // API key type.
 type APIKey struct {
 	// The API key.
-	Apikey string `json:"apikey"`
+	APIKey string `json:"APIKey"`
 }
 
 // Input type for API key related operations.
