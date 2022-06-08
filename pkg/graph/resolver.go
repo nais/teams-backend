@@ -3,6 +3,7 @@ package graph
 import (
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/dbmodels"
@@ -83,4 +84,21 @@ func (r *Resolver) withPagination(pagination *model.Pagination, tx *gorm.DB) (*m
 		Offset:  pagination.Offset,
 		Limit:   pagination.Limit,
 	}, tx
+}
+
+func (r *mutationResolver) teamWithAssociations(ctx context.Context, teamID uuid.UUID) (*dbmodels.Team, error) {
+	team := &dbmodels.Team{}
+	err := r.db.
+		WithContext(ctx).
+		Where("id = ?", teamID).
+		Preload("Users").
+		Preload("SystemState").
+		Preload("Metadata").
+		First(team).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return team, nil
 }

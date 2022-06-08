@@ -63,7 +63,10 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 
 	// FIXME: Add log entry for team creation?
 
-	team = r.teamWithAssociations(*team.ID)
+	team, err = r.teamWithAssociations(ctx, *team.ID)
+	if err != nil {
+		return nil, fmt.Errorf("unable to fetch complete team: %s", err)
+	}
 	r.trigger <- team
 
 	return team, nil
@@ -98,7 +101,10 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 		return nil, err
 	}
 
-	team = r.teamWithAssociations(*team.ID)
+	team, err = r.teamWithAssociations(ctx, *team.ID)
+	if err != nil {
+		return nil, fmt.Errorf("unable to fetch complete team: %s", err)
+	}
 	r.trigger <- team
 
 	return team, nil
@@ -135,7 +141,10 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 
 	// FIXME: Also remove all role bindings for the removed users that are attached to the specific team
 
-	team = r.teamWithAssociations(*team.ID)
+	team, err = r.teamWithAssociations(ctx, *team.ID)
+	if err != nil {
+		return nil, fmt.Errorf("unable to fetch complete team: %s", err)
+	}
 	r.trigger <- team
 
 	return team, nil
