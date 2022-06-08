@@ -72,7 +72,7 @@ func run() error {
 		return err
 	}
 
-	err = fixtures.InsertRootUser(ctx, db)
+	err = fixtures.InsertInitialDataset(ctx, db)
 	if err != nil {
 		return err
 	}

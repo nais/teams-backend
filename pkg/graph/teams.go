@@ -12,6 +12,7 @@ import (
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
+	"github.com/nais/console/pkg/roles"
 	"gorm.io/gorm"
 )
 
@@ -21,31 +22,39 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		return nil, err
 	}
 
+	user := authz.UserFromContext(ctx)
+
 	team := &dbmodels.Team{
 		Slug:    input.Slug,
 		Name:    &input.Name,
 		Purpose: input.Purpose,
+		Users:   []*dbmodels.User{user},
 	}
 
-	err = r.db.Transaction(func(tx *gorm.DB) error {
-		// New team
+	tx := r.db.WithContext(ctx)
+
+	err = tx.Transaction(func(tx *gorm.DB) error {
+		teamEditor := &dbmodels.Role{
+			Name: roles.TeamEditor,
+		}
+
+		tx.Where(teamEditor).First(teamEditor)
+		if tx.Error != nil {
+			return tx.Error
+		}
+
 		tx.Create(team)
+		if tx.Error != nil {
+			return tx.Error
+		}
 
-		// Assign creator as administrator for team
-		rolebinding := &dbmodels.RoleBinding{
+		roleBinding := &dbmodels.RoleBinding{
 			TeamID: team.ID,
-			RoleID: dbmodels.TeamEditorRoleID,
-			User:   authz.UserFromContext(ctx),
+			Role:   teamEditor,
+			User:   user,
 		}
 
-		tx.Create(rolebinding)
-
-		err = tx.Model(team).Association("Users").Append(authz.UserFromContext(ctx))
-		if err != nil {
-			return err
-		}
-
-		return tx.Error
+		return tx.Create(roleBinding).Error
 	})
 
 	if err != nil {
@@ -61,32 +70,30 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 }
 
 func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUsersToTeamInput) (*dbmodels.Team, error) {
-	users := make([]*dbmodels.User, 0)
-	team := &dbmodels.Team{}
 	tx := r.db.WithContext(ctx)
 
-	tx.Find(&users, input.UserIds)
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-
-	if len(users) != len(input.UserIds) {
-		return nil, fmt.Errorf("one or more non-existing user IDs given as parameters")
-	}
-
-	tx.First(team, "id = ?", input.TeamID)
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-
-	// all models populated, check ACL now
-	err := authz.Authorized(ctx, r.console, team, authz.AccessLevelUpdate, authz.ResourceTeams)
-
+	team := &dbmodels.Team{}
+	err := tx.Where("id = ?", input.TeamID).First(team).Error
 	if err != nil {
 		return nil, err
 	}
 
-	err = r.db.Model(team).Association("Users").Append(users)
+	users := make([]*dbmodels.User, 0)
+	err = tx.Where(input.UserIds).Find(&users).Error
+	if err != nil {
+		return nil, err
+	}
+
+	if len(users) != len(input.UserIds) {
+		return nil, fmt.Errorf("one or more non-existing or duplicate user IDs given as parameter")
+	}
+
+	err = authz.Authorized(ctx, r.console, team, authz.AccessLevelUpdate, authz.ResourceTeams)
+	if err != nil {
+		return nil, err
+	}
+
+	err = tx.Model(team).Association("Users").Append(users)
 	if err != nil {
 		return nil, err
 	}
@@ -98,34 +105,35 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 }
 
 func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.RemoveUsersFromTeamInput) (*dbmodels.Team, error) {
-	users := make([]*dbmodels.User, 0)
-	team := &dbmodels.Team{}
 	tx := r.db.WithContext(ctx)
 
-	tx.Find(&users, input.UserIds)
-	if tx.Error != nil {
-		return nil, tx.Error
+	team := &dbmodels.Team{}
+	err := tx.Where("id = ?", input.TeamID).First(team).Error
+	if err != nil {
+		return nil, err
+	}
+
+	users := make([]*dbmodels.User, 0)
+	err = tx.Where(input.UserIds).Find(&users).Error
+	if err != nil {
+		return nil, err
 	}
 
 	if len(users) != len(input.UserIds) {
-		return nil, fmt.Errorf("one or more non-existing user IDs given as parameters")
+		return nil, fmt.Errorf("one or more non-existing or duplicate user IDs given as parameter")
 	}
 
-	tx.First(team, "id = ?", input.TeamID)
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-
-	// all models populated, check ACL now
-	err := authz.Authorized(ctx, r.console, team, authz.AccessLevelUpdate, authz.ResourceTeams)
+	err = authz.Authorized(ctx, r.console, team, authz.AccessLevelUpdate, authz.ResourceTeams)
 	if err != nil {
 		return nil, err
 	}
 
-	err = r.db.Model(team).Association("Users").Delete(users)
+	err = tx.Model(team).Association("Users").Delete(users)
 	if err != nil {
 		return nil, err
 	}
+
+	// FIXME: Also remove all role bindings for the removed users that are attached to the specific team
 
 	team = r.teamWithAssociations(*team.ID)
 	r.trigger <- team

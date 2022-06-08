@@ -5,19 +5,13 @@ import (
 	"fmt"
 	helpers "github.com/nais/console/pkg/console"
 	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
+	role_names "github.com/nais/console/pkg/roles"
 
-	"github.com/google/uuid"
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/dbmodels"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
-
-func modelWithID(id *uuid.UUID) dbmodels.Model {
-	return dbmodels.Model{
-		ID: id,
-	}
-}
 
 var (
 	allAccessLevels = string(authz.AccessLevelCreate) + string(authz.AccessLevelRead) + string(authz.AccessLevelUpdate) + string(authz.AccessLevelDelete)
@@ -30,7 +24,7 @@ const (
 	defaultApiKey = "secret"
 )
 
-func InsertRootUser(ctx context.Context, db *gorm.DB) error {
+func InsertInitialDataset(ctx context.Context, db *gorm.DB) error {
 	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// If there are any users in the database, skip creation
 		users := make([]*dbmodels.User, 0)
@@ -49,44 +43,48 @@ func InsertRootUser(ctx context.Context, db *gorm.DB) error {
 		log.Infof("Inserting initial root user into database...")
 
 		rootUser := &dbmodels.User{
-			Model: modelWithID(dbmodels.AdminUserID),
 			Email: helpers.Strp(emailRootUser),
 			Name:  helpers.Strp(nameRootUser),
 		}
 
-		roles := []*dbmodels.Role{
-			{
-				Model:       modelWithID(dbmodels.TeamEditorRoleID),
+		tx.Create(rootUser)
+
+		apikey := &dbmodels.ApiKey{
+			APIKey: defaultApiKey,
+			UserID: *rootUser.ID,
+		}
+
+		tx.Create(apikey)
+
+		roles := map[string]*dbmodels.Role{
+			role_names.TeamEditor: {
 				SystemID:    console.ID,
-				Name:        "Team editor",
+				Name:        role_names.TeamEditor,
 				Description: "Gives the user full access to the team. If given on a global scale, this role gives full access to all teams.",
 				Resource:    string(authz.ResourceTeams),
 				AccessLevel: allAccessLevels,
 				Permission:  authz.PermissionAllow,
 			},
-			{
-				Model:       modelWithID(dbmodels.TeamViewerRoleID),
+			role_names.TeamViewer: {
 				SystemID:    console.ID,
-				Name:        "Team viewer",
+				Name:        role_names.TeamViewer,
 				Description: "Allows a user to view the contents of a team.",
 				Resource:    string(authz.ResourceTeams),
 				AccessLevel: string(authz.AccessLevelRead),
 				Permission:  authz.PermissionAllow,
 			},
-			{
-				Model:       modelWithID(dbmodels.TeamCreatorRoleID),
+			role_names.TeamCreator: {
 				SystemID:    console.ID,
-				Name:        "Team creator",
+				Name:        role_names.TeamCreator,
 				Description: "Allows a user to create new teams.",
 				Resource:    string(authz.ResourceTeams),
 				AccessLevel: string(authz.AccessLevelCreate),
 				Permission:  authz.PermissionAllow,
 			},
 
-			{
-				Model:       modelWithID(dbmodels.RoleEditorRoleID),
+			role_names.RoleEditor: {
 				SystemID:    console.ID,
-				Name:        "Role editor",
+				Name:        role_names.RoleEditor,
 				Description: "Gives the user role administration access.",
 				Resource:    string(authz.ResourceRoles),
 				AccessLevel: allAccessLevels,
@@ -94,26 +92,22 @@ func InsertRootUser(ctx context.Context, db *gorm.DB) error {
 			},
 		}
 
+		for _, role := range roles {
+			tx.Create(role)
+		}
+
 		roleBindings := []*dbmodels.RoleBinding{
 			{
-				UserID: dbmodels.AdminUserID,
-				RoleID: dbmodels.TeamEditorRoleID,
+				UserID: rootUser.ID,
+				RoleID: roles[role_names.TeamEditor].ID,
 			},
 			{
-				UserID: dbmodels.AdminUserID,
-				RoleID: dbmodels.RoleEditorRoleID,
+				UserID: rootUser.ID,
+				RoleID: roles[role_names.RoleEditor].ID,
 			},
 		}
 
-		apikey := &dbmodels.ApiKey{
-			APIKey: defaultApiKey,
-			UserID: *rootUser.ID,
-		}
-
-		tx.Create(rootUser)
-		tx.Create(roles)
 		tx.Create(roleBindings)
-		tx.Create(apikey)
 
 		return tx.Error
 	})
