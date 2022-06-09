@@ -88,6 +88,12 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 		return s.logger.Errorf(in, OpCreate, "role not found %s: %w", roles.TeamViewer, err)
 	}
 
+	roleViewer := &dbmodels.Role{}
+	err = tx.Where("name = ?", roles.RoleViewer).First(roleViewer).Error
+	if err != nil {
+		return s.logger.Errorf(in, OpCreate, "role not found %s: %w", roles.RoleViewer, err)
+	}
+
 	client := s.config.Client(ctx)
 	srv, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
@@ -116,6 +122,9 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 						},
 						{
 							RoleID: teamViewer.ID,
+						},
+						{
+							RoleID: roleViewer.ID,
 						},
 					},
 				}

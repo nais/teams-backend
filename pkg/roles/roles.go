@@ -6,4 +6,5 @@ const (
 	TeamCreator = "Team creator"
 
 	RoleEditor = "Role editor"
+	RoleViewer = "Role viewer"
 )

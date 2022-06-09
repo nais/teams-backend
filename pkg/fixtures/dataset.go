@@ -42,8 +42,8 @@ func InsertInitialDataset(ctx context.Context, db *gorm.DB) error {
 		log.Infof("Inserting initial root user into database...")
 
 		rootUser := &dbmodels.User{
-			Email: helpers.Strp(adminUserName),
-			Name:  helpers.Strp(adminUserEmail),
+			Name:  helpers.Strp(adminUserName),
+			Email: helpers.Strp(adminUserEmail),
 		}
 
 		tx.Create(rootUser)
@@ -87,6 +87,14 @@ func InsertInitialDataset(ctx context.Context, db *gorm.DB) error {
 				Description: "Gives the user role administration access.",
 				Resource:    string(authz.ResourceRoles),
 				AccessLevel: allAccessLevels,
+				Permission:  authz.PermissionAllow,
+			},
+			role_names.RoleViewer: {
+				SystemID:    console.ID,
+				Name:        role_names.RoleViewer,
+				Description: "Allows a user to view roles.",
+				Resource:    string(authz.ResourceRoles),
+				AccessLevel: string(authz.AccessLevelRead),
 				Permission:  authz.PermissionAllow,
 			},
 		}
