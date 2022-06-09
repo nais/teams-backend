@@ -66,7 +66,7 @@ func (r *Resolver) paginatedQuery(ctx context.Context, pagination *model.Paginat
 	if pagination == nil {
 		pagination = &model.Pagination{
 			Offset: 0,
-			Limit:  10,
+			Limit:  50,
 		}
 	}
 	tx := r.db.WithContext(ctx).Model(dbmodel).Where(query.GetQuery()).Order(sort.GetOrderString())

@@ -1181,7 +1181,7 @@ input Pagination {
     offset: Int! = 0
 
     "Number of entries per page."
-    limit: Int! = 10
+    limit: Int! = 50
 }
 
 "Direction of the sort."
@@ -8053,7 +8053,7 @@ func (ec *executionContext) unmarshalInputPagination(ctx context.Context, obj in
 		asMap["offset"] = 0
 	}
 	if _, present := asMap["limit"]; !present {
-		asMap["limit"] = 10
+		asMap["limit"] = 50
 	}
 
 	for k, v := range asMap {
