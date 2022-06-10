@@ -3,12 +3,11 @@ package fixtures
 import (
 	"context"
 	"fmt"
+	"github.com/nais/console/pkg/authz"
 	helpers "github.com/nais/console/pkg/console"
+	"github.com/nais/console/pkg/dbmodels"
 	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
 	role_names "github.com/nais/console/pkg/roles"
-
-	"github.com/nais/console/pkg/authz"
-	"github.com/nais/console/pkg/dbmodels"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
@@ -34,8 +33,8 @@ func InsertInitialDataset(ctx context.Context, db *gorm.DB) error {
 		}
 
 		console := &dbmodels.System{}
-		tx.First(console, "name = ?", console_reconciler.Name)
-		if console.ID == nil {
+		err := tx.First(console, "name = ?", console_reconciler.Name).Error
+		if err != nil {
 			return fmt.Errorf("system fixtures not in database")
 		}
 
@@ -46,14 +45,20 @@ func InsertInitialDataset(ctx context.Context, db *gorm.DB) error {
 			Email: helpers.Strp(adminUserEmail),
 		}
 
-		tx.Create(rootUser)
-
-		apikey := &dbmodels.ApiKey{
-			APIKey: defaultApiKey,
-			UserID: *rootUser.ID,
+		err = tx.Create(rootUser).Error
+		if err != nil {
+			return err
 		}
 
-		tx.Create(apikey)
+		apiKey := &dbmodels.ApiKey{
+			APIKey: defaultApiKey,
+			User:   rootUser,
+		}
+
+		err = tx.Create(apiKey).Error
+		if err != nil {
+			return err
+		}
 
 		roles := map[string]*dbmodels.Role{
 			role_names.TeamEditor: {
@@ -100,7 +105,10 @@ func InsertInitialDataset(ctx context.Context, db *gorm.DB) error {
 		}
 
 		for _, role := range roles {
-			tx.Create(role)
+			err = tx.Create(role).Error
+			if err != nil {
+				return err
+			}
 		}
 
 		roleBindings := []*dbmodels.RoleBinding{
@@ -114,8 +122,6 @@ func InsertInitialDataset(ctx context.Context, db *gorm.DB) error {
 			},
 		}
 
-		tx.Create(roleBindings)
-
-		return tx.Error
+		return tx.Create(roleBindings).Error
 	})
 }
