@@ -28,24 +28,31 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		Slug:    input.Slug,
 		Name:    &input.Name,
 		Purpose: input.Purpose,
-		Users:   []*dbmodels.User{user},
 	}
 
 	tx := r.db.WithContext(ctx)
 
 	err = tx.Transaction(func(tx *gorm.DB) error {
-		teamEditor := &dbmodels.Role{
-			Name: roles.TeamEditor,
+		teamEditor := &dbmodels.Role{}
+
+		err = tx.Where("name = ?", roles.TeamEditor).First(teamEditor).Error
+		if err != nil {
+			return err
 		}
 
-		tx.Where(teamEditor).First(teamEditor)
-		if tx.Error != nil {
-			return tx.Error
+		err = r.createObjectWithTracking(ctx, team)
+		if err != nil {
+			return err
 		}
 
-		tx.Create(team)
-		if tx.Error != nil {
-			return tx.Error
+		ut := &dbmodels.UsersTeams{
+			UserID: user.ID,
+			TeamID: team.ID,
+		}
+
+		err = r.createObjectWithTracking(ctx, ut)
+		if err != nil {
+			return err
 		}
 
 		roleBinding := &dbmodels.RoleBinding{
@@ -54,7 +61,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 			User:   user,
 		}
 
-		return tx.Create(roleBinding).Error
+		return r.createObjectWithTracking(ctx, roleBinding)
 	})
 
 	if err != nil {

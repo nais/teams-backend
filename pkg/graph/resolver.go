@@ -34,17 +34,15 @@ type Model interface {
 	GetModel() *dbmodels.Model
 }
 
-// Create a new object in the database, attaching the current user in metadata.
-func (r *Resolver) createDB(ctx context.Context, obj Model) error {
-	m := obj.GetModel()
+func (r *Resolver) createObjectWithTracking(ctx context.Context, obj Model) error {
 	user := authz.UserFromContext(ctx)
-	m.CreatedBy = user
-	m.UpdatedBy = user
-	tx := r.db.WithContext(ctx).Create(obj)
-	if tx.Error != nil {
-		return tx.Error
+	if user == nil {
+		return fmt.Errorf("context has no user")
 	}
-	return tx.Find(obj).Error
+	model := obj.GetModel()
+	model.CreatedBy = user
+	model.UpdatedBy = user
+	return r.db.WithContext(ctx).Create(obj).Error
 }
 
 // Update an object in the database, attaching the current user in metadata.
