@@ -8,13 +8,15 @@ func Migrate(db *gorm.DB) error {
 	return db.AutoMigrate(
 		&ApiKey{},
 		&AuditLog{},
-		&Role{},
 		&RoleBinding{},
+		&Role{},
 		&Synchronization{},
-		&System{},
 		&SystemState{},
+		&System{},
+		&SystemsTeams{},
 		&TeamMetadata{},
 		&Team{},
 		&User{},
+		&UsersTeams{},
 	)
 }
