@@ -20,7 +20,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.CreateUse
 		Email: input.Email,
 		Name:  &input.Name,
 	}
-	err := r.createObjectWithTracking(ctx, u)
+	err := r.createTrackedObject(ctx, u)
 	return u, err
 }
 

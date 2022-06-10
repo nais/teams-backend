@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/google/uuid"
-
+	"github.com/jackc/pgconn"
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/model"
@@ -14,6 +14,10 @@ import (
 // This file will not be regenerated automatically.
 //
 // It serves as dependency injection for your app, add any dependencies you require here.
+
+const (
+	DuplicateErrorCode = "23505"
+)
 
 type Resolver struct {
 	db      *gorm.DB
@@ -29,12 +33,12 @@ func NewResolver(db *gorm.DB, console *dbmodels.System, trigger chan<- *dbmodels
 	}
 }
 
-// Enables abstracted access to CreatedBy and UpdatedBy for generic database models.
+// Model Enables abstracted access to CreatedBy and UpdatedBy for generic database models.
 type Model interface {
 	GetModel() *dbmodels.Model
 }
 
-func (r *Resolver) createObjectWithTracking(ctx context.Context, obj Model) error {
+func (r *Resolver) createTrackedObject(ctx context.Context, obj Model) error {
 	user := authz.UserFromContext(ctx)
 	if user == nil {
 		return fmt.Errorf("context has no user")
@@ -43,6 +47,23 @@ func (r *Resolver) createObjectWithTracking(ctx context.Context, obj Model) erro
 	model.CreatedBy = user
 	model.UpdatedBy = user
 	return r.db.WithContext(ctx).Create(obj).Error
+}
+
+func (r *Resolver) createTrackedObjectIgnoringDuplicates(ctx context.Context, obj Model) error {
+	err := r.createTrackedObject(ctx, obj)
+
+	if err == nil {
+		return nil
+	}
+
+	switch t := err.(type) {
+	case *pgconn.PgError:
+		if t.Code == DuplicateErrorCode {
+			return nil
+		}
+	}
+
+	return err
 }
 
 // Update an object in the database, attaching the current user in metadata.

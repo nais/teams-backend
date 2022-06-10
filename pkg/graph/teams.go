@@ -40,7 +40,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 			return err
 		}
 
-		err = r.createObjectWithTracking(ctx, team)
+		err = r.createTrackedObject(ctx, team)
 		if err != nil {
 			return err
 		}
@@ -50,7 +50,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 			TeamID: team.ID,
 		}
 
-		err = r.createObjectWithTracking(ctx, ut)
+		err = r.createTrackedObject(ctx, ut)
 		if err != nil {
 			return err
 		}
@@ -61,7 +61,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 			User:   user,
 		}
 
-		return r.createObjectWithTracking(ctx, roleBinding)
+		return r.createTrackedObject(ctx, roleBinding)
 	})
 
 	if err != nil {
@@ -103,7 +103,20 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 		return nil, err
 	}
 
-	err = tx.Model(team).Association("Users").Append(users)
+	err = r.db.Transaction(func(tx *gorm.DB) error {
+		for _, userId := range input.UserIds {
+			tm := &dbmodels.UsersTeams{
+				UserID: userId,
+				TeamID: team.ID,
+			}
+			err = r.createTrackedObjectIgnoringDuplicates(ctx, tm)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
@@ -141,12 +154,23 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 		return nil, err
 	}
 
-	err = tx.Model(team).Association("Users").Delete(users)
+	err = tx.Transaction(func(tx *gorm.DB) error {
+		err = tx.Where("user_id IN (?) AND team_id = ?", input.UserIds, team.ID).Delete(&dbmodels.UsersTeams{}).Error
+		if err != nil {
+			return err
+		}
+
+		err = tx.Where("user_id IN (?) AND team_id = ?", input.UserIds, team.ID).Delete(&dbmodels.RoleBinding{}).Error
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
-
-	// FIXME: Also remove all role bindings for the removed users that are attached to the specific team
 
 	team, err = r.teamWithAssociations(ctx, *team.ID)
 	if err != nil {

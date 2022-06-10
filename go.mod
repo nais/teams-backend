@@ -11,6 +11,7 @@ require (
 	github.com/go-chi/cors v1.2.0
 	github.com/google/go-github/v43 v43.0.0
 	github.com/google/uuid v1.3.0
+	github.com/jackc/pgconn v1.11.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mattn/go-sqlite3 v1.14.12
 	github.com/shurcooL/githubv4 v0.0.0-20220115235240-a14260e6f8a2
@@ -43,7 +44,6 @@ require (
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
-	github.com/jackc/pgconn v1.11.0 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgproto3/v2 v2.2.0 // indirect
