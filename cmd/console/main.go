@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
 	"net/http"
@@ -12,7 +11,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/99designs/gqlgen/graphql"
 	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/go-chi/chi"
@@ -31,7 +29,6 @@ import (
 	"github.com/nais/console/pkg/usersync"
 	"github.com/nais/console/pkg/version"
 	log "github.com/sirupsen/logrus"
-	"github.com/vektah/gqlparser/v2/gqlerror"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -373,18 +370,7 @@ func setupGraphAPI(db *gorm.DB, console *dbmodels.System, trigger chan<- *dbmode
 			gc,
 		),
 	)
-	handler.SetErrorPresenter(func(ctx context.Context, e error) *gqlerror.Error {
-		err := graphql.DefaultErrorPresenter(ctx, e)
-
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			err.Message = "Not found"
-			err.Extensions = map[string]interface{}{
-				"code": "404",
-			}
-		}
-
-		return err
-	})
+	handler.SetErrorPresenter(graph.GetErrorPresenter())
 	return handler
 }
 
