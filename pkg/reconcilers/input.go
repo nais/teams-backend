@@ -13,18 +13,6 @@ type Input struct {
 	Team            *dbmodels.Team
 }
 
-func (in Input) GetSystem() *dbmodels.System {
-	return in.System
-}
-
-func (in Input) GetSynchronization() *dbmodels.Synchronization {
-	return in.Synchronization
-}
-
-func (in Input) GetTeam() *dbmodels.Team {
-	return in.Team
-}
-
 func (in Input) GetAuditLogEntry(user *dbmodels.User, success bool, action, format string, args ...interface{}) *dbmodels.AuditLog {
 	return &dbmodels.AuditLog{
 		Action:          action,

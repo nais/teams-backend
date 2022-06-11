@@ -10,9 +10,6 @@ type logger struct {
 
 // Input Log input interface
 type Input interface {
-	GetSystem() *dbmodels.System
-	GetSynchronization() *dbmodels.Synchronization
-	GetTeam() *dbmodels.Team
 	GetAuditLogEntry(user *dbmodels.User, success bool, action, format string, args ...interface{}) *dbmodels.AuditLog
 }
 
