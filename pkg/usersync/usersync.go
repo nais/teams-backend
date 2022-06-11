@@ -9,7 +9,6 @@ import (
 	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/google_jwt"
-	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
 	"github.com/nais/console/pkg/roles"
 	"golang.org/x/oauth2/jwt"
 	"gorm.io/gorm"
@@ -21,6 +20,7 @@ import (
 )
 
 type userSynchronizer struct {
+	system *dbmodels.System
 	logger auditlogger.Logger
 	domain string
 	config *jwt.Config
@@ -38,16 +38,17 @@ var (
 	ErrNotEnabled = errors.New("disabled by configuration")
 )
 
-func New(logger auditlogger.Logger, db *gorm.DB, domain string, config *jwt.Config) *userSynchronizer {
+func New(db *gorm.DB, system *dbmodels.System, logger auditlogger.Logger, domain string, config *jwt.Config) *userSynchronizer {
 	return &userSynchronizer{
-		config: config,
 		db:     db,
-		domain: domain,
+		system: system,
 		logger: logger,
+		domain: domain,
+		config: config,
 	}
 }
 
-func NewFromConfig(cfg *config.Config, db *gorm.DB, logger auditlogger.Logger) (*userSynchronizer, error) {
+func NewFromConfig(cfg *config.Config, db *gorm.DB, system *dbmodels.System, logger auditlogger.Logger) (*userSynchronizer, error) {
 	if !cfg.UserSync.Enabled {
 		return nil, ErrNotEnabled
 	}
@@ -58,7 +59,7 @@ func NewFromConfig(cfg *config.Config, db *gorm.DB, logger auditlogger.Logger) (
 		return nil, fmt.Errorf("get google jwt config: %w", err)
 	}
 
-	return New(logger, db, cfg.PartnerDomain, cf), nil
+	return New(db, system, logger, cfg.PartnerDomain, cf), nil
 }
 
 // Sync Fetch all users from the partner and add them as local users in Console. If a user already exists in Console
@@ -67,17 +68,10 @@ func NewFromConfig(cfg *config.Config, db *gorm.DB, logger auditlogger.Logger) (
 // All new users will be grated two roles: "Team Creator" and "Team viewer"
 func (s *userSynchronizer) Sync(ctx context.Context) error {
 	tx := s.db.WithContext(ctx)
-
-	system := &dbmodels.System{}
-	err := tx.Where("name = ?", console_reconciler.Name).First(system).Error
-	if err != nil {
-		return err
-	}
-
-	in := reconcilers.Input{System: system}
+	in := reconcilers.Input{System: s.system}
 
 	teamCreator := &dbmodels.Role{}
-	err = tx.Where("name = ?", roles.TeamCreator).First(teamCreator).Error
+	err := tx.Where("name = ?", roles.TeamCreator).First(teamCreator).Error
 	if err != nil {
 		return s.logger.Errorf(in, OpCreate, "role not found %s: %w", roles.TeamCreator, err)
 	}

@@ -152,7 +152,7 @@ func run() error {
 
 	// User synchronizer
 	userSyncTimer := time.NewTimer(1 * time.Second)
-	userSyncer, err := usersync.NewFromConfig(cfg, db, logger)
+	userSyncer, err := usersync.NewFromConfig(cfg, db, systems[console_reconciler.Name], logger)
 	if err != nil {
 		userSyncTimer.Stop()
 		if err != usersync.ErrNotEnabled {
