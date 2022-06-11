@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/jackc/pgconn"
+	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/model"
@@ -20,16 +21,18 @@ const (
 )
 
 type Resolver struct {
-	db      *gorm.DB
-	trigger chan<- *dbmodels.Team
-	console *dbmodels.System
+	db          *gorm.DB
+	trigger     chan<- *dbmodels.Team
+	console     *dbmodels.System
+	auditLogger *auditlogger.Logger
 }
 
-func NewResolver(db *gorm.DB, console *dbmodels.System, trigger chan<- *dbmodels.Team) *Resolver {
+func NewResolver(db *gorm.DB, console *dbmodels.System, trigger chan<- *dbmodels.Team, auditLogger *auditlogger.Logger) *Resolver {
 	return &Resolver{
-		db:      db,
-		trigger: trigger,
-		console: console,
+		db:          db,
+		console:     console,
+		trigger:     trigger,
+		auditLogger: auditLogger,
 	}
 }
 
