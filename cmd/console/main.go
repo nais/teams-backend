@@ -245,17 +245,17 @@ func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems ma
 				Team:            team,
 			}
 
-			log.Info(input.AuditLog(nil, true, console_reconciler.OpReconcileStart, "Starting reconcile"))
+			log.Info(input.GetAuditLogEntry(nil, true, console_reconciler.OpReconcileStart, "Starting reconcile"))
 			err := reconciler.Reconcile(ctx, input)
 
 			switch er := err.(type) {
 			case nil:
-				log.Info(input.AuditLog(nil, true, console_reconciler.OpReconcileEnd, "Successfully reconciled"))
+				log.Info(input.GetAuditLogEntry(nil, true, console_reconciler.OpReconcileEnd, "Successfully reconciled"))
 			case *dbmodels.AuditLog:
 				er.Log().Error(er.Message)
 				teamErrors++
 			case error:
-				log.Error(input.AuditLog(nil, true, console_reconciler.OpReconcileEnd, er.Error()))
+				log.Error(input.GetAuditLogEntry(nil, true, console_reconciler.OpReconcileEnd, er.Error()))
 				teamErrors++
 			}
 		}
