@@ -154,12 +154,43 @@ func (a *AuditLog) Error() string {
 
 // Log Add an entry in the standard logger
 func (a *AuditLog) Log() *log.Entry {
+	var teamSlug string
+	var teamName string
+	var userEmail string
+	var userName string
+
+	if a.Team != nil {
+		teamName = a.Team.Name
+		teamSlug = string(a.Team.Slug)
+	}
+
+	if a.User != nil {
+		if a.User.Email != nil {
+			userEmail = *a.User.Email
+		}
+
+		userName = a.User.Name
+	}
+
 	return log.StandardLogger().WithFields(log.Fields{
-		"system":         a.System.Name,
+		"system_id":      a.SystemID,
+		"system_name":    a.System.Name,
 		"correlation_id": a.SynchronizationID,
-		"user":           a.UserID,
-		"team":           a.TeamID,
+		"team_id":        uuidAsString(a.TeamID),
+		"team_name":      teamName,
+		"team_slug":      teamSlug,
+		"user_email":     userEmail,
+		"user_id":        uuidAsString(a.UserID),
+		"user_name":      userName,
 		"action":         a.Action,
 		"success":        a.Success,
 	})
+}
+
+func uuidAsString(id *uuid.UUID) string {
+	if id == nil {
+		return ""
+	}
+
+	return id.String()
 }
