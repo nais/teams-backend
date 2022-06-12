@@ -10,7 +10,7 @@ import (
 
 // Model Base model that all database tables inherit.
 type Model struct {
-	ID          *uuid.UUID `gorm:"primaryKey; type:uuid; default:(uuid_generate_v4())"`
+	ID          *uuid.UUID `gorm:"type:uuid; primaryKey; default:(uuid_generate_v4())"`
 	CreatedAt   time.Time  `gorm:"<-:create; autoCreateTime; index; not null"`
 	CreatedBy   *User      `gorm:""`
 	UpdatedBy   *User      `gorm:""`
@@ -41,10 +41,10 @@ type AuditLog struct {
 	Synchronization   *Synchronization `gorm:""`
 	User              *User            `gorm:""` // User object, not subject, i.e. which user was affected by the operation.
 	Team              *Team            `gorm:""`
-	SystemID          *uuid.UUID       `gorm:""`
-	SynchronizationID *uuid.UUID       `gorm:""`
-	UserID            *uuid.UUID       `gorm:""`
-	TeamID            *uuid.UUID       `gorm:""`
+	SystemID          *uuid.UUID       `gorm:"type:uuid"`
+	SynchronizationID *uuid.UUID       `gorm:"type:uuid"`
+	UserID            *uuid.UUID       `gorm:"type:uuid"`
+	TeamID            *uuid.UUID       `gorm:"type:uuid"`
 	Success           bool             `gorm:"not null; index"` // True if operation succeeded
 	Action            string           `gorm:"not null; index"` // CRUD action
 	Message           string           `gorm:"not null"`        // User readable success or error message (log line)
@@ -55,16 +55,16 @@ type RoleBinding struct {
 	Role   *Role      `gorm:"not null"` // which role is granted
 	Team   *Team      `gorm:""`         // role is granted in context of this team
 	User   *User      `gorm:"not null"` // which user is granted this role
-	UserID *uuid.UUID `gorm:"not null; index:user_role_team_index,unique"`
-	RoleID *uuid.UUID `gorm:"not null; index:user_role_team_index,unique"`
-	TeamID *uuid.UUID `gorm:"index:user_role_team_index,unique"`
+	UserID *uuid.UUID `gorm:"type:uuid; not null; index:user_role_team_index,unique"`
+	RoleID *uuid.UUID `gorm:"type:uuid; not null; index:user_role_team_index,unique"`
+	TeamID *uuid.UUID `gorm:"type:uuid; index:user_role_team_index,unique"`
 }
 
 type Role struct {
 	Model
 	SoftDeletes
 	System       *System        `gorm:"not null"`
-	SystemID     *uuid.UUID     `gorm:"not null; index"`
+	SystemID     *uuid.UUID     `gorm:"type:uuid; not null; index"`
 	Name         string         `gorm:"uniqueIndex; not null"`
 	Description  string         `gorm:""`
 	Resource     string         `gorm:"not null"` // sub-resource at system (maybe not needed if systems are namespaced, e.g. gcp:buckets)
@@ -81,9 +81,9 @@ type Synchronization struct {
 type SystemState struct {
 	Model
 	Team        *Team
-	TeamID      *uuid.UUID `gorm:"uniqueIndex:system_env_team_key; index"`
+	TeamID      *uuid.UUID `gorm:"type:uuid; uniqueIndex:system_env_team_key; index"`
 	System      *System    `gorm:""`
-	SystemID    *uuid.UUID `gorm:"uniqueIndex:system_env_team_key; not null; index"`
+	SystemID    *uuid.UUID `gorm:"type:uuid; uniqueIndex:system_env_team_key; not null; index"`
 	Environment *string    `gorm:"uniqueIndex:system_env_team_key"`
 	Key         string     `gorm:"uniqueIndex:system_env_team_key; not null"`
 	Value       string     `gorm:"not null"`
@@ -99,14 +99,14 @@ type SystemsTeams struct {
 	Model
 	System   *System    `gorm:"not null"`
 	Team     *Team      `gorm:"not null"`
-	SystemID *uuid.UUID `gorm:"not null; index:systems_teams_index,unique"`
-	TeamID   *uuid.UUID `gorm:"not null; index:systems_teams_index,unique"`
+	SystemID *uuid.UUID `gorm:"type:uuid; not null; index:systems_teams_index,unique"`
+	TeamID   *uuid.UUID `gorm:"type:uuid; not null; index:systems_teams_index,unique"`
 }
 
 type TeamMetadata struct {
 	Model
 	Team   *Team      `gorm:""`
-	TeamID *uuid.UUID `gorm:"uniqueIndex:team_key"`
+	TeamID *uuid.UUID `gorm:"type:uuid; uniqueIndex:team_key"`
 	Key    string     `gorm:"uniqueIndex:team_key; not null"`
 	Value  *string    `gorm:""`
 }
@@ -137,8 +137,8 @@ type UsersTeams struct {
 	Model
 	Team   *Team      `gorm:"not null"`
 	User   *User      `gorm:"not null"`
-	UserID *uuid.UUID `gorm:"not null; index:users_teams_index,unique"`
-	TeamID *uuid.UUID `gorm:"not null; index:users_teams_index,unique"`
+	UserID *uuid.UUID `gorm:"type:uuid; not null; index:users_teams_index,unique"`
+	TeamID *uuid.UUID `gorm:"type:uuid; not null; index:users_teams_index,unique"`
 }
 
 // GetModel Enable callers to access the base model through an interface.
