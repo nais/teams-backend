@@ -99,7 +99,7 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 		sync := &dbmodels.Synchronization{}
 		err = tx.Create(sync).Error
 		if err != nil {
-			return fmt.Errorf("%s: unable to create synchronization: %w", OpPrepare, err)
+			return fmt.Errorf("%s: unable to create synchronization for audit logs: %w", OpPrepare, err)
 		}
 
 		in := reconcilers.Input{
