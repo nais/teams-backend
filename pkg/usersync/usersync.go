@@ -109,16 +109,16 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				localUser = &dbmodels.User{
 					Email: helpers.Strp(remoteUser.PrimaryEmail),
-					Name:  helpers.Strp(remoteUser.Name.FullName),
+					Name:  remoteUser.Name.FullName,
 					RoleBindings: []*dbmodels.RoleBinding{
 						{
-							RoleID: teamCreator.ID,
+							RoleID: *teamCreator.ID,
 						},
 						{
-							RoleID: teamViewer.ID,
+							RoleID: *teamViewer.ID,
 						},
 						{
-							RoleID: roleViewer.ID,
+							RoleID: *roleViewer.ID,
 						},
 					},
 				}

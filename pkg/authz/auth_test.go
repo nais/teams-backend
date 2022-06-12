@@ -16,7 +16,7 @@ func TestContextWithUser(t *testing.T) {
 
 	user := &dbmodels.User{
 		Email: helpers.Strp("mail@example.com"),
-		Name:  helpers.Strp("User Name"),
+		Name:  "User Name",
 	}
 
 	ctx = authz.ContextWithUser(ctx, user)
@@ -29,12 +29,12 @@ func TestContextWithRoleBindings(t *testing.T) {
 
 	roleBindings := []*dbmodels.RoleBinding{
 		{
-			User: &dbmodels.User{
+			User: dbmodels.User{
 				Email: helpers.Strp("mail1@example.com"),
 			},
 		},
 		{
-			User: &dbmodels.User{
+			User: dbmodels.User{
 				Email: helpers.Strp("mail2@example.com"),
 			},
 		},
@@ -57,19 +57,19 @@ func TestSimpleAllowDeny(t *testing.T) {
 	// as roles are prefetched before they are sent to the Authorized() function.
 	roles := []*dbmodels.Role{
 		{
-			SystemID:    &unusedSystem,
+			SystemID:    unusedSystem,
 			Resource:    "teams",
 			AccessLevel: string(authz.AccessLevelRead),
 			Permission:  authz.PermissionDeny,
 		},
 		{
-			SystemID:    &systemID,
+			SystemID:    systemID,
 			Resource:    "teams",
 			AccessLevel: string(authz.AccessLevelRead),
 			Permission:  authz.PermissionAllow,
 		},
 		{
-			SystemID:    &systemID,
+			SystemID:    systemID,
 			Resource:    "roles",
 			AccessLevel: string(authz.AccessLevelCreate),
 			Permission:  authz.PermissionAllow,
@@ -110,13 +110,13 @@ func TestAllowDenyOrdering(t *testing.T) {
 	}
 	roles := []*dbmodels.Role{
 		{
-			SystemID:    &systemID,
+			SystemID:    systemID,
 			Resource:    "teams",
 			AccessLevel: string(authz.AccessLevelRead),
 			Permission:  authz.PermissionAllow,
 		},
 		{
-			SystemID:    &systemID,
+			SystemID:    systemID,
 			Resource:    "teams",
 			AccessLevel: string(authz.AccessLevelRead),
 			Permission:  authz.PermissionDeny,
@@ -136,13 +136,13 @@ func TestExplicitDeny(t *testing.T) {
 	}
 	roles := []*dbmodels.Role{
 		{
-			SystemID:    &systemID,
+			SystemID:    systemID,
 			Resource:    "teams",
 			AccessLevel: string(authz.AccessLevelCreate),
 			Permission:  authz.PermissionAllow,
 		},
 		{
-			SystemID:    &systemID,
+			SystemID:    systemID,
 			Resource:    "teams",
 			AccessLevel: string(authz.AccessLevelRead),
 			Permission:  authz.PermissionDeny,
@@ -157,7 +157,7 @@ func makeRoleBindings(roles []*dbmodels.Role) []*dbmodels.RoleBinding {
 	roleBindings := make([]*dbmodels.RoleBinding, 0)
 	for _, role := range roles {
 		rb := &dbmodels.RoleBinding{
-			Role: role,
+			Role: *role,
 		}
 		roleBindings = append(roleBindings, rb)
 	}

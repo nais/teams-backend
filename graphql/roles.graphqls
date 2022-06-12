@@ -53,7 +53,7 @@ type Role {
     system: System!
 
     "Description of the role."
-    description: String
+    description: String!
 
     "Resource of the role."
     resource: String!

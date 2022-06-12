@@ -3,7 +3,6 @@ package graph_test
 import (
 	"context"
 	"github.com/nais/console/pkg/authz"
-	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/test"
@@ -17,11 +16,11 @@ import (
 func getContextWithAddedRoleBinding(system *dbmodels.System, resource authz.Resource, accessLevel authz.AccessLevel, permission string) context.Context {
 	roles := []*dbmodels.RoleBinding{
 		{
-			Role: &dbmodels.Role{
+			Role: dbmodels.Role{
 				Resource:    string(resource),
 				AccessLevel: string(accessLevel),
 				Permission:  permission,
-				SystemID:    system.ID,
+				SystemID:    *system.ID,
 			},
 		},
 	}
@@ -44,16 +43,16 @@ func TestQueryResolver_Teams(t *testing.T) {
 	db.AutoMigrate(&dbmodels.Team{})
 	db.Create([]dbmodels.Team{
 		{
-			Slug: dbmodels.SlugP("b"),
-			Name: helpers.Strp("B"),
+			Slug: "b",
+			Name: "B",
 		},
 		{
-			Slug: dbmodels.SlugP("a"),
-			Name: helpers.Strp("A"),
+			Slug: "a",
+			Name: "A",
 		},
 		{
-			Slug: dbmodels.SlugP("c"),
-			Name: helpers.Strp("C"),
+			Slug: "c",
+			Name: "C",
 		},
 	})
 

@@ -81,7 +81,7 @@ func (s *namespaceReconciler) Reconcile(ctx context.Context, in reconcilers.Inpu
 
 	// read all state variables
 	for _, state := range in.Team.SystemState {
-		if state.SystemID != in.System.ID {
+		if state.SystemID != *in.System.ID {
 			continue
 		}
 		if state.Key != dbmodels.SystemStateGoogleProjectID {

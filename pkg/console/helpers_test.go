@@ -73,7 +73,7 @@ func TestDomainUsers(t *testing.T) {
 	t.Run("User with missing email", func(t *testing.T) {
 		users := []*dbmodels.User{
 			{
-				Name: helpers.Strp("some name"),
+				Name: "some name",
 			},
 			{
 				Email: helpers.Strp("user1@example.com"),

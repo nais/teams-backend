@@ -173,7 +173,7 @@ func run() error {
 				runTimer.Reset(immediateRun)
 			}
 			if pendingTeams[team.Slug.String()] == nil {
-				log.Infof("Scheduling team '%s' for reconciliation in %s", *team.Slug, nextRun.Sub(time.Now()))
+				log.Infof("Scheduling team '%s' for reconciliation in %s", team.Slug, nextRun.Sub(time.Now()))
 				pendingTeams[team.Slug.String()] = team
 			}
 
@@ -234,8 +234,8 @@ func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems ma
 	for key, team := range *teams {
 		teamErrors := 0
 
-		if team == nil || team.Slug == nil {
-			panic("BUG: refusing to reconcile team with empty slug")
+		if team == nil {
+			panic("BUG: refusing to reconcile empty team")
 		}
 
 		for system, reconciler := range systems {

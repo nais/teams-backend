@@ -41,7 +41,7 @@ func InsertInitialDataset(ctx context.Context, db *gorm.DB) error {
 		log.Infof("Inserting initial root user into database...")
 
 		rootUser := &dbmodels.User{
-			Name:  helpers.Strp(adminUserName),
+			Name:  adminUserName,
 			Email: helpers.Strp(adminUserEmail),
 		}
 
@@ -52,7 +52,7 @@ func InsertInitialDataset(ctx context.Context, db *gorm.DB) error {
 
 		apiKey := &dbmodels.ApiKey{
 			APIKey: defaultApiKey,
-			User:   rootUser,
+			User:   *rootUser,
 		}
 
 		err = tx.Create(apiKey).Error
@@ -62,7 +62,7 @@ func InsertInitialDataset(ctx context.Context, db *gorm.DB) error {
 
 		roles := map[string]*dbmodels.Role{
 			role_names.TeamEditor: {
-				SystemID:    console.ID,
+				SystemID:    *console.ID,
 				Name:        role_names.TeamEditor,
 				Description: "Gives the user full access to the team. If given on a global scale, this role gives full access to all teams.",
 				Resource:    string(authz.ResourceTeams),
@@ -70,7 +70,7 @@ func InsertInitialDataset(ctx context.Context, db *gorm.DB) error {
 				Permission:  authz.PermissionAllow,
 			},
 			role_names.TeamViewer: {
-				SystemID:    console.ID,
+				SystemID:    *console.ID,
 				Name:        role_names.TeamViewer,
 				Description: "Allows a user to view the contents of a team.",
 				Resource:    string(authz.ResourceTeams),
@@ -78,7 +78,7 @@ func InsertInitialDataset(ctx context.Context, db *gorm.DB) error {
 				Permission:  authz.PermissionAllow,
 			},
 			role_names.TeamCreator: {
-				SystemID:    console.ID,
+				SystemID:    *console.ID,
 				Name:        role_names.TeamCreator,
 				Description: "Allows a user to create new teams.",
 				Resource:    string(authz.ResourceTeams),
@@ -87,7 +87,7 @@ func InsertInitialDataset(ctx context.Context, db *gorm.DB) error {
 			},
 
 			role_names.RoleEditor: {
-				SystemID:    console.ID,
+				SystemID:    *console.ID,
 				Name:        role_names.RoleEditor,
 				Description: "Gives the user role administration access.",
 				Resource:    string(authz.ResourceRoles),
@@ -95,7 +95,7 @@ func InsertInitialDataset(ctx context.Context, db *gorm.DB) error {
 				Permission:  authz.PermissionAllow,
 			},
 			role_names.RoleViewer: {
-				SystemID:    console.ID,
+				SystemID:    *console.ID,
 				Name:        role_names.RoleViewer,
 				Description: "Allows a user to view roles.",
 				Resource:    string(authz.ResourceRoles),
@@ -113,12 +113,12 @@ func InsertInitialDataset(ctx context.Context, db *gorm.DB) error {
 
 		roleBindings := []*dbmodels.RoleBinding{
 			{
-				UserID: rootUser.ID,
-				RoleID: roles[role_names.TeamEditor].ID,
+				UserID: *rootUser.ID,
+				RoleID: *roles[role_names.TeamEditor].ID,
 			},
 			{
-				UserID: rootUser.ID,
-				RoleID: roles[role_names.RoleEditor].ID,
+				UserID: *rootUser.ID,
+				RoleID: *roles[role_names.RoleEditor].ID,
 			},
 		}
 

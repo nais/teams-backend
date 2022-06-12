@@ -18,8 +18,8 @@ func (in Input) GetAuditLogEntry(user *dbmodels.User, success bool, action, form
 		Action:          action,
 		Message:         fmt.Sprintf(format, args...),
 		Success:         success,
-		Synchronization: in.Synchronization,
-		System:          in.System,
+		Synchronization: *in.Synchronization,
+		System:          *in.System,
 		Team:            in.Team,
 		User:            user,
 	}

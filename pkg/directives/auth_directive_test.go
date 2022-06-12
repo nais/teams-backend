@@ -3,7 +3,6 @@ package directives_test
 import (
 	"context"
 	"github.com/nais/console/pkg/authz"
-	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/directives"
 	"github.com/nais/console/pkg/test"
@@ -18,15 +17,15 @@ func TestAuth(t *testing.T) {
 	db.AutoMigrate(&dbmodels.User{}, &dbmodels.RoleBinding{})
 
 	userWithNoRoleBindings := &dbmodels.User{
-		Name: helpers.Strp("user1"),
+		Name: "user1",
 	}
 	userWithRoleBindings := &dbmodels.User{
-		Name: helpers.Strp("user2"),
+		Name: "user2",
 		RoleBindings: []*dbmodels.RoleBinding{
 			{
-				Role: &dbmodels.Role{
+				Role: dbmodels.Role{
 					Name: "role_for_user2",
-					System: &dbmodels.System{
+					System: dbmodels.System{
 						Name: "system_for_user2",
 					},
 				},
@@ -34,12 +33,12 @@ func TestAuth(t *testing.T) {
 		},
 	}
 	userWithOtherRoleBindings := &dbmodels.User{
-		Name: helpers.Strp("user3"),
+		Name: "user3",
 		RoleBindings: []*dbmodels.RoleBinding{
 			{
-				Role: &dbmodels.Role{
+				Role: dbmodels.Role{
 					Name: "role_for_user3",
-					System: &dbmodels.System{
+					System: dbmodels.System{
 						Name: "system_for_user3",
 					},
 				},
@@ -62,7 +61,7 @@ func TestAuth(t *testing.T) {
 		nextHandler = func(ctx context.Context) (res interface{}, err error) {
 			panic("Should not be executed")
 		}
-		user := &dbmodels.User{Name: helpers.Strp("user that does not exist in the DB")}
+		user := &dbmodels.User{Name: "user that does not exist in the DB"}
 		_, err := auth(authz.ContextWithUser(context.Background(), user), obj, nextHandler)
 		assert.EqualError(t, err, "record not found")
 	})

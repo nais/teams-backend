@@ -66,7 +66,7 @@ func NewFromConfig(_ *gorm.DB, cfg *config.Config, logger auditlogger.Logger) (r
 }
 
 func (s *azureReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {
-	grp, err := s.client.GetOrCreateGroup(ctx, teamNameWithPrefix(in.Team.Slug), *in.Team.Name, *in.Team.Purpose)
+	grp, err := s.client.GetOrCreateGroup(ctx, teamNameWithPrefix(&in.Team.Slug), in.Team.Name, *in.Team.Purpose)
 	if err != nil {
 		return err
 	}

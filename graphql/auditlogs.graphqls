@@ -18,10 +18,10 @@ type AuditLog {
     id: UUID!
 
     "The related system."
-    system: System
+    system: System!
 
     "The related synchronization."
-    synchronization: Synchronization
+    synchronization: Synchronization!
 
     "The related user."
     user: User
@@ -39,7 +39,7 @@ type AuditLog {
     message: String!
 
     "Creation time of the log entry."
-    createdAt: Time
+    createdAt: Time!
 }
 
 "Audit log collection."

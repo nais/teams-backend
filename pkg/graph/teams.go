@@ -25,8 +25,8 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 	user := authz.UserFromContext(ctx)
 
 	team := &dbmodels.Team{
-		Slug:    input.Slug,
-		Name:    &input.Name,
+		Slug:    *input.Slug,
+		Name:    input.Name,
 		Purpose: input.Purpose,
 	}
 
@@ -46,8 +46,8 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		}
 
 		ut := &dbmodels.UsersTeams{
-			UserID: user.ID,
-			TeamID: team.ID,
+			UserID: *user.ID,
+			TeamID: *team.ID,
 		}
 
 		err = r.createTrackedObject(ctx, ut)
@@ -56,9 +56,9 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		}
 
 		roleBinding := &dbmodels.RoleBinding{
+			RoleID: *teamEditor.ID,
 			TeamID: team.ID,
-			Role:   teamEditor,
-			User:   user,
+			UserID: *user.ID,
 		}
 
 		return r.createTrackedObject(ctx, roleBinding)
@@ -106,8 +106,8 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 	err = r.db.Transaction(func(tx *gorm.DB) error {
 		for _, userId := range input.UserIds {
 			tm := &dbmodels.UsersTeams{
-				UserID: userId,
-				TeamID: team.ID,
+				UserID: *userId,
+				TeamID: *team.ID,
 			}
 			err = r.createTrackedObjectIgnoringDuplicates(ctx, tm)
 			if err != nil {

@@ -28,7 +28,7 @@ func ApiKeyAuthentication(db *gorm.DB) func(next http.Handler) http.Handler {
 				return
 			}
 
-			ctx := authz.ContextWithUser(r.Context(), key.User)
+			ctx := authz.ContextWithUser(r.Context(), &key.User)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		}
 		return http.HandlerFunc(fn)

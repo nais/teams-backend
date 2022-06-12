@@ -3,6 +3,7 @@ package github_team_reconciler_test
 import (
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 	helpers "github.com/nais/console/pkg/console"
 	"io/ioutil"
 	"net/http"
@@ -41,12 +42,23 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 	const keepEmail = "should-keep@example.com"
 	const removeLogin = "should-remove"
 
+	systemID, _ := uuid.NewUUID()
+	syncID, _ := uuid.NewUUID()
+
 	reconcilerInput := reconcilers.Input{
-		System:          nil,
-		Synchronization: nil,
+		System: &dbmodels.System{
+			Model: dbmodels.Model{
+				ID: &systemID,
+			},
+		},
+		Synchronization: &dbmodels.Synchronization{
+			Model: dbmodels.Model{
+				ID: &syncID,
+			},
+		},
 		Team: &dbmodels.Team{
-			Slug:    &teamSlug,
-			Name:    helpers.Strp(teamName),
+			Slug:    teamSlug,
+			Name:    teamName,
 			Purpose: helpers.Strp(description),
 			Users: []*dbmodels.User{
 				{

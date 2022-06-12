@@ -16,7 +16,7 @@ func setupFixtures(db *gorm.DB) error {
 			Model:        dbmodels.Model{},
 			SoftDeletes:  dbmodels.SoftDeletes{},
 			Email:        helpers.Strp("user@example.com"),
-			Name:         helpers.Strp("User Name"),
+			Name:         "User Name",
 			Teams:        nil,
 			RoleBindings: nil,
 		})

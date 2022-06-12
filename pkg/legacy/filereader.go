@@ -40,8 +40,8 @@ func (t *Team) Convert() *dbmodels.Team {
 
 	slug := dbmodels.Slug(t.Name)
 	return &dbmodels.Team{
-		Slug:     &slug,
-		Name:     &t.Name,
+		Slug:     slug,
+		Name:     t.Name,
 		Purpose:  &t.Description,
 		Metadata: meta,
 	}

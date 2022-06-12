@@ -12,9 +12,6 @@ import (
 )
 
 func (r *auditLogResolver) System(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.System, error) {
-	if obj.SystemID == nil {
-		return nil, nil
-	}
 	var system *dbmodels.System
 	err := r.db.Model(&obj).Association("System").Find(&system)
 	if err != nil {
@@ -24,9 +21,6 @@ func (r *auditLogResolver) System(ctx context.Context, obj *dbmodels.AuditLog) (
 }
 
 func (r *auditLogResolver) Synchronization(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.Synchronization, error) {
-	if obj.SynchronizationID == nil {
-		return nil, nil
-	}
 	var synchronization *dbmodels.Synchronization
 	err := r.db.Model(&obj).Association("Synchronization").Find(&synchronization)
 	if err != nil {

@@ -73,7 +73,7 @@ func RoleBindingsAreAuthorized(roleBindings []*dbmodels.RoleBinding, system *dbm
 
 	for _, roleBinding := range roleBindings {
 		// ignore role binding if systems does not match
-		if *roleBinding.Role.SystemID != *system.ID {
+		if roleBinding.Role.SystemID != *system.ID {
 			continue
 		}
 

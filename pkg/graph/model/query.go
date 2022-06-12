@@ -38,7 +38,7 @@ func (in *UsersQuery) GetQuery() interface{} {
 	}
 	return &dbmodels.User{
 		Email: in.Email,
-		Name:  in.Name,
+		Name:  *in.Name,
 	}
 }
 
@@ -47,8 +47,8 @@ func (in *TeamsQuery) GetQuery() interface{} {
 		return &dbmodels.Team{}
 	}
 	return &dbmodels.Team{
-		Slug: in.Slug,
-		Name: in.Name,
+		Slug: *in.Slug,
+		Name: *in.Name,
 	}
 }
 
@@ -68,8 +68,8 @@ func (in *AuditLogsQuery) GetQuery() interface{} {
 	return &dbmodels.AuditLog{
 		TeamID:            in.TeamID,
 		UserID:            in.UserID,
-		SystemID:          in.SystemID,
-		SynchronizationID: in.SynchronizationID,
+		SystemID:          *in.SystemID,
+		SynchronizationID: *in.SynchronizationID,
 	}
 }
 

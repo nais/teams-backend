@@ -3,6 +3,7 @@ package nais_deploy_reconciler_test
 import (
 	"context"
 	"encoding/json"
+	"github.com/google/uuid"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -44,11 +45,22 @@ func TestNaisDeployReconciler_Reconcile(t *testing.T) {
 	reconciler := nais_deploy_reconciler.New(logger, http.DefaultClient, srv.URL, key)
 	slug := dbmodels.Slug(teamName)
 
+	systemID, _ := uuid.NewUUID()
+	syncID, _ := uuid.NewUUID()
+
 	err := reconciler.Reconcile(ctx, reconcilers.Input{
-		System:          nil,
-		Synchronization: nil,
+		System: &dbmodels.System{
+			Model: dbmodels.Model{
+				ID: &systemID,
+			},
+		},
+		Synchronization: &dbmodels.Synchronization{
+			Model: dbmodels.Model{
+				ID: &syncID,
+			},
+		},
 		Team: &dbmodels.Team{
-			Slug: &slug,
+			Slug: slug,
 		},
 	})
 

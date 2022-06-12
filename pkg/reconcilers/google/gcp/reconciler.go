@@ -156,7 +156,7 @@ func (s *gcpReconciler) CreateProject(svc *cloudresourcemanager.Service, in reco
 }
 
 func (s *gcpReconciler) CreatePermissions(svc *cloudresourcemanager.Service, in reconcilers.Input, projectName string) error {
-	member := fmt.Sprintf("group:%s%s@%s", reconcilers.TeamNamePrefix, *in.Team.Slug, s.domain)
+	member := fmt.Sprintf("group:%s%s@%s", reconcilers.TeamNamePrefix, in.Team.Slug, s.domain)
 	const owner = "roles/owner"
 
 	req := &cloudresourcemanager.SetIamPolicyRequest{

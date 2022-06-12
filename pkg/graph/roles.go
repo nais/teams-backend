@@ -19,9 +19,9 @@ func (r *mutationResolver) AssignRoleToUser(ctx context.Context, input model.Ass
 	}
 
 	rb := &dbmodels.RoleBinding{
-		UserID: input.UserID,
-		RoleID: input.RoleID,
+		RoleID: *input.RoleID,
 		TeamID: input.TeamID,
+		UserID: *input.UserID,
 	}
 
 	tx := r.db.WithContext(ctx).Create(rb)
