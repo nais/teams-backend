@@ -81,8 +81,8 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		mockClient.On("AddMemberToGroup", mock.Anything, group, addMember).Return(nil).Once()
 
 		err := reconciler.Reconcile(ctx, reconcilers.Input{
-			System:          system,
-			Synchronization: sync,
+			System:          *system,
+			Synchronization: *sync,
 			Team: &dbmodels.Team{
 				Slug:    teamSlug,
 				Name:    teamName,
@@ -105,8 +105,8 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Return(nil, fmt.Errorf("GetOrCreateGroup failed")).Once()
 
 		err := reconciler.Reconcile(ctx, reconcilers.Input{
-			System:          system,
-			Synchronization: sync,
+			System:          *system,
+			Synchronization: *sync,
 			Team: &dbmodels.Team{
 				Slug:    teamSlug,
 				Name:    teamName,
@@ -131,8 +131,8 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Return(nil, fmt.Errorf("ListGroupMembers failed")).Once()
 
 		err := reconciler.Reconcile(ctx, reconcilers.Input{
-			System:          system,
-			Synchronization: sync,
+			System:          *system,
+			Synchronization: *sync,
 			Team: &dbmodels.Team{
 				Slug:    teamSlug,
 				Name:    teamName,
@@ -159,8 +159,8 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Return(fmt.Errorf("RemoveMemberFromGroup failed")).Once()
 
 		err := reconciler.Reconcile(ctx, reconcilers.Input{
-			System:          system,
-			Synchronization: sync,
+			System:          *system,
+			Synchronization: *sync,
 			Team: &dbmodels.Team{
 				Slug:    teamSlug,
 				Name:    teamName,
@@ -187,8 +187,8 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		mockClient.On("GetUser", mock.Anything, *addUser.Email).Return(nil, fmt.Errorf("GetUser failed")).Once()
 
 		err := reconciler.Reconcile(ctx, reconcilers.Input{
-			System:          system,
-			Synchronization: sync,
+			System:          *system,
+			Synchronization: *sync,
 			Team: &dbmodels.Team{
 				Slug:    teamSlug,
 				Name:    teamName,
@@ -218,8 +218,8 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Return(fmt.Errorf("AddMemberToGroup failed")).Once()
 
 		err := reconciler.Reconcile(ctx, reconcilers.Input{
-			System:          system,
-			Synchronization: sync,
+			System:          *system,
+			Synchronization: *sync,
 			Team: &dbmodels.Team{
 				Slug:    teamSlug,
 				Name:    teamName,

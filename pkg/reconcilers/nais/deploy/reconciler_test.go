@@ -49,12 +49,12 @@ func TestNaisDeployReconciler_Reconcile(t *testing.T) {
 	syncID, _ := uuid.NewUUID()
 
 	err := reconciler.Reconcile(ctx, reconcilers.Input{
-		System: &dbmodels.System{
+		System: dbmodels.System{
 			Model: dbmodels.Model{
 				ID: &systemID,
 			},
 		},
-		Synchronization: &dbmodels.Synchronization{
+		Synchronization: dbmodels.Synchronization{
 			Model: dbmodels.Model{
 				ID: &syncID,
 			},

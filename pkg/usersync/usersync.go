@@ -20,7 +20,7 @@ import (
 )
 
 type userSynchronizer struct {
-	system *dbmodels.System
+	system dbmodels.System
 	logger auditlogger.Logger
 	domain string
 	config *jwt.Config
@@ -28,6 +28,7 @@ type userSynchronizer struct {
 }
 
 const (
+	OpPrepare    = "usersync:prepare"
 	OpListRemote = "usersync:list:remote"
 	OpListLocal  = "usersync:list:local"
 	OpCreate     = "usersync:create"
@@ -38,7 +39,7 @@ var (
 	ErrNotEnabled = errors.New("disabled by configuration")
 )
 
-func New(db *gorm.DB, system *dbmodels.System, logger auditlogger.Logger, domain string, config *jwt.Config) *userSynchronizer {
+func New(db *gorm.DB, system dbmodels.System, logger auditlogger.Logger, domain string, config *jwt.Config) *userSynchronizer {
 	return &userSynchronizer{
 		db:     db,
 		system: system,
@@ -48,7 +49,7 @@ func New(db *gorm.DB, system *dbmodels.System, logger auditlogger.Logger, domain
 	}
 }
 
-func NewFromConfig(cfg *config.Config, db *gorm.DB, system *dbmodels.System, logger auditlogger.Logger) (*userSynchronizer, error) {
+func NewFromConfig(cfg *config.Config, db *gorm.DB, system dbmodels.System, logger auditlogger.Logger) (*userSynchronizer, error) {
 	if !cfg.UserSync.Enabled {
 		return nil, ErrNotEnabled
 	}
@@ -62,74 +63,74 @@ func NewFromConfig(cfg *config.Config, db *gorm.DB, system *dbmodels.System, log
 	return New(db, system, logger, cfg.PartnerDomain, cf), nil
 }
 
+type auditLogEntry struct {
+	in      reconcilers.Input
+	op      string
+	user    dbmodels.User
+	message string
+}
+
 // Sync Fetch all users from the partner and add them as local users in Console. If a user already exists in Console
 // the local user will remain untouched. After all users have been added we will also remove all local users that
 // matches the partner domain that does not exist in the Google Directory.
 // All new users will be grated two roles: "Team Creator" and "Team viewer"
 func (s *userSynchronizer) Sync(ctx context.Context) error {
 	tx := s.db.WithContext(ctx)
-	in := reconcilers.Input{System: s.system}
 
-	teamCreator := &dbmodels.Role{}
-	err := tx.Where("name = ?", roles.TeamCreator).First(teamCreator).Error
+	roleBindings, err := getUserRoleBindings(tx)
 	if err != nil {
-		return s.logger.Errorf(in, OpCreate, "role not found %s: %w", roles.TeamCreator, err)
-	}
-
-	teamViewer := &dbmodels.Role{}
-	err = tx.Where("name = ?", roles.TeamViewer).First(teamViewer).Error
-	if err != nil {
-		return s.logger.Errorf(in, OpCreate, "role not found %s: %w", roles.TeamViewer, err)
-	}
-
-	roleViewer := &dbmodels.Role{}
-	err = tx.Where("name = ?", roles.RoleViewer).First(roleViewer).Error
-	if err != nil {
-		return s.logger.Errorf(in, OpCreate, "role not found %s: %w", roles.RoleViewer, err)
+		return fmt.Errorf("%s: unable to fetch roles: %w", OpPrepare, err)
 	}
 
 	client := s.config.Client(ctx)
 	srv, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
-		return s.logger.Errorf(in, OpListRemote, "retrieve directory client: %w", err)
+		return fmt.Errorf("%s: retrieve directory client: %w", OpListRemote, err)
 	}
 
 	resp, err := srv.Users.List().Domain(s.domain).Do()
 	if err != nil {
-		return s.logger.Errorf(in, OpListRemote, "list remote users: %w", err)
+		return fmt.Errorf("%s: list remote users: %w", OpListRemote, err)
 	}
 
-	userIds := make(map[uuid.UUID]struct{})
+	auditLogEntries := make([]*auditLogEntry, 0)
 
-	return tx.Transaction(func(tx *gorm.DB) error {
+	err = tx.Transaction(func(tx *gorm.DB) error {
+		sync := &dbmodels.Synchronization{}
+		err = tx.Create(sync).Error
+		if err != nil {
+			return fmt.Errorf("%s: unable to create synchronization: %w", OpPrepare, err)
+		}
+
+		in := reconcilers.Input{
+			Synchronization: *sync,
+			System:          s.system,
+		}
+
+		userIds := make(map[uuid.UUID]struct{})
+
 		for _, remoteUser := range resp.Users {
 			localUser := &dbmodels.User{}
 
 			err = tx.Where("email = ?", remoteUser.PrimaryEmail).First(localUser).Error
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				localUser = &dbmodels.User{
-					Email: helpers.Strp(remoteUser.PrimaryEmail),
-					Name:  remoteUser.Name.FullName,
-					RoleBindings: []*dbmodels.RoleBinding{
-						{
-							RoleID: *teamCreator.ID,
-						},
-						{
-							RoleID: *teamViewer.ID,
-						},
-						{
-							RoleID: *roleViewer.ID,
-						},
-					},
+					Email:        helpers.Strp(remoteUser.PrimaryEmail),
+					Name:         remoteUser.Name.FullName,
+					RoleBindings: roleBindings,
 				}
 
 				err = tx.Create(localUser).Error
 				if err != nil {
-					return s.logger.Errorf(in, OpCreate, "create local user %s: %w", remoteUser.PrimaryEmail, err)
+					return fmt.Errorf("%s: create local user %s: %w", OpCreate, remoteUser.PrimaryEmail, err)
 				}
 
-				s.logger.UserLogf(in, OpCreate, localUser, "Local user created")
-
+				auditLogEntries = append(auditLogEntries, &auditLogEntry{
+					in:      in,
+					op:      OpCreate,
+					user:    *localUser,
+					message: fmt.Sprintf("Local user created: %s", localUser.Name),
+				})
 			}
 
 			userIds[*localUser.ID] = struct{}{}
@@ -139,7 +140,7 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 		domainEmails := "%@" + s.domain
 		err = tx.Where("email LIKE ?", domainEmails).Find(&localUsers).Error
 		if err != nil {
-			return s.logger.Errorf(in, OpListLocal, "list local users: %w", err)
+			return fmt.Errorf("%s: list local users: %w", OpListLocal, err)
 		}
 
 		for _, localUser := range localUsers {
@@ -150,12 +151,50 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 
 			err = tx.Delete(localUser).Error
 			if err != nil {
-				return s.logger.Errorf(in, OpDelete, "delete local user %s: %w", *localUser.Email, err)
+				return fmt.Errorf("%s: delete local user %s: %w", OpDelete, *localUser.Email, err)
 			}
 
-			s.logger.UserLogf(in, OpDelete, localUser, "Local user deleted")
+			auditLogEntries = append(auditLogEntries, &auditLogEntry{
+				in:      in,
+				op:      OpDelete,
+				user:    *localUser,
+				message: fmt.Sprintf("Local user deleted: %s", localUser.Name),
+			})
 		}
 
 		return nil
 	})
+
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range auditLogEntries {
+		s.logger.UserLogf(entry.in, entry.op, &entry.user, entry.message)
+	}
+
+	return nil
+}
+
+func getUserRoleBindings(tx *gorm.DB) ([]*dbmodels.RoleBinding, error) {
+	roles := []string{
+		roles.TeamCreator,
+		roles.TeamViewer,
+		roles.RoleViewer,
+	}
+	roleBindings := make([]*dbmodels.RoleBinding, 0)
+
+	for _, roleName := range roles {
+		role := &dbmodels.Role{}
+		err := tx.Where("name = ?", roleName).First(role).Error
+		if err != nil {
+			return nil, fmt.Errorf("role not found %s: %w", roleName, err)
+		}
+
+		roleBindings = append(roleBindings, &dbmodels.RoleBinding{
+			RoleID: *role.ID,
+		})
+	}
+
+	return roleBindings, nil
 }

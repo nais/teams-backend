@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
+	"gorm.io/gorm/clause"
 	"net/http"
 	"net/url"
 	"os"
@@ -142,7 +143,7 @@ func run() error {
 	// Asynchronously record all audit log in database
 	go func() {
 		for logLine := range logs {
-			err = db.Omit("System").Create(logLine).Error
+			err = db.Omit(clause.Associations).Create(logLine).Error
 			if err != nil {
 				log.Errorf("store audit log line in database: %s", err)
 			}
@@ -152,7 +153,7 @@ func run() error {
 
 	// User synchronizer
 	userSyncTimer := time.NewTimer(1 * time.Second)
-	userSyncer, err := usersync.NewFromConfig(cfg, db, systems[console_reconciler.Name], logger)
+	userSyncer, err := usersync.NewFromConfig(cfg, db, *systems[console_reconciler.Name], logger)
 	if err != nil {
 		userSyncTimer.Stop()
 		if err != usersync.ErrNotEnabled {
@@ -240,8 +241,8 @@ func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems ma
 
 		for system, reconciler := range systems {
 			input := reconcilers.Input{
-				System:          system,
-				Synchronization: synchronization,
+				System:          *system,
+				Synchronization: *synchronization,
 				Team:            team,
 			}
 
