@@ -1,4 +1,4 @@
-package helpers_test
+package console_test
 
 import (
 	helpers "github.com/nais/console/pkg/console"

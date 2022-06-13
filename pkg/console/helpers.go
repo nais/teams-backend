@@ -1,4 +1,4 @@
-package helpers
+package console
 
 import (
 	"github.com/nais/console/pkg/dbmodels"
