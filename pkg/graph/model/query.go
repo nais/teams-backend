@@ -36,52 +36,93 @@ func (in *UsersQuery) GetQuery() interface{} {
 	if in == nil {
 		return &dbmodels.User{}
 	}
-	return &dbmodels.User{
+
+	user := &dbmodels.User{
 		Email: in.Email,
-		Name:  in.Name,
 	}
+
+	if in.Name != nil {
+		user.Name = in.Name
+	}
+
+	return user
 }
 
 func (in *TeamsQuery) GetQuery() interface{} {
 	if in == nil {
 		return &dbmodels.Team{}
 	}
-	return &dbmodels.Team{
-		Slug: *in.Slug,
-		Name: *in.Name,
+
+	team := &dbmodels.Team{}
+
+	if in.Slug != nil {
+		team.Slug = *in.Slug
 	}
+
+	if in.Name != nil {
+		team.Name = *in.Name
+	}
+
+	return team
 }
 
 func (in *SystemsQuery) GetQuery() interface{} {
 	if in == nil {
 		return &dbmodels.System{}
 	}
-	return &dbmodels.System{
-		Name: *in.Name,
+
+	system := &dbmodels.System{}
+
+	if in.Name != nil {
+		system.Name = *in.Name
 	}
+
+	return system
 }
 
 func (in *AuditLogsQuery) GetQuery() interface{} {
 	if in == nil {
 		return &dbmodels.AuditLog{}
 	}
-	return &dbmodels.AuditLog{
-		ActorID:        in.ActorID,
-		CorrelationID:  *in.CorrelationID,
-		TargetSystemID: *in.TargetSystemID,
-		TargetTeamID:   in.TargetTeamID,
-		TargetUserID:   in.TargetUserID,
+	entry := &dbmodels.AuditLog{
+		ActorID:      in.ActorID,
+		TargetTeamID: in.TargetTeamID,
+		TargetUserID: in.TargetUserID,
 	}
+
+	if in.CorrelationID != nil {
+		entry.CorrelationID = *in.CorrelationID
+	}
+
+	if in.TargetSystemID != nil {
+		entry.TargetSystemID = *in.TargetSystemID
+	}
+
+	return entry
 }
 
 func (in *RolesQuery) GetQuery() interface{} {
 	if in == nil {
 		return &dbmodels.Role{}
 	}
-	return &dbmodels.Role{
-		Name:        *in.Name,
-		Resource:    *in.Resource,
-		AccessLevel: *in.AccessLevel,
-		Permission:  *in.Permission,
+
+	role := &dbmodels.Role{}
+
+	if in.Name != nil {
+		role.Name = *in.Name
 	}
+
+	if in.Resource != nil {
+		role.Resource = *in.Resource
+	}
+
+	if in.AccessLevel != nil {
+		role.AccessLevel = *in.AccessLevel
+	}
+
+	if in.Permission != nil {
+		role.Permission = *in.Permission
+	}
+
+	return role
 }
