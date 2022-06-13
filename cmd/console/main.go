@@ -373,7 +373,7 @@ func corsConfig() cors.Options {
 	}
 }
 
-func setupHTTPServer(cfg *config.Config, db *gorm.DB, graphapi *graphql_handler.Server, authhandler *authn.Handler, store authn.SessionStore) (*http.Server, error) {
+func setupHTTPServer(cfg *config.Config, db *gorm.DB, graphApi *graphql_handler.Server, authHandler *authn.Handler, store authn.SessionStore) (*http.Server, error) {
 	r := chi.NewRouter()
 
 	r.Get("/healthz", func(_ http.ResponseWriter, _ *http.Request) {})
@@ -396,13 +396,13 @@ func setupHTTPServer(cfg *config.Config, db *gorm.DB, graphapi *graphql_handler.
 
 	r.Route("/query", func(r chi.Router) {
 		r.Use(middlewares...)
-		r.Post("/", graphapi.ServeHTTP)
+		r.Post("/", graphApi.ServeHTTP)
 	})
 
 	r.Route("/oauth2", func(r chi.Router) {
-		r.Get("/login", authhandler.Login)
-		r.Get("/logout", authhandler.Logout)
-		r.Get("/callback", authhandler.Callback)
+		r.Get("/login", authHandler.Login)
+		r.Get("/logout", authHandler.Logout)
+		r.Get("/callback", authHandler.Callback)
 	})
 
 	srv := &http.Server{
