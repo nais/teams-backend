@@ -173,7 +173,11 @@ type ComplexityRoot struct {
 }
 
 type AuditLogResolver interface {
+	TargetSystem(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.System, error)
 	Synchronization(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.Synchronization, error)
+	Actor(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.User, error)
+	TargetUser(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.User, error)
+	TargetTeam(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.Team, error)
 }
 type MutationResolver interface {
 	CreateAPIKey(ctx context.Context, input model.APIKeyInput) (*model.APIKey, error)
@@ -2022,7 +2026,7 @@ func (ec *executionContext) _AuditLog_targetSystem(ctx context.Context, field gr
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.TargetSystem, nil
+		return ec.resolvers.AuditLog().TargetSystem(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2034,17 +2038,17 @@ func (ec *executionContext) _AuditLog_targetSystem(ctx context.Context, field gr
 		}
 		return graphql.Null
 	}
-	res := resTmp.(dbmodels.System)
+	res := resTmp.(*dbmodels.System)
 	fc.Result = res
-	return ec.marshalNSystem2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSystem(ctx, field.Selections, res)
+	return ec.marshalNSystem2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSystem(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_AuditLog_targetSystem(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "AuditLog",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
@@ -2120,7 +2124,7 @@ func (ec *executionContext) _AuditLog_actor(ctx context.Context, field graphql.C
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Actor, nil
+		return ec.resolvers.AuditLog().Actor(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2138,8 +2142,8 @@ func (ec *executionContext) fieldContext_AuditLog_actor(ctx context.Context, fie
 	fc = &graphql.FieldContext{
 		Object:     "AuditLog",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
@@ -2177,7 +2181,7 @@ func (ec *executionContext) _AuditLog_targetUser(ctx context.Context, field grap
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.TargetUser, nil
+		return ec.resolvers.AuditLog().TargetUser(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2195,8 +2199,8 @@ func (ec *executionContext) fieldContext_AuditLog_targetUser(ctx context.Context
 	fc = &graphql.FieldContext{
 		Object:     "AuditLog",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
@@ -2234,7 +2238,7 @@ func (ec *executionContext) _AuditLog_targetTeam(ctx context.Context, field grap
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.TargetTeam, nil
+		return ec.resolvers.AuditLog().TargetTeam(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2252,8 +2256,8 @@ func (ec *executionContext) fieldContext_AuditLog_targetTeam(ctx context.Context
 	fc = &graphql.FieldContext{
 		Object:     "AuditLog",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
@@ -8580,12 +8584,25 @@ func (ec *executionContext) _AuditLog(ctx context.Context, sel ast.SelectionSet,
 				atomic.AddUint32(&invalids, 1)
 			}
 		case "targetSystem":
+			field := field
 
-			out.Values[i] = ec._AuditLog_targetSystem(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuditLog_targetSystem(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
 			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
 		case "synchronization":
 			field := field
 
@@ -8607,17 +8624,56 @@ func (ec *executionContext) _AuditLog(ctx context.Context, sel ast.SelectionSet,
 
 			})
 		case "actor":
+			field := field
 
-			out.Values[i] = ec._AuditLog_actor(ctx, field, obj)
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuditLog_actor(ctx, field, obj)
+				return res
+			}
 
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
 		case "targetUser":
+			field := field
 
-			out.Values[i] = ec._AuditLog_targetUser(ctx, field, obj)
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuditLog_targetUser(ctx, field, obj)
+				return res
+			}
 
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
 		case "targetTeam":
+			field := field
 
-			out.Values[i] = ec._AuditLog_targetTeam(ctx, field, obj)
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuditLog_targetTeam(ctx, field, obj)
+				return res
+			}
 
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
 		case "action":
 
 			out.Values[i] = ec._AuditLog_action(ctx, field, obj)

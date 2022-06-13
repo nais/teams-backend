@@ -74,13 +74,15 @@ models:
         resolver: true
   AuditLog:
     fields:
-      system:
+      actor:
         resolver: true
       synchronization:
         resolver: true
-      user:
+      targetSystem:
         resolver: true
-      team:
+      targetTeam:
+        resolver: true
+      targetUser:
         resolver: true
   RoleBinding:
     fields:
