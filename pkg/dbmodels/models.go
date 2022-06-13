@@ -130,7 +130,7 @@ type User struct {
 	Model
 	SoftDeletes
 	Email        *string        `gorm:"unique"`
-	Name         *string        `gorm:"not null"`
+	Name         string         `gorm:"not null"`
 	Teams        []*Team        `gorm:"many2many:users_teams"`
 	RoleBindings []*RoleBinding `gorm:"foreignKey:UserID"`
 }
@@ -167,7 +167,7 @@ func (a *AuditLog) Log() *log.Entry {
 			actorEmail = *a.Actor.Email
 		}
 
-		actorName = *a.Actor.Name
+		actorName = a.Actor.Name
 	}
 
 	if a.TargetTeam != nil {

@@ -18,7 +18,7 @@ import (
 func (r *mutationResolver) CreateUser(ctx context.Context, input model.CreateUserInput) (*dbmodels.User, error) {
 	u := &dbmodels.User{
 		Email: input.Email,
-		Name:  &input.Name,
+		Name:  input.Name,
 	}
 	err := r.createTrackedObject(ctx, u)
 	return u, err
@@ -30,7 +30,7 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, input model.UpdateUse
 			ID: input.ID,
 		},
 		Email: input.Email,
-		Name:  input.Name,
+		Name:  *input.Name,
 	}
 	err := r.updateDB(ctx, u)
 	return u, err

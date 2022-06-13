@@ -42,7 +42,7 @@ func (in *UsersQuery) GetQuery() interface{} {
 	}
 
 	if in.Name != nil {
-		user.Name = in.Name
+		user.Name = *in.Name
 	}
 
 	return user
