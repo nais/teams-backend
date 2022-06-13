@@ -2,6 +2,7 @@ package graph_test
 
 import (
 	"context"
+	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/test"
@@ -29,7 +30,9 @@ func TestQueryResolver_Systems(t *testing.T) {
 	ch := make(chan *dbmodels.Team, 100)
 	system := getSystem()
 	ctx := context.Background()
-	resolver := graph.NewResolver(db, system, ch, nil).Query()
+
+	logger := auditlogger.New(db)
+	resolver := graph.NewResolver(db, system, ch, logger).Query()
 
 	t.Run("No filter or sort", func(t *testing.T) {
 		systems, err := resolver.Systems(ctx, nil, nil, nil)

@@ -17,6 +17,7 @@ const (
 	Name             = "console"
 	OpReconcileStart = "console:reconcile:start"
 	OpReconcileEnd   = "console:reconcile:end"
+	OpCreateTeam     = "console:team:create"
 )
 
 func init() {

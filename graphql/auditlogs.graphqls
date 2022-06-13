@@ -41,9 +41,6 @@ type AuditLog {
     "String representation of the action performed."
     action: String!
 
-    "Whether or not the action was successful."
-    success: Boolean!
-
     "Log entry message."
     message: String!
 

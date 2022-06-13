@@ -111,7 +111,7 @@ func (s *gcpReconciler) getOrCreateGroup(groupsService *admin_directory_v1.Group
 		return nil, fmt.Errorf("%s: create Google Directory group: %s", OpCreate, err)
 	}
 
-	s.auditLogger.Log(OpCreate, true, corr, s.system, nil, &team, nil, "successfully created Google Directory group '%s'", grp.Email)
+	s.auditLogger.Log(OpCreate, corr, s.system, nil, &team, nil, "created Google Directory group '%s'", grp.Email)
 
 	return grp, nil
 }
@@ -137,7 +137,7 @@ func (s *gcpReconciler) connectUsers(membersService *admin_directory_v1.MembersS
 		}
 		deleted++
 		// FIXME: connect audit log with database user, if exists
-		s.auditLogger.Log(OpDeleteMember, true, corr, s.system, nil, &team, nil, "deleted member '%s' from Google Directory group '%s'", member.Email, grp.Email)
+		s.auditLogger.Log(OpDeleteMember, corr, s.system, nil, &team, nil, "deleted member '%s' from Google Directory group '%s'", member.Email, grp.Email)
 	}
 
 	for _, user := range createMembers {
@@ -154,7 +154,7 @@ func (s *gcpReconciler) connectUsers(membersService *admin_directory_v1.MembersS
 		}
 		created++
 		// FIXME: connect audit log with database user, if exists
-		s.auditLogger.Log(OpAddMember, true, corr, s.system, nil, &team, nil, "added member '%s' to Google Directory group '%s'", member.Email, grp.Email)
+		s.auditLogger.Log(OpAddMember, corr, s.system, nil, &team, nil, "added member '%s' to Google Directory group '%s'", member.Email, grp.Email)
 	}
 
 	return nil
@@ -177,7 +177,7 @@ func (s *gcpReconciler) addToGKESecurityGroup(membersService *admin_directory_v1
 		return fmt.Errorf("%s: add group '%s' to GKE security group '%s': %s", OpAddToGKESecurityGroup, member.Email, groupKey, err)
 	}
 
-	s.auditLogger.Log(OpAddToGKESecurityGroup, true, corr, s.system, nil, &team, nil, "added group '%s' to GKE security group '%s'", member.Email, groupKey)
+	s.auditLogger.Log(OpAddToGKESecurityGroup, corr, s.system, nil, &team, nil, "added group '%s' to GKE security group '%s'", member.Email, groupKey)
 
 	return nil
 }

@@ -48,8 +48,7 @@ type AuditLog struct {
 	TargetTeamID   *uuid.UUID  `gorm:"type:uuid"`
 	TargetUserID   *uuid.UUID  `gorm:"type:uuid"`
 	Action         string      `gorm:"not null; index"`
-	Success        bool        `gorm:"not null; index"` // True if operation succeeded
-	Message        string      `gorm:"not null"`        // Human readable success or error message (log line)
+	Message        string      `gorm:"not null"` // Human readable message (log line)
 }
 
 type Correlation struct {
@@ -185,7 +184,6 @@ func (a *AuditLog) Log() *log.Entry {
 		"actor_id":           uuidAsString(a.ActorID),
 		"actor_name":         actorName,
 		"correlation_id":     a.CorrelationID,
-		"success":            a.Success,
 		"target_system_id":   a.TargetSystemID,
 		"target_system_name": a.TargetSystem.Name,
 		"target_team_id":     uuidAsString(a.TargetTeamID),

@@ -24,10 +24,10 @@ type Resolver struct {
 	db          *gorm.DB
 	trigger     chan<- *dbmodels.Team
 	console     *dbmodels.System
-	auditLogger *auditlogger.AuditLogger
+	auditLogger auditlogger.AuditLogger
 }
 
-func NewResolver(db *gorm.DB, console *dbmodels.System, trigger chan<- *dbmodels.Team, auditLogger *auditlogger.AuditLogger) *Resolver {
+func NewResolver(db *gorm.DB, console *dbmodels.System, trigger chan<- *dbmodels.Team, auditLogger auditlogger.AuditLogger) *Resolver {
 	return &Resolver{
 		db:          db,
 		console:     console,

@@ -12,7 +12,9 @@ import (
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
+	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
 	"github.com/nais/console/pkg/roles"
+	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -68,7 +70,15 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		return nil, err
 	}
 
-	// FIXME: Add log entry for team creation?
+	// FIXME: Figure out a way to specify the same correlation to the reconcilers below
+	corr := &dbmodels.Correlation{}
+	err = r.db.Create(corr).Error
+
+	if err != nil {
+		log.Warnf("unable to create correlation for audit log")
+	} else {
+		r.auditLogger.Log(console_reconciler.OpCreateTeam, *corr, *r.console, user, team, nil, "Team created")
+	}
 
 	team, err = r.teamWithAssociations(ctx, *team.ID)
 	if err != nil {

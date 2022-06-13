@@ -152,7 +152,7 @@ func (s *gcpReconciler) CreateProject(svc *cloudresourcemanager.Service, corr db
 		return nil, err
 	}
 
-	s.auditLogger.Log(OpCreateProject, true, corr, s.system, nil, &team, nil, "successfully created GCP project '%s'", proj.Name)
+	s.auditLogger.Log(OpCreateProject, corr, s.system, nil, &team, nil, "created GCP project '%s'", proj.Name)
 
 	return proj, nil
 }
@@ -178,7 +178,7 @@ func (s *gcpReconciler) CreatePermissions(svc *cloudresourcemanager.Service, cor
 		return fmt.Errorf("%s: assign GCP project IAM permissions: %s", OpAssignPermissions, err)
 	}
 
-	s.auditLogger.Log(OpAssignPermissions, true, corr, s.system, nil, &team, nil, "successfully assigned GCP project IAM permissions for '%s'", projectName)
+	s.auditLogger.Log(OpAssignPermissions, corr, s.system, nil, &team, nil, "assigned GCP project IAM permissions for '%s'", projectName)
 
 	return nil
 }

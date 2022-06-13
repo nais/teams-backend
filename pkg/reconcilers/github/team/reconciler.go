@@ -111,7 +111,7 @@ func (s *gitHubReconciler) getOrCreateTeam(ctx context.Context, corr dbmodels.Co
 		return nil, fmt.Errorf("%s: create GitHub team '%s': %s", OpCreate, newTeam, err)
 	}
 
-	s.auditLogger.Log(OpCreate, true, corr, s.system, nil, &team, nil, "created GitHub team '%s'", newTeam)
+	s.auditLogger.Log(OpCreate, corr, s.system, nil, &team, nil, "created GitHub team '%s'", newTeam)
 
 	return githubTeam, nil
 }
@@ -142,7 +142,7 @@ func (s *gitHubReconciler) connectUsers(ctx context.Context, corr dbmodels.Corre
 		}
 
 		// TODO: Connect local database user to log entry
-		s.auditLogger.Log(OpAddMember, true, corr, s.system, nil, &team, nil, "added member '%s' to GitHub team '%s'", username, *githubTeam.Slug)
+		s.auditLogger.Log(OpAddMember, corr, s.system, nil, &team, nil, "added member '%s' to GitHub team '%s'", username, *githubTeam.Slug)
 	}
 
 	extra := extraMembers(members, usernames)
@@ -154,7 +154,7 @@ func (s *gitHubReconciler) connectUsers(ctx context.Context, corr dbmodels.Corre
 		}
 
 		// TODO: Connect local database user to log entry
-		s.auditLogger.Log(OpDeleteMember, true, corr, s.system, nil, &team, nil, "deleted member '%s' to GitHub team '%s'", username, *githubTeam.Slug)
+		s.auditLogger.Log(OpDeleteMember, corr, s.system, nil, &team, nil, "deleted member '%s' to GitHub team '%s'", username, *githubTeam.Slug)
 	}
 
 	return nil

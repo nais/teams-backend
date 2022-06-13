@@ -12,14 +12,8 @@ type auditLogger struct {
 	db *gorm.DB
 }
 
-type AuditLog struct {
-	Success bool   `gorm:"not null; index"` // True if operation succeeded
-	Action  string `gorm:"not null; index"`
-	Message string `gorm:"not null"` // Human readable success or error message (log line)
-}
-
 type AuditLogger interface {
-	Log(action string, success bool, corr dbmodels.Correlation, targetSystem dbmodels.System, actor *dbmodels.User, targetTeam *dbmodels.Team, targetUser *dbmodels.User, message string, messageArgs ...interface{}) error
+	Log(action string, corr dbmodels.Correlation, targetSystem dbmodels.System, actor *dbmodels.User, targetTeam *dbmodels.Team, targetUser *dbmodels.User, message string, messageArgs ...interface{}) error
 }
 
 func New(db *gorm.DB) AuditLogger {
@@ -28,7 +22,7 @@ func New(db *gorm.DB) AuditLogger {
 	}
 }
 
-func (l *auditLogger) Log(action string, success bool, corr dbmodels.Correlation, targetSystem dbmodels.System, actor *dbmodels.User, targetTeam *dbmodels.Team, targetUser *dbmodels.User, message string, messageArgs ...interface{}) error {
+func (l *auditLogger) Log(action string, corr dbmodels.Correlation, targetSystem dbmodels.System, actor *dbmodels.User, targetTeam *dbmodels.Team, targetUser *dbmodels.User, message string, messageArgs ...interface{}) error {
 	var actorId *uuid.UUID
 	var targetTeamId *uuid.UUID
 	var targetUserId *uuid.UUID
@@ -57,7 +51,6 @@ func (l *auditLogger) Log(action string, success bool, corr dbmodels.Correlation
 		TargetUser:     targetUser,
 		TargetTeamID:   targetTeamId,
 		TargetUserID:   targetUserId,
-		Success:        success,
 
 		Message: fmt.Sprintf(message, messageArgs...),
 	}
