@@ -74,11 +74,11 @@ func (_m *MockClient) GetGroup(ctx context.Context, slug string) (*Group, error)
 }
 
 // GetOrCreateGroup provides a mock function with given fields: ctx, slug, name, description
-func (_m *MockClient) GetOrCreateGroup(ctx context.Context, slug string, name string, description string) (*Group, error) {
+func (_m *MockClient) GetOrCreateGroup(ctx context.Context, slug string, name string, description *string) (*Group, bool, error) {
 	ret := _m.Called(ctx, slug, name, description)
 
 	var r0 *Group
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) *Group); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, *string) *Group); ok {
 		r0 = rf(ctx, slug, name, description)
 	} else {
 		if ret.Get(0) != nil {
@@ -86,14 +86,21 @@ func (_m *MockClient) GetOrCreateGroup(ctx context.Context, slug string, name st
 		}
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, string, string) error); ok {
+	var r1 bool
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, *string) bool); ok {
 		r1 = rf(ctx, slug, name, description)
 	} else {
-		r1 = ret.Error(1)
+		r1 = ret.Get(1).(bool)
 	}
 
-	return r0, r1
+	var r2 error
+	if rf, ok := ret.Get(2).(func(context.Context, string, string, *string) error); ok {
+		r2 = rf(ctx, slug, name, description)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // GetUser provides a mock function with given fields: ctx, email

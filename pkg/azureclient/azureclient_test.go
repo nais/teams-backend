@@ -3,6 +3,7 @@ package azureclient
 import (
 	"bytes"
 	"context"
+	helpers "github.com/nais/console/pkg/console"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
@@ -238,10 +239,11 @@ func Test_GetOrCreateGroupWhenGroupExists(t *testing.T) {
 
 	client := New(httpClient)
 
-	group, err := client.GetOrCreateGroup(context.TODO(), "slug", "name", "description")
+	group, created, err := client.GetOrCreateGroup(context.TODO(), "slug", "name", helpers.Strp("description"))
 
 	assert.NoError(t, err)
 	assert.Equal(t, "group-id", group.ID)
+	assert.False(t, created)
 }
 
 func Test_GetOrCreateGroupWhenGroupDoesNotExist(t *testing.T) {
@@ -268,13 +270,14 @@ func Test_GetOrCreateGroupWhenGroupDoesNotExist(t *testing.T) {
 
 	client := New(httpClient)
 
-	group, err := client.GetOrCreateGroup(context.TODO(), "slug", "name", "description")
+	group, created, err := client.GetOrCreateGroup(context.TODO(), "slug", "name", helpers.Strp("description"))
 
 	assert.NoError(t, err)
 	assert.Equal(t, "some-id", group.ID)
 	assert.Equal(t, "description", group.Description)
 	assert.Equal(t, "name", group.DisplayName)
 	assert.Equal(t, "mail", group.MailNickname)
+	assert.True(t, created)
 }
 
 func Test_ListGroupMembers(t *testing.T) {

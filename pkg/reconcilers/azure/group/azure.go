@@ -70,9 +70,14 @@ func NewFromConfig(_ *gorm.DB, cfg *config.Config, system dbmodels.System, audit
 }
 
 func (s *azureReconciler) Reconcile(ctx context.Context, sync dbmodels.Synchronization, team dbmodels.Team) error {
-	grp, err := s.client.GetOrCreateGroup(ctx, teamNameWithPrefix(&team.Slug), team.Name, *team.Purpose)
+	prefixedName := teamNameWithPrefix(team.Slug)
+	grp, created, err := s.client.GetOrCreateGroup(ctx, prefixedName, team.Name, team.Purpose)
 	if err != nil {
 		return err
+	}
+
+	if created {
+		s.auditLogger.Log(OpCreate, true, sync, s.system, nil, &team, nil, "created Azure AD group: %s", grp)
 	}
 
 	err = s.connectUsers(ctx, sync, grp, team)
@@ -165,9 +170,6 @@ func extraMembers(members []*azureclient.Member, users []*dbmodels.User) []*azur
 	return members
 }
 
-func teamNameWithPrefix(slug *dbmodels.Slug) string {
-	if slug == nil {
-		panic("nil slug passed to teamNameWithPrefix")
-	}
-	return reconcilers.TeamNamePrefix + slug.String()
+func teamNameWithPrefix(slug dbmodels.Slug) string {
+	return reconcilers.TeamNamePrefix + string(slug)
 }

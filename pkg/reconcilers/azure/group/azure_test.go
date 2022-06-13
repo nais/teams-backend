@@ -21,6 +21,7 @@ import (
 func TestAzureReconciler_Reconcile(t *testing.T) {
 	const domain = "example.com"
 	const teamName = "myteam"
+	purpose := helpers.Strp(teamName)
 	teamSlug := dbmodels.Slug(teamName)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
@@ -71,8 +72,8 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		mockClient := &azureclient.MockClient{}
 		reconciler := azure_group.New(system, auditLogger, creds, mockClient, domain)
 
-		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, teamName).
-			Return(group, nil).Once()
+		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, purpose).
+			Return(group, true, nil).Once()
 		mockClient.On("ListGroupMembers", mock.Anything, group).
 			Return([]*azureclient.Member{keepMember, removeMember}, nil).Once()
 		mockClient.On("RemoveMemberFromGroup", mock.Anything, group, removeMember).Return(nil).Once()
@@ -82,7 +83,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		err := reconciler.Reconcile(ctx, sync, dbmodels.Team{
 			Slug:    teamSlug,
 			Name:    teamName,
-			Purpose: helpers.Strp(teamName),
+			Purpose: purpose,
 			Users: []*dbmodels.User{
 				addUser, keepUser,
 			},
@@ -96,13 +97,13 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		mockClient := &azureclient.MockClient{}
 		reconciler := azure_group.New(system, auditLogger, creds, mockClient, domain)
 
-		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, teamName).
-			Return(nil, fmt.Errorf("GetOrCreateGroup failed")).Once()
+		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, purpose).
+			Return(nil, false, fmt.Errorf("GetOrCreateGroup failed")).Once()
 
 		err := reconciler.Reconcile(ctx, sync, dbmodels.Team{
 			Slug:    teamSlug,
 			Name:    teamName,
-			Purpose: helpers.Strp(teamName),
+			Purpose: purpose,
 			Users: []*dbmodels.User{
 				addUser, keepUser,
 			},
@@ -116,15 +117,15 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		mockClient := &azureclient.MockClient{}
 		reconciler := azure_group.New(system, auditLogger, creds, mockClient, domain)
 
-		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, teamName).
-			Return(group, nil).Once()
+		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, purpose).
+			Return(group, true, nil).Once()
 		mockClient.On("ListGroupMembers", mock.Anything, group).
 			Return(nil, fmt.Errorf("ListGroupMembers failed")).Once()
 
 		err := reconciler.Reconcile(ctx, sync, dbmodels.Team{
 			Slug:    teamSlug,
 			Name:    teamName,
-			Purpose: helpers.Strp(teamName),
+			Purpose: purpose,
 			Users: []*dbmodels.User{
 				addUser, keepUser,
 			},
@@ -138,8 +139,8 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		mockClient := &azureclient.MockClient{}
 		reconciler := azure_group.New(system, auditLogger, creds, mockClient, domain)
 
-		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, teamName).
-			Return(group, nil).Once()
+		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, purpose).
+			Return(group, true, nil).Once()
 		mockClient.On("ListGroupMembers", mock.Anything, group).
 			Return([]*azureclient.Member{keepMember, removeMember}, nil).Once()
 		mockClient.On("RemoveMemberFromGroup", mock.Anything, group, removeMember).
@@ -148,7 +149,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		err := reconciler.Reconcile(ctx, sync, dbmodels.Team{
 			Slug:    teamSlug,
 			Name:    teamName,
-			Purpose: helpers.Strp(teamName),
+			Purpose: purpose,
 			Users: []*dbmodels.User{
 				addUser, keepUser,
 			},
@@ -162,8 +163,8 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		mockClient := &azureclient.MockClient{}
 		reconciler := azure_group.New(system, auditLogger, creds, mockClient, domain)
 
-		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, teamName).
-			Return(group, nil).Once()
+		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, purpose).
+			Return(group, true, nil).Once()
 		mockClient.On("ListGroupMembers", mock.Anything, group).
 			Return([]*azureclient.Member{keepMember, removeMember}, nil).Once()
 		mockClient.On("RemoveMemberFromGroup", mock.Anything, group, removeMember).Return(nil).Once()
@@ -172,7 +173,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		err := reconciler.Reconcile(ctx, sync, dbmodels.Team{
 			Slug:    teamSlug,
 			Name:    teamName,
-			Purpose: helpers.Strp(teamName),
+			Purpose: purpose,
 			Users: []*dbmodels.User{
 				addUser, keepUser,
 			},
@@ -187,8 +188,8 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		mockClient := &azureclient.MockClient{}
 		reconciler := azure_group.New(system, auditLogger, creds, mockClient, domain)
 
-		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, teamName).
-			Return(group, nil).Once()
+		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, purpose).
+			Return(group, true, nil).Once()
 		mockClient.On("ListGroupMembers", mock.Anything, group).
 			Return([]*azureclient.Member{keepMember, removeMember}, nil).Once()
 		mockClient.On("RemoveMemberFromGroup", mock.Anything, group, removeMember).Return(nil).Once()
@@ -199,7 +200,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		err := reconciler.Reconcile(ctx, sync, dbmodels.Team{
 			Slug:    teamSlug,
 			Name:    teamName,
-			Purpose: helpers.Strp(teamName),
+			Purpose: purpose,
 			Users: []*dbmodels.User{
 				addUser, keepUser,
 			},

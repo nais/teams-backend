@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	helpers "github.com/nais/console/pkg/console"
 	"io"
 	"net/http"
 	"net/url"
@@ -18,7 +19,7 @@ type Client interface {
 	AddMemberToGroup(ctx context.Context, grp *Group, member *Member) error
 	CreateGroup(ctx context.Context, grp *Group) (*Group, error)
 	GetGroup(ctx context.Context, slug string) (*Group, error)
-	GetOrCreateGroup(ctx context.Context, slug, name, description string) (*Group, error)
+	GetOrCreateGroup(ctx context.Context, slug, name string, description *string) (*Group, bool, error)
 	GetUser(ctx context.Context, email string) (*Member, error)
 	ListGroupMembers(ctx context.Context, grp *Group) ([]*Member, error)
 	ListGroupOwners(ctx context.Context, grp *Group) ([]*Owner, error)
@@ -138,14 +139,16 @@ func (s *client) CreateGroup(ctx context.Context, grp *Group) (*Group, error) {
 	return grp, nil
 }
 
-func (s *client) GetOrCreateGroup(ctx context.Context, slug, name, description string) (*Group, error) {
+// GetOrCreateGroup Get or create a group fom the Graph API. The second return value informs if the group was
+// created or not.
+func (s *client) GetOrCreateGroup(ctx context.Context, slug, name string, description *string) (*Group, bool, error) {
 	grp, err := s.GetGroup(ctx, slug)
 	if err == nil {
-		return grp, err
+		return grp, false, err
 	}
 
 	grp = &Group{
-		Description:     description,
+		Description:     helpers.DerefString(description),
 		DisplayName:     name,
 		GroupTypes:      nil,
 		MailEnabled:     false,
@@ -153,7 +156,13 @@ func (s *client) GetOrCreateGroup(ctx context.Context, slug, name, description s
 		SecurityEnabled: true,
 	}
 
-	return s.CreateGroup(ctx, grp)
+	createdGroup, err := s.CreateGroup(ctx, grp)
+
+	if err != nil {
+		return nil, false, err
+	}
+
+	return createdGroup, true, nil
 }
 
 // https://docs.microsoft.com/en-us/graph/api/group-list-owners?view=graph-rest-1.0&tabs=http
