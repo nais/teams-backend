@@ -58,21 +58,25 @@ type ComplexityRoot struct {
 	}
 
 	AuditLog struct {
-		Action          func(childComplexity int) int
-		Actor           func(childComplexity int) int
-		CreatedAt       func(childComplexity int) int
-		ID              func(childComplexity int) int
-		Message         func(childComplexity int) int
-		Success         func(childComplexity int) int
-		Synchronization func(childComplexity int) int
-		TargetSystem    func(childComplexity int) int
-		TargetTeam      func(childComplexity int) int
-		TargetUser      func(childComplexity int) int
+		Action       func(childComplexity int) int
+		Actor        func(childComplexity int) int
+		Correlation  func(childComplexity int) int
+		CreatedAt    func(childComplexity int) int
+		ID           func(childComplexity int) int
+		Message      func(childComplexity int) int
+		Success      func(childComplexity int) int
+		TargetSystem func(childComplexity int) int
+		TargetTeam   func(childComplexity int) int
+		TargetUser   func(childComplexity int) int
 	}
 
 	AuditLogs struct {
 		Nodes    func(childComplexity int) int
 		PageInfo func(childComplexity int) int
+	}
+
+	Correlation struct {
+		ID func(childComplexity int) int
 	}
 
 	Mutation struct {
@@ -126,10 +130,6 @@ type ComplexityRoot struct {
 		PageInfo func(childComplexity int) int
 	}
 
-	Synchronization struct {
-		ID func(childComplexity int) int
-	}
-
 	System struct {
 		ID   func(childComplexity int) int
 		Name func(childComplexity int) int
@@ -174,7 +174,7 @@ type ComplexityRoot struct {
 
 type AuditLogResolver interface {
 	TargetSystem(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.System, error)
-	Synchronization(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.Synchronization, error)
+	Correlation(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.Correlation, error)
 	Actor(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.User, error)
 	TargetUser(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.User, error)
 	TargetTeam(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.Team, error)
@@ -255,6 +255,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.AuditLog.Actor(childComplexity), true
 
+	case "AuditLog.correlation":
+		if e.complexity.AuditLog.Correlation == nil {
+			break
+		}
+
+		return e.complexity.AuditLog.Correlation(childComplexity), true
+
 	case "AuditLog.createdAt":
 		if e.complexity.AuditLog.CreatedAt == nil {
 			break
@@ -282,13 +289,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.AuditLog.Success(childComplexity), true
-
-	case "AuditLog.synchronization":
-		if e.complexity.AuditLog.Synchronization == nil {
-			break
-		}
-
-		return e.complexity.AuditLog.Synchronization(childComplexity), true
 
 	case "AuditLog.targetSystem":
 		if e.complexity.AuditLog.TargetSystem == nil {
@@ -324,6 +324,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.AuditLogs.PageInfo(childComplexity), true
+
+	case "Correlation.id":
+		if e.complexity.Correlation.ID == nil {
+			break
+		}
+
+		return e.complexity.Correlation.ID(childComplexity), true
 
 	case "Mutation.addUsersToTeam":
 		if e.complexity.Mutation.AddUsersToTeam == nil {
@@ -636,13 +643,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Roles.PageInfo(childComplexity), true
 
-	case "Synchronization.id":
-		if e.complexity.Synchronization.ID == nil {
-			break
-		}
-
-		return e.complexity.Synchronization.ID(childComplexity), true
-
 	case "System.id":
 		if e.complexity.System.ID == nil {
 			break
@@ -941,6 +941,12 @@ input APIKeyInput {
     ): AuditLogs! @auth
 }
 
+"Correlation type."
+type Correlation {
+    "ID of the correlation."
+    id: UUID!
+}
+
 "Audit log type."
 type AuditLog {
     "ID of the log entry."
@@ -949,8 +955,8 @@ type AuditLog {
     "The related system."
     targetSystem: System!
 
-    "The related synchronization."
-    synchronization: Synchronization!
+    "The related correlation."
+    correlation: Correlation!
 
     "The actor who performed the action in the entry. When this field is empty it means that the console system itself performed the action."
     actor: User
@@ -985,6 +991,9 @@ type AuditLogs {
 
 "Input for filtering a collection of audit log entries."
 input AuditLogsQuery {
+    "Filter by correlation ID."
+    correlationId: UUID
+
     "Filter by team ID."
     teamId: UUID
 
@@ -993,9 +1002,6 @@ input AuditLogsQuery {
 
     "Filter by system ID."
     systemId: UUID
-
-    "Filter by synchronization ID."
-    synchronizationId: UUID
 }
 
 "Input for sorting a collection of audit log entries."
@@ -1203,11 +1209,6 @@ enum SortDirection {
 
     "Sort descending."
     DESC
-}`, BuiltIn: false},
-	{Name: "../../../graphql/synchronizations.graphqls", Input: `"Synchronization type."
-type Synchronization {
-    "ID of the synchronization."
-    id: UUID!
 }`, BuiltIn: false},
 	{Name: "../../../graphql/systems.graphqls", Input: `extend type Query {
     "Get a collection of systems."
@@ -2062,8 +2063,8 @@ func (ec *executionContext) fieldContext_AuditLog_targetSystem(ctx context.Conte
 	return fc, nil
 }
 
-func (ec *executionContext) _AuditLog_synchronization(ctx context.Context, field graphql.CollectedField, obj *dbmodels.AuditLog) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_AuditLog_synchronization(ctx, field)
+func (ec *executionContext) _AuditLog_correlation(ctx context.Context, field graphql.CollectedField, obj *dbmodels.AuditLog) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_AuditLog_correlation(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -2076,7 +2077,7 @@ func (ec *executionContext) _AuditLog_synchronization(ctx context.Context, field
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.AuditLog().Synchronization(rctx, obj)
+		return ec.resolvers.AuditLog().Correlation(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2088,12 +2089,12 @@ func (ec *executionContext) _AuditLog_synchronization(ctx context.Context, field
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*dbmodels.Synchronization)
+	res := resTmp.(*dbmodels.Correlation)
 	fc.Result = res
-	return ec.marshalNSynchronization2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSynchronization(ctx, field.Selections, res)
+	return ec.marshalNCorrelation2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐCorrelation(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_AuditLog_synchronization(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_AuditLog_correlation(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "AuditLog",
 		Field:      field,
@@ -2102,9 +2103,9 @@ func (ec *executionContext) fieldContext_AuditLog_synchronization(ctx context.Co
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
-				return ec.fieldContext_Synchronization_id(ctx, field)
+				return ec.fieldContext_Correlation_id(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Synchronization", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type Correlation", field.Name)
 		},
 	}
 	return fc, nil
@@ -2554,8 +2555,8 @@ func (ec *executionContext) fieldContext_AuditLogs_nodes(ctx context.Context, fi
 				return ec.fieldContext_AuditLog_id(ctx, field)
 			case "targetSystem":
 				return ec.fieldContext_AuditLog_targetSystem(ctx, field)
-			case "synchronization":
-				return ec.fieldContext_AuditLog_synchronization(ctx, field)
+			case "correlation":
+				return ec.fieldContext_AuditLog_correlation(ctx, field)
 			case "actor":
 				return ec.fieldContext_AuditLog_actor(ctx, field)
 			case "targetUser":
@@ -2572,6 +2573,50 @@ func (ec *executionContext) fieldContext_AuditLogs_nodes(ctx context.Context, fi
 				return ec.fieldContext_AuditLog_createdAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type AuditLog", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Correlation_id(ctx context.Context, field graphql.CollectedField, obj *dbmodels.Correlation) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Correlation_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*uuid.UUID)
+	fc.Result = res
+	return ec.marshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Correlation_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Correlation",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type UUID does not have child fields")
 		},
 	}
 	return fc, nil
@@ -4931,50 +4976,6 @@ func (ec *executionContext) fieldContext_Roles_nodes(ctx context.Context, field 
 	return fc, nil
 }
 
-func (ec *executionContext) _Synchronization_id(ctx context.Context, field graphql.CollectedField, obj *dbmodels.Synchronization) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Synchronization_id(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ID, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*uuid.UUID)
-	fc.Result = res
-	return ec.marshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Synchronization_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Synchronization",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type UUID does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _System_id(ctx context.Context, field graphql.CollectedField, obj *dbmodels.System) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_System_id(ctx, field)
 	if err != nil {
@@ -5482,8 +5483,8 @@ func (ec *executionContext) fieldContext_Team_auditLogs(ctx context.Context, fie
 				return ec.fieldContext_AuditLog_id(ctx, field)
 			case "targetSystem":
 				return ec.fieldContext_AuditLog_targetSystem(ctx, field)
-			case "synchronization":
-				return ec.fieldContext_AuditLog_synchronization(ctx, field)
+			case "correlation":
+				return ec.fieldContext_AuditLog_correlation(ctx, field)
 			case "actor":
 				return ec.fieldContext_AuditLog_actor(ctx, field)
 			case "targetUser":
@@ -7988,6 +7989,14 @@ func (ec *executionContext) unmarshalInputAuditLogsQuery(ctx context.Context, ob
 
 	for k, v := range asMap {
 		switch k {
+		case "correlationId":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("correlationId"))
+			it.CorrelationID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		case "teamId":
 			var err error
 
@@ -8009,14 +8018,6 @@ func (ec *executionContext) unmarshalInputAuditLogsQuery(ctx context.Context, ob
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("systemId"))
 			it.SystemID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "synchronizationId":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("synchronizationId"))
-			it.SynchronizationID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -8603,7 +8604,7 @@ func (ec *executionContext) _AuditLog(ctx context.Context, sel ast.SelectionSet,
 				return innerFunc(ctx)
 
 			})
-		case "synchronization":
+		case "correlation":
 			field := field
 
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
@@ -8612,7 +8613,7 @@ func (ec *executionContext) _AuditLog(ctx context.Context, sel ast.SelectionSet,
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._AuditLog_synchronization(ctx, field, obj)
+				res = ec._AuditLog_correlation(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -8733,6 +8734,34 @@ func (ec *executionContext) _AuditLogs(ctx context.Context, sel ast.SelectionSet
 		case "nodes":
 
 			out.Values[i] = ec._AuditLogs_nodes(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var correlationImplementors = []string{"Correlation"}
+
+func (ec *executionContext) _Correlation(ctx context.Context, sel ast.SelectionSet, obj *dbmodels.Correlation) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, correlationImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Correlation")
+		case "id":
+
+			out.Values[i] = ec._Correlation_id(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -9315,34 +9344,6 @@ func (ec *executionContext) _Roles(ctx context.Context, sel ast.SelectionSet, ob
 		case "nodes":
 
 			out.Values[i] = ec._Roles_nodes(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var synchronizationImplementors = []string{"Synchronization"}
-
-func (ec *executionContext) _Synchronization(ctx context.Context, sel ast.SelectionSet, obj *dbmodels.Synchronization) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, synchronizationImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("Synchronization")
-		case "id":
-
-			out.Values[i] = ec._Synchronization_id(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -10148,6 +10149,20 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
+func (ec *executionContext) marshalNCorrelation2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐCorrelation(ctx context.Context, sel ast.SelectionSet, v dbmodels.Correlation) graphql.Marshaler {
+	return ec._Correlation(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNCorrelation2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐCorrelation(ctx context.Context, sel ast.SelectionSet, v *dbmodels.Correlation) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Correlation(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNCreateTeamInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐCreateTeamInput(ctx context.Context, v interface{}) (model.CreateTeamInput, error) {
 	res, err := ec.unmarshalInputCreateTeamInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -10392,20 +10407,6 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 		}
 	}
 	return res
-}
-
-func (ec *executionContext) marshalNSynchronization2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSynchronization(ctx context.Context, sel ast.SelectionSet, v dbmodels.Synchronization) graphql.Marshaler {
-	return ec._Synchronization(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNSynchronization2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSynchronization(ctx context.Context, sel ast.SelectionSet, v *dbmodels.Synchronization) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._Synchronization(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNSystem2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSystem(ctx context.Context, sel ast.SelectionSet, v dbmodels.System) graphql.Marshaler {

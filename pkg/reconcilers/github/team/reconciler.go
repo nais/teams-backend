@@ -72,16 +72,16 @@ func NewFromConfig(_ *gorm.DB, cfg *config.Config, system dbmodels.System, audit
 	return New(system, auditLogger, cfg.GitHub.Organization, cfg.PartnerDomain, restClient.Teams, graphClient), nil
 }
 
-func (s *gitHubReconciler) Reconcile(ctx context.Context, sync dbmodels.Synchronization, team dbmodels.Team) error {
-	githubTeam, err := s.getOrCreateTeam(ctx, sync, team)
+func (s *gitHubReconciler) Reconcile(ctx context.Context, corr dbmodels.Correlation, team dbmodels.Team) error {
+	githubTeam, err := s.getOrCreateTeam(ctx, corr, team)
 	if err != nil {
 		return err
 	}
 
-	return s.connectUsers(ctx, sync, team, githubTeam)
+	return s.connectUsers(ctx, corr, team, githubTeam)
 }
 
-func (s *gitHubReconciler) getOrCreateTeam(ctx context.Context, sync dbmodels.Synchronization, team dbmodels.Team) (*github.Team, error) {
+func (s *gitHubReconciler) getOrCreateTeam(ctx context.Context, corr dbmodels.Correlation, team dbmodels.Team) (*github.Team, error) {
 	existingTeam, resp, err := s.teamsService.GetTeamBySlug(ctx, s.org, team.Slug.String())
 
 	if resp == nil && err != nil {
@@ -111,12 +111,12 @@ func (s *gitHubReconciler) getOrCreateTeam(ctx context.Context, sync dbmodels.Sy
 		return nil, fmt.Errorf("%s: create GitHub team '%s': %s", OpCreate, newTeam, err)
 	}
 
-	s.auditLogger.Log(OpCreate, true, sync, s.system, nil, &team, nil, "created GitHub team '%s'", newTeam)
+	s.auditLogger.Log(OpCreate, true, corr, s.system, nil, &team, nil, "created GitHub team '%s'", newTeam)
 
 	return githubTeam, nil
 }
 
-func (s *gitHubReconciler) connectUsers(ctx context.Context, sync dbmodels.Synchronization, team dbmodels.Team, githubTeam *github.Team) error {
+func (s *gitHubReconciler) connectUsers(ctx context.Context, corr dbmodels.Correlation, team dbmodels.Team, githubTeam *github.Team) error {
 	userMap, err := s.mapSSOUsers(ctx, team.Users)
 	if err != nil {
 		return err
@@ -142,7 +142,7 @@ func (s *gitHubReconciler) connectUsers(ctx context.Context, sync dbmodels.Synch
 		}
 
 		// TODO: Connect local database user to log entry
-		s.auditLogger.Log(OpAddMember, true, sync, s.system, nil, &team, nil, "added member '%s' to GitHub team '%s'", username, *githubTeam.Slug)
+		s.auditLogger.Log(OpAddMember, true, corr, s.system, nil, &team, nil, "added member '%s' to GitHub team '%s'", username, *githubTeam.Slug)
 	}
 
 	extra := extraMembers(members, usernames)
@@ -154,7 +154,7 @@ func (s *gitHubReconciler) connectUsers(ctx context.Context, sync dbmodels.Synch
 		}
 
 		// TODO: Connect local database user to log entry
-		s.auditLogger.Log(OpDeleteMember, true, sync, s.system, nil, &team, nil, "deleted member '%s' to GitHub team '%s'", username, *githubTeam.Slug)
+		s.auditLogger.Log(OpDeleteMember, true, corr, s.system, nil, &team, nil, "deleted member '%s' to GitHub team '%s'", username, *githubTeam.Slug)
 	}
 
 	return nil

@@ -66,10 +66,10 @@ func (in *AuditLogsQuery) GetQuery() interface{} {
 		return &dbmodels.AuditLog{}
 	}
 	return &dbmodels.AuditLog{
-		ActorID:           in.UserID,
-		SynchronizationID: *in.SynchronizationID,
-		TargetSystemID:    *in.SystemID,
-		TargetTeamID:      in.TeamID,
+		ActorID:        in.UserID,
+		CorrelationID:  *in.CorrelationID,
+		TargetSystemID: *in.SystemID,
+		TargetTeamID:   in.TeamID,
 	}
 }
 

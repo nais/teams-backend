@@ -56,7 +56,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		Email: &keepMember.Mail,
 	}
 	syncID, _ := uuid.NewUUID()
-	sync := dbmodels.Synchronization{
+	corr := dbmodels.Correlation{
 		Model: dbmodels.Model{
 			ID: &syncID,
 		},
@@ -80,7 +80,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		mockClient.On("GetUser", mock.Anything, *addUser.Email).Return(addMember, nil).Once()
 		mockClient.On("AddMemberToGroup", mock.Anything, group, addMember).Return(nil).Once()
 
-		err := reconciler.Reconcile(ctx, sync, dbmodels.Team{
+		err := reconciler.Reconcile(ctx, corr, dbmodels.Team{
 			Slug:    teamSlug,
 			Name:    teamName,
 			Purpose: purpose,
@@ -100,7 +100,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, purpose).
 			Return(nil, false, fmt.Errorf("GetOrCreateGroup failed")).Once()
 
-		err := reconciler.Reconcile(ctx, sync, dbmodels.Team{
+		err := reconciler.Reconcile(ctx, corr, dbmodels.Team{
 			Slug:    teamSlug,
 			Name:    teamName,
 			Purpose: purpose,
@@ -122,7 +122,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		mockClient.On("ListGroupMembers", mock.Anything, group).
 			Return(nil, fmt.Errorf("ListGroupMembers failed")).Once()
 
-		err := reconciler.Reconcile(ctx, sync, dbmodels.Team{
+		err := reconciler.Reconcile(ctx, corr, dbmodels.Team{
 			Slug:    teamSlug,
 			Name:    teamName,
 			Purpose: purpose,
@@ -146,7 +146,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		mockClient.On("RemoveMemberFromGroup", mock.Anything, group, removeMember).
 			Return(fmt.Errorf("RemoveMemberFromGroup failed")).Once()
 
-		err := reconciler.Reconcile(ctx, sync, dbmodels.Team{
+		err := reconciler.Reconcile(ctx, corr, dbmodels.Team{
 			Slug:    teamSlug,
 			Name:    teamName,
 			Purpose: purpose,
@@ -170,7 +170,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		mockClient.On("RemoveMemberFromGroup", mock.Anything, group, removeMember).Return(nil).Once()
 		mockClient.On("GetUser", mock.Anything, *addUser.Email).Return(nil, fmt.Errorf("GetUser failed")).Once()
 
-		err := reconciler.Reconcile(ctx, sync, dbmodels.Team{
+		err := reconciler.Reconcile(ctx, corr, dbmodels.Team{
 			Slug:    teamSlug,
 			Name:    teamName,
 			Purpose: purpose,
@@ -197,7 +197,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		mockClient.On("AddMemberToGroup", mock.Anything, group, addMember).
 			Return(fmt.Errorf("AddMemberToGroup failed")).Once()
 
-		err := reconciler.Reconcile(ctx, sync, dbmodels.Team{
+		err := reconciler.Reconcile(ctx, corr, dbmodels.Team{
 			Slug:    teamSlug,
 			Name:    teamName,
 			Purpose: purpose,

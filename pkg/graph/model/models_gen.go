@@ -51,14 +51,14 @@ type AuditLogs struct {
 
 // Input for filtering a collection of audit log entries.
 type AuditLogsQuery struct {
+	// Filter by correlation ID.
+	CorrelationID *uuid.UUID `json:"correlationId"`
 	// Filter by team ID.
 	TeamID *uuid.UUID `json:"teamId"`
 	// Filter by user ID.
 	UserID *uuid.UUID `json:"userId"`
 	// Filter by system ID.
 	SystemID *uuid.UUID `json:"systemId"`
-	// Filter by synchronization ID.
-	SynchronizationID *uuid.UUID `json:"synchronizationId"`
 }
 
 // Input for sorting a collection of audit log entries.

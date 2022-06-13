@@ -213,8 +213,8 @@ func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems ma
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	sync := &dbmodels.Synchronization{}
-	tx := db.WithContext(ctx).Create(sync)
+	corr := &dbmodels.Correlation{}
+	tx := db.WithContext(ctx).Create(corr)
 	if tx.Error != nil {
 		return fmt.Errorf("cannot create synchronization reference: %w", tx.Error)
 	}
@@ -228,7 +228,7 @@ func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems ma
 
 		for _, reconciler := range systems {
 			log.Infof("%s: Starting reconcile for team: %s", console_reconciler.OpReconcileStart, team.Name)
-			err := reconciler.Reconcile(ctx, *sync, *team)
+			err := reconciler.Reconcile(ctx, *corr, *team)
 
 			switch er := err.(type) {
 			case nil:

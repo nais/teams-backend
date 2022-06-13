@@ -64,7 +64,7 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 	return New(system, auditLogger, cfg.PartnerDomain, config), nil
 }
 
-func (s *gcpReconciler) Reconcile(ctx context.Context, sync dbmodels.Synchronization, team dbmodels.Team) error {
+func (s *gcpReconciler) Reconcile(ctx context.Context, corr dbmodels.Correlation, team dbmodels.Team) error {
 	client := s.config.Client(ctx)
 
 	srv, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(client))
@@ -72,17 +72,17 @@ func (s *gcpReconciler) Reconcile(ctx context.Context, sync dbmodels.Synchroniza
 		return fmt.Errorf("retrieve directory client: %s", err)
 	}
 
-	grp, err := s.getOrCreateGroup(srv.Groups, sync, team)
+	grp, err := s.getOrCreateGroup(srv.Groups, corr, team)
 	if err != nil {
 		return err
 	}
 
-	err = s.connectUsers(srv.Members, grp, sync, team)
+	err = s.connectUsers(srv.Members, grp, corr, team)
 	if err != nil {
 		return fmt.Errorf("%s: add members to group: %s", OpAddMembers, err)
 	}
 
-	err = s.addToGKESecurityGroup(srv.Members, grp, sync, team)
+	err = s.addToGKESecurityGroup(srv.Members, grp, corr, team)
 	if err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func (s *gcpReconciler) Reconcile(ctx context.Context, sync dbmodels.Synchroniza
 	return nil
 }
 
-func (s *gcpReconciler) getOrCreateGroup(groupsService *admin_directory_v1.GroupsService, sync dbmodels.Synchronization, team dbmodels.Team) (*admin_directory_v1.Group, error) {
+func (s *gcpReconciler) getOrCreateGroup(groupsService *admin_directory_v1.GroupsService, corr dbmodels.Correlation, team dbmodels.Team) (*admin_directory_v1.Group, error) {
 	slug := reconcilers.TeamNamePrefix + team.Slug
 	email := fmt.Sprintf("%s@%s", slug, s.domain)
 
@@ -111,12 +111,12 @@ func (s *gcpReconciler) getOrCreateGroup(groupsService *admin_directory_v1.Group
 		return nil, fmt.Errorf("%s: create Google Directory group: %s", OpCreate, err)
 	}
 
-	s.auditLogger.Log(OpCreate, true, sync, s.system, nil, &team, nil, "successfully created Google Directory group '%s'", grp.Email)
+	s.auditLogger.Log(OpCreate, true, corr, s.system, nil, &team, nil, "successfully created Google Directory group '%s'", grp.Email)
 
 	return grp, nil
 }
 
-func (s *gcpReconciler) connectUsers(membersService *admin_directory_v1.MembersService, grp *admin_directory_v1.Group, sync dbmodels.Synchronization, team dbmodels.Team) error {
+func (s *gcpReconciler) connectUsers(membersService *admin_directory_v1.MembersService, grp *admin_directory_v1.Group, corr dbmodels.Correlation, team dbmodels.Team) error {
 	remoteMembers, err := membersService.List(grp.Id).Do()
 	if err != nil {
 		return fmt.Errorf("%s: list existing members in Google Directory group: %s", OpAddMembers, err)
@@ -137,7 +137,7 @@ func (s *gcpReconciler) connectUsers(membersService *admin_directory_v1.MembersS
 		}
 		deleted++
 		// FIXME: connect audit log with database user, if exists
-		s.auditLogger.Log(OpDeleteMember, true, sync, s.system, nil, &team, nil, "deleted member '%s' from Google Directory group '%s'", member.Email, grp.Email)
+		s.auditLogger.Log(OpDeleteMember, true, corr, s.system, nil, &team, nil, "deleted member '%s' from Google Directory group '%s'", member.Email, grp.Email)
 	}
 
 	for _, user := range createMembers {
@@ -154,13 +154,13 @@ func (s *gcpReconciler) connectUsers(membersService *admin_directory_v1.MembersS
 		}
 		created++
 		// FIXME: connect audit log with database user, if exists
-		s.auditLogger.Log(OpAddMember, true, sync, s.system, nil, &team, nil, "added member '%s' to Google Directory group '%s'", member.Email, grp.Email)
+		s.auditLogger.Log(OpAddMember, true, corr, s.system, nil, &team, nil, "added member '%s' to Google Directory group '%s'", member.Email, grp.Email)
 	}
 
 	return nil
 }
 
-func (s *gcpReconciler) addToGKESecurityGroup(membersService *admin_directory_v1.MembersService, grp *admin_directory_v1.Group, sync dbmodels.Synchronization, team dbmodels.Team) error {
+func (s *gcpReconciler) addToGKESecurityGroup(membersService *admin_directory_v1.MembersService, grp *admin_directory_v1.Group, corr dbmodels.Correlation, team dbmodels.Team) error {
 	const groupPrefix = "gke-security-groups@"
 	groupKey := groupPrefix + s.domain
 
@@ -177,7 +177,7 @@ func (s *gcpReconciler) addToGKESecurityGroup(membersService *admin_directory_v1
 		return fmt.Errorf("%s: add group '%s' to GKE security group '%s': %s", OpAddToGKESecurityGroup, member.Email, groupKey, err)
 	}
 
-	s.auditLogger.Log(OpAddToGKESecurityGroup, true, sync, s.system, nil, &team, nil, "added group '%s' to GKE security group '%s'", member.Email, groupKey)
+	s.auditLogger.Log(OpAddToGKESecurityGroup, true, corr, s.system, nil, &team, nil, "added group '%s' to GKE security group '%s'", member.Email, groupKey)
 
 	return nil
 }

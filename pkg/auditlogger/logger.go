@@ -19,7 +19,7 @@ type AuditLog struct {
 }
 
 type AuditLogger interface {
-	Log(action string, success bool, sync dbmodels.Synchronization, targetSystem dbmodels.System, actor *dbmodels.User, targetTeam *dbmodels.Team, targetUser *dbmodels.User, message string, messageArgs ...interface{}) error
+	Log(action string, success bool, corr dbmodels.Correlation, targetSystem dbmodels.System, actor *dbmodels.User, targetTeam *dbmodels.Team, targetUser *dbmodels.User, message string, messageArgs ...interface{}) error
 }
 
 func New(db *gorm.DB) AuditLogger {
@@ -28,7 +28,7 @@ func New(db *gorm.DB) AuditLogger {
 	}
 }
 
-func (l *auditLogger) Log(action string, success bool, sync dbmodels.Synchronization, targetSystem dbmodels.System, actor *dbmodels.User, targetTeam *dbmodels.Team, targetUser *dbmodels.User, message string, messageArgs ...interface{}) error {
+func (l *auditLogger) Log(action string, success bool, corr dbmodels.Correlation, targetSystem dbmodels.System, actor *dbmodels.User, targetTeam *dbmodels.Team, targetUser *dbmodels.User, message string, messageArgs ...interface{}) error {
 	var actorId *uuid.UUID
 	var targetTeamId *uuid.UUID
 	var targetUserId *uuid.UUID
@@ -46,18 +46,18 @@ func (l *auditLogger) Log(action string, success bool, sync dbmodels.Synchroniza
 	}
 
 	logEntry := &dbmodels.AuditLog{
-		Action:            action,
-		Actor:             actor,
-		ActorID:           actorId,
-		Synchronization:   sync,
-		SynchronizationID: *sync.ID,
-		TargetSystem:      targetSystem,
-		TargetSystemID:    *targetSystem.ID,
-		TargetTeam:        targetTeam,
-		TargetUser:        targetUser,
-		TargetTeamID:      targetTeamId,
-		TargetUserID:      targetUserId,
-		Success:           success,
+		Action:         action,
+		Actor:          actor,
+		ActorID:        actorId,
+		Correlation:    corr,
+		CorrelationID:  *corr.ID,
+		TargetSystem:   targetSystem,
+		TargetSystemID: *targetSystem.ID,
+		TargetTeam:     targetTeam,
+		TargetUser:     targetUser,
+		TargetTeamID:   targetTeamId,
+		TargetUserID:   targetUserId,
+		Success:        success,
 
 		Message: fmt.Sprintf(message, messageArgs...),
 	}

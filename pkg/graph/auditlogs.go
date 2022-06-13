@@ -20,13 +20,13 @@ func (r *auditLogResolver) TargetSystem(ctx context.Context, obj *dbmodels.Audit
 	return system, nil
 }
 
-func (r *auditLogResolver) Synchronization(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.Synchronization, error) {
-	var synchronization *dbmodels.Synchronization
-	err := r.db.Model(&obj).Association("Synchronization").Find(&synchronization)
+func (r *auditLogResolver) Correlation(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.Correlation, error) {
+	var corr *dbmodels.Correlation
+	err := r.db.Model(&obj).Association("Correlation").Find(&corr)
 	if err != nil {
 		return nil, err
 	}
-	return synchronization, nil
+	return corr, nil
 }
 
 func (r *auditLogResolver) Actor(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.User, error) {

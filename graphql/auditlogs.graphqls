@@ -12,6 +12,12 @@ extend type Query {
     ): AuditLogs! @auth
 }
 
+"Correlation type."
+type Correlation {
+    "ID of the correlation."
+    id: UUID!
+}
+
 "Audit log type."
 type AuditLog {
     "ID of the log entry."
@@ -20,8 +26,8 @@ type AuditLog {
     "The related system."
     targetSystem: System!
 
-    "The related synchronization."
-    synchronization: Synchronization!
+    "The related correlation."
+    correlation: Correlation!
 
     "The actor who performed the action in the entry. When this field is empty it means that the console system itself performed the action."
     actor: User
@@ -56,6 +62,9 @@ type AuditLogs {
 
 "Input for filtering a collection of audit log entries."
 input AuditLogsQuery {
+    "Filter by correlation ID."
+    correlationId: UUID
+
     "Filter by team ID."
     teamId: UUID
 
@@ -64,9 +73,6 @@ input AuditLogsQuery {
 
     "Filter by system ID."
     systemId: UUID
-
-    "Filter by synchronization ID."
-    synchronizationId: UUID
 }
 
 "Input for sorting a collection of audit log entries."

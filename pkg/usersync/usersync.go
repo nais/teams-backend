@@ -91,10 +91,10 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 		return fmt.Errorf("%s: list remote users: %w", OpListRemote, err)
 	}
 
-	sync := &dbmodels.Synchronization{}
-	err = tx.Create(sync).Error
+	corr := &dbmodels.Correlation{}
+	err = tx.Create(corr).Error
 	if err != nil {
-		return fmt.Errorf("%s: unable to create synchronization for audit logs: %w", OpPrepare, err)
+		return fmt.Errorf("%s: unable to create correlation for audit logs: %w", OpPrepare, err)
 	}
 
 	auditLogEntries := make([]*auditLogEntry, 0)
@@ -162,7 +162,7 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 	}
 
 	for _, entry := range auditLogEntries {
-		s.auditLogger.Log(entry.action, true, *sync, s.system, nil, nil, &entry.user, entry.message)
+		s.auditLogger.Log(entry.action, true, *corr, s.system, nil, nil, &entry.user, entry.message)
 	}
 
 	return nil

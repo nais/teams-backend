@@ -52,13 +52,13 @@ func TestNaisDeployReconciler_Reconcile(t *testing.T) {
 	slug := dbmodels.Slug(teamName)
 
 	syncID, _ := uuid.NewUUID()
-	sync := dbmodels.Synchronization{
+	corr := dbmodels.Correlation{
 		Model: dbmodels.Model{
 			ID: &syncID,
 		},
 	}
 
-	err := reconciler.Reconcile(ctx, sync, dbmodels.Team{
+	err := reconciler.Reconcile(ctx, corr, dbmodels.Team{
 		Slug: slug,
 	})
 

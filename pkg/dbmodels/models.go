@@ -37,19 +37,24 @@ type ApiKey struct {
 type AuditLog struct {
 	Model
 	SoftDeletes
-	Actor             *User           `gorm:""` // The user or service account that performed the action
-	Synchronization   Synchronization `gorm:""`
-	TargetSystem      System          `gorm:""`
-	TargetTeam        *Team           `gorm:""` // The team, if any, that was the target of the action
-	TargetUser        *User           `gorm:""` // The user, if any, that was the target of the action
-	ActorID           *uuid.UUID      `gorm:"type:uuid"`
-	SynchronizationID uuid.UUID       `gorm:"type:uuid; not null"`
-	TargetSystemID    uuid.UUID       `gorm:"type:uuid; not null"`
-	TargetTeamID      *uuid.UUID      `gorm:"type:uuid"`
-	TargetUserID      *uuid.UUID      `gorm:"type:uuid"`
-	Action            string          `gorm:"not null; index"`
-	Success           bool            `gorm:"not null; index"` // True if operation succeeded
-	Message           string          `gorm:"not null"`        // Human readable success or error message (log line)
+	Actor          *User       `gorm:""` // The user or service account that performed the action
+	Correlation    Correlation `gorm:""`
+	TargetSystem   System      `gorm:""`
+	TargetTeam     *Team       `gorm:""` // The team, if any, that was the target of the action
+	TargetUser     *User       `gorm:""` // The user, if any, that was the target of the action
+	ActorID        *uuid.UUID  `gorm:"type:uuid"`
+	CorrelationID  uuid.UUID   `gorm:"type:uuid; not null"`
+	TargetSystemID uuid.UUID   `gorm:"type:uuid; not null"`
+	TargetTeamID   *uuid.UUID  `gorm:"type:uuid"`
+	TargetUserID   *uuid.UUID  `gorm:"type:uuid"`
+	Action         string      `gorm:"not null; index"`
+	Success        bool        `gorm:"not null; index"` // True if operation succeeded
+	Message        string      `gorm:"not null"`        // Human readable success or error message (log line)
+}
+
+type Correlation struct {
+	Model
+	SoftDeletes
 }
 
 type RoleBinding struct {
@@ -73,11 +78,6 @@ type Role struct {
 	AccessLevel  string         `gorm:"not null"` // CRUD
 	Permission   string         `gorm:"not null"` // allow/deny
 	RoleBindings []*RoleBinding `gorm:"foreignKey:RoleID"`
-}
-
-type Synchronization struct {
-	Model
-	SoftDeletes
 }
 
 type SystemState struct {
@@ -184,7 +184,7 @@ func (a *AuditLog) Log() *log.Entry {
 		"actor_email":        actorEmail,
 		"actor_id":           uuidAsString(a.ActorID),
 		"actor_name":         actorName,
-		"correlation_id":     a.SynchronizationID,
+		"correlation_id":     a.CorrelationID,
 		"success":            a.Success,
 		"target_system_id":   a.TargetSystemID,
 		"target_system_name": a.TargetSystem.Name,

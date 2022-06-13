@@ -8,9 +8,9 @@ func Migrate(db *gorm.DB) error {
 	return db.AutoMigrate(
 		&ApiKey{},
 		&AuditLog{},
+		&Correlation{},
 		&RoleBinding{},
 		&Role{},
-		&Synchronization{},
 		&SystemState{},
 		&System{},
 		&SystemsTeams{},

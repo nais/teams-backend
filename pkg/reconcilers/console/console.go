@@ -31,6 +31,6 @@ func NewFromConfig(_ *gorm.DB, _ *config.Config, _ dbmodels.System, _ auditlogge
 	return New(), nil
 }
 
-func (s *consoleReconciler) Reconcile(_ context.Context, _ dbmodels.Synchronization, _ dbmodels.Team) error {
+func (s *consoleReconciler) Reconcile(_ context.Context, _ dbmodels.Correlation, _ dbmodels.Team) error {
 	return nil
 }

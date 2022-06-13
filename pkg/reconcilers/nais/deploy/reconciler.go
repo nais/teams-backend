@@ -66,7 +66,7 @@ func NewFromConfig(_ *gorm.DB, cfg *config.Config, system dbmodels.System, audit
 	return New(system, auditLogger, http.DefaultClient, cfg.NaisDeploy.Endpoint, provisionKey), nil
 }
 
-func (s *naisDeployReconciler) Reconcile(ctx context.Context, sync dbmodels.Synchronization, team dbmodels.Team) error {
+func (s *naisDeployReconciler) Reconcile(ctx context.Context, corr dbmodels.Correlation, team dbmodels.Team) error {
 	const signatureHeader = "X-NAIS-Signature"
 
 	payload, err := json.Marshal(&ProvisionApiKeyRequest{
@@ -95,7 +95,7 @@ func (s *naisDeployReconciler) Reconcile(ctx context.Context, sync dbmodels.Sync
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusCreated {
-		s.auditLogger.Log(OpProvisionApiKey, true, sync, s.system, nil, &team, nil, "provisioned NAIS deploy API key to team '%s'", team.Slug)
+		s.auditLogger.Log(OpProvisionApiKey, true, corr, s.system, nil, &team, nil, "provisioned NAIS deploy API key to team '%s'", team.Slug)
 		return nil
 	}
 

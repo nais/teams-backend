@@ -48,7 +48,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		},
 	}
 	syncID, _ := uuid.NewUUID()
-	sync := dbmodels.Synchronization{
+	corr := dbmodels.Correlation{
 		Model: dbmodels.Model{
 			ID: &syncID,
 		},
@@ -85,7 +85,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		configureAddTeamMembershipBySlug(teamsService, org, teamName, createLogin)
 		configureRemoveTeamMembershipBySlug(teamsService, org, teamName, removeLogin)
 
-		err := reconciler.Reconcile(ctx, sync, team)
+		err := reconciler.Reconcile(ctx, corr, team)
 
 		assert.NoError(t, err)
 		teamsService.AssertExpectations(t)
@@ -107,7 +107,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 				},
 			}, nil).Once()
 
-		err := reconciler.Reconcile(ctx, sync, team)
+		err := reconciler.Reconcile(ctx, corr, team)
 
 		assert.EqualError(t, err, expectedErr.Error())
 		teamsService.AssertExpectations(t)
@@ -129,7 +129,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 				},
 			}, nil).Once()
 
-		err := reconciler.Reconcile(ctx, sync, team)
+		err := reconciler.Reconcile(ctx, corr, team)
 
 		assert.EqualError(t, err, expectedErr.Error())
 		teamsService.AssertExpectations(t)
@@ -158,7 +158,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		configureAddTeamMembershipBySlug(teamsService, org, teamName, createLogin)
 		configureRemoveTeamMembershipBySlug(teamsService, org, teamName, removeLogin)
 
-		err := reconciler.Reconcile(ctx, sync, team)
+		err := reconciler.Reconcile(ctx, corr, team)
 
 		assert.NoError(t, err)
 		teamsService.AssertExpectations(t)

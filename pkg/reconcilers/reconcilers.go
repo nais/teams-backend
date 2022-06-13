@@ -11,7 +11,7 @@ var ErrReconcilerNotEnabled = errors.New("reconciler not enabled")
 
 // Reconciler Interface for all reconcilers
 type Reconciler interface {
-	Reconcile(ctx context.Context, sync dbmodels.Synchronization, team dbmodels.Team) error
+	Reconcile(ctx context.Context, corr dbmodels.Correlation, team dbmodels.Team) error
 }
 
 // TeamNamePrefix Prefix that can be used for team-like objects in external systems
