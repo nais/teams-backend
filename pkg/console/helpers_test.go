@@ -22,6 +22,12 @@ func TestStrp(t *testing.T) {
 	assert.Equal(t, &s, helpers.Strp(s))
 }
 
+func TestDerefString(t *testing.T) {
+	withValue := "some string"
+	assert.Equal(t, "some string", helpers.DerefString(&withValue))
+	assert.Equal(t, "", helpers.DerefString(nil))
+}
+
 func TestDomainUsers(t *testing.T) {
 	t.Run("No users", func(t *testing.T) {
 		users := make([]*dbmodels.User, 0)

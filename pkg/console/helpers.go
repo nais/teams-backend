@@ -9,6 +9,14 @@ func Strp(s string) *string {
 	return &s
 }
 
+func DerefString(s *string) string {
+	if s == nil {
+		return ""
+
+	}
+	return *s
+}
+
 func StringWithFallback(strp *string, fallback string) string {
 	if strp == nil || *strp == "" {
 		return fallback
