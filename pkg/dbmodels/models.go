@@ -156,15 +156,11 @@ func (a *AuditLog) Error() string {
 
 // Log Add an entry in the standard logger
 func (a *AuditLog) Log() *log.Entry {
-	var targetTeamSlug string
-	var targetTeamName string
 	var actorEmail string
 	var actorName string
-
-	if a.TargetTeam != nil {
-		targetTeamName = a.TargetTeam.Name
-		targetTeamSlug = string(a.TargetTeam.Slug)
-	}
+	var targetTeamName string
+	var targetTeamSlug string
+	var targetUserName string
 
 	if a.Actor != nil {
 		if a.Actor.Email != nil {
@@ -172,6 +168,15 @@ func (a *AuditLog) Log() *log.Entry {
 		}
 
 		actorName = *a.Actor.Name
+	}
+
+	if a.TargetTeam != nil {
+		targetTeamName = a.TargetTeam.Name
+		targetTeamSlug = string(a.TargetTeam.Slug)
+	}
+
+	if a.TargetUser != nil {
+		targetUserName = a.TargetUser.Name
 	}
 
 	return log.StandardLogger().WithFields(log.Fields{
@@ -186,6 +191,8 @@ func (a *AuditLog) Log() *log.Entry {
 		"target_team_id":     uuidAsString(a.TargetTeamID),
 		"target_team_name":   targetTeamName,
 		"target_team_slug":   targetTeamSlug,
+		"target_user_id":     uuidAsString(a.TargetUserID),
+		"target_user_name":   targetUserName,
 	})
 }
 
