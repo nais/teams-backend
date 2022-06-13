@@ -62,17 +62,20 @@ type AuditLogs {
 
 "Input for filtering a collection of audit log entries."
 input AuditLogsQuery {
+    "Filter by actor ID."
+    actorId: UUID
+
     "Filter by correlation ID."
     correlationId: UUID
 
-    "Filter by team ID."
-    teamId: UUID
+    "Filter by target system ID."
+    targetSystemId: UUID
 
-    "Filter by user ID."
-    userId: UUID
+    "Filter by target team ID."
+    targetTeamId: UUID
 
-    "Filter by system ID."
-    systemId: UUID
+    "Filter by target user ID."
+    targetUserId: UUID
 }
 
 "Input for sorting a collection of audit log entries."

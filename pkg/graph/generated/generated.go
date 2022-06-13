@@ -991,17 +991,20 @@ type AuditLogs {
 
 "Input for filtering a collection of audit log entries."
 input AuditLogsQuery {
+    "Filter by actor ID."
+    actorId: UUID
+
     "Filter by correlation ID."
     correlationId: UUID
 
-    "Filter by team ID."
-    teamId: UUID
+    "Filter by target system ID."
+    targetSystemId: UUID
 
-    "Filter by user ID."
-    userId: UUID
+    "Filter by target team ID."
+    targetTeamId: UUID
 
-    "Filter by system ID."
-    systemId: UUID
+    "Filter by target user ID."
+    targetUserId: UUID
 }
 
 "Input for sorting a collection of audit log entries."
@@ -7989,6 +7992,14 @@ func (ec *executionContext) unmarshalInputAuditLogsQuery(ctx context.Context, ob
 
 	for k, v := range asMap {
 		switch k {
+		case "actorId":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("actorId"))
+			it.ActorID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		case "correlationId":
 			var err error
 
@@ -7997,27 +8008,27 @@ func (ec *executionContext) unmarshalInputAuditLogsQuery(ctx context.Context, ob
 			if err != nil {
 				return it, err
 			}
-		case "teamId":
+		case "targetSystemId":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamId"))
-			it.TeamID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetSystemId"))
+			it.TargetSystemID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "userId":
+		case "targetTeamId":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
-			it.UserID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetTeamId"))
+			it.TargetTeamID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "systemId":
+		case "targetUserId":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("systemId"))
-			it.SystemID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetUserId"))
+			it.TargetUserID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
 			if err != nil {
 				return it, err
 			}
