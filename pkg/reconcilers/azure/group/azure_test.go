@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	helpers "github.com/nais/console/pkg/console"
+	"github.com/nais/console/pkg/test"
 	"testing"
 	"time"
 
@@ -27,9 +28,8 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 	defer cancel()
 
-	ch := make(chan *dbmodels.AuditLog, 100)
-	auditLogger := auditlogger.New(ch)
-	defer close(ch)
+	db := test.GetTestDB()
+	auditLogger := auditlogger.New(db)
 
 	creds := clientcredentials.Config{}
 

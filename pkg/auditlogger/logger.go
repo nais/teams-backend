@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/dbmodels"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type auditLogger struct {
-	logs chan<- *dbmodels.AuditLog
+	db *gorm.DB
 }
 
 type AuditLog struct {
@@ -17,16 +19,16 @@ type AuditLog struct {
 }
 
 type AuditLogger interface {
-	Log(action string, success bool, sync dbmodels.Synchronization, targetSystem dbmodels.System, actor *dbmodels.User, targetTeam *dbmodels.Team, targetUser *dbmodels.User, message string, messageArgs ...interface{})
+	Log(action string, success bool, sync dbmodels.Synchronization, targetSystem dbmodels.System, actor *dbmodels.User, targetTeam *dbmodels.Team, targetUser *dbmodels.User, message string, messageArgs ...interface{}) error
 }
 
-func New(logs chan<- *dbmodels.AuditLog) AuditLogger {
+func New(db *gorm.DB) AuditLogger {
 	return &auditLogger{
-		logs: logs,
+		db: db,
 	}
 }
 
-func (s *auditLogger) Log(action string, success bool, sync dbmodels.Synchronization, targetSystem dbmodels.System, actor *dbmodels.User, targetTeam *dbmodels.Team, targetUser *dbmodels.User, message string, messageArgs ...interface{}) {
+func (l *auditLogger) Log(action string, success bool, sync dbmodels.Synchronization, targetSystem dbmodels.System, actor *dbmodels.User, targetTeam *dbmodels.Team, targetUser *dbmodels.User, message string, messageArgs ...interface{}) error {
 	var actorId *uuid.UUID
 	var targetTeamId *uuid.UUID
 	var targetUserId *uuid.UUID
@@ -59,5 +61,11 @@ func (s *auditLogger) Log(action string, success bool, sync dbmodels.Synchroniza
 
 		Message: fmt.Sprintf(message, messageArgs...),
 	}
-	s.logs <- logEntry
+	err := l.db.Omit(clause.Associations).Create(logEntry).Error
+	if err != nil {
+		return fmt.Errorf("store audit log line in database: %s", err)
+	}
+
+	logEntry.Log().Infof(logEntry.Message)
+	return err
 }

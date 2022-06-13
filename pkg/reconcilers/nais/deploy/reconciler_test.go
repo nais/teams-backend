@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/google/uuid"
+	"github.com/nais/console/pkg/test"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -37,9 +38,8 @@ func TestNaisDeployReconciler_Reconcile(t *testing.T) {
 	defer cancel()
 
 	key := make([]byte, 32)
-	ch := make(chan *dbmodels.AuditLog, 100)
-	logger := auditlogger.New(ch)
-	defer close(ch)
+	db := test.GetTestDB()
+	logger := auditlogger.New(db)
 
 	systemID, _ := uuid.NewUUID()
 	system := dbmodels.System{

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
-	"gorm.io/gorm/clause"
 	"net/http"
 	"net/url"
 	"os"
@@ -77,9 +76,8 @@ func run() error {
 
 	// Control channels for goroutine communication
 	const maxQueueSize = 4096
-	logs := make(chan *dbmodels.AuditLog, maxQueueSize)
 	trigger := make(chan *dbmodels.Team, maxQueueSize)
-	logger := auditlogger.New(logs)
+	logger := auditlogger.New(db)
 
 	recs, err := initReconcilers(db, cfg, logger, systems)
 	if err != nil {
@@ -139,17 +137,6 @@ func run() error {
 	for _, team := range allTeams {
 		trigger <- team
 	}
-
-	// Asynchronously record all audit log in database
-	go func() {
-		for logLine := range logs {
-			err = db.Omit(clause.Associations).Create(logLine).Error
-			if err != nil {
-				log.Errorf("store audit log line in database: %s", err)
-			}
-			logLine.Log().Infof(logLine.Message)
-		}
-	}()
 
 	// User synchronizer
 	userSyncTimer := time.NewTimer(1 * time.Second)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	helpers "github.com/nais/console/pkg/console"
+	"github.com/nais/console/pkg/test"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -27,9 +28,8 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 	defer cancel()
 
-	ch := make(chan *dbmodels.AuditLog, 100)
-	logger := auditlogger.New(ch)
-	defer close(ch)
+	db := test.GetTestDB()
+	logger := auditlogger.New(db)
 
 	const org = "my-organization"
 	const domain = "example.com"
