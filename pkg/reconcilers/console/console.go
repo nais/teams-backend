@@ -2,6 +2,7 @@ package console_reconciler
 
 import (
 	"context"
+	"github.com/nais/console/pkg/dbmodels"
 
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
@@ -26,10 +27,10 @@ func New() *consoleReconciler {
 	return &consoleReconciler{}
 }
 
-func NewFromConfig(_ *gorm.DB, _ *config.Config, _ auditlogger.Logger) (reconcilers.Reconciler, error) {
+func NewFromConfig(_ *gorm.DB, _ *config.Config, _ dbmodels.System, _ auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	return New(), nil
 }
 
-func (s *consoleReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {
+func (s *consoleReconciler) Reconcile(_ context.Context, _ dbmodels.Synchronization, _ dbmodels.Team) error {
 	return nil
 }

@@ -34,11 +34,12 @@ type namespaceReconciler struct {
 	db               *gorm.DB
 	config           *jwt.Config
 	domain           string
-	logger           auditlogger.Logger
+	auditLogger      auditlogger.AuditLogger
 	projectParentIDs map[string]string
 	topicPrefix      string
 	credentialsFile  string
 	projectID        string
+	system           dbmodels.System
 }
 
 const (
@@ -50,27 +51,28 @@ func init() {
 	registry.Register(Name, NewFromConfig)
 }
 
-func New(db *gorm.DB, logger auditlogger.Logger, domain, topicPrefix, credentialsFile, projectID string, projectParentIDs map[string]string) *namespaceReconciler {
+func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, domain, topicPrefix, credentialsFile, projectID string, projectParentIDs map[string]string) *namespaceReconciler {
 	return &namespaceReconciler{
 		db:               db,
-		logger:           logger,
+		auditLogger:      auditLogger,
 		domain:           domain,
 		topicPrefix:      topicPrefix,
 		credentialsFile:  credentialsFile,
 		projectParentIDs: projectParentIDs,
 		projectID:        projectID,
+		system:           system,
 	}
 }
 
-func NewFromConfig(db *gorm.DB, cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
+func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.NaisNamespace.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
 
-	return New(db, logger, cfg.PartnerDomain, cfg.NaisNamespace.TopicPrefix, cfg.Google.CredentialsFile, cfg.NaisNamespace.ProjectID, cfg.GCP.ProjectParentIDs), nil
+	return New(db, system, auditLogger, cfg.PartnerDomain, cfg.NaisNamespace.TopicPrefix, cfg.Google.CredentialsFile, cfg.NaisNamespace.ProjectID, cfg.GCP.ProjectParentIDs), nil
 }
 
-func (s *namespaceReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {
+func (s *namespaceReconciler) Reconcile(ctx context.Context, sync dbmodels.Synchronization, team dbmodels.Team) error {
 	svc, err := pubsub.NewClient(ctx, s.projectID, option.WithCredentialsFile(s.credentialsFile))
 	if err != nil {
 		return fmt.Errorf("retrieve pubsub client: %s", err)
@@ -80,8 +82,8 @@ func (s *namespaceReconciler) Reconcile(ctx context.Context, in reconcilers.Inpu
 	projects := make(map[string]string)
 
 	// read all state variables
-	for _, state := range in.Team.SystemState {
-		if state.SystemID != *in.System.ID {
+	for _, state := range team.SystemState {
+		if state.SystemID != *s.system.ID {
 			continue
 		}
 		if state.Key != dbmodels.SystemStateGoogleProjectID {
@@ -96,18 +98,19 @@ func (s *namespaceReconciler) Reconcile(ctx context.Context, in reconcilers.Inpu
 	for environment := range s.projectParentIDs {
 		gcpProjectID := projects[environment]
 		if len(gcpProjectID) == 0 {
-			return s.logger.Errorf(in, OpCreateNamespace, "no GCP project created for team '%s' and environment '%s'", in.Team.Slug, environment)
+			return fmt.Errorf("%s: no GCP project created for team '%s' and environment '%s'", OpCreateNamespace, team.Slug, environment)
 		}
-		err = s.createNamespace(ctx, svc, in.Team, environment, gcpProjectID)
+
+		err = s.createNamespace(ctx, svc, team, environment, gcpProjectID)
 		if err != nil {
-			return s.logger.Errorf(in, OpCreateNamespace, err.Error())
+			return fmt.Errorf("%s: %s", OpCreateNamespace, err.Error())
 		}
 	}
 
 	return nil
 }
 
-func (s *namespaceReconciler) createNamespace(ctx context.Context, pubsubService *pubsub.Client, team *dbmodels.Team, environment, gcpProjectID string) error {
+func (s *namespaceReconciler) createNamespace(ctx context.Context, pubsubService *pubsub.Client, team dbmodels.Team, environment, gcpProjectID string) error {
 	req := &naisdRequest{
 		Type: NaisdCreateNamespace,
 		Data: naisdData{

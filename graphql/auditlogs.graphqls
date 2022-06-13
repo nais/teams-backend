@@ -18,16 +18,19 @@ type AuditLog {
     id: UUID!
 
     "The related system."
-    system: System!
+    targetSystem: System!
 
     "The related synchronization."
     synchronization: Synchronization!
 
-    "The related user."
-    user: User
+    "The actor who performed the action in the log entry."
+    actor: User
 
-    "The related team."
-    team: Team
+    "The target user."
+    targetUser: User
+
+    "The target team."
+    targetTeam: Team
 
     "String representation of the action performed."
     action: String!

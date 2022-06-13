@@ -1,43 +1,63 @@
 package auditlogger
 
 import (
+	"fmt"
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/dbmodels"
 )
 
-type logger struct {
+type auditLogger struct {
 	logs chan<- *dbmodels.AuditLog
 }
 
-// Input Log input interface
-type Input interface {
-	GetAuditLogEntry(user *dbmodels.User, success bool, action, format string, args ...interface{}) *dbmodels.AuditLog
+type AuditLog struct {
+	Success bool   `gorm:"not null; index"` // True if operation succeeded
+	Action  string `gorm:"not null; index"`
+	Message string `gorm:"not null"` // Human readable success or error message (log line)
 }
 
-type Logger interface {
-	Errorf(in Input, operation string, format string, args ...interface{}) error
-	UserErrorf(in Input, operation string, user *dbmodels.User, format string, args ...interface{}) error
-	Logf(in Input, operation string, format string, args ...interface{})
-	UserLogf(in Input, operation string, user *dbmodels.User, format string, args ...interface{})
+type AuditLogger interface {
+	Log(action string, success bool, sync dbmodels.Synchronization, targetSystem dbmodels.System, actor *dbmodels.User, targetTeam *dbmodels.Team, targetUser *dbmodels.User, message string, messageArgs ...interface{})
 }
 
-func New(logs chan<- *dbmodels.AuditLog) Logger {
-	return &logger{
+func New(logs chan<- *dbmodels.AuditLog) AuditLogger {
+	return &auditLogger{
 		logs: logs,
 	}
 }
 
-func (s *logger) Errorf(in Input, operation string, format string, args ...interface{}) error {
-	return in.GetAuditLogEntry(nil, false, operation, format, args...)
-}
+func (s *auditLogger) Log(action string, success bool, sync dbmodels.Synchronization, targetSystem dbmodels.System, actor *dbmodels.User, targetTeam *dbmodels.Team, targetUser *dbmodels.User, message string, messageArgs ...interface{}) {
+	var actorId *uuid.UUID
+	var targetTeamId *uuid.UUID
+	var targetUserId *uuid.UUID
 
-func (s *logger) UserErrorf(in Input, operation string, user *dbmodels.User, format string, args ...interface{}) error {
-	return in.GetAuditLogEntry(user, false, operation, format, args...)
-}
+	if actor != nil && actor.ID != nil {
+		actorId = actor.ID
+	}
 
-func (s *logger) Logf(in Input, operation string, format string, args ...interface{}) {
-	s.UserLogf(in, operation, nil, format, args...)
-}
+	if targetTeam != nil && targetTeam.ID != nil {
+		targetTeamId = targetTeam.ID
+	}
 
-func (s *logger) UserLogf(in Input, operation string, user *dbmodels.User, format string, args ...interface{}) {
-	s.logs <- in.GetAuditLogEntry(user, true, operation, format, args...)
+	if targetUser != nil && targetUser.ID != nil {
+		targetUserId = targetUser.ID
+	}
+
+	logEntry := &dbmodels.AuditLog{
+		Action:            action,
+		Actor:             actor,
+		ActorID:           actorId,
+		Synchronization:   sync,
+		SynchronizationID: *sync.ID,
+		TargetSystem:      targetSystem,
+		TargetSystemID:    *targetSystem.ID,
+		TargetTeam:        targetTeam,
+		TargetUser:        targetUser,
+		TargetTeamID:      targetTeamId,
+		TargetUserID:      targetUserId,
+		Success:           success,
+
+		Message: fmt.Sprintf(message, messageArgs...),
+	}
+	s.logs <- logEntry
 }

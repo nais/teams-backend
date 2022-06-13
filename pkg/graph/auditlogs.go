@@ -11,15 +11,6 @@ import (
 	"github.com/nais/console/pkg/graph/model"
 )
 
-func (r *auditLogResolver) System(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.System, error) {
-	var system *dbmodels.System
-	err := r.db.Model(&obj).Association("System").Find(&system)
-	if err != nil {
-		return nil, err
-	}
-	return system, nil
-}
-
 func (r *auditLogResolver) Synchronization(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.Synchronization, error) {
 	var synchronization *dbmodels.Synchronization
 	err := r.db.Model(&obj).Association("Synchronization").Find(&synchronization)
@@ -27,30 +18,6 @@ func (r *auditLogResolver) Synchronization(ctx context.Context, obj *dbmodels.Au
 		return nil, err
 	}
 	return synchronization, nil
-}
-
-func (r *auditLogResolver) User(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.User, error) {
-	if obj.UserID == nil {
-		return nil, nil
-	}
-	var user *dbmodels.User
-	err := r.db.Model(&obj).Association("User").Find(&user)
-	if err != nil {
-		return nil, err
-	}
-	return user, nil
-}
-
-func (r *auditLogResolver) Team(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.Team, error) {
-	if obj.TeamID == nil {
-		return nil, nil
-	}
-	var team *dbmodels.Team
-	err := r.db.Model(&obj).Association("Team").Find(&team)
-	if err != nil {
-		return nil, err
-	}
-	return team, nil
 }
 
 func (r *queryResolver) AuditLogs(ctx context.Context, pagination *model.Pagination, query *model.AuditLogsQuery, sort *model.AuditLogsSort) (*model.AuditLogs, error) {
@@ -73,3 +40,40 @@ func (r *queryResolver) AuditLogs(ctx context.Context, pagination *model.Paginat
 func (r *Resolver) AuditLog() generated.AuditLogResolver { return &auditLogResolver{r} }
 
 type auditLogResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//    it when you're done.
+//  - You have helper methods in this file. Move them out to keep these resolver files clean.
+func (r *auditLogResolver) System(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.System, error) {
+	var system *dbmodels.System
+	err := r.db.Model(&obj).Association("System").Find(&system)
+	if err != nil {
+		return nil, err
+	}
+	return system, nil
+}
+func (r *auditLogResolver) User(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.User, error) {
+	if obj.ActorID == nil {
+		return nil, nil
+	}
+	var user *dbmodels.User
+	err := r.db.Model(&obj).Association("User").Find(&user)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+func (r *auditLogResolver) Team(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.Team, error) {
+	if obj.TargetTeamID == nil {
+		return nil, nil
+	}
+	var team *dbmodels.Team
+	err := r.db.Model(&obj).Association("Team").Find(&team)
+	if err != nil {
+		return nil, err
+	}
+	return team, nil
+}

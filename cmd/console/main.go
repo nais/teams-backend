@@ -226,8 +226,8 @@ func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems ma
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	synchronization := &dbmodels.Synchronization{}
-	tx := db.WithContext(ctx).Create(synchronization)
+	sync := &dbmodels.Synchronization{}
+	tx := db.WithContext(ctx).Create(sync)
 	if tx.Error != nil {
 		return fmt.Errorf("cannot create synchronization reference: %w", tx.Error)
 	}
@@ -239,24 +239,18 @@ func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems ma
 			panic("BUG: refusing to reconcile empty team")
 		}
 
-		for system, reconciler := range systems {
-			input := reconcilers.Input{
-				System:          *system,
-				Synchronization: *synchronization,
-				Team:            team,
-			}
-
-			log.Info(input.GetAuditLogEntry(nil, true, console_reconciler.OpReconcileStart, "Starting reconcile"))
-			err := reconciler.Reconcile(ctx, input)
+		for _, reconciler := range systems {
+			log.Infof("%s: Starting reconcile", console_reconciler.OpReconcileStart)
+			err := reconciler.Reconcile(ctx, *sync, *team)
 
 			switch er := err.(type) {
 			case nil:
-				log.Info(input.GetAuditLogEntry(nil, true, console_reconciler.OpReconcileEnd, "Successfully reconciled"))
+				log.Infof("%s: Successfully reconciled", console_reconciler.OpReconcileEnd)
 			case *dbmodels.AuditLog:
 				er.Log().Error(er.Message)
 				teamErrors++
 			case error:
-				log.Error(input.GetAuditLogEntry(nil, true, console_reconciler.OpReconcileEnd, er.Error()))
+				log.Errorf("%s: %s", console_reconciler.OpReconcileEnd, er.Error())
 				teamErrors++
 			}
 		}
@@ -309,12 +303,12 @@ func setupLogging(format, level string) error {
 	return nil
 }
 
-func initReconcilers(db *gorm.DB, cfg *config.Config, logger auditlogger.Logger, systems map[string]*dbmodels.System) (map[*dbmodels.System]reconcilers.Reconciler, error) {
+func initReconcilers(db *gorm.DB, cfg *config.Config, logger auditlogger.AuditLogger, systems map[string]*dbmodels.System) (map[*dbmodels.System]reconcilers.Reconciler, error) {
 	recs := make(map[*dbmodels.System]reconcilers.Reconciler)
 
 	factories := registry.Reconcilers()
 	for key, factory := range factories {
-		rec, err := factory(db, cfg, logger)
+		rec, err := factory(db, cfg, *systems[key], logger)
 		switch err {
 		case reconcilers.ErrReconcilerNotEnabled:
 			log.Warnf("Reconciler '%s' is disabled through configuration", key)
@@ -360,7 +354,7 @@ func setupDatabase(cfg *config.Config) (*gorm.DB, error) {
 	return db, nil
 }
 
-func setupGraphAPI(db *gorm.DB, console *dbmodels.System, trigger chan<- *dbmodels.Team, logger *auditlogger.Logger) *graphql_handler.Server {
+func setupGraphAPI(db *gorm.DB, console *dbmodels.System, trigger chan<- *dbmodels.Team, logger *auditlogger.AuditLogger) *graphql_handler.Server {
 	resolver := graph.NewResolver(db, console, trigger, logger)
 	gc := generated.Config{}
 	gc.Resolvers = resolver

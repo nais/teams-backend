@@ -14,17 +14,16 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/nais/console/pkg/config"
-	"github.com/nais/console/pkg/reconcilers"
 	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/option"
 )
 
 type userSynchronizer struct {
-	system dbmodels.System
-	logger auditlogger.Logger
-	domain string
-	config *jwt.Config
-	db     *gorm.DB
+	system      dbmodels.System
+	auditLogger auditlogger.AuditLogger
+	domain      string
+	config      *jwt.Config
+	db          *gorm.DB
 }
 
 const (
@@ -39,17 +38,17 @@ var (
 	ErrNotEnabled = errors.New("disabled by configuration")
 )
 
-func New(db *gorm.DB, system dbmodels.System, logger auditlogger.Logger, domain string, config *jwt.Config) *userSynchronizer {
+func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config) *userSynchronizer {
 	return &userSynchronizer{
-		db:     db,
-		system: system,
-		logger: logger,
-		domain: domain,
-		config: config,
+		db:          db,
+		system:      system,
+		auditLogger: auditLogger,
+		domain:      domain,
+		config:      config,
 	}
 }
 
-func NewFromConfig(cfg *config.Config, db *gorm.DB, system dbmodels.System, logger auditlogger.Logger) (*userSynchronizer, error) {
+func NewFromConfig(cfg *config.Config, db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger) (*userSynchronizer, error) {
 	if !cfg.UserSync.Enabled {
 		return nil, ErrNotEnabled
 	}
@@ -60,12 +59,11 @@ func NewFromConfig(cfg *config.Config, db *gorm.DB, system dbmodels.System, logg
 		return nil, fmt.Errorf("get google jwt config: %w", err)
 	}
 
-	return New(db, system, logger, cfg.PartnerDomain, cf), nil
+	return New(db, system, auditLogger, cfg.PartnerDomain, cf), nil
 }
 
 type auditLogEntry struct {
-	in      reconcilers.Input
-	op      string
+	action  string
 	user    dbmodels.User
 	message string
 }
@@ -93,19 +91,15 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 		return fmt.Errorf("%s: list remote users: %w", OpListRemote, err)
 	}
 
+	sync := &dbmodels.Synchronization{}
+	err = tx.Create(sync).Error
+	if err != nil {
+		return fmt.Errorf("%s: unable to create synchronization for audit logs: %w", OpPrepare, err)
+	}
+
 	auditLogEntries := make([]*auditLogEntry, 0)
 
 	err = tx.Transaction(func(tx *gorm.DB) error {
-		sync := &dbmodels.Synchronization{}
-		err = tx.Create(sync).Error
-		if err != nil {
-			return fmt.Errorf("%s: unable to create synchronization for audit logs: %w", OpPrepare, err)
-		}
-
-		in := reconcilers.Input{
-			Synchronization: *sync,
-			System:          s.system,
-		}
 
 		userIds := make(map[uuid.UUID]struct{})
 
@@ -126,10 +120,9 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 				}
 
 				auditLogEntries = append(auditLogEntries, &auditLogEntry{
-					in:      in,
-					op:      OpCreate,
-					user:    *localUser,
+					action:  OpCreate,
 					message: fmt.Sprintf("Local user created: %s", localUser.Name),
+					user:    *localUser,
 				})
 			}
 
@@ -155,10 +148,9 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 			}
 
 			auditLogEntries = append(auditLogEntries, &auditLogEntry{
-				in:      in,
-				op:      OpDelete,
-				user:    *localUser,
+				action:  OpDelete,
 				message: fmt.Sprintf("Local user deleted: %s", localUser.Name),
+				user:    *localUser,
 			})
 		}
 
@@ -170,7 +162,7 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 	}
 
 	for _, entry := range auditLogEntries {
-		s.logger.UserLogf(entry.in, entry.op, &entry.user, entry.message)
+		s.auditLogger.Log(entry.action, true, *sync, s.system, nil, nil, &entry.user, entry.message)
 	}
 
 	return nil

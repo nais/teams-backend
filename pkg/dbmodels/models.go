@@ -37,17 +37,19 @@ type ApiKey struct {
 type AuditLog struct {
 	Model
 	SoftDeletes
+	Actor             *User           `gorm:""` // The user or service account that performed the action
 	Synchronization   Synchronization `gorm:""`
-	System            System          `gorm:""`
-	Team              *Team           `gorm:""`
-	User              *User           `gorm:""` // User object, not subject, i.e. which user was affected by the operation.
+	TargetSystem      System          `gorm:""`
+	TargetTeam        *Team           `gorm:""` // The team, if any, that was the target of the action
+	TargetUser        *User           `gorm:""` // The user, if any, that was the target of the action
+	ActorID           *uuid.UUID      `gorm:"type:uuid"`
 	SynchronizationID uuid.UUID       `gorm:"type:uuid; not null"`
-	SystemID          uuid.UUID       `gorm:"type:uuid; not null"`
-	TeamID            *uuid.UUID      `gorm:"type:uuid"`
-	UserID            *uuid.UUID      `gorm:"type:uuid"`
+	TargetSystemID    uuid.UUID       `gorm:"type:uuid; not null"`
+	TargetTeamID      *uuid.UUID      `gorm:"type:uuid"`
+	TargetUserID      *uuid.UUID      `gorm:"type:uuid"`
+	Action            string          `gorm:"not null; index"`
 	Success           bool            `gorm:"not null; index"` // True if operation succeeded
-	Action            string          `gorm:"not null; index"` // CRUD action
-	Message           string          `gorm:"not null"`        // User readable success or error message (log line)
+	Message           string          `gorm:"not null"`        // Human readable success or error message (log line)
 }
 
 type RoleBinding struct {
@@ -121,7 +123,7 @@ type Team struct {
 	SystemState []*SystemState  `gorm:""`
 	Users       []*User         `gorm:"many2many:users_teams"`
 	Systems     []*System       `gorm:"many2many:systems_teams"`
-	AuditLogs   []*AuditLog     `gorm:"foreignKey:TeamID"`
+	AuditLogs   []*AuditLog     `gorm:"foreignKey:TargetTeamID"`
 }
 
 type User struct {
@@ -154,36 +156,36 @@ func (a *AuditLog) Error() string {
 
 // Log Add an entry in the standard logger
 func (a *AuditLog) Log() *log.Entry {
-	var teamSlug string
-	var teamName string
-	var userEmail string
-	var userName string
+	var targetTeamSlug string
+	var targetTeamName string
+	var actorEmail string
+	var actorName string
 
-	if a.Team != nil {
-		teamName = a.Team.Name
-		teamSlug = string(a.Team.Slug)
+	if a.TargetTeam != nil {
+		targetTeamName = a.TargetTeam.Name
+		targetTeamSlug = string(a.TargetTeam.Slug)
 	}
 
-	if a.User != nil {
-		if a.User.Email != nil {
-			userEmail = *a.User.Email
+	if a.Actor != nil {
+		if a.Actor.Email != nil {
+			actorEmail = *a.Actor.Email
 		}
 
-		userName = *a.User.Name
+		actorName = *a.Actor.Name
 	}
 
 	return log.StandardLogger().WithFields(log.Fields{
-		"system_id":      a.SystemID,
-		"system_name":    a.System.Name,
-		"correlation_id": a.SynchronizationID,
-		"team_id":        uuidAsString(a.TeamID),
-		"team_name":      teamName,
-		"team_slug":      teamSlug,
-		"user_email":     userEmail,
-		"user_id":        uuidAsString(a.UserID),
-		"user_name":      userName,
-		"action":         a.Action,
-		"success":        a.Success,
+		"action":             a.Action,
+		"actor_email":        actorEmail,
+		"actor_id":           uuidAsString(a.ActorID),
+		"actor_name":         actorName,
+		"correlation_id":     a.SynchronizationID,
+		"success":            a.Success,
+		"target_system_id":   a.TargetSystemID,
+		"target_system_name": a.TargetSystem.Name,
+		"target_team_id":     uuidAsString(a.TargetTeamID),
+		"target_team_name":   targetTeamName,
+		"target_team_slug":   targetTeamSlug,
 	})
 }
 

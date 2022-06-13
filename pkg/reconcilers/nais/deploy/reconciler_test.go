@@ -11,7 +11,6 @@ import (
 
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/dbmodels"
-	"github.com/nais/console/pkg/reconcilers"
 	nais_deploy_reconciler "github.com/nais/console/pkg/reconcilers/nais/deploy"
 	"github.com/stretchr/testify/assert"
 )
@@ -42,26 +41,25 @@ func TestNaisDeployReconciler_Reconcile(t *testing.T) {
 	logger := auditlogger.New(ch)
 	defer close(ch)
 
-	reconciler := nais_deploy_reconciler.New(logger, http.DefaultClient, srv.URL, key)
+	systemID, _ := uuid.NewUUID()
+	system := dbmodels.System{
+		Model: dbmodels.Model{
+			ID: &systemID,
+		},
+	}
+
+	reconciler := nais_deploy_reconciler.New(system, logger, http.DefaultClient, srv.URL, key)
 	slug := dbmodels.Slug(teamName)
 
-	systemID, _ := uuid.NewUUID()
 	syncID, _ := uuid.NewUUID()
+	sync := dbmodels.Synchronization{
+		Model: dbmodels.Model{
+			ID: &syncID,
+		},
+	}
 
-	err := reconciler.Reconcile(ctx, reconcilers.Input{
-		System: dbmodels.System{
-			Model: dbmodels.Model{
-				ID: &systemID,
-			},
-		},
-		Synchronization: dbmodels.Synchronization{
-			Model: dbmodels.Model{
-				ID: &syncID,
-			},
-		},
-		Team: &dbmodels.Team{
-			Slug: slug,
-		},
+	err := reconciler.Reconcile(ctx, sync, dbmodels.Team{
+		Slug: slug,
 	})
 
 	assert.NoError(t, err)

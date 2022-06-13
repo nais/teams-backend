@@ -24,8 +24,9 @@ type gcpReconciler struct {
 	db               *gorm.DB
 	config           *jwt.Config
 	domain           string
-	logger           auditlogger.Logger
+	auditLogger      auditlogger.AuditLogger
 	projectParentIDs map[string]string
+	system           dbmodels.System
 }
 
 const (
@@ -38,17 +39,18 @@ func init() {
 	registry.Register(Name, NewFromConfig)
 }
 
-func New(db *gorm.DB, logger auditlogger.Logger, domain string, config *jwt.Config, projectParentIDs map[string]string) *gcpReconciler {
+func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config, projectParentIDs map[string]string) *gcpReconciler {
 	return &gcpReconciler{
 		db:               db,
-		logger:           logger,
+		auditLogger:      auditLogger,
 		domain:           domain,
 		config:           config,
 		projectParentIDs: projectParentIDs,
+		system:           system,
 	}
 }
 
-func NewFromConfig(db *gorm.DB, cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
+func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.GCP.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
@@ -66,10 +68,10 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, logger auditlogger.Logger) (
 		return nil, fmt.Errorf("initialize google credentials: %w", err)
 	}
 
-	return New(db, logger, cfg.PartnerDomain, cf, cfg.GCP.ProjectParentIDs), nil
+	return New(db, system, auditLogger, cfg.PartnerDomain, cf, cfg.GCP.ProjectParentIDs), nil
 }
 
-func (s *gcpReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {
+func (s *gcpReconciler) Reconcile(ctx context.Context, sync dbmodels.Synchronization, team dbmodels.Team) error {
 	client := s.config.Client(ctx)
 
 	svc, err := cloudresourcemanager.NewService(ctx, option.WithHTTPClient(client))
@@ -78,17 +80,17 @@ func (s *gcpReconciler) Reconcile(ctx context.Context, in reconcilers.Input) err
 	}
 
 	for environment, parentID := range s.projectParentIDs {
-		proj, err := s.CreateProject(svc, in, environment, parentID)
+		proj, err := s.CreateProject(svc, sync, team, environment, parentID)
 		if err != nil {
 			return err
 		}
 
-		err = saveProjectState(s.db, in.Team.ID, environment, proj.ProjectId)
+		err = saveProjectState(s.db, team.ID, environment, proj.ProjectId)
 		if err != nil {
-			return s.logger.Errorf(in, OpCreateProject, "create GCP project: project was created, but ID could not be stored in database: %s", err)
+			return fmt.Errorf("%s: create GCP project: project was created, but ID could not be stored in database: %s", OpCreateProject, err)
 		}
 
-		err = s.CreatePermissions(svc, in, proj.Name)
+		err = s.CreatePermissions(svc, sync, team, proj.Name)
 		if err != nil {
 			return err
 		}
@@ -97,15 +99,15 @@ func (s *gcpReconciler) Reconcile(ctx context.Context, in reconcilers.Input) err
 	return nil
 }
 
-func (s *gcpReconciler) CreateProject(svc *cloudresourcemanager.Service, in reconcilers.Input, environment, parentID string) (*cloudresourcemanager.Project, error) {
-	projectID := CreateProjectID(s.domain, environment, in.Team.Slug.String())
+func (s *gcpReconciler) CreateProject(svc *cloudresourcemanager.Service, sync dbmodels.Synchronization, team dbmodels.Team, environment, parentID string) (*cloudresourcemanager.Project, error) {
+	projectID := CreateProjectID(s.domain, environment, team.Slug.String())
 
 	proj := &cloudresourcemanager.Project{
 		Parent:    parentID,
 		ProjectId: projectID,
 	}
 
-	oper, err := svc.Projects.Create(proj).Do()
+	operation, err := svc.Projects.Create(proj).Do()
 
 	switch typedError := err.(type) {
 	case *googleapi.Error:
@@ -113,16 +115,16 @@ func (s *gcpReconciler) CreateProject(svc *cloudresourcemanager.Service, in reco
 		// 1) already created by us in this folder, or
 		// 2) someone else owns this project
 		if typedError.Code != http.StatusConflict {
-			return nil, s.logger.Errorf(in, OpCreateProject, "create GCP project: %s", err)
+			return nil, fmt.Errorf("%s: create GCP project: %s", OpCreateProject, err)
 		}
 
 		query, err := svc.Projects.Search().Query("id:" + projectID).Do()
 		if err != nil {
-			return nil, s.logger.Errorf(in, OpCreateProject, "create GCP project: %s", err)
+			return nil, fmt.Errorf("%s: create GCP project: %s", OpCreateProject, err)
 		}
 
 		if len(query.Projects) == 0 {
-			return nil, s.logger.Errorf(in, OpCreateProject, "create GCP project: globally unique project ID is already assigned", err)
+			return nil, fmt.Errorf("%s: create GCP project: globally unique project ID is already assigned", OpCreateProject)
 		}
 
 		for _, proj = range query.Projects {
@@ -131,32 +133,32 @@ func (s *gcpReconciler) CreateProject(svc *cloudresourcemanager.Service, in reco
 			}
 		}
 
-		return nil, s.logger.Errorf(in, OpCreateProject, "create GCP project: BUG: search results for project ID returned project without correct ID")
+		return nil, fmt.Errorf("%s: create GCP project: BUG: search results for project ID returned project without correct ID", OpCreateProject)
 
 	case nil:
-		for !oper.Done {
+		for !operation.Done {
 			var err error
-			oper, err = svc.Operations.Get(oper.Name).Do()
+			operation, err = svc.Operations.Get(operation.Name).Do()
 			if err != nil {
-				return nil, s.logger.Errorf(in, OpCreateProject, "create GCP project: %s", err)
+				return nil, fmt.Errorf("%s: create GCP project: %s", OpCreateProject, err)
 			}
 		}
 
-		if oper.Error != nil {
-			return nil, s.logger.Errorf(in, OpCreateProject, "create GCP project: %s", oper.Error.Message)
+		if operation.Error != nil {
+			return nil, fmt.Errorf("%s: create GCP project: %s", OpCreateProject, operation.Error.Message)
 		}
 
 	default:
 		return nil, err
 	}
 
-	s.logger.Logf(in, OpCreateProject, "successfully created GCP project '%s'", proj.Name)
+	s.auditLogger.Log(OpCreateProject, true, sync, s.system, nil, &team, nil, "successfully created GCP project '%s'", proj.Name)
 
 	return proj, nil
 }
 
-func (s *gcpReconciler) CreatePermissions(svc *cloudresourcemanager.Service, in reconcilers.Input, projectName string) error {
-	member := fmt.Sprintf("group:%s%s@%s", reconcilers.TeamNamePrefix, in.Team.Slug, s.domain)
+func (s *gcpReconciler) CreatePermissions(svc *cloudresourcemanager.Service, sync dbmodels.Synchronization, team dbmodels.Team, projectName string) error {
+	member := fmt.Sprintf("group:%s%s@%s", reconcilers.TeamNamePrefix, team.Slug, s.domain)
 	const owner = "roles/owner"
 
 	req := &cloudresourcemanager.SetIamPolicyRequest{
@@ -173,10 +175,10 @@ func (s *gcpReconciler) CreatePermissions(svc *cloudresourcemanager.Service, in 
 	_, err := svc.Projects.SetIamPolicy(projectName, req).Do()
 
 	if err != nil {
-		return s.logger.Errorf(in, OpAssignPermissions, "assign GCP project IAM permissions: %s", err)
+		return fmt.Errorf("%s: assign GCP project IAM permissions: %s", OpAssignPermissions, err)
 	}
 
-	s.logger.Logf(in, OpAssignPermissions, "successfully assigned GCP project IAM permissions for '%s'", projectName)
+	s.auditLogger.Log(OpAssignPermissions, true, sync, s.system, nil, &team, nil, "successfully assigned GCP project IAM permissions for '%s'", projectName)
 
 	return nil
 }

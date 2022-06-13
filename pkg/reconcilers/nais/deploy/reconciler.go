@@ -7,6 +7,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"github.com/nais/console/pkg/dbmodels"
 	"net/http"
 	"time"
 
@@ -26,9 +28,10 @@ type ProvisionApiKeyRequest struct {
 // naisDeployReconciler creates teams on GitHub and connects users to them.
 type naisDeployReconciler struct {
 	client       *http.Client
-	logger       auditlogger.Logger
+	auditLogger  auditlogger.AuditLogger
 	endpoint     string
 	provisionKey []byte
+	system       dbmodels.System
 }
 
 const (
@@ -40,16 +43,17 @@ func init() {
 	registry.Register(Name, NewFromConfig)
 }
 
-func New(logger auditlogger.Logger, client *http.Client, endpoint string, provisionKey []byte) *naisDeployReconciler {
+func New(system dbmodels.System, auditLogger auditlogger.AuditLogger, client *http.Client, endpoint string, provisionKey []byte) *naisDeployReconciler {
 	return &naisDeployReconciler{
 		client:       client,
-		logger:       logger,
+		auditLogger:  auditLogger,
 		endpoint:     endpoint,
 		provisionKey: provisionKey,
+		system:       system,
 	}
 }
 
-func NewFromConfig(_ *gorm.DB, cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
+func NewFromConfig(_ *gorm.DB, cfg *config.Config, system dbmodels.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.NaisDeploy.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
@@ -59,15 +63,15 @@ func NewFromConfig(_ *gorm.DB, cfg *config.Config, logger auditlogger.Logger) (r
 		return nil, err
 	}
 
-	return New(logger, http.DefaultClient, cfg.NaisDeploy.Endpoint, provisionKey), nil
+	return New(system, auditLogger, http.DefaultClient, cfg.NaisDeploy.Endpoint, provisionKey), nil
 }
 
-func (s *naisDeployReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {
+func (s *naisDeployReconciler) Reconcile(ctx context.Context, sync dbmodels.Synchronization, team dbmodels.Team) error {
 	const signatureHeader = "X-NAIS-Signature"
 
 	payload, err := json.Marshal(&ProvisionApiKeyRequest{
 		Rotate:    false,
-		Team:      in.Team.Slug.String(),
+		Team:      team.Slug.String(),
 		Timestamp: time.Now().Unix(),
 	})
 
@@ -91,14 +95,14 @@ func (s *naisDeployReconciler) Reconcile(ctx context.Context, in reconcilers.Inp
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusCreated {
-		s.logger.Logf(in, OpProvisionApiKey, "provisioned NAIS deploy API key to team '%s'", in.Team.Slug)
+		s.auditLogger.Log(OpProvisionApiKey, true, sync, s.system, nil, &team, nil, "provisioned NAIS deploy API key to team '%s'", team.Slug)
 		return nil
 	}
 
-	return s.logger.Errorf(in, OpProvisionApiKey, "provision NAIS deploy API key to team '%s': %s", in.Team.Slug, resp.Status)
+	return fmt.Errorf("%s: provision NAIS deploy API key to team '%s': %s", OpProvisionApiKey, team.Slug, resp.Status)
 }
 
-// GenMAC generates the HMAC signature for a message provided the secret key using SHA256
+// genMAC generates the HMAC signature for a message provided the secret key using SHA256
 func genMAC(message, key []byte) string {
 	mac := hmac.New(sha256.New, key)
 	mac.Write(message)

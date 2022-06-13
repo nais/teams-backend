@@ -2,7 +2,9 @@ package azure_group_reconciler
 
 import (
 	"context"
+	"fmt"
 	helpers "github.com/nais/console/pkg/console"
+	log "github.com/sirupsen/logrus"
 	"strings"
 
 	"github.com/nais/console/pkg/auditlogger"
@@ -18,10 +20,11 @@ import (
 
 // gitHubReconciler creates teams on GitHub and connects users to them.
 type azureReconciler struct {
-	logger auditlogger.Logger
-	oauth  clientcredentials.Config
-	client azureclient.Client
-	domain string
+	system      dbmodels.System
+	auditLogger auditlogger.AuditLogger
+	oauth       clientcredentials.Config
+	client      azureclient.Client
+	domain      string
 }
 
 const (
@@ -37,16 +40,17 @@ func init() {
 	registry.Register(Name, NewFromConfig)
 }
 
-func New(logger auditlogger.Logger, oauth clientcredentials.Config, client azureclient.Client, domain string) *azureReconciler {
+func New(system dbmodels.System, auditLogger auditlogger.AuditLogger, oauth clientcredentials.Config, client azureclient.Client, domain string) *azureReconciler {
 	return &azureReconciler{
-		logger: logger,
-		oauth:  oauth,
-		client: client,
-		domain: domain,
+		system:      system,
+		auditLogger: auditLogger,
+		oauth:       oauth,
+		client:      client,
+		domain:      domain,
 	}
 }
 
-func NewFromConfig(_ *gorm.DB, cfg *config.Config, logger auditlogger.Logger) (reconcilers.Reconciler, error) {
+func NewFromConfig(_ *gorm.DB, cfg *config.Config, system dbmodels.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.Azure.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
@@ -62,46 +66,43 @@ func NewFromConfig(_ *gorm.DB, cfg *config.Config, logger auditlogger.Logger) (r
 		},
 	}
 
-	return New(logger, conf, azureclient.New(conf.Client(context.Background())), cfg.PartnerDomain), nil
+	return New(system, auditLogger, conf, azureclient.New(conf.Client(context.Background())), cfg.PartnerDomain), nil
 }
 
-func (s *azureReconciler) Reconcile(ctx context.Context, in reconcilers.Input) error {
-	grp, err := s.client.GetOrCreateGroup(ctx, teamNameWithPrefix(&in.Team.Slug), in.Team.Name, *in.Team.Purpose)
+func (s *azureReconciler) Reconcile(ctx context.Context, sync dbmodels.Synchronization, team dbmodels.Team) error {
+	grp, err := s.client.GetOrCreateGroup(ctx, teamNameWithPrefix(&team.Slug), team.Name, *team.Purpose)
 	if err != nil {
 		return err
 	}
 
-	// FIXME: support changing metadata (group name, description)
-
-	err = s.connectUsers(ctx, grp, in)
+	err = s.connectUsers(ctx, sync, grp, team)
 	if err != nil {
-		return s.logger.Errorf(in, OpAddMembers, "add members to group: %s", err)
+		return fmt.Errorf("%s: add members to group: %s", OpAddMembers, err)
 	}
 
 	return nil
 }
 
-func (s *azureReconciler) connectUsers(ctx context.Context, grp *azureclient.Group, in reconcilers.Input) error {
+func (s *azureReconciler) connectUsers(ctx context.Context, sync dbmodels.Synchronization, grp *azureclient.Group, team dbmodels.Team) error {
 	members, err := s.client.ListGroupMembers(ctx, grp)
 	if err != nil {
-		return s.logger.Errorf(in, OpAddMembers, "list existing members in Azure group: %s", err)
+		return fmt.Errorf("%s: list existing members in Azure group: %s", OpAddMembers, err)
 	}
 
-	localMembers := helpers.DomainUsers(in.Team.Users, s.domain)
+	localMembers := helpers.DomainUsers(team.Users, s.domain)
 
 	deleteMembers := extraMembers(members, localMembers)
 	createUsers := missingUsers(members, localMembers)
 
 	for _, member := range deleteMembers {
-		// FIXME: connect audit log with database user, if exists
 		err = s.client.RemoveMemberFromGroup(ctx, grp, member)
 		if err != nil {
-			return s.logger.UserErrorf(in, OpDeleteMember, nil, "delete member '%s' from Azure group '%s': %s", member.Mail, grp.MailNickname, err)
+			return fmt.Errorf("%s: delete member '%s' from Azure group '%s': %s", OpDeleteMember, member.Mail, grp.MailNickname, err)
 		}
-		s.logger.UserLogf(in, OpDeleteMember, nil, "deleted member '%s' from Azure group '%s'", member.Mail, grp.MailNickname)
-	}
 
-	s.logger.Logf(in, OpDeleteMembers, "all unmanaged members successfully deleted from Azure group '%s'", grp.MailNickname)
+		// FIXME: connect audit log with database user
+		s.auditLogger.Log(OpDeleteMember, true, sync, s.system, nil, &team, nil, "deleted member '%s' from Azure group '%s'", member.Mail, grp.MailNickname)
+	}
 
 	for _, user := range createUsers {
 		if user.Email == nil {
@@ -109,17 +110,17 @@ func (s *azureReconciler) connectUsers(ctx context.Context, grp *azureclient.Gro
 		}
 		member, err := s.client.GetUser(ctx, *user.Email)
 		if err != nil {
-			s.logger.UserLogf(in, OpAddMember, user, "Unable to lookup user with email '%s' in Azure", *user.Email)
+			log.Warnf("%s: Unable to lookup user with email '%s' in Azure", OpAddMember, *user.Email)
 			continue
 		}
 		err = s.client.AddMemberToGroup(ctx, grp, member)
 		if err != nil {
-			return s.logger.UserErrorf(in, OpAddMember, user, "add member '%s' to Azure group '%s': %s", member.Mail, grp.MailNickname, err)
+			return fmt.Errorf("%s: add member '%s' to Azure group '%s': %s", OpAddMember, member.Mail, grp.MailNickname, err)
 		}
-		s.logger.UserLogf(in, OpAddMember, user, "added member '%s' to Azure group '%s'", member.Mail, grp.MailNickname)
-	}
 
-	s.logger.Logf(in, OpAddMembers, "all members successfully added to Azure group '%s'", grp.MailNickname)
+		// FIXME: connect audit log with database user
+		s.auditLogger.Log(OpAddMember, true, sync, s.system, nil, &team, nil, "added member '%s' to Azure group '%s'", member.Mail, grp.MailNickname)
+	}
 
 	return nil
 }

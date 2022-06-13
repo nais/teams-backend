@@ -14,7 +14,6 @@ import (
 	"github.com/google/go-github/v43/github"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/dbmodels"
-	"github.com/nais/console/pkg/reconcilers"
 	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
 	"github.com/shurcooL/githubv4"
 	"github.com/stretchr/testify/assert"
@@ -43,30 +42,28 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 	const removeLogin = "should-remove"
 
 	systemID, _ := uuid.NewUUID()
+	system := dbmodels.System{
+		Model: dbmodels.Model{
+			ID: &systemID,
+		},
+	}
 	syncID, _ := uuid.NewUUID()
+	sync := dbmodels.Synchronization{
+		Model: dbmodels.Model{
+			ID: &syncID,
+		},
+	}
 
-	reconcilerInput := reconcilers.Input{
-		System: dbmodels.System{
-			Model: dbmodels.Model{
-				ID: &systemID,
+	team := dbmodels.Team{
+		Slug:    teamSlug,
+		Name:    teamName,
+		Purpose: helpers.Strp(description),
+		Users: []*dbmodels.User{
+			{
+				Email: helpers.Strp(createEmail),
 			},
-		},
-		Synchronization: dbmodels.Synchronization{
-			Model: dbmodels.Model{
-				ID: &syncID,
-			},
-		},
-		Team: &dbmodels.Team{
-			Slug:    teamSlug,
-			Name:    teamName,
-			Purpose: helpers.Strp(description),
-			Users: []*dbmodels.User{
-				{
-					Email: helpers.Strp(createEmail),
-				},
-				{
-					Email: helpers.Strp(keepEmail),
-				},
+			{
+				Email: helpers.Strp(keepEmail),
 			},
 		},
 	}
@@ -76,7 +73,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 	t.Run("create everything from scratch", func(t *testing.T) {
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
 		graphClient := github_team_reconciler.NewMockGraphClient(t)
-		reconciler := github_team_reconciler.New(logger, org, domain, teamsService, graphClient)
+		reconciler := github_team_reconciler.New(system, logger, org, domain, teamsService, graphClient)
 
 		configureGetTeamBySlug(teamsService, org, teamName)
 		configureCreateTeam(teamsService, org, teamName, description)
@@ -88,7 +85,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		configureAddTeamMembershipBySlug(teamsService, org, teamName, createLogin)
 		configureRemoveTeamMembershipBySlug(teamsService, org, teamName, removeLogin)
 
-		err := reconciler.Reconcile(ctx, reconcilerInput)
+		err := reconciler.Reconcile(ctx, sync, team)
 
 		assert.NoError(t, err)
 		teamsService.AssertExpectations(t)
@@ -98,7 +95,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 	t.Run("GetTeamBySlug error", func(t *testing.T) {
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
 		graphClient := github_team_reconciler.NewMockGraphClient(t)
-		reconciler := github_team_reconciler.New(logger, org, domain, teamsService, graphClient)
+		reconciler := github_team_reconciler.New(system, logger, org, domain, teamsService, graphClient)
 
 		expectedErr := fmt.Errorf("server raised error: 418: I'm a teapot: this is a body")
 		teamsService.On("GetTeamBySlug", mock.Anything, org, teamName).
@@ -110,7 +107,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 				},
 			}, nil).Once()
 
-		err := reconciler.Reconcile(ctx, reconcilerInput)
+		err := reconciler.Reconcile(ctx, sync, team)
 
 		assert.EqualError(t, err, expectedErr.Error())
 		teamsService.AssertExpectations(t)
@@ -120,7 +117,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 	t.Run("GetTeamBySlug client error", func(t *testing.T) {
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
 		graphClient := github_team_reconciler.NewMockGraphClient(t)
-		reconciler := github_team_reconciler.New(logger, org, domain, teamsService, graphClient)
+		reconciler := github_team_reconciler.New(system, logger, org, domain, teamsService, graphClient)
 
 		expectedErr := fmt.Errorf("server raised error: 418: I'm a teapot: this is a body")
 		teamsService.On("GetTeamBySlug", mock.Anything, org, teamName).
@@ -132,7 +129,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 				},
 			}, nil).Once()
 
-		err := reconciler.Reconcile(ctx, reconcilerInput)
+		err := reconciler.Reconcile(ctx, sync, team)
 
 		assert.EqualError(t, err, expectedErr.Error())
 		teamsService.AssertExpectations(t)
@@ -142,7 +139,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 	t.Run("GetTeamBySlug team exists", func(t *testing.T) {
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
 		graphClient := github_team_reconciler.NewMockGraphClient(t)
-		reconciler := github_team_reconciler.New(logger, org, domain, teamsService, graphClient)
+		reconciler := github_team_reconciler.New(system, logger, org, domain, teamsService, graphClient)
 
 		teamsService.On("GetTeamBySlug", mock.Anything, org, teamName).
 			Return(&github.Team{
@@ -161,7 +158,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		configureAddTeamMembershipBySlug(teamsService, org, teamName, createLogin)
 		configureRemoveTeamMembershipBySlug(teamsService, org, teamName, removeLogin)
 
-		err := reconciler.Reconcile(ctx, reconcilerInput)
+		err := reconciler.Reconcile(ctx, sync, team)
 
 		assert.NoError(t, err)
 		teamsService.AssertExpectations(t)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/google/go-github/v43/github"
 	"github.com/nais/console/pkg/auditlogger"
+	"github.com/nais/console/pkg/dbmodels"
 	"github.com/shurcooL/githubv4"
 )
 
@@ -21,7 +22,8 @@ type TeamsService interface {
 
 // gitHubReconciler creates teams on GitHub and connects users to them.
 type gitHubReconciler struct {
-	logger       auditlogger.Logger
+	system       dbmodels.System
+	auditLogger  auditlogger.AuditLogger
 	teamsService TeamsService
 	graphClient  GraphClient
 	org          string
