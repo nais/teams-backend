@@ -38,7 +38,7 @@ func (in *UsersQuery) GetQuery() interface{} {
 	}
 	return &dbmodels.User{
 		Email: in.Email,
-		Name:  *in.Name,
+		Name:  in.Name,
 	}
 }
 
