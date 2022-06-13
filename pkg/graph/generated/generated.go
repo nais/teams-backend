@@ -952,7 +952,7 @@ type AuditLog {
     "The related synchronization."
     synchronization: Synchronization!
 
-    "The actor who performed the action in the log entry."
+    "The actor who performed the action in the entry. When this field is empty it means that the console system itself performed the action."
     actor: User
 
     "The target user."
