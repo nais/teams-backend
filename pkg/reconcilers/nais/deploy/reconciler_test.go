@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/google/uuid"
+	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/test"
 	"net/http"
 	"net/http/httptest"
@@ -58,9 +59,9 @@ func TestNaisDeployReconciler_Reconcile(t *testing.T) {
 		},
 	}
 
-	err := reconciler.Reconcile(ctx, corr, dbmodels.Team{
+	err := reconciler.Reconcile(ctx, reconcilers.NewReconcilerInput(corr, dbmodels.Team{
 		Slug: slug,
-	})
+	}))
 
 	assert.NoError(t, err)
 }

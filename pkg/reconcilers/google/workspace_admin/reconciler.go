@@ -50,7 +50,7 @@ func New(system dbmodels.System, auditLogger auditlogger.AuditLogger, domain str
 	}
 }
 
-func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(_ *gorm.DB, cfg *config.Config, system dbmodels.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.Google.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
@@ -64,13 +64,15 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 	return New(system, auditLogger, cfg.PartnerDomain, config), nil
 }
 
-func (s *gcpReconciler) Reconcile(ctx context.Context, corr dbmodels.Correlation, team dbmodels.Team) error {
+func (s *gcpReconciler) Reconcile(ctx context.Context, input reconcilers.ReconcilerInput) error {
 	client := s.config.Client(ctx)
 
 	srv, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
 		return fmt.Errorf("retrieve directory client: %s", err)
 	}
+
+	corr, team := input.GetValues()
 
 	grp, err := s.getOrCreateGroup(srv.Groups, corr, team)
 	if err != nil {

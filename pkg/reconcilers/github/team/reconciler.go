@@ -72,13 +72,14 @@ func NewFromConfig(_ *gorm.DB, cfg *config.Config, system dbmodels.System, audit
 	return New(system, auditLogger, cfg.GitHub.Organization, cfg.PartnerDomain, restClient.Teams, graphClient), nil
 }
 
-func (s *gitHubReconciler) Reconcile(ctx context.Context, corr dbmodels.Correlation, team dbmodels.Team) error {
+func (s *gitHubReconciler) Reconcile(ctx context.Context, input reconcilers.ReconcilerInput) error {
+	corr, team := input.GetValues()
 	githubTeam, err := s.getOrCreateTeam(ctx, corr, team)
 	if err != nil {
 		return err
 	}
 
-	return s.connectUsers(ctx, corr, team, githubTeam)
+	return s.connectUsers(ctx, githubTeam, corr, team)
 }
 
 func (s *gitHubReconciler) getOrCreateTeam(ctx context.Context, corr dbmodels.Correlation, team dbmodels.Team) (*github.Team, error) {
@@ -116,7 +117,7 @@ func (s *gitHubReconciler) getOrCreateTeam(ctx context.Context, corr dbmodels.Co
 	return githubTeam, nil
 }
 
-func (s *gitHubReconciler) connectUsers(ctx context.Context, corr dbmodels.Correlation, team dbmodels.Team, githubTeam *github.Team) error {
+func (s *gitHubReconciler) connectUsers(ctx context.Context, githubTeam *github.Team, corr dbmodels.Correlation, team dbmodels.Team) error {
 	userMap, err := s.mapSSOUsers(ctx, team.Users)
 	if err != nil {
 		return err

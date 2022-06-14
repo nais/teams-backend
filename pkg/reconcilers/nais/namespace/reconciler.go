@@ -72,11 +72,13 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 	return New(db, system, auditLogger, cfg.PartnerDomain, cfg.NaisNamespace.TopicPrefix, cfg.Google.CredentialsFile, cfg.NaisNamespace.ProjectID, cfg.GCP.ProjectParentIDs), nil
 }
 
-func (s *namespaceReconciler) Reconcile(ctx context.Context, corr dbmodels.Correlation, team dbmodels.Team) error {
+func (s *namespaceReconciler) Reconcile(ctx context.Context, input reconcilers.ReconcilerInput) error {
 	svc, err := pubsub.NewClient(ctx, s.projectID, option.WithCredentialsFile(s.credentialsFile))
 	if err != nil {
 		return fmt.Errorf("retrieve pubsub client: %s", err)
 	}
+
+	_, team := input.GetValues()
 
 	// map of environment -> project ID
 	projects := make(map[string]string)

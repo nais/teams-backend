@@ -69,7 +69,8 @@ func NewFromConfig(_ *gorm.DB, cfg *config.Config, system dbmodels.System, audit
 	return New(system, auditLogger, conf, azureclient.New(conf.Client(context.Background())), cfg.PartnerDomain), nil
 }
 
-func (s *azureReconciler) Reconcile(ctx context.Context, corr dbmodels.Correlation, team dbmodels.Team) error {
+func (s *azureReconciler) Reconcile(ctx context.Context, input reconcilers.ReconcilerInput) error {
+	corr, team := input.GetValues()
 	prefixedName := teamNameWithPrefix(team.Slug)
 	grp, created, err := s.client.GetOrCreateGroup(ctx, prefixedName, team.Name, team.Purpose)
 	if err != nil {
@@ -80,7 +81,7 @@ func (s *azureReconciler) Reconcile(ctx context.Context, corr dbmodels.Correlati
 		s.auditLogger.Log(OpCreate, corr, s.system, nil, &team, nil, "created Azure AD group: %s", grp)
 	}
 
-	err = s.connectUsers(ctx, corr, grp, team)
+	err = s.connectUsers(ctx, grp, corr, team)
 	if err != nil {
 		return fmt.Errorf("%s: add members to group: %s", OpAddMembers, err)
 	}
@@ -88,7 +89,7 @@ func (s *azureReconciler) Reconcile(ctx context.Context, corr dbmodels.Correlati
 	return nil
 }
 
-func (s *azureReconciler) connectUsers(ctx context.Context, corr dbmodels.Correlation, grp *azureclient.Group, team dbmodels.Team) error {
+func (s *azureReconciler) connectUsers(ctx context.Context, grp *azureclient.Group, corr dbmodels.Correlation, team dbmodels.Team) error {
 	members, err := s.client.ListGroupMembers(ctx, grp)
 	if err != nil {
 		return fmt.Errorf("%s: list existing members in Azure group: %s", OpAddMembers, err)

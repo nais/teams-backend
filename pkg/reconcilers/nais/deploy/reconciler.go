@@ -66,8 +66,9 @@ func NewFromConfig(_ *gorm.DB, cfg *config.Config, system dbmodels.System, audit
 	return New(system, auditLogger, http.DefaultClient, cfg.NaisDeploy.Endpoint, provisionKey), nil
 }
 
-func (s *naisDeployReconciler) Reconcile(ctx context.Context, corr dbmodels.Correlation, team dbmodels.Team) error {
+func (s *naisDeployReconciler) Reconcile(ctx context.Context, input reconcilers.ReconcilerInput) error {
 	const signatureHeader = "X-NAIS-Signature"
+	corr, team := input.GetValues()
 
 	payload, err := json.Marshal(&ProvisionApiKeyRequest{
 		Rotate:    false,

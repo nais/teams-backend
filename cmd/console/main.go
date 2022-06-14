@@ -228,7 +228,8 @@ func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems ma
 
 		for _, reconciler := range systems {
 			log.Infof("%s: Starting reconcile for team: %s", console_reconciler.OpReconcileStart, team.Name)
-			err := reconciler.Reconcile(ctx, *corr, *team)
+			input := reconcilers.NewReconcilerInput(*corr, *team)
+			err := reconciler.Reconcile(ctx, input)
 
 			switch er := err.(type) {
 			case nil:

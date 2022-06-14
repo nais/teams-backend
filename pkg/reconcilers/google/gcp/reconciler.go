@@ -71,16 +71,17 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 	return New(db, system, auditLogger, cfg.PartnerDomain, cf, cfg.GCP.ProjectParentIDs), nil
 }
 
-func (s *gcpReconciler) Reconcile(ctx context.Context, corr dbmodels.Correlation, team dbmodels.Team) error {
+func (s *gcpReconciler) Reconcile(ctx context.Context, input reconcilers.ReconcilerInput) error {
 	client := s.config.Client(ctx)
-
 	svc, err := cloudresourcemanager.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
 		return fmt.Errorf("retrieve cloud resource manager client: %s", err)
 	}
 
+	corr, team := input.GetValues()
+
 	for environment, parentID := range s.projectParentIDs {
-		proj, err := s.CreateProject(svc, corr, team, environment, parentID)
+		proj, err := s.CreateProject(svc, environment, parentID, corr, team)
 		if err != nil {
 			return err
 		}
@@ -90,16 +91,18 @@ func (s *gcpReconciler) Reconcile(ctx context.Context, corr dbmodels.Correlation
 			return fmt.Errorf("%s: create GCP project: project was created, but ID could not be stored in database: %s", OpCreateProject, err)
 		}
 
-		err = s.CreatePermissions(svc, corr, team, proj.Name)
+		err = s.CreatePermissions(svc, proj.Name, corr, team)
 		if err != nil {
 			return err
 		}
 	}
 
+	// FIXME: Create audit log entry
+
 	return nil
 }
 
-func (s *gcpReconciler) CreateProject(svc *cloudresourcemanager.Service, corr dbmodels.Correlation, team dbmodels.Team, environment, parentID string) (*cloudresourcemanager.Project, error) {
+func (s *gcpReconciler) CreateProject(svc *cloudresourcemanager.Service, environment, parentID string, corr dbmodels.Correlation, team dbmodels.Team) (*cloudresourcemanager.Project, error) {
 	projectID := CreateProjectID(s.domain, environment, team.Slug.String())
 
 	proj := &cloudresourcemanager.Project{
@@ -157,7 +160,7 @@ func (s *gcpReconciler) CreateProject(svc *cloudresourcemanager.Service, corr db
 	return proj, nil
 }
 
-func (s *gcpReconciler) CreatePermissions(svc *cloudresourcemanager.Service, corr dbmodels.Correlation, team dbmodels.Team, projectName string) error {
+func (s *gcpReconciler) CreatePermissions(svc *cloudresourcemanager.Service, projectName string, corr dbmodels.Correlation, team dbmodels.Team) error {
 	member := fmt.Sprintf("group:%s%s@%s", reconcilers.TeamNamePrefix, team.Slug, s.domain)
 	const owner = "roles/owner"
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	helpers "github.com/nais/console/pkg/console"
+	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/test"
 	"io/ioutil"
 	"net/http"
@@ -85,7 +86,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		configureAddTeamMembershipBySlug(teamsService, org, teamName, createLogin)
 		configureRemoveTeamMembershipBySlug(teamsService, org, teamName, removeLogin)
 
-		err := reconciler.Reconcile(ctx, corr, team)
+		err := reconciler.Reconcile(ctx, reconcilers.NewReconcilerInput(corr, team))
 
 		assert.NoError(t, err)
 		teamsService.AssertExpectations(t)
@@ -107,7 +108,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 				},
 			}, nil).Once()
 
-		err := reconciler.Reconcile(ctx, corr, team)
+		err := reconciler.Reconcile(ctx, reconcilers.NewReconcilerInput(corr, team))
 
 		assert.EqualError(t, err, expectedErr.Error())
 		teamsService.AssertExpectations(t)
@@ -129,7 +130,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 				},
 			}, nil).Once()
 
-		err := reconciler.Reconcile(ctx, corr, team)
+		err := reconciler.Reconcile(ctx, reconcilers.NewReconcilerInput(corr, team))
 
 		assert.EqualError(t, err, expectedErr.Error())
 		teamsService.AssertExpectations(t)
@@ -158,7 +159,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		configureAddTeamMembershipBySlug(teamsService, org, teamName, createLogin)
 		configureRemoveTeamMembershipBySlug(teamsService, org, teamName, removeLogin)
 
-		err := reconciler.Reconcile(ctx, corr, team)
+		err := reconciler.Reconcile(ctx, reconcilers.NewReconcilerInput(corr, team))
 
 		assert.NoError(t, err)
 		teamsService.AssertExpectations(t)
