@@ -75,7 +75,7 @@ type auditLogEntry struct {
 func (s *userSynchronizer) Sync(ctx context.Context) error {
 	tx := s.db.WithContext(ctx)
 
-	roleBindings, err := getUserRoleBindings(tx)
+	defaultRoleIds, err := getDefaultRoleIds(tx)
 	if err != nil {
 		return fmt.Errorf("%s: unable to fetch roles: %w", OpPrepare, err)
 	}
@@ -109,14 +109,26 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 			err = tx.Where("email = ?", remoteUser.PrimaryEmail).First(localUser).Error
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				localUser = &dbmodels.User{
-					Email:        helpers.Strp(remoteUser.PrimaryEmail),
-					Name:         remoteUser.Name.FullName,
-					RoleBindings: roleBindings,
+					Email: helpers.Strp(remoteUser.PrimaryEmail),
+					Name:  remoteUser.Name.FullName,
 				}
 
 				err = tx.Create(localUser).Error
 				if err != nil {
 					return fmt.Errorf("%s: create local user %s: %w", OpCreate, remoteUser.PrimaryEmail, err)
+				}
+
+				roleBindings := make([]dbmodels.RoleBinding, len(defaultRoleIds))
+				for idx, roleId := range defaultRoleIds {
+					roleBindings[idx] = dbmodels.RoleBinding{
+						RoleID: roleId,
+						UserID: *localUser.ID,
+					}
+				}
+
+				err = tx.Create(roleBindings).Error
+				if err != nil {
+					return fmt.Errorf("%s: create role bindings for local user %s: %w", OpCreate, remoteUser.PrimaryEmail, err)
 				}
 
 				auditLogEntries = append(auditLogEntries, &auditLogEntry{
@@ -168,25 +180,23 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 	return nil
 }
 
-func getUserRoleBindings(tx *gorm.DB) ([]*dbmodels.RoleBinding, error) {
+func getDefaultRoleIds(tx *gorm.DB) ([]uuid.UUID, error) {
 	roles := []string{
 		roles.TeamCreator,
 		roles.TeamViewer,
 		roles.RoleViewer,
 	}
-	roleBindings := make([]*dbmodels.RoleBinding, 0)
+	roleIds := make([]uuid.UUID, len(roles))
 
-	for _, roleName := range roles {
+	for idx, roleName := range roles {
 		role := &dbmodels.Role{}
 		err := tx.Where("name = ?", roleName).First(role).Error
 		if err != nil {
 			return nil, fmt.Errorf("role not found %s: %w", roleName, err)
 		}
 
-		roleBindings = append(roleBindings, &dbmodels.RoleBinding{
-			RoleID: *role.ID,
-		})
+		roleIds[idx] = *role.ID
 	}
 
-	return roleBindings, nil
+	return roleIds, nil
 }
