@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
 	"net/http"
 	"net/url"
@@ -76,7 +77,7 @@ func run() error {
 
 	// Control channels for goroutine communication
 	const maxQueueSize = 4096
-	trigger := make(chan *dbmodels.Team, maxQueueSize)
+	teamReconciler := make(chan reconcilers.ReconcileTeamInput, maxQueueSize)
 	logger := auditlogger.New(db)
 
 	recs, err := initReconcilers(db, cfg, logger, systems)
@@ -94,7 +95,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	handler := setupGraphAPI(db, systems[console_reconciler.Name], trigger, logger)
+	handler := setupGraphAPI(db, systems[console_reconciler.Name], teamReconciler, logger)
 	srv, err := setupHTTPServer(cfg, db, handler, authHandler, store)
 	if err != nil {
 		return err
@@ -119,23 +120,22 @@ func run() error {
 		cancel()
 	}()
 
-	const nextRunGracePeriod = 15 * time.Second
-	const immediateRun = 1 * time.Second
-	const syncTimeout = 15 * time.Minute
+	const nextReconcileGracePeriod = 15 * time.Second
+	const immediateReconcile = 1 * time.Second
 
-	nextRun := time.Time{}
-	runTimer := time.NewTimer(1 * time.Second)
-	runTimer.Stop()
-	pendingTeams := make(map[string]*dbmodels.Team)
+	nextReconcile := time.Time{}
+	reconcileTimer := time.NewTimer(1 * time.Second)
+	reconcileTimer.Stop()
 
-	// Synchronize every team on startup
+	pendingTeams := make(map[uuid.UUID]reconcilers.ReconcileTeamInput)
+
+	// Reconcile all teams on startup
 	allTeams := make([]*dbmodels.Team, 0)
-	db.Preload("Users").
-		Preload("SystemState").
-		Preload("Metadata").
-		Find(&allTeams)
+	db.Preload("Users").Preload("SystemState").Preload("Metadata").Find(&allTeams)
 	for _, team := range allTeams {
-		trigger <- team
+		teamReconciler <- reconcilers.ReconcileTeamInput{
+			Team: *team,
+		}
 	}
 
 	// User synchronizer
@@ -155,24 +155,24 @@ func run() error {
 		case <-ctx.Done():
 			break
 
-		case team := <-trigger:
-			if nextRun.Before(time.Now()) {
-				nextRun = time.Now().Add(immediateRun)
-				runTimer.Reset(immediateRun)
+		case input := <-teamReconciler:
+			if nextReconcile.Before(time.Now()) {
+				nextReconcile = time.Now().Add(immediateReconcile)
+				reconcileTimer.Reset(immediateReconcile)
 			}
-			if pendingTeams[team.Slug.String()] == nil {
-				log.Infof("Scheduling team '%s' for reconciliation in %s", team.Slug, nextRun.Sub(time.Now()))
-				pendingTeams[team.Slug.String()] = team
+			if _, exists := pendingTeams[*input.Team.ID]; !exists {
+				log.Infof("Scheduling team '%s' for reconciliation in %s", input.Team.Slug, nextReconcile.Sub(time.Now()))
+				pendingTeams[*input.Team.ID] = input
 			}
 
-		case <-runTimer.C:
+		case <-reconcileTimer.C:
 			log.Infof("Running reconcile of %d teams...", len(pendingTeams))
 
-			err = syncAll(ctx, syncTimeout, db, recs, &pendingTeams)
+			err = reconcileTeams(ctx, db, recs, &pendingTeams)
 
 			if err != nil {
 				log.Error(err)
-				runTimer.Reset(nextRunGracePeriod)
+				reconcileTimer.Reset(nextReconcileGracePeriod)
 			}
 
 			if len(pendingTeams) > 0 {
@@ -207,10 +207,11 @@ func run() error {
 	return nil
 }
 
-func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems map[*dbmodels.System]reconcilers.Reconciler, teams *map[string]*dbmodels.Team) error {
+func reconcileTeams(ctx context.Context, db *gorm.DB, recs map[*dbmodels.System]reconcilers.Reconciler, reconcileInputs *map[uuid.UUID]reconcilers.ReconcileTeamInput) error {
+	const reconcileTimeout = 15 * time.Minute
 	errors := 0
 
-	ctx, cancel := context.WithTimeout(ctx, timeout)
+	ctx, cancel := context.WithTimeout(ctx, reconcileTimeout)
 	defer cancel()
 
 	corr := &dbmodels.Correlation{}
@@ -219,23 +220,19 @@ func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems ma
 		return fmt.Errorf("cannot create synchronization reference: %w", tx.Error)
 	}
 
-	for key, team := range *teams {
+	for teamId, input := range *reconcileInputs {
 		teamErrors := 0
 
-		if team == nil {
-			panic("BUG: refusing to reconcile empty team")
-		}
-
-		for _, reconciler := range systems {
-			log.Infof("%s: Starting reconcile for team: %s", console_reconciler.OpReconcileStart, team.Name)
+		for _, reconciler := range recs {
+			log.Infof("%s: Starting reconcile for team: %s", console_reconciler.OpReconcileStart, input.Team.Name)
 			err := reconciler.Reconcile(ctx, reconcilers.Input{
 				Corr: *corr,
-				Team: *team,
+				Team: input.Team,
 			})
 
 			switch er := err.(type) {
 			case nil:
-				log.Infof("%s: Successfully reconciled team: %s", console_reconciler.OpReconcileEnd, team.Name)
+				log.Infof("%s: Successfully reconciled team: %s", console_reconciler.OpReconcileEnd, input.Team.Name)
 			case *dbmodels.AuditLog:
 				er.Log().Error(er.Message)
 				teamErrors++
@@ -246,7 +243,7 @@ func syncAll(ctx context.Context, timeout time.Duration, db *gorm.DB, systems ma
 		}
 
 		if teamErrors == 0 {
-			delete(*teams, key)
+			delete(*reconcileInputs, teamId)
 		}
 		errors += teamErrors
 	}
@@ -344,8 +341,8 @@ func setupDatabase(cfg *config.Config) (*gorm.DB, error) {
 	return db, nil
 }
 
-func setupGraphAPI(db *gorm.DB, console *dbmodels.System, trigger chan<- *dbmodels.Team, logger auditlogger.AuditLogger) *graphql_handler.Server {
-	resolver := graph.NewResolver(db, console, trigger, logger)
+func setupGraphAPI(db *gorm.DB, console *dbmodels.System, teamReconciler chan<- reconcilers.ReconcileTeamInput, logger auditlogger.AuditLogger) *graphql_handler.Server {
+	resolver := graph.NewResolver(db, console, teamReconciler, logger)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
 	gc.Directives.Auth = directives.Auth(db)

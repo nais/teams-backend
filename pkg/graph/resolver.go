@@ -9,6 +9,7 @@ import (
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/model"
+	"github.com/nais/console/pkg/reconcilers"
 	"gorm.io/gorm"
 )
 
@@ -21,18 +22,18 @@ const (
 )
 
 type Resolver struct {
-	db          *gorm.DB
-	trigger     chan<- *dbmodels.Team
-	console     *dbmodels.System
-	auditLogger auditlogger.AuditLogger
+	db             *gorm.DB
+	teamReconciler chan<- reconcilers.ReconcileTeamInput
+	console        *dbmodels.System
+	auditLogger    auditlogger.AuditLogger
 }
 
-func NewResolver(db *gorm.DB, console *dbmodels.System, trigger chan<- *dbmodels.Team, auditLogger auditlogger.AuditLogger) *Resolver {
+func NewResolver(db *gorm.DB, console *dbmodels.System, teamReconciler chan<- reconcilers.ReconcileTeamInput, auditLogger auditlogger.AuditLogger) *Resolver {
 	return &Resolver{
-		db:          db,
-		console:     console,
-		trigger:     trigger,
-		auditLogger: auditLogger,
+		db:             db,
+		console:        console,
+		teamReconciler: teamReconciler,
+		auditLogger:    auditLogger,
 	}
 }
 

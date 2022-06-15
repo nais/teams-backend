@@ -12,6 +12,7 @@ import (
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
+	"github.com/nais/console/pkg/reconcilers"
 	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
 	"github.com/nais/console/pkg/roles"
 	log "github.com/sirupsen/logrus"
@@ -84,7 +85,9 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 	if err != nil {
 		return nil, fmt.Errorf("unable to fetch complete team: %s", err)
 	}
-	r.trigger <- team
+	r.teamReconciler <- reconcilers.ReconcileTeamInput{
+		Team: *team,
+	}
 
 	return team, nil
 }
@@ -135,7 +138,9 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 	if err != nil {
 		return nil, fmt.Errorf("unable to fetch complete team: %s", err)
 	}
-	r.trigger <- team
+	r.teamReconciler <- reconcilers.ReconcileTeamInput{
+		Team: *team,
+	}
 
 	return team, nil
 }
@@ -186,7 +191,9 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 	if err != nil {
 		return nil, fmt.Errorf("unable to fetch complete team: %s", err)
 	}
-	r.trigger <- team
+	r.teamReconciler <- reconcilers.ReconcileTeamInput{
+		Team: *team,
+	}
 
 	return team, nil
 }

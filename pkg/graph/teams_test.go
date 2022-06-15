@@ -5,6 +5,7 @@ import (
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/graph/model"
+	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -56,7 +57,7 @@ func TestQueryResolver_Teams(t *testing.T) {
 		},
 	})
 
-	ch := make(chan *dbmodels.Team, 100)
+	ch := make(chan reconcilers.ReconcileTeamInput, 100)
 	system := getSystem()
 
 	ctx := getContextWithAddedRoleBinding(system, authz.ResourceTeams, authz.AccessLevelRead, authz.PermissionAllow)
@@ -87,7 +88,7 @@ func TestQueryResolver_Teams(t *testing.T) {
 }
 
 func TestQueryResolver_TeamsNoPermission(t *testing.T) {
-	resolver := graph.NewResolver(test.GetTestDB(), getSystem(), make(chan *dbmodels.Team, 100), nil).Query()
+	resolver := graph.NewResolver(test.GetTestDB(), getSystem(), make(chan reconcilers.ReconcileTeamInput, 100), nil).Query()
 	_, err := resolver.Teams(context.Background(), nil, nil, nil)
 	assert.EqualError(t, err, "unauthorized")
 }

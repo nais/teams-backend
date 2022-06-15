@@ -5,6 +5,7 @@ import (
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/graph/model"
+	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -27,7 +28,7 @@ func TestQueryResolver_Systems(t *testing.T) {
 		},
 	})
 
-	ch := make(chan *dbmodels.Team, 100)
+	ch := make(chan reconcilers.ReconcileTeamInput, 100)
 	system := getSystem()
 	ctx := context.Background()
 
