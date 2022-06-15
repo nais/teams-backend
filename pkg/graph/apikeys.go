@@ -45,7 +45,7 @@ func (r *mutationResolver) CreateAPIKey(ctx context.Context, userID *uuid.UUID) 
 
 func (r *mutationResolver) DeleteAPIKey(ctx context.Context, userID *uuid.UUID) (bool, error) {
 	// FIXME: Handle deleted_by_id tracking
-	err := r.db.WithContext(ctx).Where("user_id = ?", userID).Delete(&dbmodels.ApiKey{}).Error
+	err := r.db.Where("user_id = ?", userID).Delete(&dbmodels.ApiKey{}).Error
 	if err != nil {
 		return false, err
 	}

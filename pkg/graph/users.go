@@ -31,9 +31,8 @@ func (r *mutationResolver) CreateServiceAccount(ctx context.Context, input model
 }
 
 func (r *mutationResolver) UpdateServiceAccount(ctx context.Context, serviceAccountID *uuid.UUID, input model.UpdateServiceAccountInput) (*dbmodels.User, error) {
-	db := r.db.WithContext(ctx)
 	serviceAccount := &dbmodels.User{}
-	err := db.Where("id = ?", serviceAccountID).First(serviceAccount).Error
+	err := r.db.Where("id = ?", serviceAccountID).First(serviceAccount).Error
 	if err != nil {
 		return nil, err
 	}
@@ -54,9 +53,8 @@ func (r *mutationResolver) UpdateServiceAccount(ctx context.Context, serviceAcco
 }
 
 func (r *mutationResolver) DeleteServiceAccount(ctx context.Context, serviceAccountID *uuid.UUID) (bool, error) {
-	db := r.db.WithContext(ctx)
 	serviceAccount := &dbmodels.User{}
-	err := db.Where("id = ?", serviceAccountID).First(serviceAccount).Error
+	err := r.db.Where("id = ?", serviceAccountID).First(serviceAccount).Error
 	if err != nil {
 		return false, err
 	}
@@ -92,9 +90,9 @@ func (r *queryResolver) Users(ctx context.Context, pagination *model.Pagination,
 
 func (r *queryResolver) User(ctx context.Context, id *uuid.UUID) (*dbmodels.User, error) {
 	user := &dbmodels.User{}
-	tx := r.db.WithContext(ctx).Where("id = ?", id).First(user)
-	if tx.Error != nil {
-		return nil, tx.Error
+	err := r.db.Where("id = ?", id).First(user).Error
+	if err != nil {
+		return nil, err
 	}
 	return user, nil
 }
@@ -105,7 +103,7 @@ func (r *queryResolver) Me(ctx context.Context) (*dbmodels.User, error) {
 
 func (r *userResolver) Teams(ctx context.Context, obj *dbmodels.User) ([]*dbmodels.Team, error) {
 	teams := make([]*dbmodels.Team, 0)
-	err := r.db.WithContext(ctx).Model(obj).Association("Teams").Find(&teams)
+	err := r.db.Model(obj).Association("Teams").Find(&teams)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +115,7 @@ func (r *userResolver) RoleBindings(ctx context.Context, obj *dbmodels.User, tea
 	where := &dbmodels.RoleBinding{
 		TeamID: teamID,
 	}
-	err := r.db.WithContext(ctx).Model(obj).Where(where).Association("RoleBindings").Find(&roleBindings)
+	err := r.db.Model(obj).Where(where).Association("RoleBindings").Find(&roleBindings)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +124,7 @@ func (r *userResolver) RoleBindings(ctx context.Context, obj *dbmodels.User, tea
 
 func (r *userResolver) HasAPIKey(ctx context.Context, obj *dbmodels.User) (bool, error) {
 	apiKey := &dbmodels.ApiKey{}
-	err := r.db.WithContext(ctx).Where("user_id = ?", obj.ID).First(&apiKey).Error
+	err := r.db.Where("user_id = ?", obj.ID).First(&apiKey).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return false, nil

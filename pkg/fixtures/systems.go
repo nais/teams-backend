@@ -27,10 +27,9 @@ func EnsureSystemsExistInDatabase(ctx context.Context, db *gorm.DB) (map[string]
 		}
 
 		log.Infof(`Ensure system "%s" exists in the database...`, name)
-		tx := db.WithContext(ctx).FirstOrCreate(system, "name = ?", name)
-
-		if tx.Error != nil {
-			return nil, tx.Error
+		err := db.FirstOrCreate(system, "name = ?", name).Error
+		if err != nil {
+			return nil, err
 		}
 
 		systems[name] = system

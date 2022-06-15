@@ -24,10 +24,9 @@ func (r *mutationResolver) AssignRoleToUser(ctx context.Context, input model.Ass
 		UserID: *input.UserID,
 	}
 
-	tx := r.db.WithContext(ctx).Create(rb)
-
-	if tx.Error != nil {
-		return nil, tx.Error
+	err = r.db.Create(rb).Error
+	if err != nil {
+		return nil, err
 	}
 	return rb, nil
 }
@@ -39,9 +38,9 @@ func (r *mutationResolver) RemoveRoleFromUser(ctx context.Context, input model.R
 	}
 
 	rb := &dbmodels.RoleBinding{}
-	tx := r.db.WithContext(ctx).First(rb, "user_id = ? AND team_id = ? AND role_id = ?", input.UserID, input.TeamID, input.RoleID).Delete(rb)
-	if tx.Error != nil {
-		return false, tx.Error
+	err = r.db.First(rb, "user_id = ? AND team_id = ? AND role_id = ?", input.UserID, input.TeamID, input.RoleID).Delete(rb).Error
+	if err != nil {
+		return false, err
 	}
 	return true, nil
 }

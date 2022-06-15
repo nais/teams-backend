@@ -22,7 +22,7 @@ const (
 )
 
 func InsertInitialDataset(ctx context.Context, db *gorm.DB, partnerDomain string) error {
-	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return db.Transaction(func(tx *gorm.DB) error {
 		// If there are any users in the database, skip creation
 		users := make([]*dbmodels.User, 0)
 		var numUsers int64

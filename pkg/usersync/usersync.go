@@ -72,9 +72,7 @@ type auditLogEntry struct {
 // matches the partner domain that does not exist in the Google Directory.
 // All new users will be grated two roles: "Team Creator" and "Team viewer"
 func (s *userSynchronizer) Sync(ctx context.Context) error {
-	tx := s.db.WithContext(ctx)
-
-	defaultRoleIds, err := getDefaultRoleIds(tx)
+	defaultRoleIds, err := s.getDefaultRoleIds()
 	if err != nil {
 		return fmt.Errorf("%s: unable to fetch roles: %w", OpPrepare, err)
 	}
@@ -91,15 +89,14 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 	}
 
 	corr := &dbmodels.Correlation{}
-	err = tx.Create(corr).Error
+	err = s.db.Create(corr).Error
 	if err != nil {
 		return fmt.Errorf("%s: unable to create correlation for audit logs: %w", OpPrepare, err)
 	}
 
 	auditLogEntries := make([]*auditLogEntry, 0)
 
-	err = tx.Transaction(func(tx *gorm.DB) error {
-
+	err = s.db.Transaction(func(tx *gorm.DB) error {
 		userIds := make(map[uuid.UUID]struct{})
 
 		for _, remoteUser := range resp.Users {
@@ -179,7 +176,7 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 	return nil
 }
 
-func getDefaultRoleIds(tx *gorm.DB) ([]uuid.UUID, error) {
+func (s *userSynchronizer) getDefaultRoleIds() ([]uuid.UUID, error) {
 	roles := []string{
 		roles.TeamCreator,
 		roles.TeamViewer,
@@ -189,7 +186,7 @@ func getDefaultRoleIds(tx *gorm.DB) ([]uuid.UUID, error) {
 
 	for idx, roleName := range roles {
 		role := &dbmodels.Role{}
-		err := tx.Where("name = ?", roleName).First(role).Error
+		err := s.db.Where("name = ?", roleName).First(role).Error
 		if err != nil {
 			return nil, fmt.Errorf("role not found %s: %w", roleName, err)
 		}

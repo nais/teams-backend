@@ -33,9 +33,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		Purpose: input.Purpose,
 	}
 
-	tx := r.db.WithContext(ctx)
-
-	err = tx.Transaction(func(tx *gorm.DB) error {
+	err = r.db.Transaction(func(tx *gorm.DB) error {
 		teamEditor := &dbmodels.Role{}
 
 		err = tx.Where("name = ?", roles.TeamEditor).First(teamEditor).Error
@@ -81,7 +79,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		r.auditLogger.Log(console_reconciler.OpCreateTeam, *corr, *r.system, user, team, nil, "Team created")
 	}
 
-	team, err = r.teamWithAssociations(ctx, *team.ID)
+	team, err = r.teamWithAssociations(*team.ID)
 	if err != nil {
 		return nil, fmt.Errorf("unable to fetch complete team: %s", err)
 	}
@@ -93,16 +91,14 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 }
 
 func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUsersToTeamInput) (*dbmodels.Team, error) {
-	tx := r.db.WithContext(ctx)
-
 	team := &dbmodels.Team{}
-	err := tx.Where("id = ?", input.TeamID).First(team).Error
+	err := r.db.Where("id = ?", input.TeamID).First(team).Error
 	if err != nil {
 		return nil, err
 	}
 
 	users := make([]*dbmodels.User, 0)
-	err = tx.Where(input.UserIds).Find(&users).Error
+	err = r.db.Where(input.UserIds).Find(&users).Error
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +130,7 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 		return nil, err
 	}
 
-	team, err = r.teamWithAssociations(ctx, *team.ID)
+	team, err = r.teamWithAssociations(*team.ID)
 	if err != nil {
 		return nil, fmt.Errorf("unable to fetch complete team: %s", err)
 	}
@@ -146,16 +142,14 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 }
 
 func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.RemoveUsersFromTeamInput) (*dbmodels.Team, error) {
-	tx := r.db.WithContext(ctx)
-
 	team := &dbmodels.Team{}
-	err := tx.Where("id = ?", input.TeamID).First(team).Error
+	err := r.db.Where("id = ?", input.TeamID).First(team).Error
 	if err != nil {
 		return nil, err
 	}
 
 	users := make([]*dbmodels.User, 0)
-	err = tx.Where(input.UserIds).Find(&users).Error
+	err = r.db.Where(input.UserIds).Find(&users).Error
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +163,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 		return nil, err
 	}
 
-	err = tx.Transaction(func(tx *gorm.DB) error {
+	err = r.db.Transaction(func(tx *gorm.DB) error {
 		err = tx.Where("user_id IN (?) AND team_id = ?", input.UserIds, team.ID).Delete(&dbmodels.UsersTeams{}).Error
 		if err != nil {
 			return err
@@ -187,7 +181,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 		return nil, err
 	}
 
-	team, err = r.teamWithAssociations(ctx, *team.ID)
+	team, err = r.teamWithAssociations(*team.ID)
 	if err != nil {
 		return nil, fmt.Errorf("unable to fetch complete team: %s", err)
 	}
@@ -199,9 +193,8 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 }
 
 func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUID) (bool, error) {
-	db := r.db.WithContext(ctx)
 	team := &dbmodels.Team{}
-	err := db.Where("id = ?", teamID).First(team).Error
+	err := r.db.Where("id = ?", teamID).First(team).Error
 	if err != nil {
 		return false, err
 	}
@@ -212,7 +205,7 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 	}
 
 	corr := &dbmodels.Correlation{}
-	err = db.Create(corr).Error
+	err = r.db.Create(corr).Error
 
 	if err != nil {
 		return false, fmt.Errorf("unable to create correlation for audit log")
@@ -220,7 +213,7 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 
 	r.auditLogger.Log(console_reconciler.OpSyncTeam, *corr, *r.system, authz.UserFromContext(ctx), team, nil, "Manual sync requested")
 
-	team, err = r.teamWithAssociations(ctx, *team.ID)
+	team, err = r.teamWithAssociations(*team.ID)
 	if err != nil {
 		return false, fmt.Errorf("unable to fetch complete team: %s", err)
 	}
@@ -252,9 +245,8 @@ func (r *queryResolver) Teams(ctx context.Context, pagination *model.Pagination,
 }
 
 func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team, error) {
-	tx := r.db.WithContext(ctx)
 	team := &dbmodels.Team{}
-	err := tx.Where("id = ?", id).First(team).Error
+	err := r.db.Where("id = ?", id).First(team).Error
 	if err != nil {
 		return nil, err
 	}
@@ -269,7 +261,7 @@ func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team
 
 func (r *teamResolver) Users(ctx context.Context, obj *dbmodels.Team) ([]*dbmodels.User, error) {
 	users := make([]*dbmodels.User, 0)
-	err := r.db.WithContext(ctx).Model(obj).Association("Users").Find(&users)
+	err := r.db.Model(obj).Association("Users").Find(&users)
 	if err != nil {
 		return nil, err
 	}
@@ -278,7 +270,7 @@ func (r *teamResolver) Users(ctx context.Context, obj *dbmodels.Team) ([]*dbmode
 
 func (r *teamResolver) Metadata(ctx context.Context, obj *dbmodels.Team) (map[string]interface{}, error) {
 	metadata := make([]*dbmodels.TeamMetadata, 0)
-	err := r.db.WithContext(ctx).Model(obj).Association("Metadata").Find(&metadata)
+	err := r.db.Model(obj).Association("Metadata").Find(&metadata)
 	if err != nil {
 		return nil, err
 	}
@@ -294,7 +286,7 @@ func (r *teamResolver) Metadata(ctx context.Context, obj *dbmodels.Team) (map[st
 
 func (r *teamResolver) AuditLogs(ctx context.Context, obj *dbmodels.Team) ([]*dbmodels.AuditLog, error) {
 	auditLogs := make([]*dbmodels.AuditLog, 0)
-	err := r.db.WithContext(ctx).Model(obj).Association("AuditLogs").Find(&auditLogs)
+	err := r.db.Model(obj).Association("AuditLogs").Find(&auditLogs)
 	if err != nil {
 		return nil, err
 	}

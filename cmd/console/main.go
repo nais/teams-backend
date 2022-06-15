@@ -212,9 +212,9 @@ func reconcileTeams(ctx context.Context, db *gorm.DB, recs []reconcilers.Reconci
 	defer cancel()
 
 	corr := &dbmodels.Correlation{}
-	tx := db.WithContext(ctx).Create(corr)
-	if tx.Error != nil {
-		return fmt.Errorf("cannot create synchronization reference: %w", tx.Error)
+	err := db.Create(corr).Error
+	if err != nil {
+		return fmt.Errorf("cannot create synchronization reference: %w", err)
 	}
 
 	for teamId, input := range *reconcileInputs {

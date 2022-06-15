@@ -56,7 +56,7 @@ func (r *Resolver) createTrackedObject(ctx context.Context, newObject Model) err
 	model := newObject.GetModel()
 	model.CreatedBy = user
 	model.UpdatedBy = user
-	return r.db.WithContext(ctx).Create(newObject).Error
+	return r.db.Create(newObject).Error
 }
 
 func (r *Resolver) createTrackedObjectIgnoringDuplicates(ctx context.Context, obj Model) error {
@@ -84,7 +84,7 @@ func (r *Resolver) updateTrackedObject(ctx context.Context, updatedObject Model)
 
 	model := updatedObject.GetModel()
 	model.UpdatedBy = user
-	return r.db.WithContext(ctx).Updates(updatedObject).Error
+	return r.db.Updates(updatedObject).Error
 }
 
 // Update the deleted_by_id column before "deleting" the object.
@@ -95,7 +95,7 @@ func (r *Resolver) deleteTrackedObject(ctx context.Context, objectToDelete SoftD
 		return fmt.Errorf("context has no user")
 	}
 
-	return r.db.WithContext(ctx).Model(objectToDelete).UpdateColumn("deleted_by_id", user.ID).Delete(objectToDelete).Error
+	return r.db.Model(objectToDelete).UpdateColumn("deleted_by_id", user.ID).Delete(objectToDelete).Error
 }
 
 // Run a query to get data from the database. Populates `collection` and returns pagination metadata.
@@ -106,7 +106,7 @@ func (r *Resolver) paginatedQuery(ctx context.Context, pagination *model.Paginat
 			Limit:  50,
 		}
 	}
-	tx := r.db.WithContext(ctx).Model(dbmodel).Where(query.GetQuery()).Order(sort.GetOrderString())
+	tx := r.db.Model(dbmodel).Where(query.GetQuery()).Order(sort.GetOrderString())
 	pageInfo, tx := r.withPagination(pagination, tx)
 	return pageInfo, tx.Find(collection).Error
 }
@@ -123,10 +123,9 @@ func (r *Resolver) withPagination(pagination *model.Pagination, tx *gorm.DB) (*m
 	}, tx
 }
 
-func (r *mutationResolver) teamWithAssociations(ctx context.Context, teamID uuid.UUID) (*dbmodels.Team, error) {
+func (r *mutationResolver) teamWithAssociations(teamID uuid.UUID) (*dbmodels.Team, error) {
 	team := &dbmodels.Team{}
 	err := r.db.
-		WithContext(ctx).
 		Where("id = ?", teamID).
 		Preload("Users").
 		Preload("SystemState").
