@@ -77,7 +77,7 @@ func run() error {
 
 	// Control channels for goroutine communication
 	const maxQueueSize = 4096
-	teamReconciler := make(chan reconcilers.ReconcileTeamInput, maxQueueSize)
+	teamReconciler := make(chan reconcilers.Input, maxQueueSize)
 	logger := auditlogger.New(db)
 
 	recs, err := initReconcilers(db, cfg, logger, systems)
@@ -124,13 +124,20 @@ func run() error {
 	reconcileTimer := time.NewTimer(1 * time.Second)
 	reconcileTimer.Stop()
 
-	pendingTeams := make(map[uuid.UUID]reconcilers.ReconcileTeamInput)
+	pendingTeams := make(map[uuid.UUID]reconcilers.Input)
 
-	// Reconcile all teams on startup
+	// Reconcile all teams on startup. All will share the same correlation ID
+	corr := &dbmodels.Correlation{}
+	err = db.WithContext(ctx).Create(corr).Error
+	if err != nil {
+		return fmt.Errorf("cannot create correlation entry for initial reconcile loop: %w", err)
+	}
+
 	allTeams := make([]*dbmodels.Team, 0)
 	db.Preload("Users").Preload("SystemState").Preload("Metadata").Find(&allTeams)
 	for _, team := range allTeams {
-		teamReconciler <- reconcilers.ReconcileTeamInput{
+		teamReconciler <- reconcilers.Input{
+			Corr: *corr,
 			Team: *team,
 		}
 	}
@@ -165,7 +172,7 @@ func run() error {
 		case <-reconcileTimer.C:
 			log.Infof("Running reconcile of %d teams...", len(pendingTeams))
 
-			err = reconcileTeams(ctx, db, recs, &pendingTeams)
+			err = reconcileTeams(ctx, recs, &pendingTeams)
 
 			if err != nil {
 				log.Error(err)
@@ -199,39 +206,26 @@ func run() error {
 	return nil
 }
 
-func reconcileTeams(ctx context.Context, db *gorm.DB, recs []reconcilers.Reconciler, reconcileInputs *map[uuid.UUID]reconcilers.ReconcileTeamInput) error {
+func reconcileTeams(ctx context.Context, recs map[string]reconcilers.Reconciler, reconcileInputs *map[uuid.UUID]reconcilers.Input) error {
 	const reconcileTimeout = 15 * time.Minute
 	errors := 0
 
 	ctx, cancel := context.WithTimeout(ctx, reconcileTimeout)
 	defer cancel()
 
-	corr := &dbmodels.Correlation{}
-	err := db.Create(corr).Error
-	if err != nil {
-		return fmt.Errorf("cannot create synchronization reference: %w", err)
-	}
-
 	for teamId, input := range *reconcileInputs {
 		teamErrors := 0
 
-		for _, reconciler := range recs {
-			log.Infof("%s: Starting reconcile for team: %s", console_reconciler.OpReconcileStart, input.Team.Name)
-			err := reconciler.Reconcile(ctx, reconcilers.Input{
-				Corr: *corr,
-				Team: input.Team,
-			})
-
-			switch er := err.(type) {
-			case nil:
-				log.Infof("%s: Successfully reconciled team: %s", console_reconciler.OpReconcileEnd, input.Team.Name)
-			case *dbmodels.AuditLog:
-				er.Log().Error(er.Message)
+		for reconcilerName, reconciler := range recs {
+			log.Infof("Starting reconciler '%s' for team: '%s'", reconcilerName, input.Team.Name)
+			err := reconciler.Reconcile(ctx, input)
+			if err != nil {
+				log.Error(err)
 				teamErrors++
-			case error:
-				log.Errorf("%s: %s", console_reconciler.OpReconcileEnd, er.Error())
-				teamErrors++
+				continue
 			}
+
+			log.Infof("Successfully finished reconciler '%s' for team: '%s'", reconcilerName, input.Team.Name)
 		}
 
 		if teamErrors == 0 {
@@ -241,7 +235,7 @@ func reconcileTeams(ctx context.Context, db *gorm.DB, recs []reconcilers.Reconci
 	}
 
 	if errors > 0 {
-		return fmt.Errorf("%d systems returned errors during reconcile", errors)
+		return fmt.Errorf("%d error(s) occurred during reconcile", errors)
 	}
 
 	return nil
@@ -282,8 +276,8 @@ func setupLogging(format, level string) error {
 	return nil
 }
 
-func initReconcilers(db *gorm.DB, cfg *config.Config, logger auditlogger.AuditLogger, systems map[string]*dbmodels.System) ([]reconcilers.Reconciler, error) {
-	recs := make([]reconcilers.Reconciler, 0)
+func initReconcilers(db *gorm.DB, cfg *config.Config, logger auditlogger.AuditLogger, systems map[string]*dbmodels.System) (map[string]reconcilers.Reconciler, error) {
+	recs := make(map[string]reconcilers.Reconciler)
 	factories := registry.Reconcilers()
 
 	for name, factory := range factories {
@@ -299,7 +293,7 @@ func initReconcilers(db *gorm.DB, cfg *config.Config, logger auditlogger.AuditLo
 		default:
 			return nil, fmt.Errorf("reconciler '%s': %w", name, err)
 		case nil:
-			recs = append(recs, rec)
+			recs[name] = rec
 			log.Infof("Reconciler initialized: '%s' -> %T", system.Name, rec)
 		}
 	}
@@ -339,7 +333,7 @@ func setupDatabase(cfg *config.Config) (*gorm.DB, error) {
 	return db, nil
 }
 
-func setupGraphAPI(db *gorm.DB, domain string, console *dbmodels.System, teamReconciler chan<- reconcilers.ReconcileTeamInput, logger auditlogger.AuditLogger) *graphql_handler.Server {
+func setupGraphAPI(db *gorm.DB, domain string, console *dbmodels.System, teamReconciler chan<- reconcilers.Input, logger auditlogger.AuditLogger) *graphql_handler.Server {
 	resolver := graph.NewResolver(db, domain, console, teamReconciler, logger)
 	gc := generated.Config{}
 	gc.Resolvers = resolver

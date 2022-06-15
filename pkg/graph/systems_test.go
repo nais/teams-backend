@@ -28,7 +28,7 @@ func TestQueryResolver_Systems(t *testing.T) {
 		},
 	})
 
-	ch := make(chan reconcilers.ReconcileTeamInput, 100)
+	ch := make(chan reconcilers.Input, 100)
 	system := getSystem()
 	ctx := context.Background()
 

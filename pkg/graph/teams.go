@@ -15,7 +15,6 @@ import (
 	"github.com/nais/console/pkg/reconcilers"
 	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
 	"github.com/nais/console/pkg/roles"
-	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -26,7 +25,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 	}
 
 	user := authz.UserFromContext(ctx)
-
+	corr := &dbmodels.Correlation{}
 	team := &dbmodels.Team{
 		Slug:    *input.Slug,
 		Name:    input.Name,
@@ -34,8 +33,12 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 	}
 
 	err = r.db.Transaction(func(tx *gorm.DB) error {
-		teamEditor := &dbmodels.Role{}
+		err = tx.Create(corr).Error
+		if err != nil {
+			return fmt.Errorf("unable to create correlation for audit log")
+		}
 
+		teamEditor := &dbmodels.Role{}
 		err = tx.Where("name = ?", roles.TeamEditor).First(teamEditor).Error
 		if err != nil {
 			return err
@@ -69,21 +72,15 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		return nil, err
 	}
 
-	// FIXME: Figure out a way to specify the same correlation to the reconcilers below
-	corr := &dbmodels.Correlation{}
-	err = r.db.Create(corr).Error
-
-	if err != nil {
-		log.Warnf("unable to create correlation for audit log")
-	} else {
-		r.auditLogger.Logf(console_reconciler.OpCreateTeam, *corr, *r.system, user, team, nil, "Team created")
-	}
+	r.auditLogger.Logf(console_reconciler.OpCreateTeam, *corr, *r.system, user, team, nil, "Team created")
 
 	team, err = r.teamWithAssociations(*team.ID)
 	if err != nil {
-		return nil, fmt.Errorf("unable to fetch complete team: %s", err)
+		return nil, fmt.Errorf("unable to fetch team: %w", err)
 	}
-	r.teamReconciler <- reconcilers.ReconcileTeamInput{
+
+	r.teamReconciler <- reconcilers.Input{
+		Corr: *corr,
 		Team: *team,
 	}
 
@@ -112,7 +109,13 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 		return nil, err
 	}
 
+	corr := &dbmodels.Correlation{}
 	err = r.db.Transaction(func(tx *gorm.DB) error {
+		err = tx.Create(corr).Error
+		if err != nil {
+			return fmt.Errorf("unable to create correlation for audit log")
+		}
+
 		for _, userId := range input.UserIds {
 			tm := &dbmodels.UsersTeams{
 				UserID: *userId,
@@ -132,9 +135,11 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 
 	team, err = r.teamWithAssociations(*team.ID)
 	if err != nil {
-		return nil, fmt.Errorf("unable to fetch complete team: %s", err)
+		return nil, fmt.Errorf("unable to fetch team: %w", err)
 	}
-	r.teamReconciler <- reconcilers.ReconcileTeamInput{
+
+	r.teamReconciler <- reconcilers.Input{
+		Corr: *corr,
 		Team: *team,
 	}
 
@@ -163,7 +168,13 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 		return nil, err
 	}
 
+	corr := &dbmodels.Correlation{}
 	err = r.db.Transaction(func(tx *gorm.DB) error {
+		err = tx.Create(corr).Error
+		if err != nil {
+			return fmt.Errorf("unable to create correlation for audit log")
+		}
+
 		err = tx.Where("user_id IN (?) AND team_id = ?", input.UserIds, team.ID).Delete(&dbmodels.UsersTeams{}).Error
 		if err != nil {
 			return err
@@ -183,9 +194,10 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 
 	team, err = r.teamWithAssociations(*team.ID)
 	if err != nil {
-		return nil, fmt.Errorf("unable to fetch complete team: %s", err)
+		return nil, fmt.Errorf("unable to fetch team: %w", err)
 	}
-	r.teamReconciler <- reconcilers.ReconcileTeamInput{
+	r.teamReconciler <- reconcilers.Input{
+		Corr: *corr,
 		Team: *team,
 	}
 
@@ -206,7 +218,6 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 
 	corr := &dbmodels.Correlation{}
 	err = r.db.Create(corr).Error
-
 	if err != nil {
 		return false, fmt.Errorf("unable to create correlation for audit log")
 	}
@@ -215,9 +226,11 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 
 	team, err = r.teamWithAssociations(*team.ID)
 	if err != nil {
-		return false, fmt.Errorf("unable to fetch complete team: %s", err)
+		return false, fmt.Errorf("unable to fetch team: %w", err)
 	}
-	r.teamReconciler <- reconcilers.ReconcileTeamInput{
+
+	r.teamReconciler <- reconcilers.Input{
+		Corr: *corr,
 		Team: *team,
 	}
 
