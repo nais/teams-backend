@@ -4,6 +4,38 @@ Console is an API server for team creation and propagation to external systems.
 
 ADR: https://github.com/navikt/pig/blob/master/kubeops/adr/010-console-nais-io.md
 
+## Configuration
+
+Console is configured using environment variables:
+
+### `CONSOLE_AUTO_LOGIN_USER`
+
+Auto login a specific user on all requests against the GraphQL API. This setting should **NEVER** be used in a production environment.
+
+### `CONSOLE_DATABASE_URL`
+
+The URL for the database. Defaults to `postgres://console:console@localhost:3002/console?sslmode=disable` which works for local development purposes.
+
+### `CONSOLE_FRONTEND_URL`
+
+URL to the console frontend. Defaults to `http://localhost:3001`. The frontend is in a [separate repository](https://github.com/nais/console-frontend).
+
+### `CONSOLE_LISTEN_ADDRESS`
+
+The host:port combination used by the http server. Defaults to `127.0.0.1:3000`.
+
+### `CONSOLE_LOG_FORMAT`
+
+Customize the log format. Defaults to `text`. Can be set to `json`.
+
+### `CONSOLE_LOG_LEVEL`
+
+The log level used in console. Defaults to `DEBUG`.
+
+### `CONSOLE_PARTNER_DOMAIN`
+
+The domain for the partner. Defaults to `example.com`.
+
 ## Reconcilers
 
 Console uses reconcilers to sync team information to external systems, for instance GitHub or Azure AD. All reconcilers
