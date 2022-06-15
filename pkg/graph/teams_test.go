@@ -61,7 +61,7 @@ func TestQueryResolver_Teams(t *testing.T) {
 	system := getSystem()
 
 	ctx := getContextWithAddedRoleBinding(system, authz.ResourceTeams, authz.AccessLevelRead, authz.PermissionAllow)
-	resolver := graph.NewResolver(db, system, ch, nil).Query()
+	resolver := graph.NewResolver(db, "example.com", system, ch, nil).Query()
 
 	t.Run("No filter or sort", func(t *testing.T) {
 		teams, err := resolver.Teams(ctx, nil, nil, nil)
@@ -88,7 +88,7 @@ func TestQueryResolver_Teams(t *testing.T) {
 }
 
 func TestQueryResolver_TeamsNoPermission(t *testing.T) {
-	resolver := graph.NewResolver(test.GetTestDB(), getSystem(), make(chan reconcilers.ReconcileTeamInput, 100), nil).Query()
+	resolver := graph.NewResolver(test.GetTestDB(), "example.com", getSystem(), make(chan reconcilers.ReconcileTeamInput, 100), nil).Query()
 	_, err := resolver.Teams(context.Background(), nil, nil, nil)
 	assert.EqualError(t, err, "unauthorized")
 }

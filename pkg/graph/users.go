@@ -6,9 +6,11 @@ package graph
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/authz"
+	"github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
@@ -98,6 +100,10 @@ func (r *userResolver) HasAPIKey(ctx context.Context, obj *dbmodels.User) (bool,
 	}
 
 	return true, nil
+}
+
+func (r *userResolver) IsServiceAccount(ctx context.Context, obj *dbmodels.User) (bool, error) {
+	return !strings.HasSuffix(console.DerefString(obj.Email), "@"+r.domain), nil
 }
 
 // User returns generated.UserResolver implementation.

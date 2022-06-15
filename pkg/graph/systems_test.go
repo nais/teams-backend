@@ -33,7 +33,7 @@ func TestQueryResolver_Systems(t *testing.T) {
 	ctx := context.Background()
 
 	logger := auditlogger.New(db)
-	resolver := graph.NewResolver(db, system, ch, logger).Query()
+	resolver := graph.NewResolver(db, "example.com", system, ch, logger).Query()
 
 	t.Run("No filter or sort", func(t *testing.T) {
 		systems, err := resolver.Systems(ctx, nil, nil, nil)

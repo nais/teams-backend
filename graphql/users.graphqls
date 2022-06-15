@@ -58,6 +58,9 @@ type User {
     "Whether or not the user has an API key."
     hasAPIKey: Boolean!
 
+    "Whether or not the user is a service account."
+    isServiceAccount: Boolean!
+
     "Creation time of the user."
     createdAt: Time
 }

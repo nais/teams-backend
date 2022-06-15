@@ -95,7 +95,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	handler := setupGraphAPI(db, systems[console_reconciler.Name], teamReconciler, logger)
+	handler := setupGraphAPI(db, cfg.PartnerDomain, systems[console_reconciler.Name], teamReconciler, logger)
 	srv, err := setupHTTPServer(cfg, db, handler, authHandler, store)
 	if err != nil {
 		return err
@@ -341,8 +341,8 @@ func setupDatabase(cfg *config.Config) (*gorm.DB, error) {
 	return db, nil
 }
 
-func setupGraphAPI(db *gorm.DB, console *dbmodels.System, teamReconciler chan<- reconcilers.ReconcileTeamInput, logger auditlogger.AuditLogger) *graphql_handler.Server {
-	resolver := graph.NewResolver(db, console, teamReconciler, logger)
+func setupGraphAPI(db *gorm.DB, domain string, console *dbmodels.System, teamReconciler chan<- reconcilers.ReconcileTeamInput, logger auditlogger.AuditLogger) *graphql_handler.Server {
+	resolver := graph.NewResolver(db, domain, console, teamReconciler, logger)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
 	gc.Directives.Auth = directives.Auth(db)
