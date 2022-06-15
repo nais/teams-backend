@@ -99,7 +99,7 @@ func (r *Resolver) deleteTrackedObject(ctx context.Context, objectToDelete SoftD
 }
 
 // Run a query to get data from the database. Populates `collection` and returns pagination metadata.
-func (r *Resolver) paginatedQuery(ctx context.Context, pagination *model.Pagination, query model.Query, sort model.QueryOrder, dbmodel interface{}, collection interface{}) (*model.PageInfo, error) {
+func (r *Resolver) paginatedQuery(pagination *model.Pagination, query model.Query, sort model.QueryOrder, dbmodel interface{}, collection interface{}) (*model.PageInfo, error) {
 	if pagination == nil {
 		pagination = &model.Pagination{
 			Offset: 0,

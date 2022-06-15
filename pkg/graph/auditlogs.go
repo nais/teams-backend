@@ -74,7 +74,7 @@ func (r *queryResolver) AuditLogs(ctx context.Context, pagination *model.Paginat
 			Direction: model.SortDirectionDesc,
 		}
 	}
-	pageInfo, err := r.paginatedQuery(ctx, pagination, query, sort, &dbmodels.AuditLog{}, &auditLogs)
+	pageInfo, err := r.paginatedQuery(pagination, query, sort, &dbmodels.AuditLog{}, &auditLogs)
 	return &model.AuditLogs{
 		PageInfo: pageInfo,
 		Nodes:    auditLogs,

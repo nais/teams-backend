@@ -237,7 +237,7 @@ func (r *queryResolver) Teams(ctx context.Context, pagination *model.Pagination,
 			Direction: model.SortDirectionAsc,
 		}
 	}
-	pageInfo, err := r.paginatedQuery(ctx, pagination, query, sort, &dbmodels.Team{}, &teams)
+	pageInfo, err := r.paginatedQuery(pagination, query, sort, &dbmodels.Team{}, &teams)
 	return &model.Teams{
 		PageInfo: pageInfo,
 		Nodes:    teams,

@@ -58,7 +58,7 @@ func (r *queryResolver) Roles(ctx context.Context, pagination *model.Pagination,
 			Direction: model.SortDirectionAsc,
 		}
 	}
-	pageInfo, err := r.paginatedQuery(ctx, pagination, query, sort, &dbmodels.Role{}, &roles)
+	pageInfo, err := r.paginatedQuery(pagination, query, sort, &dbmodels.Role{}, &roles)
 	return &model.Roles{
 		PageInfo: pageInfo,
 		Nodes:    roles,

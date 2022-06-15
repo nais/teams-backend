@@ -80,7 +80,7 @@ func (r *queryResolver) Users(ctx context.Context, pagination *model.Pagination,
 			Direction: model.SortDirectionAsc,
 		}
 	}
-	pageInfo, err := r.paginatedQuery(ctx, pagination, query, sort, &dbmodels.User{}, &users)
+	pageInfo, err := r.paginatedQuery(pagination, query, sort, &dbmodels.User{}, &users)
 
 	return &model.Users{
 		PageInfo: pageInfo,

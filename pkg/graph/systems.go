@@ -19,7 +19,7 @@ func (r *queryResolver) Systems(ctx context.Context, pagination *model.Paginatio
 			Direction: model.SortDirectionAsc,
 		}
 	}
-	pageInfo, err := r.paginatedQuery(ctx, pagination, query, sort, &dbmodels.System{}, &systems)
+	pageInfo, err := r.paginatedQuery(pagination, query, sort, &dbmodels.System{}, &systems)
 
 	return &model.Systems{
 		PageInfo: pageInfo,
