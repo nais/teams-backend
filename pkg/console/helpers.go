@@ -36,3 +36,18 @@ func DomainUsers(users []*dbmodels.User, domain string) []*dbmodels.User {
 
 	return domainUsers
 }
+
+// ServiceAccountEmail Generate a service account email address given the name of the service account
+func ServiceAccountEmail(name dbmodels.Slug, partnerDomain string) string {
+	return string(name) + serviceAccountSuffix(partnerDomain)
+}
+
+// IsServiceAccount Check if a user is a service account or not
+func IsServiceAccount(user dbmodels.User, partnerDomain string) bool {
+	return strings.HasSuffix(DerefString(user.Email), serviceAccountSuffix(partnerDomain))
+}
+
+func serviceAccountSuffix(partnerDomain string) string {
+	const serviceAccountSuffix = "serviceaccounts.nais.io"
+	return "@" + partnerDomain + "." + serviceAccountSuffix
+}

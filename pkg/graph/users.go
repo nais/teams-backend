@@ -6,7 +6,6 @@ package graph
 import (
 	"context"
 	"errors"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/authz"
@@ -17,25 +16,17 @@ import (
 	"gorm.io/gorm"
 )
 
-func (r *mutationResolver) CreateUser(ctx context.Context, input model.CreateUserInput) (*dbmodels.User, error) {
-	u := &dbmodels.User{
-		Email: input.Email,
-		Name:  input.Name,
+func (r *mutationResolver) CreateServiceAccount(ctx context.Context, input model.CreateServiceAccountInput) (*dbmodels.User, error) {
+	email := console.ServiceAccountEmail(*input.Name, r.domain)
+	sa := &dbmodels.User{
+		Name:  input.Name.String(),
+		Email: &email,
 	}
-	err := r.createTrackedObject(ctx, u)
-	return u, err
-}
-
-func (r *mutationResolver) UpdateUser(ctx context.Context, input model.UpdateUserInput) (*dbmodels.User, error) {
-	u := &dbmodels.User{
-		Model: dbmodels.Model{
-			ID: input.ID,
-		},
-		Email: input.Email,
-		Name:  *input.Name,
+	err := r.createTrackedObject(ctx, sa)
+	if err != nil {
+		return nil, err
 	}
-	err := r.updateDB(ctx, u)
-	return u, err
+	return sa, nil
 }
 
 func (r *queryResolver) Users(ctx context.Context, pagination *model.Pagination, query *model.UsersQuery, sort *model.UsersSort) (*model.Users, error) {
@@ -103,7 +94,7 @@ func (r *userResolver) HasAPIKey(ctx context.Context, obj *dbmodels.User) (bool,
 }
 
 func (r *userResolver) IsServiceAccount(ctx context.Context, obj *dbmodels.User) (bool, error) {
-	return !strings.HasSuffix(console.DerefString(obj.Email), "@"+r.domain), nil
+	return console.IsServiceAccount(*obj, r.domain), nil
 }
 
 // User returns generated.UserResolver implementation.

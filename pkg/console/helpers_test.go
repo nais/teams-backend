@@ -28,6 +28,24 @@ func TestDerefString(t *testing.T) {
 	assert.Equal(t, "", helpers.DerefString(nil))
 }
 
+func TestServiceAccountEmail(t *testing.T) {
+	assert.Equal(t, "foo@domain.serviceaccounts.nais.io", helpers.ServiceAccountEmail("foo", "domain"))
+}
+
+func TestIsServiceAccount(t *testing.T) {
+	domainUser := dbmodels.User{
+		Email: helpers.Strp("user@domain.serviceaccounts.nais.io"),
+	}
+	exampleComUser := dbmodels.User{
+		Email: helpers.Strp("user@example.com.serviceaccounts.nais.io"),
+	}
+
+	assert.True(t, helpers.IsServiceAccount(domainUser, "domain"))
+	assert.False(t, helpers.IsServiceAccount(exampleComUser, "domain"))
+	assert.False(t, helpers.IsServiceAccount(domainUser, "example.com"))
+	assert.True(t, helpers.IsServiceAccount(exampleComUser, "example.com"))
+}
+
 func TestDomainUsers(t *testing.T) {
 	t.Run("No users", func(t *testing.T) {
 		users := make([]*dbmodels.User, 0)

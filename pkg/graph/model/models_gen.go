@@ -71,6 +71,12 @@ type AuditLogsSort struct {
 	Direction SortDirection `json:"direction"`
 }
 
+// Input for creating a new service account.
+type CreateServiceAccountInput struct {
+	// The name of the new service account. An email address will be automatically generated using the provided name.
+	Name *dbmodels.Slug `json:"name"`
+}
+
 // Input for creating a new team.
 type CreateTeamInput struct {
 	// Team slug.
@@ -79,14 +85,6 @@ type CreateTeamInput struct {
 	Name string `json:"name"`
 	// Team purpose.
 	Purpose *string `json:"purpose"`
-}
-
-// Input for creating a new user.
-type CreateUserInput struct {
-	// The email address of the new user. Must not already exist, if set.
-	Email *string `json:"email"`
-	// The name of the new user.
-	Name string `json:"name"`
 }
 
 // Pagination metadata attached to queries resulting in a collection of data.
@@ -199,16 +197,6 @@ type TeamsSort struct {
 	Field TeamSortField `json:"field"`
 	// Sort direction.
 	Direction SortDirection `json:"direction"`
-}
-
-// Input for updating an existing user.
-type UpdateUserInput struct {
-	// The ID of the existing user.
-	ID *uuid.UUID `json:"id"`
-	// The updated email address of the user.
-	Email *string `json:"email"`
-	// The updated name of the user.
-	Name *string `json:"name"`
 }
 
 // User collection.

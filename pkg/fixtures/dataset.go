@@ -17,12 +17,11 @@ var (
 )
 
 const (
-	adminUserName  = "admin"
-	adminUserEmail = "admin@console"
-	defaultApiKey  = "secret"
+	adminUserName = "admin"
+	defaultApiKey = "secret"
 )
 
-func InsertInitialDataset(ctx context.Context, db *gorm.DB) error {
+func InsertInitialDataset(ctx context.Context, db *gorm.DB, partnerDomain string) error {
 	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// If there are any users in the database, skip creation
 		users := make([]*dbmodels.User, 0)
@@ -40,9 +39,11 @@ func InsertInitialDataset(ctx context.Context, db *gorm.DB) error {
 
 		log.Infof("Inserting initial root user into database...")
 
+		email := helpers.ServiceAccountEmail(adminUserName, partnerDomain)
+
 		rootUser := &dbmodels.User{
 			Name:  adminUserName,
-			Email: helpers.Strp(adminUserEmail),
+			Email: &email,
 		}
 
 		err = tx.Create(rootUser).Error

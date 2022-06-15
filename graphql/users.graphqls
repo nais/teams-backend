@@ -22,16 +22,10 @@ extend type Query {
 }
 
 extend type Mutation {
-    "Create and return a new user."
-    createUser(
-        "Input for creation of the new user."
-        input: CreateUserInput!
-    ): User! @auth
-
-    "Update an existing user, and return the updated user object."
-    updateUser(
-        "Input for updating the existing user."
-        input: UpdateUserInput!
+    "Create and return a new service account."
+    createServiceAccount(
+        "Input for creation of the new service account."
+        input: CreateServiceAccountInput!
     ): User! @auth
 }
 
@@ -92,25 +86,10 @@ input UsersSort {
     direction: SortDirection!
 }
 
-"Input for creating a new user."
-input CreateUserInput {
-    "The email address of the new user. Must not already exist, if set."
-    email: String
-
-    "The name of the new user."
-    name: String!
-}
-
-"Input for updating an existing user."
-input UpdateUserInput {
-    "The ID of the existing user."
-    id: UUID!
-
-    "The updated email address of the user."
-    email: String
-
-    "The updated name of the user."
-    name: String
+"Input for creating a new service account."
+input CreateServiceAccountInput {
+    "The name of the new service account. An email address will be automatically generated using the provided name."
+    name: Slug!
 }
 
 "Fields to sort the collection by."
