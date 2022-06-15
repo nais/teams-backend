@@ -44,15 +44,15 @@ type Model interface {
 	GetModel() *dbmodels.Model
 }
 
-func (r *Resolver) createTrackedObject(ctx context.Context, obj Model) error {
+func (r *Resolver) createTrackedObject(ctx context.Context, newObject Model) error {
 	user := authz.UserFromContext(ctx)
 	if user == nil {
 		return fmt.Errorf("context has no user")
 	}
-	model := obj.GetModel()
+	model := newObject.GetModel()
 	model.CreatedBy = user
 	model.UpdatedBy = user
-	return r.db.WithContext(ctx).Create(obj).Error
+	return r.db.WithContext(ctx).Create(newObject).Error
 }
 
 func (r *Resolver) createTrackedObjectIgnoringDuplicates(ctx context.Context, obj Model) error {
@@ -72,18 +72,15 @@ func (r *Resolver) createTrackedObjectIgnoringDuplicates(ctx context.Context, ob
 	return err
 }
 
-// Update an object in the database, attaching the current user in metadata.
-func (r *Resolver) updateDB(ctx context.Context, obj Model) error {
-	m := obj.GetModel()
-	m.UpdatedBy = authz.UserFromContext(ctx)
-	tx := r.db.WithContext(ctx).Updates(obj)
-	if tx.Error != nil {
-		return tx.Error
+func (r *Resolver) updateTrackedObject(ctx context.Context, updatedObject Model) error {
+	user := authz.UserFromContext(ctx)
+	if user == nil {
+		return fmt.Errorf("context has no user")
 	}
-	if tx.RowsAffected == 0 {
-		return fmt.Errorf("no such %T", obj)
-	}
-	return tx.Find(obj).Error
+
+	model := updatedObject.GetModel()
+	model.UpdatedBy = user
+	return r.db.WithContext(ctx).Updates(updatedObject).Error
 }
 
 // Run a query to get data from the database. Populates `collection` and returns pagination metadata.

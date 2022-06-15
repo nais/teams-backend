@@ -6,11 +6,13 @@ package graph
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/dbmodels"
+	"github.com/nais/console/pkg/fixtures"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
 	"gorm.io/gorm"
@@ -26,6 +28,49 @@ func (r *mutationResolver) CreateServiceAccount(ctx context.Context, input model
 		return nil, err
 	}
 	return sa, nil
+}
+
+func (r *mutationResolver) UpdateServiceAccount(ctx context.Context, serviceAccountID *uuid.UUID, input model.UpdateServiceAccountInput) (*dbmodels.User, error) {
+	db := r.db.WithContext(ctx)
+	serviceAccount := &dbmodels.User{}
+	err := db.Where("id = ?", serviceAccountID).First(serviceAccount).Error
+	if err != nil {
+		return nil, err
+	}
+
+	if serviceAccount.Name == fixtures.AdminUserName {
+		return nil, fmt.Errorf("unable to update admin account")
+	}
+
+	serviceAccount.Name = string(*input.Name)
+	serviceAccount.Email = console.ServiceAccountEmail(*input.Name, r.partnerDomain)
+
+	err = r.updateTrackedObject(ctx, serviceAccount)
+	if err != nil {
+		return nil, err
+	}
+
+	return serviceAccount, nil
+}
+
+func (r *mutationResolver) DeleteServiceAccount(ctx context.Context, serviceAccountID *uuid.UUID) (bool, error) {
+	db := r.db.WithContext(ctx)
+	serviceAccount := &dbmodels.User{}
+	err := db.Where("id = ?", serviceAccountID).First(serviceAccount).Error
+	if err != nil {
+		return false, err
+	}
+
+	if serviceAccount.Name == fixtures.AdminUserName {
+		return false, fmt.Errorf("unable to delete admin account")
+	}
+
+	err = db.Delete(serviceAccount).Error
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 func (r *queryResolver) Users(ctx context.Context, pagination *model.Pagination, query *model.UsersQuery, sort *model.UsersSort) (*model.Users, error) {
