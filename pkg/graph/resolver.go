@@ -99,28 +99,28 @@ func (r *Resolver) deleteTrackedObject(ctx context.Context, objectToDelete SoftD
 }
 
 // Run a query to get data from the database. Populates `collection` and returns pagination metadata.
-func (r *Resolver) paginatedQuery(pagination *model.Pagination, query model.Query, sort model.QueryOrder, dbmodel interface{}, collection interface{}) (*model.PageInfo, error) {
+func (r *Resolver) paginatedQuery(pagination *model.Pagination, query model.Query, sort model.QueryOrder, dbModel interface{}, collection interface{}) (*model.PageInfo, error) {
 	if pagination == nil {
 		pagination = &model.Pagination{
 			Offset: 0,
 			Limit:  50,
 		}
 	}
-	tx := r.db.Model(dbmodel).Where(query.GetQuery()).Order(sort.GetOrderString())
-	pageInfo, tx := r.withPagination(pagination, tx)
-	return pageInfo, tx.Find(collection).Error
+	db := r.db.Model(dbModel).Where(query.GetQuery()).Order(sort.GetOrderString())
+	pageInfo, db := r.withPagination(pagination, db)
+	return pageInfo, db.Find(collection).Error
 }
 
 // Limit a query by its pagination parameters, count number of rows in dataset, and return pagination metadata.
-func (r *Resolver) withPagination(pagination *model.Pagination, tx *gorm.DB) (*model.PageInfo, *gorm.DB) {
+func (r *Resolver) withPagination(pagination *model.Pagination, db *gorm.DB) (*model.PageInfo, *gorm.DB) {
 	var count int64
-	tx = tx.Count(&count).Limit(pagination.Limit).Offset(pagination.Offset)
+	db = db.Count(&count).Limit(pagination.Limit).Offset(pagination.Offset)
 
 	return &model.PageInfo{
 		Results: int(count),
 		Offset:  pagination.Offset,
 		Limit:   pagination.Limit,
-	}, tx
+	}, db
 }
 
 func (r *mutationResolver) teamWithAssociations(teamID uuid.UUID) (*dbmodels.Team, error) {
