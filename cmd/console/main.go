@@ -85,9 +85,6 @@ func run() error {
 		return err
 	}
 
-	for system, rec := range recs {
-		log.Infof("Reconciler initialized: '%s' -> %T", system.Name, rec)
-	}
 	log.Infof("Initialized %d reconcilers.", len(recs))
 
 	store := authn.NewStore()
@@ -207,7 +204,7 @@ func run() error {
 	return nil
 }
 
-func reconcileTeams(ctx context.Context, db *gorm.DB, recs map[*dbmodels.System]reconcilers.Reconciler, reconcileInputs *map[uuid.UUID]reconcilers.ReconcileTeamInput) error {
+func reconcileTeams(ctx context.Context, db *gorm.DB, recs []reconcilers.Reconciler, reconcileInputs *map[uuid.UUID]reconcilers.ReconcileTeamInput) error {
 	const reconcileTimeout = 15 * time.Minute
 	errors := 0
 
@@ -290,19 +287,25 @@ func setupLogging(format, level string) error {
 	return nil
 }
 
-func initReconcilers(db *gorm.DB, cfg *config.Config, logger auditlogger.AuditLogger, systems map[string]*dbmodels.System) (map[*dbmodels.System]reconcilers.Reconciler, error) {
-	recs := make(map[*dbmodels.System]reconcilers.Reconciler)
-
+func initReconcilers(db *gorm.DB, cfg *config.Config, logger auditlogger.AuditLogger, systems map[string]*dbmodels.System) ([]reconcilers.Reconciler, error) {
+	recs := make([]reconcilers.Reconciler, 0)
 	factories := registry.Reconcilers()
-	for key, factory := range factories {
-		rec, err := factory(db, cfg, *systems[key], logger)
+
+	for name, factory := range factories {
+		system, exists := systems[name]
+		if !exists {
+			return nil, fmt.Errorf("BUG: missing system for reconciler %s", name)
+		}
+
+		rec, err := factory(db, cfg, *system, logger)
 		switch err {
 		case reconcilers.ErrReconcilerNotEnabled:
-			log.Warnf("Reconciler '%s' is disabled through configuration", key)
+			log.Warnf("Reconciler '%s' is disabled through configuration", name)
 		default:
-			return nil, fmt.Errorf("reconciler '%s': %w", key, err)
+			return nil, fmt.Errorf("reconciler '%s': %w", name, err)
 		case nil:
-			recs[systems[key]] = rec
+			recs = append(recs, rec)
+			log.Infof("Reconciler initialized: '%s' -> %T", system.Name, rec)
 		}
 	}
 
