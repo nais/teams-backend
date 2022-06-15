@@ -44,6 +44,10 @@ type Model interface {
 	GetModel() *dbmodels.Model
 }
 
+type SoftDeleteModel interface {
+	GetSoftDeleteModel() *dbmodels.SoftDelete
+}
+
 func (r *Resolver) createTrackedObject(ctx context.Context, newObject Model) error {
 	user := authz.UserFromContext(ctx)
 	if user == nil {
@@ -81,6 +85,17 @@ func (r *Resolver) updateTrackedObject(ctx context.Context, updatedObject Model)
 	model := updatedObject.GetModel()
 	model.UpdatedBy = user
 	return r.db.WithContext(ctx).Updates(updatedObject).Error
+}
+
+// Update the deleted_by_id column before "deleting" the object.
+// When using UpdateColumn the update time tracking is not updated.
+func (r *Resolver) deleteTrackedObject(ctx context.Context, objectToDelete SoftDeleteModel) error {
+	user := authz.UserFromContext(ctx)
+	if user == nil {
+		return fmt.Errorf("context has no user")
+	}
+
+	return r.db.WithContext(ctx).Model(objectToDelete).UpdateColumn("deleted_by_id", user.ID).Delete(objectToDelete).Error
 }
 
 // Run a query to get data from the database. Populates `collection` and returns pagination metadata.

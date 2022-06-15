@@ -19,8 +19,8 @@ type Model struct {
 	UpdatedAt   time.Time  `gorm:"autoUpdateTime; not null"`
 }
 
-// SoftDeletes Add fields to support Gorm soft deletes
-type SoftDeletes struct {
+// SoftDelete Add fields to support Gorm soft deletes
+type SoftDelete struct {
 	DeletedBy   *User          `gorm:""`
 	DeletedByID *uuid.UUID     `gorm:"type:uuid"`
 	DeletedAt   gorm.DeletedAt `gorm:"index"`
@@ -28,7 +28,7 @@ type SoftDeletes struct {
 
 type ApiKey struct {
 	Model
-	SoftDeletes
+	SoftDelete
 	APIKey string    `gorm:"unique; not null"`
 	User   User      `gorm:""`
 	UserID uuid.UUID `gorm:"type:uuid; not null"`
@@ -36,7 +36,7 @@ type ApiKey struct {
 
 type AuditLog struct {
 	Model
-	SoftDeletes
+	SoftDelete
 	Actor          *User       `gorm:""` // The user or service account that performed the action
 	Correlation    Correlation `gorm:""`
 	TargetSystem   System      `gorm:""`
@@ -53,7 +53,7 @@ type AuditLog struct {
 
 type Correlation struct {
 	Model
-	SoftDeletes
+	SoftDelete
 }
 
 type RoleBinding struct {
@@ -68,7 +68,7 @@ type RoleBinding struct {
 
 type Role struct {
 	Model
-	SoftDeletes
+	SoftDelete
 	System       System         `gorm:"not null"`
 	SystemID     uuid.UUID      `gorm:"type:uuid; not null; index"`
 	Name         string         `gorm:"uniqueIndex; not null"`
@@ -92,7 +92,7 @@ type SystemState struct {
 
 type System struct {
 	Model
-	SoftDeletes
+	SoftDelete
 	Name string `gorm:"uniqueIndex; not null"`
 }
 
@@ -114,7 +114,7 @@ type TeamMetadata struct {
 
 type Team struct {
 	Model
-	SoftDeletes
+	SoftDelete
 	Slug        Slug            `gorm:"<-:create; unique; not null"`
 	Name        string          `gorm:"unique; not null"`
 	Purpose     *string         `gorm:""`
@@ -127,7 +127,7 @@ type Team struct {
 
 type User struct {
 	Model
-	SoftDeletes
+	SoftDelete
 	Email        string         `gorm:"not null; unique"`
 	Name         string         `gorm:"not null"`
 	Teams        []*Team        `gorm:"many2many:users_teams"`
@@ -146,6 +146,11 @@ type UsersTeams struct {
 // This means that setting common metadata like 'created by' or 'updated by' can be abstracted.
 func (m *Model) GetModel() *Model {
 	return m
+}
+
+// GetSoftDeleteModel Enable callers to access the soft delete part of the model through an interface.
+func (s *SoftDelete) GetSoftDeleteModel() *SoftDelete {
+	return s
 }
 
 // Error Get the err message from the audit log

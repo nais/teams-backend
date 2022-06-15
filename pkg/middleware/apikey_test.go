@@ -13,7 +13,7 @@ func setupFixtures(db *gorm.DB) error {
 	return db.Transaction(func(tx *gorm.DB) error {
 		tx.Create(&dbmodels.User{
 			Model:        dbmodels.Model{},
-			SoftDeletes:  dbmodels.SoftDeletes{},
+			SoftDelete:   dbmodels.SoftDelete{},
 			Email:        "user@example.com",
 			Name:         "User Name",
 			Teams:        nil,
