@@ -170,7 +170,7 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 	}
 
 	for _, entry := range auditLogEntries {
-		s.auditLogger.Log(entry.action, *corr, s.system, nil, nil, &entry.user, entry.message)
+		s.auditLogger.Logf(entry.action, *corr, s.system, nil, nil, &entry.user, entry.message)
 	}
 
 	return nil

@@ -76,7 +76,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 	if err != nil {
 		log.Warnf("unable to create correlation for audit log")
 	} else {
-		r.auditLogger.Log(console_reconciler.OpCreateTeam, *corr, *r.system, user, team, nil, "Team created")
+		r.auditLogger.Logf(console_reconciler.OpCreateTeam, *corr, *r.system, user, team, nil, "Team created")
 	}
 
 	team, err = r.teamWithAssociations(*team.ID)
@@ -211,7 +211,7 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 		return false, fmt.Errorf("unable to create correlation for audit log")
 	}
 
-	r.auditLogger.Log(console_reconciler.OpSyncTeam, *corr, *r.system, authz.UserFromContext(ctx), team, nil, "Manual sync requested")
+	r.auditLogger.Logf(console_reconciler.OpSyncTeam, *corr, *r.system, authz.UserFromContext(ctx), team, nil, "Manual sync requested")
 
 	team, err = r.teamWithAssociations(*team.ID)
 	if err != nil {

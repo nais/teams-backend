@@ -77,7 +77,7 @@ func (s *azureReconciler) Reconcile(ctx context.Context, input reconcilers.Input
 	}
 
 	if created {
-		s.auditLogger.Log(OpCreate, input.Corr, s.system, nil, &input.Team, nil, "created Azure AD group: %s", grp)
+		s.auditLogger.Logf(OpCreate, input.Corr, s.system, nil, &input.Team, nil, "created Azure AD group: %s", grp)
 	}
 
 	err = s.connectUsers(ctx, grp, input.Corr, input.Team)
@@ -106,7 +106,7 @@ func (s *azureReconciler) connectUsers(ctx context.Context, grp *azureclient.Gro
 		}
 
 		// FIXME: connect audit log with database user
-		s.auditLogger.Log(OpDeleteMember, corr, s.system, nil, &team, nil, "deleted member '%s' from Azure group '%s'", member.Mail, grp.MailNickname)
+		s.auditLogger.Logf(OpDeleteMember, corr, s.system, nil, &team, nil, "deleted member '%s' from Azure group '%s'", member.Mail, grp.MailNickname)
 	}
 
 	for _, user := range createUsers {
@@ -121,7 +121,7 @@ func (s *azureReconciler) connectUsers(ctx context.Context, grp *azureclient.Gro
 		}
 
 		// FIXME: connect audit log with database user
-		s.auditLogger.Log(OpAddMember, corr, s.system, nil, &team, nil, "added member '%s' to Azure group '%s'", member.Mail, grp.MailNickname)
+		s.auditLogger.Logf(OpAddMember, corr, s.system, nil, &team, nil, "added member '%s' to Azure group '%s'", member.Mail, grp.MailNickname)
 	}
 
 	return nil

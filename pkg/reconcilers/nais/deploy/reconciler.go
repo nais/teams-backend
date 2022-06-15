@@ -95,7 +95,7 @@ func (s *naisDeployReconciler) Reconcile(ctx context.Context, input reconcilers.
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusCreated {
-		s.auditLogger.Log(OpProvisionApiKey, input.Corr, s.system, nil, &input.Team, nil, "provisioned NAIS deploy API key to team '%s'", input.Team.Slug)
+		s.auditLogger.Logf(OpProvisionApiKey, input.Corr, s.system, nil, &input.Team, nil, "provisioned NAIS deploy API key to team '%s'", input.Team.Slug)
 		return nil
 	}
 
