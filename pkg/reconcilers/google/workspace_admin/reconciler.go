@@ -141,11 +141,8 @@ func (s *gcpReconciler) connectUsers(membersService *admin_directory_v1.MembersS
 	}
 
 	for _, user := range createMembers {
-		if user.Email == nil {
-			continue
-		}
 		member := &admin_directory_v1.Member{
-			Email: *user.Email,
+			Email: user.Email,
 		}
 		_, err = membersService.Insert(grp.Id, member).Do()
 		if err != nil {
@@ -187,10 +184,7 @@ func (s *gcpReconciler) addToGKESecurityGroup(membersService *admin_directory_v1
 func missingUsers(members []*admin_directory_v1.Member, users []*dbmodels.User) []*dbmodels.User {
 	userMap := make(map[string]*dbmodels.User)
 	for _, user := range users {
-		if user.Email == nil {
-			continue
-		}
-		userMap[*user.Email] = user
+		userMap[user.Email] = user
 	}
 	for _, member := range members {
 		delete(userMap, member.Email)
@@ -210,10 +204,7 @@ func extraMembers(members []*admin_directory_v1.Member, users []*dbmodels.User) 
 		memberMap[member.Email] = member
 	}
 	for _, user := range users {
-		if user.Email == nil {
-			continue
-		}
-		delete(memberMap, *user.Email)
+		delete(memberMap, user.Email)
 	}
 	members = make([]*admin_directory_v1.Member, 0, len(memberMap))
 	for _, member := range memberMap {

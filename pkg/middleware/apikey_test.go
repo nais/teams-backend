@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/test"
 	"testing"
 
@@ -15,7 +14,7 @@ func setupFixtures(db *gorm.DB) error {
 		tx.Create(&dbmodels.User{
 			Model:        dbmodels.Model{},
 			SoftDeletes:  dbmodels.SoftDeletes{},
-			Email:        helpers.Strp("user@example.com"),
+			Email:        "user@example.com",
 			Name:         "User Name",
 			Teams:        nil,
 			RoleBindings: nil,

@@ -110,12 +110,9 @@ func (s *azureReconciler) connectUsers(ctx context.Context, grp *azureclient.Gro
 	}
 
 	for _, user := range createUsers {
-		if user.Email == nil {
-			continue
-		}
-		member, err := s.client.GetUser(ctx, *user.Email)
+		member, err := s.client.GetUser(ctx, user.Email)
 		if err != nil {
-			log.Warnf("%s: Unable to lookup user with email '%s' in Azure", OpAddMember, *user.Email)
+			log.Warnf("%s: Unable to lookup user with email '%s' in Azure", OpAddMember, user.Email)
 			continue
 		}
 		err = s.client.AddMemberToGroup(ctx, grp, member)
@@ -135,10 +132,7 @@ func (s *azureReconciler) connectUsers(ctx context.Context, grp *azureclient.Gro
 func missingUsers(members []*azureclient.Member, users []*dbmodels.User) []*dbmodels.User {
 	userMap := make(map[string]*dbmodels.User)
 	for _, user := range users {
-		if user.Email == nil {
-			continue
-		}
-		userMap[*user.Email] = user
+		userMap[user.Email] = user
 	}
 	for _, member := range members {
 		delete(userMap, strings.ToLower(member.Mail))
@@ -158,10 +152,7 @@ func extraMembers(members []*azureclient.Member, users []*dbmodels.User) []*azur
 		memberMap[strings.ToLower(member.Mail)] = member
 	}
 	for _, user := range users {
-		if user.Email == nil {
-			continue
-		}
-		delete(memberMap, *user.Email)
+		delete(memberMap, user.Email)
 	}
 	members = make([]*azureclient.Member, 0, len(memberMap))
 	for _, member := range memberMap {

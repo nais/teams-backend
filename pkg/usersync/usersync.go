@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
-	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/google_jwt"
 	"github.com/nais/console/pkg/roles"
@@ -109,7 +108,7 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 			err = tx.Where("email = ?", remoteUser.PrimaryEmail).First(localUser).Error
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				localUser = &dbmodels.User{
-					Email: helpers.Strp(remoteUser.PrimaryEmail),
+					Email: remoteUser.PrimaryEmail,
 					Name:  remoteUser.Name.FullName,
 				}
 
@@ -156,7 +155,7 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 
 			err = tx.Delete(localUser).Error
 			if err != nil {
-				return fmt.Errorf("%s: delete local user %s: %w", OpDelete, *localUser.Email, err)
+				return fmt.Errorf("%s: delete local user %s: %w", OpDelete, localUser.Email, err)
 			}
 
 			auditLogEntries = append(auditLogEntries, &auditLogEntry{

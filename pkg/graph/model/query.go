@@ -37,8 +37,10 @@ func (in *UsersQuery) GetQuery() interface{} {
 		return &dbmodels.User{}
 	}
 
-	user := &dbmodels.User{
-		Email: in.Email,
+	user := &dbmodels.User{}
+
+	if in.Email != nil {
+		user.Email = *in.Email
 	}
 
 	if in.Name != nil {

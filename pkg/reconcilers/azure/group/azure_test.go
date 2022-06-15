@@ -51,10 +51,10 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		Mail: "removeMember@example.com",
 	}
 	addUser := &dbmodels.User{
-		Email: helpers.Strp("add@example.com"),
+		Email: "add@example.com",
 	}
 	keepUser := &dbmodels.User{
-		Email: &keepMember.Mail,
+		Email: keepMember.Mail,
 	}
 	syncID, _ := uuid.NewUUID()
 	corr := dbmodels.Correlation{
@@ -78,7 +78,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		mockClient.On("ListGroupMembers", mock.Anything, group).
 			Return([]*azureclient.Member{keepMember, removeMember}, nil).Once()
 		mockClient.On("RemoveMemberFromGroup", mock.Anything, group, removeMember).Return(nil).Once()
-		mockClient.On("GetUser", mock.Anything, *addUser.Email).Return(addMember, nil).Once()
+		mockClient.On("GetUser", mock.Anything, addUser.Email).Return(addMember, nil).Once()
 		mockClient.On("AddMemberToGroup", mock.Anything, group, addMember).Return(nil).Once()
 
 		err := reconciler.Reconcile(ctx, reconcilers.Input{
@@ -181,7 +181,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		mockClient.On("ListGroupMembers", mock.Anything, group).
 			Return([]*azureclient.Member{keepMember, removeMember}, nil).Once()
 		mockClient.On("RemoveMemberFromGroup", mock.Anything, group, removeMember).Return(nil).Once()
-		mockClient.On("GetUser", mock.Anything, *addUser.Email).Return(nil, fmt.Errorf("GetUser failed")).Once()
+		mockClient.On("GetUser", mock.Anything, addUser.Email).Return(nil, fmt.Errorf("GetUser failed")).Once()
 
 		err := reconciler.Reconcile(ctx, reconcilers.Input{
 			Corr: corr,
@@ -209,7 +209,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		mockClient.On("ListGroupMembers", mock.Anything, group).
 			Return([]*azureclient.Member{keepMember, removeMember}, nil).Once()
 		mockClient.On("RemoveMemberFromGroup", mock.Anything, group, removeMember).Return(nil).Once()
-		mockClient.On("GetUser", mock.Anything, *addUser.Email).Return(addMember, nil).Once()
+		mockClient.On("GetUser", mock.Anything, addUser.Email).Return(addMember, nil).Once()
 		mockClient.On("AddMemberToGroup", mock.Anything, group, addMember).
 			Return(fmt.Errorf("AddMemberToGroup failed")).Once()
 

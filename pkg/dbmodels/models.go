@@ -128,7 +128,7 @@ type Team struct {
 type User struct {
 	Model
 	SoftDeletes
-	Email        *string        `gorm:"unique"`
+	Email        string         `gorm:"not null; unique"`
 	Name         string         `gorm:"not null"`
 	Teams        []*Team        `gorm:"many2many:users_teams"`
 	RoleBindings []*RoleBinding `gorm:"foreignKey:UserID"`
@@ -162,10 +162,7 @@ func (a *AuditLog) Log() *log.Entry {
 	var targetUserName string
 
 	if a.Actor != nil {
-		if a.Actor.Email != nil {
-			actorEmail = *a.Actor.Email
-		}
-
+		actorEmail = a.Actor.Email
 		actorName = a.Actor.Name
 	}
 

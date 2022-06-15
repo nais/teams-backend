@@ -61,10 +61,10 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		Purpose: helpers.Strp(description),
 		Users: []*dbmodels.User{
 			{
-				Email: helpers.Strp(createEmail),
+				Email: createEmail,
 			},
 			{
-				Email: helpers.Strp(keepEmail),
+				Email: keepEmail,
 			},
 		},
 	}

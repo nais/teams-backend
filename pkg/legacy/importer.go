@@ -50,7 +50,7 @@ func (gimp *GroupImporter) GroupMembers(groupID string) ([]*dbmodels.User, error
 	users := make([]*dbmodels.User, 0, len(members))
 	for _, member := range members {
 		users = append(users, &dbmodels.User{
-			Email: &member.Mail,
+			Email: member.Mail,
 			Name:  member.Mail,
 		})
 	}
@@ -68,7 +68,7 @@ func (gimp *GroupImporter) GroupOwners(groupID string) ([]*dbmodels.User, error)
 	users := make([]*dbmodels.User, 0, len(members))
 	for _, member := range members {
 		users = append(users, &dbmodels.User{
-			Email: &member.UserPrincipalName,
+			Email: member.UserPrincipalName,
 			Name:  member.UserPrincipalName,
 		})
 	}

@@ -29,7 +29,7 @@ func DomainUsers(users []*dbmodels.User, domain string) []*dbmodels.User {
 	suffix := "@" + domain
 
 	for _, user := range users {
-		if user.Email != nil && strings.HasSuffix(*user.Email, suffix) {
+		if strings.HasSuffix(user.Email, suffix) {
 			domainUsers = append(domainUsers, user)
 		}
 	}
@@ -44,7 +44,7 @@ func ServiceAccountEmail(name dbmodels.Slug, partnerDomain string) string {
 
 // IsServiceAccount Check if a user is a service account or not
 func IsServiceAccount(user dbmodels.User, partnerDomain string) bool {
-	return strings.HasSuffix(DerefString(user.Email), serviceAccountSuffix(partnerDomain))
+	return strings.HasSuffix(user.Email, serviceAccountSuffix(partnerDomain))
 }
 
 func serviceAccountSuffix(partnerDomain string) string {

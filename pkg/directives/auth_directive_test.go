@@ -17,10 +17,12 @@ func TestAuth(t *testing.T) {
 	db.AutoMigrate(&dbmodels.User{}, &dbmodels.RoleBinding{})
 
 	userWithNoRoleBindings := &dbmodels.User{
-		Name: "user1",
+		Name:  "user1",
+		Email: "user1@example.com",
 	}
 	userWithRoleBindings := &dbmodels.User{
-		Name: "user2",
+		Name:  "user2",
+		Email: "user2@example.com",
 		RoleBindings: []*dbmodels.RoleBinding{
 			{
 				Role: dbmodels.Role{
@@ -33,7 +35,8 @@ func TestAuth(t *testing.T) {
 		},
 	}
 	userWithOtherRoleBindings := &dbmodels.User{
-		Name: "user3",
+		Name:  "user3",
+		Email: "user3@example.com",
 		RoleBindings: []*dbmodels.RoleBinding{
 			{
 				Role: dbmodels.Role{

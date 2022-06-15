@@ -226,9 +226,9 @@ func (s *gitHubReconciler) mapSSOUsers(ctx context.Context, users []*dbmodels.Us
 	localUsers := helpers.DomainUsers(users, s.domain)
 
 	for _, user := range localUsers {
-		githubUsername, err := s.lookupSSOUser(ctx, *user.Email)
+		githubUsername, err := s.lookupSSOUser(ctx, user.Email)
 		if err == errGitHubUserNotFound {
-			log.Warnf("%s: No GitHub user for email: %s", OpMapSSOUser, *user.Email)
+			log.Warnf("%s: No GitHub user for email: %s", OpMapSSOUser, user.Email)
 			continue
 		}
 		if err != nil {

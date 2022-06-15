@@ -35,7 +35,7 @@ type User {
     id: UUID!
 
     "The email address of the user."
-    email: String
+    email: String!
 
     "The name of the user."
     name: String!

@@ -17,10 +17,9 @@ import (
 )
 
 func (r *mutationResolver) CreateServiceAccount(ctx context.Context, input model.CreateServiceAccountInput) (*dbmodels.User, error) {
-	email := console.ServiceAccountEmail(*input.Name, r.partnerDomain)
 	sa := &dbmodels.User{
 		Name:  input.Name.String(),
-		Email: &email,
+		Email: console.ServiceAccountEmail(*input.Name, r.partnerDomain),
 	}
 	err := r.createTrackedObject(ctx, sa)
 	if err != nil {

@@ -39,11 +39,9 @@ func InsertInitialDataset(ctx context.Context, db *gorm.DB, partnerDomain string
 
 		log.Infof("Inserting initial root user into database...")
 
-		email := helpers.ServiceAccountEmail(adminUserName, partnerDomain)
-
 		rootUser := &dbmodels.User{
 			Name:  adminUserName,
-			Email: &email,
+			Email: helpers.ServiceAccountEmail(adminUserName, partnerDomain),
 		}
 
 		err = tx.Create(rootUser).Error

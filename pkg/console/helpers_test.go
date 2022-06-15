@@ -34,10 +34,10 @@ func TestServiceAccountEmail(t *testing.T) {
 
 func TestIsServiceAccount(t *testing.T) {
 	domainUser := dbmodels.User{
-		Email: helpers.Strp("user@domain.serviceaccounts.nais.io"),
+		Email: "user@domain.serviceaccounts.nais.io",
 	}
 	exampleComUser := dbmodels.User{
-		Email: helpers.Strp("user@example.com.serviceaccounts.nais.io"),
+		Email: "user@example.com.serviceaccounts.nais.io",
 	}
 
 	assert.True(t, helpers.IsServiceAccount(domainUser, "domain"))
@@ -56,42 +56,42 @@ func TestDomainUsers(t *testing.T) {
 	t.Run("No users removed", func(t *testing.T) {
 		users := []*dbmodels.User{
 			{
-				Email: helpers.Strp("user1@example.com"),
+				Email: "user1@example.com",
 			},
 			{
-				Email: helpers.Strp("user2@example.com"),
+				Email: "user2@example.com",
 			},
 			{
-				Email: helpers.Strp("user3@example.com"),
+				Email: "user3@example.com",
 			},
 		}
 		domainUsers := helpers.DomainUsers(users, "example.com")
 		assert.Len(t, domainUsers, 3)
-		assert.Equal(t, "user1@example.com", *domainUsers[0].Email)
-		assert.Equal(t, "user2@example.com", *domainUsers[1].Email)
-		assert.Equal(t, "user3@example.com", *domainUsers[2].Email)
+		assert.Equal(t, "user1@example.com", domainUsers[0].Email)
+		assert.Equal(t, "user2@example.com", domainUsers[1].Email)
+		assert.Equal(t, "user3@example.com", domainUsers[2].Email)
 	})
 
 	t.Run("Users removed", func(t *testing.T) {
 		users := []*dbmodels.User{
 			{
-				Email: helpers.Strp("user1@example.com"),
+				Email: "user1@example.com",
 			},
 			{
-				Email: helpers.Strp("user2@foo.bar"),
+				Email: "user2@foo.bar",
 			},
 			{
-				Email: helpers.Strp("user3@example.com"),
+				Email: "user3@example.com",
 			},
 		}
 		domainUsers := helpers.DomainUsers(users, "example.com")
 		assert.Len(t, domainUsers, 2)
-		assert.Equal(t, "user1@example.com", *domainUsers[0].Email)
-		assert.Equal(t, "user3@example.com", *domainUsers[1].Email)
+		assert.Equal(t, "user1@example.com", domainUsers[0].Email)
+		assert.Equal(t, "user3@example.com", domainUsers[1].Email)
 
 		domainUsers = helpers.DomainUsers(users, "foo.bar")
 		assert.Len(t, domainUsers, 1)
-		assert.Equal(t, "user2@foo.bar", *domainUsers[0].Email)
+		assert.Equal(t, "user2@foo.bar", domainUsers[0].Email)
 	})
 
 	t.Run("User with missing email", func(t *testing.T) {
@@ -100,11 +100,11 @@ func TestDomainUsers(t *testing.T) {
 				Name: "some name",
 			},
 			{
-				Email: helpers.Strp("user1@example.com"),
+				Email: "user1@example.com",
 			},
 		}
 		domainUsers := helpers.DomainUsers(users, "example.com")
 		assert.Len(t, domainUsers, 1)
-		assert.Equal(t, "user1@example.com", *domainUsers[0].Email)
+		assert.Equal(t, "user1@example.com", domainUsers[0].Email)
 	})
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/authz"
-	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -15,7 +14,7 @@ func TestContextWithUser(t *testing.T) {
 	assert.Nil(t, authz.UserFromContext(ctx))
 
 	user := &dbmodels.User{
-		Email: helpers.Strp("mail@example.com"),
+		Email: "mail@example.com",
 		Name:  "User Name",
 	}
 
@@ -30,12 +29,12 @@ func TestContextWithRoleBindings(t *testing.T) {
 	roleBindings := []*dbmodels.RoleBinding{
 		{
 			User: dbmodels.User{
-				Email: helpers.Strp("mail1@example.com"),
+				Email: "mail1@example.com",
 			},
 		},
 		{
 			User: dbmodels.User{
-				Email: helpers.Strp("mail2@example.com"),
+				Email: "mail2@example.com",
 			},
 		},
 	}
