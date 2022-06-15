@@ -31,8 +31,8 @@ func Oauth2Authentication(db *gorm.DB, store authn.SessionStore) func(next http.
 			}
 
 			user := &dbmodels.User{}
-			tx := db.First(user, "email = ?", session.Email)
-			if tx.Error != nil {
+			err = db.First(user, "email = ?", session.Email).Error
+			if err != nil {
 				next.ServeHTTP(w, r)
 				return
 			}

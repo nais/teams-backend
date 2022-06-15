@@ -190,6 +190,5 @@ func saveProjectState(db *gorm.DB, teamID *uuid.UUID, environment, projectID str
 		Key:    dbmodels.SystemStateGoogleProjectID + ":" + environment,
 		Value:  projectID,
 	}
-	tx := db.Save(meta)
-	return tx.Error
+	return db.Save(meta).Error
 }

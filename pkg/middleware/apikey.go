@@ -22,8 +22,8 @@ func ApiKeyAuthentication(db *gorm.DB) func(next http.Handler) http.Handler {
 				APIKey: authHeader[7:],
 			}
 
-			tx := db.Preload("User").First(key, "api_key = ?", key.APIKey)
-			if tx.Error != nil {
+			err := db.Preload("User").First(key, "api_key = ?", key.APIKey).Error
+			if err != nil {
 				next.ServeHTTP(w, r)
 				return
 			}

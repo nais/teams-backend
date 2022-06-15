@@ -45,9 +45,6 @@ func TestImportTeamsFromLegacyAzure(t *testing.T) {
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		for _, yamlteam := range teams {
-			if tx.Error != nil {
-				return tx.Error
-			}
 			team := yamlteam.Convert()
 
 			log.Debugf("Fetch team info for %s...", *team.Name)
@@ -62,13 +59,19 @@ func TestImportTeamsFromLegacyAzure(t *testing.T) {
 					log.Warnf("Skip member %s", *member.Email)
 					continue
 				}
-				tx.FirstOrCreate(member, "email = ?", *member.Email)
+				err := tx.FirstOrCreate(member, "email = ?", *member.Email).Error
+				if err != nil {
+					return err
+				}
 				log.Debugf("Created user %s", *member.Email)
 				validMembers = append(validMembers, member)
 			}
 
 			team.Users = validMembers
-			tx.Save(team)
+			err = tx.Save(team).Error
+			if err != nil {
+				return err
+			}
 
 			log.Infof("Fetch team administrators for %s...", *team.Name)
 			owners, err := gimp.GroupOwners(yamlteam.AzureID)
@@ -77,19 +80,28 @@ func TestImportTeamsFromLegacyAzure(t *testing.T) {
 					log.Warnf("Skip owner %s", *owner.Email)
 					continue
 				}
-				tx.FirstOrCreate(owner, "email = ?", *owner.Email)
+				err = tx.FirstOrCreate(owner, "email = ?", *owner.Email).Error
+				if err != nil {
+					return err
+				}
 				log.Debugf("Created user %s", *owner.Email)
 				rb := &dbmodels.RoleBinding{
 					RoleID: roles.TeamManagerID,
 					TeamID: team.ID,
 					UserID: owner.ID,
 				}
-				tx.Save(rb)
+				err = tx.Save(rb).Error
+				if err != nil {
+					return err
+				}
 				validMembers = append(validMembers, owner)
 			}
 
 			team.Users = validMembers
-			tx.Save(team)
+			err = tx.Save(team).Error
+			if err != nil {
+				return err
+			}
 
 			log.Infof("Created %s with %d owners and %d members", *team.Name, len(owners), len(members))
 
@@ -125,9 +137,9 @@ func setupDatabase(cfg *config.Config) (*gorm.DB, error) {
 	log.Infof("Successfully connected to database.")
 
 	// uuid-ossp is needed for PostgreSQL to generate UUIDs as primary keys
-	tx := db.Exec(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`)
-	if tx.Error != nil {
-		return nil, fmt.Errorf("install postgres uuid extension: %w", tx.Error)
+	err := db.Exec(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`).Error
+	if err != nil {
+		return nil, fmt.Errorf("install postgres uuid extension: %w", err)
 	}
 
 	log.Infof("Migrating database schema...")

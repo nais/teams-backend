@@ -33,9 +33,9 @@ func Auth(db *gorm.DB) Directive {
 
 func loadUserRoleBindings(db *gorm.DB, user *dbmodels.User) ([]*dbmodels.RoleBinding, error) {
 	newUser := &dbmodels.User{}
-	tx := db.Where("ID = ?", user.ID).Preload("RoleBindings").Preload("RoleBindings.Role").Preload("RoleBindings.Role.System").First(newUser)
-	if tx.Error != nil {
-		return nil, tx.Error
+	err := db.Where("ID = ?", user.ID).Preload("RoleBindings").Preload("RoleBindings.Role").Preload("RoleBindings.Role.System").First(newUser).Error
+	if err != nil {
+		return nil, err
 	}
 	return newUser.RoleBindings, nil
 }

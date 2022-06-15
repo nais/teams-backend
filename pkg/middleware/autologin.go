@@ -15,8 +15,8 @@ func AutologinMiddleware(db *gorm.DB, email string) func(next http.Handler) http
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
 			user := &dbmodels.User{}
-			tx := db.First(user, "email = ?", email)
-			if tx.Error != nil {
+			err := db.First(user, "email = ?", email).Error
+			if err != nil {
 				next.ServeHTTP(w, r)
 				return
 			}
