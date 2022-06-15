@@ -70,7 +70,6 @@ type auditLogEntry struct {
 // Sync Fetch all users from the partner and add them as local users in Console. If a user already exists in Console
 // the local user will remain untouched. After all users have been added we will also remove all local users that
 // matches the partner domain that does not exist in the Google Directory.
-// All new users will be grated two roles: "Team Creator" and "Team viewer"
 func (s *userSynchronizer) Sync(ctx context.Context) error {
 	defaultRoleIds, err := s.getDefaultRoleIds()
 	if err != nil {

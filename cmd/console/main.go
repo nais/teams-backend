@@ -185,12 +185,7 @@ func run() error {
 			err = userSyncer.Sync(ctx)
 			cancel()
 
-			switch er := err.(type) {
-			case nil:
-				break
-			case *dbmodels.AuditLog:
-				er.Log().Error(er.Message)
-			default:
+			if err != nil {
 				log.Error(err)
 			}
 
