@@ -8,12 +8,13 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/model"
 	"gorm.io/gorm"
 )
 
-func (r *mutationResolver) CreateAPIKey(ctx context.Context, input model.APIKeyInput) (*model.APIKey, error) {
+func (r *mutationResolver) CreateAPIKey(ctx context.Context, userID *uuid.UUID) (*model.APIKey, error) {
 	buf := make([]byte, 16)
 	_, err := rand.Read(buf)
 	if err != nil {
@@ -22,9 +23,10 @@ func (r *mutationResolver) CreateAPIKey(ctx context.Context, input model.APIKeyI
 
 	key := &dbmodels.ApiKey{
 		APIKey: base64.RawURLEncoding.EncodeToString(buf),
-		UserID: *input.UserID,
+		UserID: *userID,
 	}
 	err = r.db.Transaction(func(tx *gorm.DB) error {
+		// FIXME: Handle deleted_by_id tracking
 		err = tx.Where("user_id = ?", key.UserID).Delete(&dbmodels.ApiKey{}).Error
 		if err != nil {
 			return err
@@ -41,8 +43,9 @@ func (r *mutationResolver) CreateAPIKey(ctx context.Context, input model.APIKeyI
 	}, nil
 }
 
-func (r *mutationResolver) DeleteAPIKey(ctx context.Context, input model.APIKeyInput) (bool, error) {
-	err := r.db.WithContext(ctx).Where("user_id = ?", input.UserID).Delete(&dbmodels.ApiKey{}).Error
+func (r *mutationResolver) DeleteAPIKey(ctx context.Context, userID *uuid.UUID) (bool, error) {
+	// FIXME: Handle deleted_by_id tracking
+	err := r.db.WithContext(ctx).Where("user_id = ?", userID).Delete(&dbmodels.ApiKey{}).Error
 	if err != nil {
 		return false, err
 	}

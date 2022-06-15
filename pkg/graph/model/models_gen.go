@@ -17,12 +17,6 @@ type APIKey struct {
 	APIKey string `json:"APIKey"`
 }
 
-// Input type for API key related operations.
-type APIKeyInput struct {
-	// ID of a user.
-	UserID *uuid.UUID `json:"userId"`
-}
-
 // Input for adding users to a team.
 type AddUsersToTeamInput struct {
 	// List of user IDs that should be added to the team.

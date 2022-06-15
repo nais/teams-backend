@@ -1,20 +1,20 @@
 extend type Mutation {
     """
-    Create an API key for a user, then return the created API key.
+    Create an API key for a user or a service account, then return the created API key.
 
     Any existing API keys for this user will be invalidated.
 
     The API key value can only be retrieved through this call, so be sure to save the return value.
     """
     createAPIKey(
-        "Input for creating the API key."
-        input: APIKeyInput!
+        "ID of a user or a service account."
+        userId: UUID!
     ): APIKey! @auth
 
-    "Delete any API keys associated with a user."
+    "Delete any API keys associated with a user or a service account."
     deleteAPIKey(
-        "Input for deleting the API key."
-        input: APIKeyInput!
+        "ID of a user or a service account."
+        userId: UUID!
     ): Boolean! @auth
 }
 
@@ -22,10 +22,4 @@ extend type Mutation {
 type APIKey {
     "The API key."
     APIKey: String!
-}
-
-"Input type for API key related operations."
-input APIKeyInput {
-    "ID of a user."
-    userId: UUID!
 }

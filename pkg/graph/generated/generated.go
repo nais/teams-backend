@@ -81,10 +81,10 @@ type ComplexityRoot struct {
 	Mutation struct {
 		AddUsersToTeam       func(childComplexity int, input model.AddUsersToTeamInput) int
 		AssignRoleToUser     func(childComplexity int, input model.AssignRoleInput) int
-		CreateAPIKey         func(childComplexity int, input model.APIKeyInput) int
+		CreateAPIKey         func(childComplexity int, userID *uuid.UUID) int
 		CreateServiceAccount func(childComplexity int, input model.CreateServiceAccountInput) int
 		CreateTeam           func(childComplexity int, input model.CreateTeamInput) int
-		DeleteAPIKey         func(childComplexity int, input model.APIKeyInput) int
+		DeleteAPIKey         func(childComplexity int, userID *uuid.UUID) int
 		DeleteServiceAccount func(childComplexity int, serviceAccountID *uuid.UUID) int
 		RemoveRoleFromUser   func(childComplexity int, input model.RemoveRoleInput) int
 		RemoveUsersFromTeam  func(childComplexity int, input model.RemoveUsersFromTeamInput) int
@@ -181,8 +181,8 @@ type AuditLogResolver interface {
 	TargetTeam(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.Team, error)
 }
 type MutationResolver interface {
-	CreateAPIKey(ctx context.Context, input model.APIKeyInput) (*model.APIKey, error)
-	DeleteAPIKey(ctx context.Context, input model.APIKeyInput) (bool, error)
+	CreateAPIKey(ctx context.Context, userID *uuid.UUID) (*model.APIKey, error)
+	DeleteAPIKey(ctx context.Context, userID *uuid.UUID) (bool, error)
 	AssignRoleToUser(ctx context.Context, input model.AssignRoleInput) (*dbmodels.RoleBinding, error)
 	RemoveRoleFromUser(ctx context.Context, input model.RemoveRoleInput) (bool, error)
 	CreateTeam(ctx context.Context, input model.CreateTeamInput) (*dbmodels.Team, error)
@@ -362,7 +362,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateAPIKey(childComplexity, args["input"].(model.APIKeyInput)), true
+		return e.complexity.Mutation.CreateAPIKey(childComplexity, args["userId"].(*uuid.UUID)), true
 
 	case "Mutation.createServiceAccount":
 		if e.complexity.Mutation.CreateServiceAccount == nil {
@@ -398,7 +398,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.DeleteAPIKey(childComplexity, args["input"].(model.APIKeyInput)), true
+		return e.complexity.Mutation.DeleteAPIKey(childComplexity, args["userId"].(*uuid.UUID)), true
 
 	case "Mutation.deleteServiceAccount":
 		if e.complexity.Mutation.DeleteServiceAccount == nil {
@@ -832,7 +832,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	rc := graphql.GetOperationContext(ctx)
 	ec := executionContext{rc, e}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
-		ec.unmarshalInputAPIKeyInput,
 		ec.unmarshalInputAddUsersToTeamInput,
 		ec.unmarshalInputAssignRoleInput,
 		ec.unmarshalInputAuditLogsQuery,
@@ -913,21 +912,21 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 var sources = []*ast.Source{
 	{Name: "../../../graphql/apikeys.graphqls", Input: `extend type Mutation {
     """
-    Create an API key for a user, then return the created API key.
+    Create an API key for a user or a service account, then return the created API key.
 
     Any existing API keys for this user will be invalidated.
 
     The API key value can only be retrieved through this call, so be sure to save the return value.
     """
     createAPIKey(
-        "Input for creating the API key."
-        input: APIKeyInput!
+        "ID of a user or a service account."
+        userId: UUID!
     ): APIKey! @auth
 
-    "Delete any API keys associated with a user."
+    "Delete any API keys associated with a user or a service account."
     deleteAPIKey(
-        "Input for deleting the API key."
-        input: APIKeyInput!
+        "ID of a user or a service account."
+        userId: UUID!
     ): Boolean! @auth
 }
 
@@ -935,12 +934,6 @@ var sources = []*ast.Source{
 type APIKey {
     "The API key."
     APIKey: String!
-}
-
-"Input type for API key related operations."
-input APIKeyInput {
-    "ID of a user."
-    userId: UUID!
 }`, BuiltIn: false},
 	{Name: "../../../graphql/auditlogs.graphqls", Input: `extend type Query {
     "Get a collection of audit log entries."
@@ -1578,15 +1571,15 @@ func (ec *executionContext) field_Mutation_assignRoleToUser_args(ctx context.Con
 func (ec *executionContext) field_Mutation_createAPIKey_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.APIKeyInput
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNAPIKeyInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAPIKeyInput(ctx, tmp)
+	var arg0 *uuid.UUID
+	if tmp, ok := rawArgs["userId"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
+		arg0, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
+	args["userId"] = arg0
 	return args, nil
 }
 
@@ -1623,15 +1616,15 @@ func (ec *executionContext) field_Mutation_createTeam_args(ctx context.Context, 
 func (ec *executionContext) field_Mutation_deleteAPIKey_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.APIKeyInput
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNAPIKeyInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAPIKeyInput(ctx, tmp)
+	var arg0 *uuid.UUID
+	if tmp, ok := rawArgs["userId"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
+		arg0, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
+	args["userId"] = arg0
 	return args, nil
 }
 
@@ -2637,7 +2630,7 @@ func (ec *executionContext) _Mutation_createAPIKey(ctx context.Context, field gr
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().CreateAPIKey(rctx, fc.Args["input"].(model.APIKeyInput))
+			return ec.resolvers.Mutation().CreateAPIKey(rctx, fc.Args["userId"].(*uuid.UUID))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -2716,7 +2709,7 @@ func (ec *executionContext) _Mutation_deleteAPIKey(ctx context.Context, field gr
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().DeleteAPIKey(rctx, fc.Args["input"].(model.APIKeyInput))
+			return ec.resolvers.Mutation().DeleteAPIKey(rctx, fc.Args["userId"].(*uuid.UUID))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -8027,29 +8020,6 @@ func (ec *executionContext) fieldContext___Type_specifiedByURL(ctx context.Conte
 
 // region    **************************** input.gotpl *****************************
 
-func (ec *executionContext) unmarshalInputAPIKeyInput(ctx context.Context, obj interface{}) (model.APIKeyInput, error) {
-	var it model.APIKeyInput
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "userId":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
-			it.UserID, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
 func (ec *executionContext) unmarshalInputAddUsersToTeamInput(ctx context.Context, obj interface{}) (model.AddUsersToTeamInput, error) {
 	var it model.AddUsersToTeamInput
 	asMap := map[string]interface{}{}
@@ -10194,11 +10164,6 @@ func (ec *executionContext) marshalNAPIKey2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpk
 		return graphql.Null
 	}
 	return ec._APIKey(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalNAPIKeyInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAPIKeyInput(ctx context.Context, v interface{}) (model.APIKeyInput, error) {
-	res, err := ec.unmarshalInputAPIKeyInput(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNAddUsersToTeamInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAddUsersToTeamInput(ctx context.Context, v interface{}) (model.AddUsersToTeamInput, error) {
