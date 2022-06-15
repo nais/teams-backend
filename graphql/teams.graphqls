@@ -36,6 +36,18 @@ extend type Mutation {
         "Input for removing users from a team."
         input: RemoveUsersFromTeamInput!
     ): Team! @auth
+
+    """
+    Manually synchronize a team.
+
+    This action will trigger a full synchronization of the team against the configured third party systems.
+
+    The action is asynchronous.
+    """
+    synchronizeTeam(
+        "The ID of the team to synchronize."
+        teamId: UUID!
+    ): Boolean! @auth
 }
 
 "Team type."

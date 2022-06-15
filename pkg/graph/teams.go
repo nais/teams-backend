@@ -198,6 +198,39 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 	return team, nil
 }
 
+func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUID) (bool, error) {
+	db := r.db.WithContext(ctx)
+	team := &dbmodels.Team{}
+	err := db.Where("id = ?", teamID).First(team).Error
+	if err != nil {
+		return false, err
+	}
+
+	err = authz.Authorized(ctx, r.system, team, authz.AccessLevelUpdate, authz.ResourceTeams)
+	if err != nil {
+		return false, err
+	}
+
+	corr := &dbmodels.Correlation{}
+	err = db.Create(corr).Error
+
+	if err != nil {
+		return false, fmt.Errorf("unable to create correlation for audit log")
+	}
+
+	r.auditLogger.Log(console_reconciler.OpSyncTeam, *corr, *r.system, authz.UserFromContext(ctx), team, nil, "Manual sync requested")
+
+	team, err = r.teamWithAssociations(ctx, *team.ID)
+	if err != nil {
+		return false, fmt.Errorf("unable to fetch complete team: %s", err)
+	}
+	r.teamReconciler <- reconcilers.ReconcileTeamInput{
+		Team: *team,
+	}
+
+	return true, nil
+}
+
 func (r *queryResolver) Teams(ctx context.Context, pagination *model.Pagination, query *model.TeamsQuery, sort *model.TeamsSort) (*model.Teams, error) {
 	err := authz.Authorized(ctx, r.system, nil, authz.AccessLevelRead, authz.ResourceTeams)
 	if err != nil {
