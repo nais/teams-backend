@@ -17,7 +17,7 @@ import (
 )
 
 func (r *mutationResolver) CreateServiceAccount(ctx context.Context, input model.CreateServiceAccountInput) (*dbmodels.User, error) {
-	email := console.ServiceAccountEmail(*input.Name, r.domain)
+	email := console.ServiceAccountEmail(*input.Name, r.partnerDomain)
 	sa := &dbmodels.User{
 		Name:  input.Name.String(),
 		Email: &email,
@@ -94,7 +94,7 @@ func (r *userResolver) HasAPIKey(ctx context.Context, obj *dbmodels.User) (bool,
 }
 
 func (r *userResolver) IsServiceAccount(ctx context.Context, obj *dbmodels.User) (bool, error) {
-	return console.IsServiceAccount(*obj, r.domain), nil
+	return console.IsServiceAccount(*obj, r.partnerDomain), nil
 }
 
 // User returns generated.UserResolver implementation.
