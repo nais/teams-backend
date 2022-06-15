@@ -81,14 +81,17 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		mockClient.On("GetUser", mock.Anything, *addUser.Email).Return(addMember, nil).Once()
 		mockClient.On("AddMemberToGroup", mock.Anything, group, addMember).Return(nil).Once()
 
-		err := reconciler.Reconcile(ctx, reconcilers.NewReconcilerInput(corr, dbmodels.Team{
-			Slug:    teamSlug,
-			Name:    teamName,
-			Purpose: purpose,
-			Users: []*dbmodels.User{
-				addUser, keepUser,
+		err := reconciler.Reconcile(ctx, reconcilers.Input{
+			Corr: corr,
+			Team: dbmodels.Team{
+				Slug:    teamSlug,
+				Name:    teamName,
+				Purpose: purpose,
+				Users: []*dbmodels.User{
+					addUser, keepUser,
+				},
 			},
-		}))
+		})
 
 		assert.NoError(t, err)
 		mockClient.AssertExpectations(t)
@@ -101,14 +104,17 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, purpose).
 			Return(nil, false, fmt.Errorf("GetOrCreateGroup failed")).Once()
 
-		err := reconciler.Reconcile(ctx, reconcilers.NewReconcilerInput(corr, dbmodels.Team{
-			Slug:    teamSlug,
-			Name:    teamName,
-			Purpose: purpose,
-			Users: []*dbmodels.User{
-				addUser, keepUser,
+		err := reconciler.Reconcile(ctx, reconcilers.Input{
+			Corr: corr,
+			Team: dbmodels.Team{
+				Slug:    teamSlug,
+				Name:    teamName,
+				Purpose: purpose,
+				Users: []*dbmodels.User{
+					addUser, keepUser,
+				},
 			},
-		}))
+		})
 
 		assert.Error(t, err)
 		mockClient.AssertExpectations(t)
@@ -123,14 +129,17 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		mockClient.On("ListGroupMembers", mock.Anything, group).
 			Return(nil, fmt.Errorf("ListGroupMembers failed")).Once()
 
-		err := reconciler.Reconcile(ctx, reconcilers.NewReconcilerInput(corr, dbmodels.Team{
-			Slug:    teamSlug,
-			Name:    teamName,
-			Purpose: purpose,
-			Users: []*dbmodels.User{
-				addUser, keepUser,
+		err := reconciler.Reconcile(ctx, reconcilers.Input{
+			Corr: corr,
+			Team: dbmodels.Team{
+				Slug:    teamSlug,
+				Name:    teamName,
+				Purpose: purpose,
+				Users: []*dbmodels.User{
+					addUser, keepUser,
+				},
 			},
-		}))
+		})
 
 		assert.Error(t, err)
 		mockClient.AssertExpectations(t)
@@ -147,14 +156,17 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		mockClient.On("RemoveMemberFromGroup", mock.Anything, group, removeMember).
 			Return(fmt.Errorf("RemoveMemberFromGroup failed")).Once()
 
-		err := reconciler.Reconcile(ctx, reconcilers.NewReconcilerInput(corr, dbmodels.Team{
-			Slug:    teamSlug,
-			Name:    teamName,
-			Purpose: purpose,
-			Users: []*dbmodels.User{
-				addUser, keepUser,
+		err := reconciler.Reconcile(ctx, reconcilers.Input{
+			Corr: corr,
+			Team: dbmodels.Team{
+				Slug:    teamSlug,
+				Name:    teamName,
+				Purpose: purpose,
+				Users: []*dbmodels.User{
+					addUser, keepUser,
+				},
 			},
-		}))
+		})
 
 		assert.Error(t, err)
 		mockClient.AssertExpectations(t)
@@ -171,14 +183,17 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		mockClient.On("RemoveMemberFromGroup", mock.Anything, group, removeMember).Return(nil).Once()
 		mockClient.On("GetUser", mock.Anything, *addUser.Email).Return(nil, fmt.Errorf("GetUser failed")).Once()
 
-		err := reconciler.Reconcile(ctx, reconcilers.NewReconcilerInput(corr, dbmodels.Team{
-			Slug:    teamSlug,
-			Name:    teamName,
-			Purpose: purpose,
-			Users: []*dbmodels.User{
-				addUser, keepUser,
+		err := reconciler.Reconcile(ctx, reconcilers.Input{
+			Corr: corr,
+			Team: dbmodels.Team{
+				Slug:    teamSlug,
+				Name:    teamName,
+				Purpose: purpose,
+				Users: []*dbmodels.User{
+					addUser, keepUser,
+				},
 			},
-		}))
+		})
 
 		assert.NoError(t, err)
 		mockClient.AssertExpectations(t)
@@ -198,14 +213,17 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		mockClient.On("AddMemberToGroup", mock.Anything, group, addMember).
 			Return(fmt.Errorf("AddMemberToGroup failed")).Once()
 
-		err := reconciler.Reconcile(ctx, reconcilers.NewReconcilerInput(corr, dbmodels.Team{
-			Slug:    teamSlug,
-			Name:    teamName,
-			Purpose: purpose,
-			Users: []*dbmodels.User{
-				addUser, keepUser,
+		err := reconciler.Reconcile(ctx, reconcilers.Input{
+			Corr: corr,
+			Team: dbmodels.Team{
+				Slug:    teamSlug,
+				Name:    teamName,
+				Purpose: purpose,
+				Users: []*dbmodels.User{
+					addUser, keepUser,
+				},
 			},
-		}))
+		})
 
 		assert.Error(t, err)
 		mockClient.AssertExpectations(t)

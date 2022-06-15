@@ -69,19 +69,18 @@ func NewFromConfig(_ *gorm.DB, cfg *config.Config, system dbmodels.System, audit
 	return New(system, auditLogger, conf, azureclient.New(conf.Client(context.Background())), cfg.PartnerDomain), nil
 }
 
-func (s *azureReconciler) Reconcile(ctx context.Context, input reconcilers.ReconcilerInput) error {
-	corr, team := input.GetValues()
-	prefixedName := teamNameWithPrefix(team.Slug)
-	grp, created, err := s.client.GetOrCreateGroup(ctx, prefixedName, team.Name, team.Purpose)
+func (s *azureReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
+	prefixedName := teamNameWithPrefix(input.Team.Slug)
+	grp, created, err := s.client.GetOrCreateGroup(ctx, prefixedName, input.Team.Name, input.Team.Purpose)
 	if err != nil {
 		return err
 	}
 
 	if created {
-		s.auditLogger.Log(OpCreate, corr, s.system, nil, &team, nil, "created Azure AD group: %s", grp)
+		s.auditLogger.Log(OpCreate, input.Corr, s.system, nil, &input.Team, nil, "created Azure AD group: %s", grp)
 	}
 
-	err = s.connectUsers(ctx, grp, corr, team)
+	err = s.connectUsers(ctx, grp, input.Corr, input.Team)
 	if err != nil {
 		return fmt.Errorf("%s: add members to group: %s", OpAddMembers, err)
 	}

@@ -10,7 +10,7 @@ var ErrReconcilerNotEnabled = errors.New("reconciler not enabled")
 
 // Reconciler Interface for all reconcilers
 type Reconciler interface {
-	Reconcile(ctx context.Context, input ReconcilerInput) error
+	Reconcile(ctx context.Context, input Input) error
 }
 
 // TeamNamePrefix Prefix that can be used for team-like objects in external systems

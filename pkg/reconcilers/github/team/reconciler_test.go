@@ -86,7 +86,10 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		configureAddTeamMembershipBySlug(teamsService, org, teamName, createLogin)
 		configureRemoveTeamMembershipBySlug(teamsService, org, teamName, removeLogin)
 
-		err := reconciler.Reconcile(ctx, reconcilers.NewReconcilerInput(corr, team))
+		err := reconciler.Reconcile(ctx, reconcilers.Input{
+			Corr: corr,
+			Team: team,
+		})
 
 		assert.NoError(t, err)
 		teamsService.AssertExpectations(t)
@@ -108,7 +111,10 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 				},
 			}, nil).Once()
 
-		err := reconciler.Reconcile(ctx, reconcilers.NewReconcilerInput(corr, team))
+		err := reconciler.Reconcile(ctx, reconcilers.Input{
+			Corr: corr,
+			Team: team,
+		})
 
 		assert.EqualError(t, err, expectedErr.Error())
 		teamsService.AssertExpectations(t)
@@ -130,7 +136,10 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 				},
 			}, nil).Once()
 
-		err := reconciler.Reconcile(ctx, reconcilers.NewReconcilerInput(corr, team))
+		err := reconciler.Reconcile(ctx, reconcilers.Input{
+			Corr: corr,
+			Team: team,
+		})
 
 		assert.EqualError(t, err, expectedErr.Error())
 		teamsService.AssertExpectations(t)
@@ -159,7 +168,10 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		configureAddTeamMembershipBySlug(teamsService, org, teamName, createLogin)
 		configureRemoveTeamMembershipBySlug(teamsService, org, teamName, removeLogin)
 
-		err := reconciler.Reconcile(ctx, reconcilers.NewReconcilerInput(corr, team))
+		err := reconciler.Reconcile(ctx, reconcilers.Input{
+			Corr: corr,
+			Team: team,
+		})
 
 		assert.NoError(t, err)
 		teamsService.AssertExpectations(t)

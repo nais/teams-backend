@@ -71,27 +71,25 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 	return New(db, system, auditLogger, cfg.PartnerDomain, cf, cfg.GCP.ProjectParentIDs), nil
 }
 
-func (s *gcpReconciler) Reconcile(ctx context.Context, input reconcilers.ReconcilerInput) error {
+func (s *gcpReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	client := s.config.Client(ctx)
 	svc, err := cloudresourcemanager.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
 		return fmt.Errorf("retrieve cloud resource manager client: %s", err)
 	}
 
-	corr, team := input.GetValues()
-
 	for environment, parentID := range s.projectParentIDs {
-		proj, err := s.CreateProject(svc, environment, parentID, corr, team)
+		proj, err := s.CreateProject(svc, environment, parentID, input.Corr, input.Team)
 		if err != nil {
 			return err
 		}
 
-		err = saveProjectState(s.db, team.ID, environment, proj.ProjectId)
+		err = saveProjectState(s.db, input.Team.ID, environment, proj.ProjectId)
 		if err != nil {
 			return fmt.Errorf("%s: create GCP project: project was created, but ID could not be stored in database: %s", OpCreateProject, err)
 		}
 
-		err = s.CreatePermissions(svc, proj.Name, corr, team)
+		err = s.CreatePermissions(svc, proj.Name, input.Corr, input.Team)
 		if err != nil {
 			return err
 		}

@@ -59,9 +59,12 @@ func TestNaisDeployReconciler_Reconcile(t *testing.T) {
 		},
 	}
 
-	err := reconciler.Reconcile(ctx, reconcilers.NewReconcilerInput(corr, dbmodels.Team{
-		Slug: slug,
-	}))
+	err := reconciler.Reconcile(ctx, reconcilers.Input{
+		Corr: corr,
+		Team: dbmodels.Team{
+			Slug: slug,
+		},
+	})
 
 	assert.NoError(t, err)
 }

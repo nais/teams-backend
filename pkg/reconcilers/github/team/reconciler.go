@@ -72,14 +72,13 @@ func NewFromConfig(_ *gorm.DB, cfg *config.Config, system dbmodels.System, audit
 	return New(system, auditLogger, cfg.GitHub.Organization, cfg.PartnerDomain, restClient.Teams, graphClient), nil
 }
 
-func (s *gitHubReconciler) Reconcile(ctx context.Context, input reconcilers.ReconcilerInput) error {
-	corr, team := input.GetValues()
-	githubTeam, err := s.getOrCreateTeam(ctx, corr, team)
+func (s *gitHubReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
+	githubTeam, err := s.getOrCreateTeam(ctx, input.Corr, input.Team)
 	if err != nil {
 		return err
 	}
 
-	return s.connectUsers(ctx, githubTeam, corr, team)
+	return s.connectUsers(ctx, githubTeam, input.Corr, input.Team)
 }
 
 func (s *gitHubReconciler) getOrCreateTeam(ctx context.Context, corr dbmodels.Correlation, team dbmodels.Team) (*github.Team, error) {

@@ -66,13 +66,12 @@ func NewFromConfig(_ *gorm.DB, cfg *config.Config, system dbmodels.System, audit
 	return New(system, auditLogger, http.DefaultClient, cfg.NaisDeploy.Endpoint, provisionKey), nil
 }
 
-func (s *naisDeployReconciler) Reconcile(ctx context.Context, input reconcilers.ReconcilerInput) error {
+func (s *naisDeployReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	const signatureHeader = "X-NAIS-Signature"
-	corr, team := input.GetValues()
 
 	payload, err := json.Marshal(&ProvisionApiKeyRequest{
 		Rotate:    false,
-		Team:      team.Slug.String(),
+		Team:      input.Team.Slug.String(),
 		Timestamp: time.Now().Unix(),
 	})
 
@@ -96,11 +95,11 @@ func (s *naisDeployReconciler) Reconcile(ctx context.Context, input reconcilers.
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusCreated {
-		s.auditLogger.Log(OpProvisionApiKey, corr, s.system, nil, &team, nil, "provisioned NAIS deploy API key to team '%s'", team.Slug)
+		s.auditLogger.Log(OpProvisionApiKey, input.Corr, s.system, nil, &input.Team, nil, "provisioned NAIS deploy API key to team '%s'", input.Team.Slug)
 		return nil
 	}
 
-	return fmt.Errorf("%s: provision NAIS deploy API key to team '%s': %s", OpProvisionApiKey, team.Slug, resp.Status)
+	return fmt.Errorf("%s: provision NAIS deploy API key to team '%s': %s", OpProvisionApiKey, input.Team.Slug, resp.Status)
 }
 
 // genMAC generates the HMAC signature for a message provided the secret key using SHA256

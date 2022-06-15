@@ -72,19 +72,17 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 	return New(db, system, auditLogger, cfg.PartnerDomain, cfg.NaisNamespace.TopicPrefix, cfg.Google.CredentialsFile, cfg.NaisNamespace.ProjectID, cfg.GCP.ProjectParentIDs), nil
 }
 
-func (s *namespaceReconciler) Reconcile(ctx context.Context, input reconcilers.ReconcilerInput) error {
+func (s *namespaceReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	svc, err := pubsub.NewClient(ctx, s.projectID, option.WithCredentialsFile(s.credentialsFile))
 	if err != nil {
 		return fmt.Errorf("retrieve pubsub client: %s", err)
 	}
 
-	_, team := input.GetValues()
-
 	// map of environment -> project ID
 	projects := make(map[string]string)
 
 	// read all state variables
-	for _, state := range team.SystemState {
+	for _, state := range input.Team.SystemState {
 		if state.SystemID != *s.system.ID {
 			continue
 		}
@@ -100,10 +98,10 @@ func (s *namespaceReconciler) Reconcile(ctx context.Context, input reconcilers.R
 	for environment := range s.projectParentIDs {
 		gcpProjectID := projects[environment]
 		if len(gcpProjectID) == 0 {
-			return fmt.Errorf("%s: no GCP project created for team '%s' and environment '%s'", OpCreateNamespace, team.Slug, environment)
+			return fmt.Errorf("%s: no GCP project created for team '%s' and environment '%s'", OpCreateNamespace, input.Team.Slug, environment)
 		}
 
-		err = s.createNamespace(ctx, svc, team, environment, gcpProjectID)
+		err = s.createNamespace(ctx, svc, input.Team, environment, gcpProjectID)
 		if err != nil {
 			return fmt.Errorf("%s: %s", OpCreateNamespace, err.Error())
 		}

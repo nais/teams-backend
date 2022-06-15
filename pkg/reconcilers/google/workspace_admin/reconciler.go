@@ -64,7 +64,7 @@ func NewFromConfig(_ *gorm.DB, cfg *config.Config, system dbmodels.System, audit
 	return New(system, auditLogger, cfg.PartnerDomain, config), nil
 }
 
-func (s *gcpReconciler) Reconcile(ctx context.Context, input reconcilers.ReconcilerInput) error {
+func (s *gcpReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	client := s.config.Client(ctx)
 
 	srv, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(client))
@@ -72,19 +72,17 @@ func (s *gcpReconciler) Reconcile(ctx context.Context, input reconcilers.Reconci
 		return fmt.Errorf("retrieve directory client: %s", err)
 	}
 
-	corr, team := input.GetValues()
-
-	grp, err := s.getOrCreateGroup(srv.Groups, corr, team)
+	grp, err := s.getOrCreateGroup(srv.Groups, input.Corr, input.Team)
 	if err != nil {
 		return err
 	}
 
-	err = s.connectUsers(srv.Members, grp, corr, team)
+	err = s.connectUsers(srv.Members, grp, input.Corr, input.Team)
 	if err != nil {
 		return fmt.Errorf("%s: add members to group: %s", OpAddMembers, err)
 	}
 
-	err = s.addToGKESecurityGroup(srv.Members, grp, corr, team)
+	err = s.addToGKESecurityGroup(srv.Members, grp, input.Corr, input.Team)
 	if err != nil {
 		return err
 	}
