@@ -62,7 +62,7 @@ type Team {
     auditLogs: [AuditLog!]!
 
     "Creation time of the team."
-    createdAt: Time
+    createdAt: Time!
 }
 
 "Team collection."

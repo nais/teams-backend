@@ -56,7 +56,7 @@ type User {
     isServiceAccount: Boolean!
 
     "Creation time of the user."
-    createdAt: Time
+    createdAt: Time!
 }
 
 "User collection."
