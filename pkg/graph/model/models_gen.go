@@ -199,6 +199,12 @@ type TeamsSort struct {
 	Direction SortDirection `json:"direction"`
 }
 
+// Input for updating an existing service account.
+type UpdateServiceAccountInput struct {
+	// The new name of the service account. The email address will be automatically updated.
+	Name *dbmodels.Slug `json:"name"`
+}
+
 // User collection.
 type Users struct {
 	// Object related to pagination of the collection.

@@ -85,8 +85,10 @@ type ComplexityRoot struct {
 		CreateServiceAccount func(childComplexity int, input model.CreateServiceAccountInput) int
 		CreateTeam           func(childComplexity int, input model.CreateTeamInput) int
 		DeleteAPIKey         func(childComplexity int, input model.APIKeyInput) int
+		DeleteServiceAccount func(childComplexity int, serviceAccountID *uuid.UUID) int
 		RemoveRoleFromUser   func(childComplexity int, input model.RemoveRoleInput) int
 		RemoveUsersFromTeam  func(childComplexity int, input model.RemoveUsersFromTeamInput) int
+		UpdateServiceAccount func(childComplexity int, serviceAccountID *uuid.UUID, input model.UpdateServiceAccountInput) int
 	}
 
 	PageInfo struct {
@@ -187,6 +189,8 @@ type MutationResolver interface {
 	AddUsersToTeam(ctx context.Context, input model.AddUsersToTeamInput) (*dbmodels.Team, error)
 	RemoveUsersFromTeam(ctx context.Context, input model.RemoveUsersFromTeamInput) (*dbmodels.Team, error)
 	CreateServiceAccount(ctx context.Context, input model.CreateServiceAccountInput) (*dbmodels.User, error)
+	UpdateServiceAccount(ctx context.Context, serviceAccountID *uuid.UUID, input model.UpdateServiceAccountInput) (*dbmodels.User, error)
+	DeleteServiceAccount(ctx context.Context, serviceAccountID *uuid.UUID) (bool, error)
 }
 type QueryResolver interface {
 	AuditLogs(ctx context.Context, pagination *model.Pagination, query *model.AuditLogsQuery, sort *model.AuditLogsSort) (*model.AuditLogs, error)
@@ -396,6 +400,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.DeleteAPIKey(childComplexity, args["input"].(model.APIKeyInput)), true
 
+	case "Mutation.deleteServiceAccount":
+		if e.complexity.Mutation.DeleteServiceAccount == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteServiceAccount_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteServiceAccount(childComplexity, args["serviceAccountId"].(*uuid.UUID)), true
+
 	case "Mutation.removeRoleFromUser":
 		if e.complexity.Mutation.RemoveRoleFromUser == nil {
 			break
@@ -419,6 +435,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.RemoveUsersFromTeam(childComplexity, args["input"].(model.RemoveUsersFromTeamInput)), true
+
+	case "Mutation.updateServiceAccount":
+		if e.complexity.Mutation.UpdateServiceAccount == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateServiceAccount_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateServiceAccount(childComplexity, args["serviceAccountId"].(*uuid.UUID), args["input"].(model.UpdateServiceAccountInput)), true
 
 	case "PageInfo.limit":
 		if e.complexity.PageInfo.Limit == nil {
@@ -820,6 +848,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputSystemsSort,
 		ec.unmarshalInputTeamsQuery,
 		ec.unmarshalInputTeamsSort,
+		ec.unmarshalInputUpdateServiceAccountInput,
 		ec.unmarshalInputUsersQuery,
 		ec.unmarshalInputUsersSort,
 	)
@@ -1412,6 +1441,21 @@ extend type Mutation {
         "Input for creation of the new service account."
         input: CreateServiceAccountInput!
     ): User! @auth
+
+    "Update an existing service account."
+    updateServiceAccount(
+        "ID of the service account to update."
+        serviceAccountId: UUID!
+
+        "Input for updating an existing service account."
+        input: UpdateServiceAccountInput!
+    ): User! @auth
+
+    "Delete an existing service account."
+    deleteServiceAccount(
+        "ID of the service account to delete."
+        serviceAccountId: UUID!
+    ): Boolean! @auth
 }
 
 "User type."
@@ -1474,6 +1518,12 @@ input UsersSort {
 "Input for creating a new service account."
 input CreateServiceAccountInput {
     "The name of the new service account. An email address will be automatically generated using the provided name."
+    name: Slug!
+}
+
+"Input for updating an existing service account."
+input UpdateServiceAccountInput {
+    "The new name of the service account. The email address will be automatically updated."
     name: Slug!
 }
 
@@ -1585,6 +1635,21 @@ func (ec *executionContext) field_Mutation_deleteAPIKey_args(ctx context.Context
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_deleteServiceAccount_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *uuid.UUID
+	if tmp, ok := rawArgs["serviceAccountId"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("serviceAccountId"))
+		arg0, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["serviceAccountId"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_removeRoleFromUser_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -1612,6 +1677,30 @@ func (ec *executionContext) field_Mutation_removeUsersFromTeam_args(ctx context.
 		}
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateServiceAccount_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *uuid.UUID
+	if tmp, ok := rawArgs["serviceAccountId"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("serviceAccountId"))
+		arg0, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["serviceAccountId"] = arg0
+	var arg1 model.UpdateServiceAccountInput
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg1, err = ec.unmarshalNUpdateServiceAccountInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUpdateServiceAccountInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg1
 	return args, nil
 }
 
@@ -3213,6 +3302,174 @@ func (ec *executionContext) fieldContext_Mutation_createServiceAccount(ctx conte
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_createServiceAccount_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updateServiceAccount(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_updateServiceAccount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().UpdateServiceAccount(rctx, fc.Args["serviceAccountId"].(*uuid.UUID), fc.Args["input"].(model.UpdateServiceAccountInput))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Auth == nil {
+				return nil, errors.New("directive auth is not implemented")
+			}
+			return ec.directives.Auth(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*dbmodels.User); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/dbmodels.User`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*dbmodels.User)
+	fc.Result = res
+	return ec.marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐUser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_updateServiceAccount(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "name":
+				return ec.fieldContext_User_name(ctx, field)
+			case "teams":
+				return ec.fieldContext_User_teams(ctx, field)
+			case "roleBindings":
+				return ec.fieldContext_User_roleBindings(ctx, field)
+			case "hasAPIKey":
+				return ec.fieldContext_User_hasAPIKey(ctx, field)
+			case "isServiceAccount":
+				return ec.fieldContext_User_isServiceAccount(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_User_createdAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateServiceAccount_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deleteServiceAccount(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_deleteServiceAccount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().DeleteServiceAccount(rctx, fc.Args["serviceAccountId"].(*uuid.UUID))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Auth == nil {
+				return nil, errors.New("directive auth is not implemented")
+			}
+			return ec.directives.Auth(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(bool); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be bool`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_deleteServiceAccount(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deleteServiceAccount_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -8313,6 +8570,29 @@ func (ec *executionContext) unmarshalInputTeamsSort(ctx context.Context, obj int
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputUpdateServiceAccountInput(ctx context.Context, obj interface{}) (model.UpdateServiceAccountInput, error) {
+	var it model.UpdateServiceAccountInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	for k, v := range asMap {
+		switch k {
+		case "name":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			it.Name, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSlug(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputUsersQuery(ctx context.Context, obj interface{}) (model.UsersQuery, error) {
 	var it model.UsersQuery
 	asMap := map[string]interface{}{}
@@ -8700,6 +8980,24 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createServiceAccount(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "updateServiceAccount":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateServiceAccount(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "deleteServiceAccount":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteServiceAccount(ctx, field)
 			})
 
 			if out.Values[i] == graphql.Null {
@@ -10496,6 +10794,11 @@ func (ec *executionContext) marshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNUpdateServiceAccountInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUpdateServiceAccountInput(ctx context.Context, v interface{}) (model.UpdateServiceAccountInput, error) {
+	res, err := ec.unmarshalInputUpdateServiceAccountInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalNUser2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐUser(ctx context.Context, sel ast.SelectionSet, v dbmodels.User) graphql.Marshaler {

@@ -17,7 +17,7 @@ var (
 )
 
 const (
-	adminUserName = "admin"
+	AdminUserName = "admin"
 	defaultApiKey = "secret"
 )
 
@@ -40,8 +40,8 @@ func InsertInitialDataset(ctx context.Context, db *gorm.DB, partnerDomain string
 		log.Infof("Inserting initial root user into database...")
 
 		rootUser := &dbmodels.User{
-			Name:  adminUserName,
-			Email: helpers.ServiceAccountEmail(adminUserName, partnerDomain),
+			Name:  AdminUserName,
+			Email: helpers.ServiceAccountEmail(AdminUserName, partnerDomain),
 		}
 
 		err = tx.Create(rootUser).Error

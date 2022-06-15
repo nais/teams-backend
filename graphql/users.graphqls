@@ -27,6 +27,21 @@ extend type Mutation {
         "Input for creation of the new service account."
         input: CreateServiceAccountInput!
     ): User! @auth
+
+    "Update an existing service account."
+    updateServiceAccount(
+        "ID of the service account to update."
+        serviceAccountId: UUID!
+
+        "Input for updating an existing service account."
+        input: UpdateServiceAccountInput!
+    ): User! @auth
+
+    "Delete an existing service account."
+    deleteServiceAccount(
+        "ID of the service account to delete."
+        serviceAccountId: UUID!
+    ): Boolean! @auth
 }
 
 "User type."
@@ -89,6 +104,12 @@ input UsersSort {
 "Input for creating a new service account."
 input CreateServiceAccountInput {
     "The name of the new service account. An email address will be automatically generated using the provided name."
+    name: Slug!
+}
+
+"Input for updating an existing service account."
+input UpdateServiceAccountInput {
+    "The new name of the service account. The email address will be automatically updated."
     name: Slug!
 }
 
