@@ -20,7 +20,7 @@ import (
 )
 
 func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*dbmodels.Team, error) {
-	err := authz.Authorized(ctx, r.console, nil, authz.AccessLevelCreate, authz.ResourceTeams)
+	err := authz.Authorized(ctx, r.system, nil, authz.AccessLevelCreate, authz.ResourceTeams)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 	if err != nil {
 		log.Warnf("unable to create correlation for audit log")
 	} else {
-		r.auditLogger.Log(console_reconciler.OpCreateTeam, *corr, *r.console, user, team, nil, "Team created")
+		r.auditLogger.Log(console_reconciler.OpCreateTeam, *corr, *r.system, user, team, nil, "Team created")
 	}
 
 	team, err = r.teamWithAssociations(ctx, *team.ID)
@@ -111,7 +111,7 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 		return nil, fmt.Errorf("one or more non-existing or duplicate user IDs given as parameter")
 	}
 
-	err = authz.Authorized(ctx, r.console, team, authz.AccessLevelUpdate, authz.ResourceTeams)
+	err = authz.Authorized(ctx, r.system, team, authz.AccessLevelUpdate, authz.ResourceTeams)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +164,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 		return nil, fmt.Errorf("one or more non-existing or duplicate user IDs given as parameter")
 	}
 
-	err = authz.Authorized(ctx, r.console, team, authz.AccessLevelUpdate, authz.ResourceTeams)
+	err = authz.Authorized(ctx, r.system, team, authz.AccessLevelUpdate, authz.ResourceTeams)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +199,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 }
 
 func (r *queryResolver) Teams(ctx context.Context, pagination *model.Pagination, query *model.TeamsQuery, sort *model.TeamsSort) (*model.Teams, error) {
-	err := authz.Authorized(ctx, r.console, nil, authz.AccessLevelRead, authz.ResourceTeams)
+	err := authz.Authorized(ctx, r.system, nil, authz.AccessLevelRead, authz.ResourceTeams)
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +226,7 @@ func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team
 		return nil, err
 	}
 
-	err = authz.Authorized(ctx, r.console, team, authz.AccessLevelRead, authz.ResourceTeams)
+	err = authz.Authorized(ctx, r.system, team, authz.AccessLevelRead, authz.ResourceTeams)
 	if err != nil {
 		return nil, err
 	}

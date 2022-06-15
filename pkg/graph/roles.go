@@ -13,7 +13,7 @@ import (
 )
 
 func (r *mutationResolver) AssignRoleToUser(ctx context.Context, input model.AssignRoleInput) (*dbmodels.RoleBinding, error) {
-	err := authz.Authorized(ctx, r.console, nil, authz.AccessLevelUpdate, authz.ResourceRoles)
+	err := authz.Authorized(ctx, r.system, nil, authz.AccessLevelUpdate, authz.ResourceRoles)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +33,7 @@ func (r *mutationResolver) AssignRoleToUser(ctx context.Context, input model.Ass
 }
 
 func (r *mutationResolver) RemoveRoleFromUser(ctx context.Context, input model.RemoveRoleInput) (bool, error) {
-	err := authz.Authorized(ctx, r.console, nil, authz.AccessLevelUpdate, authz.ResourceRoles)
+	err := authz.Authorized(ctx, r.system, nil, authz.AccessLevelUpdate, authz.ResourceRoles)
 	if err != nil {
 		return false, err
 	}
@@ -47,7 +47,7 @@ func (r *mutationResolver) RemoveRoleFromUser(ctx context.Context, input model.R
 }
 
 func (r *queryResolver) Roles(ctx context.Context, pagination *model.Pagination, query *model.RolesQuery, sort *model.RolesSort) (*model.Roles, error) {
-	err := authz.Authorized(ctx, r.console, nil, authz.AccessLevelRead, authz.ResourceRoles)
+	err := authz.Authorized(ctx, r.system, nil, authz.AccessLevelRead, authz.ResourceRoles)
 	if err != nil {
 		return nil, err
 	}

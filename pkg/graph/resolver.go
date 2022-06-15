@@ -25,7 +25,7 @@ type Resolver struct {
 	db             *gorm.DB
 	domain         string
 	teamReconciler chan<- reconcilers.ReconcileTeamInput
-	console        *dbmodels.System
+	system         *dbmodels.System
 	auditLogger    auditlogger.AuditLogger
 }
 
@@ -33,7 +33,7 @@ func NewResolver(db *gorm.DB, domain string, console *dbmodels.System, teamRecon
 	return &Resolver{
 		db:             db,
 		domain:         domain,
-		console:        console,
+		system:         console,
 		teamReconciler: teamReconciler,
 		auditLogger:    auditLogger,
 	}
