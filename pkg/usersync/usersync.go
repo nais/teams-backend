@@ -11,6 +11,7 @@ import (
 	"github.com/nais/console/pkg/roles"
 	"golang.org/x/oauth2/jwt"
 	"gorm.io/gorm"
+	"strings"
 
 	"github.com/nais/console/pkg/config"
 	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
@@ -100,17 +101,18 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 
 		for _, remoteUser := range resp.Users {
 			localUser := &dbmodels.User{}
+			email := strings.ToLower(remoteUser.PrimaryEmail)
 
-			err = tx.Where("email = ?", remoteUser.PrimaryEmail).First(localUser).Error
+			err = tx.Where("email = ?", email).First(localUser).Error
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				localUser = &dbmodels.User{
-					Email: remoteUser.PrimaryEmail,
+					Email: email,
 					Name:  remoteUser.Name.FullName,
 				}
 
 				err = tx.Create(localUser).Error
 				if err != nil {
-					return fmt.Errorf("%s: create local user %s: %w", OpCreate, remoteUser.PrimaryEmail, err)
+					return fmt.Errorf("%s: create local user %s: %w", OpCreate, email, err)
 				}
 
 				roleBindings := make([]dbmodels.RoleBinding, len(defaultRoleIds))
@@ -123,7 +125,7 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 
 				err = tx.Create(roleBindings).Error
 				if err != nil {
-					return fmt.Errorf("%s: create role bindings for local user %s: %w", OpCreate, remoteUser.PrimaryEmail, err)
+					return fmt.Errorf("%s: create role bindings for local user %s: %w", OpCreate, email, err)
 				}
 
 				auditLogEntries = append(auditLogEntries, &auditLogEntry{
