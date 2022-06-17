@@ -6,6 +6,7 @@ import (
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/shurcooL/githubv4"
+	"gorm.io/gorm"
 )
 
 type GraphClient interface {
@@ -22,6 +23,7 @@ type TeamsService interface {
 
 // gitHubReconciler creates teams on GitHub and connects users to them.
 type gitHubReconciler struct {
+	db           *gorm.DB
 	system       dbmodels.System
 	auditLogger  auditlogger.AuditLogger
 	teamsService TeamsService

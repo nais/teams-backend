@@ -35,8 +35,9 @@ func init() {
 	registry.Register(Name, NewFromConfig)
 }
 
-func New(system dbmodels.System, auditLogger auditlogger.AuditLogger, org, domain string, teamsService TeamsService, graphClient GraphClient) *gitHubReconciler {
+func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, org, domain string, teamsService TeamsService, graphClient GraphClient) *gitHubReconciler {
 	return &gitHubReconciler{
+		db:           db,
 		system:       system,
 		auditLogger:  auditLogger,
 		org:          org,
@@ -46,7 +47,7 @@ func New(system dbmodels.System, auditLogger auditlogger.AuditLogger, org, domai
 	}
 }
 
-func NewFromConfig(_ *gorm.DB, cfg *config.Config, system dbmodels.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.GitHub.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
@@ -69,7 +70,7 @@ func NewFromConfig(_ *gorm.DB, cfg *config.Config, system dbmodels.System, audit
 	restClient := github.NewClient(httpClient)
 	graphClient := githubv4.NewClient(httpClient)
 
-	return New(system, auditLogger, cfg.GitHub.Organization, cfg.PartnerDomain, restClient.Teams, graphClient), nil
+	return New(db, system, auditLogger, cfg.GitHub.Organization, cfg.PartnerDomain, restClient.Teams, graphClient), nil
 }
 
 func (s *gitHubReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
