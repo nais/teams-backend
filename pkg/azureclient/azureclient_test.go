@@ -91,7 +91,7 @@ func Test_GetGroup(t *testing.T) {
 	})
 
 	client := New(httpClient)
-	group, err := client.GetGroup(context.TODO(), "slug")
+	group, err := client.GetGroupByMailNickName(context.TODO(), "slug")
 
 	assert.NoError(t, err)
 	assert.Equal(t, "group-id", group.ID)
@@ -106,7 +106,7 @@ func Test_GetGroupThatDoesNotExist(t *testing.T) {
 	})
 
 	client := New(httpClient)
-	group, err := client.GetGroup(context.TODO(), "slug")
+	group, err := client.GetGroupByMailNickName(context.TODO(), "slug")
 
 	assert.Nil(t, group)
 	assert.EqualError(t, err, "azure group 'slug' does not exist")
@@ -121,7 +121,7 @@ func Test_GetGroupWithAmbiguousResult(t *testing.T) {
 	})
 
 	client := New(httpClient)
-	group, err := client.GetGroup(context.TODO(), "slug")
+	group, err := client.GetGroupByMailNickName(context.TODO(), "slug")
 
 	assert.Nil(t, group)
 	assert.EqualError(t, err, "ambiguous response; more than one search result for azure group 'slug'")

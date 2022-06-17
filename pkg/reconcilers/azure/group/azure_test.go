@@ -7,6 +7,7 @@ import (
 	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/test"
+	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"testing"
 	"time"
 
@@ -28,6 +29,8 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 	defer cancel()
+
+	hook := logrustest.NewGlobal()
 
 	db := test.GetTestDB()
 	auditLogger := auditlogger.New(db)
@@ -71,7 +74,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 
 	t.Run("happy case", func(t *testing.T) {
 		mockClient := &azureclient.MockClient{}
-		reconciler := azure_group.New(system, auditLogger, creds, mockClient, domain)
+		reconciler := azure_group.New(db, system, auditLogger, creds, mockClient, domain)
 
 		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, purpose).
 			Return(group, true, nil).Once()
@@ -99,7 +102,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 
 	t.Run("GetOrCreateGroup fail", func(t *testing.T) {
 		mockClient := &azureclient.MockClient{}
-		reconciler := azure_group.New(system, auditLogger, creds, mockClient, domain)
+		reconciler := azure_group.New(db, system, auditLogger, creds, mockClient, domain)
 
 		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, purpose).
 			Return(nil, false, fmt.Errorf("GetOrCreateGroup failed")).Once()
@@ -122,7 +125,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 
 	t.Run("ListGroupMembers fail", func(t *testing.T) {
 		mockClient := &azureclient.MockClient{}
-		reconciler := azure_group.New(system, auditLogger, creds, mockClient, domain)
+		reconciler := azure_group.New(db, system, auditLogger, creds, mockClient, domain)
 
 		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, purpose).
 			Return(group, true, nil).Once()
@@ -147,12 +150,13 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 
 	t.Run("RemoveMemberFromGroup fail", func(t *testing.T) {
 		mockClient := &azureclient.MockClient{}
-		reconciler := azure_group.New(system, auditLogger, creds, mockClient, domain)
+		mockAuditLogger := &auditlogger.MockAuditLogger{}
+		reconciler := azure_group.New(db, system, mockAuditLogger, creds, mockClient, domain)
 
 		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, purpose).
-			Return(group, true, nil).Once()
+			Return(group, false /* pass false to skip the initial audit log entry */, nil).Once()
 		mockClient.On("ListGroupMembers", mock.Anything, group).
-			Return([]*azureclient.Member{keepMember, removeMember}, nil).Once()
+			Return([]*azureclient.Member{removeMember}, nil).Once()
 		mockClient.On("RemoveMemberFromGroup", mock.Anything, group, removeMember).
 			Return(fmt.Errorf("RemoveMemberFromGroup failed")).Once()
 
@@ -162,19 +166,17 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 				Slug:    teamSlug,
 				Name:    teamName,
 				Purpose: purpose,
-				Users: []*dbmodels.User{
-					addUser, keepUser,
-				},
 			},
 		})
 
-		assert.Error(t, err)
+		assert.NoError(t, err)
+		mockAuditLogger.AssertNotCalled(t, "Logf")
 		mockClient.AssertExpectations(t)
 	})
 
 	t.Run("GetUser fail", func(t *testing.T) {
 		mockClient := &azureclient.MockClient{}
-		reconciler := azure_group.New(system, auditLogger, creds, mockClient, domain)
+		reconciler := azure_group.New(db, system, auditLogger, creds, mockClient, domain)
 
 		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, purpose).
 			Return(group, true, nil).Once()
@@ -200,19 +202,19 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 	})
 
 	t.Run("AddMemberToGroup fail", func(t *testing.T) {
-
 		mockClient := &azureclient.MockClient{}
-		reconciler := azure_group.New(system, auditLogger, creds, mockClient, domain)
+		mockAuditLogger := &auditlogger.MockAuditLogger{}
+		reconciler := azure_group.New(db, system, mockAuditLogger, creds, mockClient, domain)
 
 		mockClient.On("GetOrCreateGroup", mock.Anything, "nais-team-myteam", teamName, purpose).
-			Return(group, true, nil).Once()
+			Return(group, false /* pass false to skip the initial audit log entry */, nil).Once()
 		mockClient.On("ListGroupMembers", mock.Anything, group).
-			Return([]*azureclient.Member{keepMember, removeMember}, nil).Once()
-		mockClient.On("RemoveMemberFromGroup", mock.Anything, group, removeMember).Return(nil).Once()
+			Return([]*azureclient.Member{keepMember}, nil).Once()
 		mockClient.On("GetUser", mock.Anything, addUser.Email).Return(addMember, nil).Once()
 		mockClient.On("AddMemberToGroup", mock.Anything, group, addMember).
 			Return(fmt.Errorf("AddMemberToGroup failed")).Once()
 
+		hook.Reset()
 		err := reconciler.Reconcile(ctx, reconcilers.Input{
 			Corr: corr,
 			Team: dbmodels.Team{
@@ -225,7 +227,8 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			},
 		})
 
-		assert.Error(t, err)
+		assert.NoError(t, err)
+		mockAuditLogger.AssertNotCalled(t, "Logf")
 		mockClient.AssertExpectations(t)
 	})
 }

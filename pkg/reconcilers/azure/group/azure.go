@@ -20,6 +20,7 @@ import (
 
 // gitHubReconciler creates teams on GitHub and connects users to them.
 type azureReconciler struct {
+	db          *gorm.DB
 	system      dbmodels.System
 	auditLogger auditlogger.AuditLogger
 	oauth       clientcredentials.Config
@@ -28,20 +29,20 @@ type azureReconciler struct {
 }
 
 const (
-	Name            = "azure:group"
-	OpCreate        = "azure:group:create"
-	OpAddMember     = "azure:group:add-member"
-	OpAddMembers    = "azure:group:add-members"
-	OpDeleteMember  = "azure:group:delete-member"
-	OpDeleteMembers = "azure:group:delete-members"
+	Name           = "azure:group"
+	OpCreate       = "azure:group:create"
+	OpAddMember    = "azure:group:add-member"
+	OpAddMembers   = "azure:group:add-members"
+	OpDeleteMember = "azure:group:delete-member"
 )
 
 func init() {
 	registry.Register(Name, NewFromConfig)
 }
 
-func New(system dbmodels.System, auditLogger auditlogger.AuditLogger, oauth clientcredentials.Config, client azureclient.Client, domain string) *azureReconciler {
+func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, oauth clientcredentials.Config, client azureclient.Client, domain string) *azureReconciler {
 	return &azureReconciler{
+		db:          db,
 		system:      system,
 		auditLogger: auditLogger,
 		oauth:       oauth,
@@ -50,7 +51,7 @@ func New(system dbmodels.System, auditLogger auditlogger.AuditLogger, oauth clie
 	}
 }
 
-func NewFromConfig(_ *gorm.DB, cfg *config.Config, system dbmodels.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.Azure.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
@@ -66,7 +67,7 @@ func NewFromConfig(_ *gorm.DB, cfg *config.Config, system dbmodels.System, audit
 		},
 	}
 
-	return New(system, auditLogger, conf, azureclient.New(conf.Client(context.Background())), cfg.PartnerDomain), nil
+	return New(db, system, auditLogger, conf, azureclient.New(conf.Client(context.Background())), cfg.PartnerDomain), nil
 }
 
 func (s *azureReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
@@ -88,77 +89,96 @@ func (s *azureReconciler) Reconcile(ctx context.Context, input reconcilers.Input
 	return nil
 }
 
+func (s *azureReconciler) getUserByEmail(email string) *dbmodels.User {
+	localUser := &dbmodels.User{}
+	err := s.db.Where("email = ?", email).First(localUser).Error
+	if err != nil {
+		return nil
+	}
+
+	return localUser
+}
+
 func (s *azureReconciler) connectUsers(ctx context.Context, grp *azureclient.Group, corr dbmodels.Correlation, team dbmodels.Team) error {
 	members, err := s.client.ListGroupMembers(ctx, grp)
 	if err != nil {
-		return fmt.Errorf("%s: list existing members in Azure group: %s", OpAddMembers, err)
+		return fmt.Errorf("%s: list existing members in Azure group '%s': %s", OpAddMembers, grp.MailNickname, err)
 	}
 
+	consoleUserMap := make(map[string]*dbmodels.User)
 	localMembers := helpers.DomainUsers(team.Users, s.domain)
 
-	deleteMembers := extraMembers(members, localMembers)
-	createUsers := missingUsers(members, localMembers)
-
-	for _, member := range deleteMembers {
+	membersToRemove := remoteOnlyMembers(members, localMembers)
+	for _, member := range membersToRemove {
+		remoteEmail := strings.ToLower(member.Mail)
 		err = s.client.RemoveMemberFromGroup(ctx, grp, member)
 		if err != nil {
-			return fmt.Errorf("%s: delete member '%s' from Azure group '%s': %s", OpDeleteMember, member.Mail, grp.MailNickname, err)
+			log.Warnf("%s: unable to remove member '%s' from group '%s' in Azure: %s", OpDeleteMember, remoteEmail, grp.MailNickname, err)
+			continue
 		}
 
-		// FIXME: connect audit log with database user
-		s.auditLogger.Logf(OpDeleteMember, corr, s.system, nil, &team, nil, "deleted member '%s' from Azure group '%s'", member.Mail, grp.MailNickname)
+		if _, exists := consoleUserMap[remoteEmail]; !exists {
+			consoleUserMap[remoteEmail] = s.getUserByEmail(remoteEmail)
+		}
+
+		s.auditLogger.Logf(OpDeleteMember, corr, s.system, nil, &team, consoleUserMap[remoteEmail], "removed member '%s' from Azure group '%s'", remoteEmail, grp.MailNickname)
 	}
 
-	for _, user := range createUsers {
+	membersToAdd := localOnlyMembers(members, localMembers)
+	for _, user := range membersToAdd {
 		member, err := s.client.GetUser(ctx, user.Email)
 		if err != nil {
-			log.Warnf("%s: Unable to lookup user with email '%s' in Azure", OpAddMember, user.Email)
+			log.Warnf("%s: unable to lookup user with email '%s' in Azure: %s", OpAddMember, user.Email, err)
 			continue
 		}
 		err = s.client.AddMemberToGroup(ctx, grp, member)
 		if err != nil {
-			return fmt.Errorf("%s: add member '%s' to Azure group '%s': %s", OpAddMember, member.Mail, grp.MailNickname, err)
+			log.Warnf("%s: unable to add member '%s' to Azure group '%s': %s", OpAddMember, user.Email, grp.MailNickname, err)
+			continue
 		}
 
-		// FIXME: connect audit log with database user
-		s.auditLogger.Logf(OpAddMember, corr, s.system, nil, &team, nil, "added member '%s' to Azure group '%s'", member.Mail, grp.MailNickname)
+		if _, exists := consoleUserMap[member.Mail]; !exists {
+			consoleUserMap[member.Mail] = s.getUserByEmail(member.Mail)
+		}
+
+		s.auditLogger.Logf(OpAddMember, corr, s.system, nil, &team, consoleUserMap[member.Mail], "added member '%s' to Azure group '%s'", member.Mail, grp.MailNickname)
 	}
 
 	return nil
 }
 
-// Given a list of Azure group members and a list of users,
-// return users not present in members list.
-func missingUsers(members []*azureclient.Member, users []*dbmodels.User) []*dbmodels.User {
-	userMap := make(map[string]*dbmodels.User)
-	for _, user := range users {
-		userMap[user.Email] = user
+// localOnlyMembers Given a list of Azure group members and a list of Console users, return Console users not present in
+// the Azure group member list. The email address is used to compare objects.
+func localOnlyMembers(azureGroupMembers []*azureclient.Member, consoleUsers []*dbmodels.User) []*dbmodels.User {
+	localUserMap := make(map[string]*dbmodels.User)
+	for _, user := range consoleUsers {
+		localUserMap[user.Email] = user
 	}
-	for _, member := range members {
-		delete(userMap, strings.ToLower(member.Mail))
+	for _, member := range azureGroupMembers {
+		delete(localUserMap, strings.ToLower(member.Mail))
 	}
-	users = make([]*dbmodels.User, 0, len(userMap))
-	for _, user := range userMap {
-		users = append(users, user)
+	localUsers := make([]*dbmodels.User, 0, len(localUserMap))
+	for _, user := range localUserMap {
+		localUsers = append(localUsers, user)
 	}
-	return users
+	return localUsers
 }
 
-// Given a list of Azure group members and a list of users,
-// return members not present in user list.
-func extraMembers(members []*azureclient.Member, users []*dbmodels.User) []*azureclient.Member {
-	memberMap := make(map[string]*azureclient.Member)
-	for _, member := range members {
-		memberMap[strings.ToLower(member.Mail)] = member
+// remoteOnlyMembers Given a list of Azure group members and a list of Console users, return Azure group members not
+// present in Console user list. The email address is used to compare objects.
+func remoteOnlyMembers(azureGroupMembers []*azureclient.Member, consoleUsers []*dbmodels.User) []*azureclient.Member {
+	azureGroupMemberMap := make(map[string]*azureclient.Member)
+	for _, member := range azureGroupMembers {
+		azureGroupMemberMap[strings.ToLower(member.Mail)] = member
 	}
-	for _, user := range users {
-		delete(memberMap, user.Email)
+	for _, user := range consoleUsers {
+		delete(azureGroupMemberMap, user.Email)
 	}
-	members = make([]*azureclient.Member, 0, len(memberMap))
-	for _, member := range memberMap {
-		members = append(members, member)
+	azureGroupMembers = make([]*azureclient.Member, 0, len(azureGroupMemberMap))
+	for _, member := range azureGroupMemberMap {
+		azureGroupMembers = append(azureGroupMembers, member)
 	}
-	return members
+	return azureGroupMembers
 }
 
 func teamNameWithPrefix(slug dbmodels.Slug) string {

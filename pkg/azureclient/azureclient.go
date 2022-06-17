@@ -18,7 +18,7 @@ type client struct {
 type Client interface {
 	AddMemberToGroup(ctx context.Context, grp *Group, member *Member) error
 	CreateGroup(ctx context.Context, grp *Group) (*Group, error)
-	GetGroup(ctx context.Context, slug string) (*Group, error)
+	GetGroupByMailNickName(ctx context.Context, slug string) (*Group, error)
 	GetOrCreateGroup(ctx context.Context, slug, name string, description *string) (*Group, bool, error)
 	GetUser(ctx context.Context, email string) (*Member, error)
 	ListGroupMembers(ctx context.Context, grp *Group) ([]*Member, error)
@@ -63,9 +63,9 @@ func (s *client) GetUser(ctx context.Context, email string) (*Member, error) {
 	return user, nil
 }
 
-func (s *client) GetGroup(ctx context.Context, slug string) (*Group, error) {
+func (s *client) GetGroupByMailNickName(ctx context.Context, mailNickname string) (*Group, error) {
 	v := &url.Values{}
-	v.Add("$filter", fmt.Sprintf("mailNickname eq '%s'", slug))
+	v.Add("$filter", fmt.Sprintf("mailNickname eq '%s'", mailNickname))
 	u := "https://graph.microsoft.com/v1.0/groups?" + v.Encode()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
@@ -89,11 +89,11 @@ func (s *client) GetGroup(ctx context.Context, slug string) (*Group, error) {
 
 	switch len(grp.Value) {
 	case 0:
-		return nil, fmt.Errorf("azure group '%s' does not exist", slug)
+		return nil, fmt.Errorf("azure group '%s' does not exist", mailNickname)
 	case 1:
 		break
 	default:
-		return nil, fmt.Errorf("ambiguous response; more than one search result for azure group '%s'", slug)
+		return nil, fmt.Errorf("ambiguous response; more than one search result for azure group '%s'", mailNickname)
 	}
 
 	return grp.Value[0], nil
@@ -141,8 +141,8 @@ func (s *client) CreateGroup(ctx context.Context, grp *Group) (*Group, error) {
 
 // GetOrCreateGroup Get or create a group fom the Graph API. The second return value informs if the group was
 // created or not.
-func (s *client) GetOrCreateGroup(ctx context.Context, slug, name string, description *string) (*Group, bool, error) {
-	grp, err := s.GetGroup(ctx, slug)
+func (s *client) GetOrCreateGroup(ctx context.Context, mailNickname, name string, description *string) (*Group, bool, error) {
+	grp, err := s.GetGroupByMailNickName(ctx, mailNickname)
 	if err == nil {
 		return grp, false, err
 	}
@@ -152,7 +152,7 @@ func (s *client) GetOrCreateGroup(ctx context.Context, slug, name string, descri
 		DisplayName:     name,
 		GroupTypes:      nil,
 		MailEnabled:     false,
-		MailNickname:    slug,
+		MailNickname:    mailNickname,
 		SecurityEnabled: true,
 	}
 
