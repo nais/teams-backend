@@ -125,23 +125,19 @@ func (s *azureReconciler) connectUsers(ctx context.Context, grp *azureclient.Gro
 	}
 
 	membersToAdd := localOnlyMembers(members, localMembers)
-	for _, user := range membersToAdd {
-		member, err := s.client.GetUser(ctx, user.Email)
+	for _, consoleUser := range membersToAdd {
+		member, err := s.client.GetUser(ctx, consoleUser.Email)
 		if err != nil {
-			log.Warnf("%s: unable to lookup user with email '%s' in Azure: %s", OpAddMember, user.Email, err)
+			log.Warnf("%s: unable to lookup user with email '%s' in Azure: %s", OpAddMember, consoleUser.Email, err)
 			continue
 		}
 		err = s.client.AddMemberToGroup(ctx, grp, member)
 		if err != nil {
-			log.Warnf("%s: unable to add member '%s' to Azure group '%s': %s", OpAddMember, user.Email, grp.MailNickname, err)
+			log.Warnf("%s: unable to add member '%s' to Azure group '%s': %s", OpAddMember, consoleUser.Email, grp.MailNickname, err)
 			continue
 		}
 
-		if _, exists := consoleUserMap[member.Mail]; !exists {
-			consoleUserMap[member.Mail] = s.getUserByEmail(member.Mail)
-		}
-
-		s.auditLogger.Logf(OpAddMember, corr, s.system, nil, &team, consoleUserMap[member.Mail], "added member '%s' to Azure group '%s'", member.Mail, grp.MailNickname)
+		s.auditLogger.Logf(OpAddMember, corr, s.system, nil, &team, consoleUser, "added member '%s' to Azure group '%s'", member.Mail, grp.MailNickname)
 	}
 
 	return nil
