@@ -5,12 +5,12 @@ LDFLAGS := -X github.com/nais/console/pkg/version.Revision=$(LAST_COMMIT) -X git
 
 .PHONY: alpine console test generate
 
-all: mocks generate console
+all: generate console
 
 console:
 	go build -o bin/console -ldflags "-s $(LDFLAGS)" cmd/console/*.go
 
-test:
+test: mocks
 	go test ./...
 
 generate:
