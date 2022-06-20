@@ -7,6 +7,7 @@ import (
 	"github.com/nais/console/pkg/google_jwt"
 	log "github.com/sirupsen/logrus"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/nais/console/pkg/auditlogger"
@@ -23,6 +24,7 @@ import (
 
 type gcpReconciler struct {
 	auditLogger auditlogger.AuditLogger
+	db          *gorm.DB
 	domain      string
 	config      *jwt.Config
 	system      dbmodels.System
@@ -41,16 +43,17 @@ func init() {
 	registry.Register(Name, NewFromConfig)
 }
 
-func New(system dbmodels.System, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config) *gcpReconciler {
+func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config) *gcpReconciler {
 	return &gcpReconciler{
 		auditLogger: auditLogger,
+		db:          db,
 		domain:      domain,
 		config:      config,
 		system:      system,
 	}
 }
 
-func NewFromConfig(_ *gorm.DB, cfg *config.Config, system dbmodels.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.Google.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
@@ -61,7 +64,7 @@ func NewFromConfig(_ *gorm.DB, cfg *config.Config, system dbmodels.System, audit
 		return nil, fmt.Errorf("get google jwt config: %w", err)
 	}
 
-	return New(system, auditLogger, cfg.PartnerDomain, config), nil
+	return New(db, system, auditLogger, cfg.PartnerDomain, config), nil
 }
 
 func (s *gcpReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
@@ -69,7 +72,7 @@ func (s *gcpReconciler) Reconcile(ctx context.Context, input reconcilers.Input) 
 
 	srv, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
-		return fmt.Errorf("retrieve directory client: %s", err)
+		return fmt.Errorf("retrieve directory client: %w", err)
 	}
 
 	grp, err := s.getOrCreateGroup(srv.Groups, input.Corr, input.Team)
@@ -79,7 +82,7 @@ func (s *gcpReconciler) Reconcile(ctx context.Context, input reconcilers.Input) 
 
 	err = s.connectUsers(srv.Members, grp, input.Corr, input.Team)
 	if err != nil {
-		return fmt.Errorf("%s: add members to group: %s", OpAddMembers, err)
+		return fmt.Errorf("%s: add members to group: %w", OpAddMembers, err)
 	}
 
 	err = s.addToGKESecurityGroup(srv.Members, grp, input.Corr, input.Team)
@@ -108,7 +111,7 @@ func (s *gcpReconciler) getOrCreateGroup(groupsService *admin_directory_v1.Group
 
 	grp, err = groupsService.Insert(grp).Do()
 	if err != nil {
-		return nil, fmt.Errorf("%s: create Google Directory group: %s", OpCreate, err)
+		return nil, fmt.Errorf("%s: create Google Directory group: %w", OpCreate, err)
 	}
 
 	s.auditLogger.Logf(OpCreate, corr, s.system, nil, &team, nil, "created Google Directory group '%s'", grp.Email)
@@ -117,41 +120,41 @@ func (s *gcpReconciler) getOrCreateGroup(groupsService *admin_directory_v1.Group
 }
 
 func (s *gcpReconciler) connectUsers(membersService *admin_directory_v1.MembersService, grp *admin_directory_v1.Group, corr dbmodels.Correlation, team dbmodels.Team) error {
-	remoteMembers, err := membersService.List(grp.Id).Do()
+	membersAccordingToGoogle, err := membersService.List(grp.Id).Do()
 	if err != nil {
-		return fmt.Errorf("%s: list existing members in Google Directory group: %s", OpAddMembers, err)
+		return fmt.Errorf("%s: list existing members in Google Directory group: %w", OpAddMembers, err)
 	}
 
+	consoleUserMap := make(map[string]*dbmodels.User)
 	localMembers := helpers.DomainUsers(team.Users, s.domain)
 
-	deleteMembers := extraMembers(remoteMembers.Members, localMembers)
-	createMembers := missingUsers(remoteMembers.Members, localMembers)
-	deleted := 0
-	created := 0
-
-	for _, member := range deleteMembers {
+	membersToRemove := remoteOnlyMembers(membersAccordingToGoogle.Members, localMembers)
+	for _, member := range membersToRemove {
+		remoteMemberEmail := strings.ToLower(member.Email)
 		err = membersService.Delete(grp.Id, member.Id).Do()
 		if err != nil {
-			fmt.Errorf("%s: delete member '%s' from Google Directory group '%s': %s", OpDeleteMember, member.Email, grp.Email, err)
+			log.Warnf("%s: delete member '%s' from Google Directory group '%s': %s", OpDeleteMember, remoteMemberEmail, grp.Email, err)
 			continue
 		}
-		deleted++
-		// FIXME: connect audit log with database user, if exists
-		s.auditLogger.Logf(OpDeleteMember, corr, s.system, nil, &team, nil, "deleted member '%s' from Google Directory group '%s'", member.Email, grp.Email)
+
+		if _, exists := consoleUserMap[remoteMemberEmail]; !exists {
+			consoleUserMap[remoteMemberEmail] = dbmodels.GetUserByEmail(s.db, remoteMemberEmail)
+		}
+
+		s.auditLogger.Logf(OpDeleteMember, corr, s.system, nil, &team, consoleUserMap[remoteMemberEmail], "deleted member '%s' from Google Directory group '%s'", member.Email, grp.Email)
 	}
 
-	for _, user := range createMembers {
+	membersToAdd := localOnlyMembers(membersAccordingToGoogle.Members, localMembers)
+	for _, user := range membersToAdd {
 		member := &admin_directory_v1.Member{
 			Email: user.Email,
 		}
 		_, err = membersService.Insert(grp.Id, member).Do()
 		if err != nil {
-			log.Errorf("%s: add member '%s' to Google Directory group '%s': %s", OpAddMember, member.Email, grp.Email, err)
+			log.Warnf("%s: add member '%s' to Google Directory group '%s': %s", OpAddMember, member.Email, grp.Email, err)
 			continue
 		}
-		created++
-		// FIXME: connect audit log with database user, if exists
-		s.auditLogger.Logf(OpAddMember, corr, s.system, nil, &team, nil, "added member '%s' to Google Directory group '%s'", member.Email, grp.Email)
+		s.auditLogger.Logf(OpAddMember, corr, s.system, nil, &team, user, "added member '%s' to Google Directory group '%s'", member.Email, grp.Email)
 	}
 
 	return nil
@@ -179,36 +182,36 @@ func (s *gcpReconciler) addToGKESecurityGroup(membersService *admin_directory_v1
 	return nil
 }
 
-// Given a list of Google group members and a list of users,
-// return users not present in members directory.
-func missingUsers(members []*admin_directory_v1.Member, users []*dbmodels.User) []*dbmodels.User {
-	userMap := make(map[string]*dbmodels.User)
-	for _, user := range users {
-		userMap[user.Email] = user
+// remoteOnlyMembers Given a list of Google group members and a list of Console users, return Google group members not
+// present in Console user list.
+func remoteOnlyMembers(googleGroupMembers []*admin_directory_v1.Member, consoleUsers []*dbmodels.User) []*admin_directory_v1.Member {
+	googleGroupMemberMap := make(map[string]*admin_directory_v1.Member)
+	for _, member := range googleGroupMembers {
+		googleGroupMemberMap[strings.ToLower(member.Email)] = member
 	}
-	for _, member := range members {
-		delete(userMap, member.Email)
+	for _, user := range consoleUsers {
+		delete(googleGroupMemberMap, user.Email)
 	}
-	users = make([]*dbmodels.User, 0, len(userMap))
-	for _, user := range userMap {
-		users = append(users, user)
+	googleGroupMembers = make([]*admin_directory_v1.Member, 0, len(googleGroupMemberMap))
+	for _, member := range googleGroupMemberMap {
+		googleGroupMembers = append(googleGroupMembers, member)
 	}
-	return users
+	return googleGroupMembers
 }
 
 // Given a list of Google group members and a list of users,
-// return members not present in user list.
-func extraMembers(members []*admin_directory_v1.Member, users []*dbmodels.User) []*admin_directory_v1.Member {
-	memberMap := make(map[string]*admin_directory_v1.Member)
-	for _, member := range members {
-		memberMap[member.Email] = member
+// return users not present in members directory.
+func localOnlyMembers(googleGroupMembers []*admin_directory_v1.Member, consoleUsers []*dbmodels.User) []*dbmodels.User {
+	localUserMap := make(map[string]*dbmodels.User)
+	for _, user := range consoleUsers {
+		localUserMap[user.Email] = user
 	}
-	for _, user := range users {
-		delete(memberMap, user.Email)
+	for _, member := range googleGroupMembers {
+		delete(localUserMap, strings.ToLower(member.Email))
 	}
-	members = make([]*admin_directory_v1.Member, 0, len(memberMap))
-	for _, member := range memberMap {
-		members = append(members, member)
+	consoleUsers = make([]*dbmodels.User, 0, len(localUserMap))
+	for _, user := range localUserMap {
+		consoleUsers = append(consoleUsers, user)
 	}
-	return members
+	return consoleUsers
 }

@@ -16,5 +16,6 @@ func TestGetUserByEmail(t *testing.T) {
 	db.Create(user)
 
 	assert.Nil(t, GetUserByEmail(db, "user-that-does-not-exist@example.com"))
+	assert.Equal(t, user.ID, GetUserByEmail(db, "User@example.com").ID)
 	assert.Equal(t, user.ID, GetUserByEmail(db, "user@example.com").ID)
 }
