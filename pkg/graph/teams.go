@@ -14,16 +14,10 @@ import (
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/reconcilers"
 	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
-	"github.com/nais/console/pkg/roles"
 	"gorm.io/gorm"
 )
 
 func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*dbmodels.Team, error) {
-	err := authz.Authorized(ctx, r.system, nil, authz.AccessLevelCreate, authz.ResourceTeams)
-	if err != nil {
-		return nil, err
-	}
-
 	user := authz.UserFromContext(ctx)
 	corr := &dbmodels.Correlation{}
 	team := &dbmodels.Team{
@@ -32,16 +26,10 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		Purpose: input.Purpose,
 	}
 
-	err = r.db.Transaction(func(tx *gorm.DB) error {
-		err = tx.Create(corr).Error
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		err := tx.Create(corr).Error
 		if err != nil {
 			return fmt.Errorf("unable to create correlation for audit log")
-		}
-
-		teamEditor := &dbmodels.Role{}
-		err = tx.Where("name = ?", roles.TeamEditor).First(teamEditor).Error
-		if err != nil {
-			return err
 		}
 
 		err = r.createTrackedObject(ctx, team)
@@ -54,18 +42,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 			TeamID: *team.ID,
 		}
 
-		err = r.createTrackedObject(ctx, ut)
-		if err != nil {
-			return err
-		}
-
-		roleBinding := &dbmodels.RoleBinding{
-			RoleID: *teamEditor.ID,
-			TeamID: team.ID,
-			UserID: *user.ID,
-		}
-
-		return r.createTrackedObject(ctx, roleBinding)
+		return r.createTrackedObject(ctx, ut)
 	})
 
 	if err != nil {
@@ -102,11 +79,6 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 
 	if len(users) != len(input.UserIds) {
 		return nil, fmt.Errorf("one or more non-existing or duplicate user IDs given as parameter")
-	}
-
-	err = authz.Authorized(ctx, r.system, team, authz.AccessLevelUpdate, authz.ResourceTeams)
-	if err != nil {
-		return nil, err
 	}
 
 	corr := &dbmodels.Correlation{}
@@ -163,11 +135,6 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 		return nil, fmt.Errorf("one or more non-existing or duplicate user IDs given as parameter")
 	}
 
-	err = authz.Authorized(ctx, r.system, team, authz.AccessLevelUpdate, authz.ResourceTeams)
-	if err != nil {
-		return nil, err
-	}
-
 	corr := &dbmodels.Correlation{}
 	err = r.db.Transaction(func(tx *gorm.DB) error {
 		err = tx.Create(corr).Error
@@ -176,11 +143,6 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 		}
 
 		err = tx.Where("user_id IN (?) AND team_id = ?", input.UserIds, team.ID).Delete(&dbmodels.UsersTeams{}).Error
-		if err != nil {
-			return err
-		}
-
-		err = tx.Where("user_id IN (?) AND team_id = ?", input.UserIds, team.ID).Delete(&dbmodels.RoleBinding{}).Error
 		if err != nil {
 			return err
 		}
@@ -211,11 +173,6 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 		return false, err
 	}
 
-	err = authz.Authorized(ctx, r.system, team, authz.AccessLevelUpdate, authz.ResourceTeams)
-	if err != nil {
-		return false, err
-	}
-
 	corr := &dbmodels.Correlation{}
 	err = r.db.Create(corr).Error
 	if err != nil {
@@ -238,11 +195,6 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 }
 
 func (r *queryResolver) Teams(ctx context.Context, pagination *model.Pagination, query *model.TeamsQuery, sort *model.TeamsSort) (*model.Teams, error) {
-	err := authz.Authorized(ctx, r.system, nil, authz.AccessLevelRead, authz.ResourceTeams)
-	if err != nil {
-		return nil, err
-	}
-
 	teams := make([]*dbmodels.Team, 0)
 	if sort == nil {
 		sort = &model.TeamsSort{
@@ -260,11 +212,6 @@ func (r *queryResolver) Teams(ctx context.Context, pagination *model.Pagination,
 func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team, error) {
 	team := &dbmodels.Team{}
 	err := r.db.Where("id = ?", id).First(team).Error
-	if err != nil {
-		return nil, err
-	}
-
-	err = authz.Authorized(ctx, r.system, team, authz.AccessLevelRead, authz.ResourceTeams)
 	if err != nil {
 		return nil, err
 	}

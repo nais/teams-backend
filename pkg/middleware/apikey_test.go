@@ -12,12 +12,11 @@ func setupFixtures(db *gorm.DB) error {
 	db.AutoMigrate(&dbmodels.User{})
 	return db.Transaction(func(tx *gorm.DB) error {
 		tx.Create(&dbmodels.User{
-			Model:        dbmodels.Model{},
-			SoftDelete:   dbmodels.SoftDelete{},
-			Email:        "user@example.com",
-			Name:         "User Name",
-			Teams:        nil,
-			RoleBindings: nil,
+			Model:      dbmodels.Model{},
+			SoftDelete: dbmodels.SoftDelete{},
+			Email:      "user@example.com",
+			Name:       "User Name",
+			Teams:      nil,
 		})
 		return nil
 	})

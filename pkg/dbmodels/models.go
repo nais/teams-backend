@@ -56,29 +56,6 @@ type Correlation struct {
 	SoftDelete
 }
 
-type RoleBinding struct {
-	Model
-	Role   Role       `gorm:""` // which role is granted
-	Team   *Team      `gorm:""` // role is granted in context of this team
-	User   User       `gorm:""` // which user is granted this role
-	RoleID uuid.UUID  `gorm:"type:uuid; not null; index:user_role_team_index,unique"`
-	TeamID *uuid.UUID `gorm:"type:uuid; index:user_role_team_index,unique"`
-	UserID uuid.UUID  `gorm:"type:uuid; not null; index:user_role_team_index,unique"`
-}
-
-type Role struct {
-	Model
-	SoftDelete
-	System       System         `gorm:"not null"`
-	SystemID     uuid.UUID      `gorm:"type:uuid; not null; index"`
-	Name         string         `gorm:"uniqueIndex; not null"`
-	Description  string         `gorm:"not null"` // Human readable role description
-	Resource     string         `gorm:"not null"` // sub-resource at system (maybe not needed if systems are namespaced, e.g. gcp:buckets)
-	AccessLevel  string         `gorm:"not null"` // CRUD
-	Permission   string         `gorm:"not null"` // allow/deny
-	RoleBindings []*RoleBinding `gorm:"foreignKey:RoleID"`
-}
-
 type SystemState struct {
 	Model
 	System      System     `gorm:""`
@@ -128,10 +105,9 @@ type Team struct {
 type User struct {
 	Model
 	SoftDelete
-	Email        string         `gorm:"not null; unique"`
-	Name         string         `gorm:"not null"`
-	Teams        []*Team        `gorm:"many2many:users_teams"`
-	RoleBindings []*RoleBinding `gorm:"foreignKey:UserID"`
+	Email string  `gorm:"not null; unique"`
+	Name  string  `gorm:"not null"`
+	Teams []*Team `gorm:"many2many:users_teams"`
 }
 
 type UsersTeams struct {

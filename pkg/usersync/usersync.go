@@ -8,7 +8,6 @@ import (
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/google_jwt"
-	"github.com/nais/console/pkg/roles"
 	"golang.org/x/oauth2/jwt"
 	"gorm.io/gorm"
 	"strings"
@@ -72,11 +71,6 @@ type auditLogEntry struct {
 // the local user will remain untouched. After all users have been added we will also remove all local users that
 // matches the partner domain that does not exist in the Google Directory.
 func (s *userSynchronizer) Sync(ctx context.Context) error {
-	defaultRoleIds, err := s.getDefaultRoleIds()
-	if err != nil {
-		return fmt.Errorf("%s: unable to fetch roles: %w", OpPrepare, err)
-	}
-
 	client := s.config.Client(ctx)
 	srv, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
@@ -113,19 +107,6 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 				err = tx.Create(localUser).Error
 				if err != nil {
 					return fmt.Errorf("%s: create local user %s: %w", OpCreate, email, err)
-				}
-
-				roleBindings := make([]dbmodels.RoleBinding, len(defaultRoleIds))
-				for idx, roleId := range defaultRoleIds {
-					roleBindings[idx] = dbmodels.RoleBinding{
-						RoleID: roleId,
-						UserID: *localUser.ID,
-					}
-				}
-
-				err = tx.Create(roleBindings).Error
-				if err != nil {
-					return fmt.Errorf("%s: create role bindings for local user %s: %w", OpCreate, email, err)
 				}
 
 				auditLogEntries = append(auditLogEntries, &auditLogEntry{
@@ -175,25 +156,4 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func (s *userSynchronizer) getDefaultRoleIds() ([]uuid.UUID, error) {
-	roles := []string{
-		roles.TeamCreator,
-		roles.TeamViewer,
-		roles.RoleViewer,
-	}
-	roleIds := make([]uuid.UUID, len(roles))
-
-	for idx, roleName := range roles {
-		role := &dbmodels.Role{}
-		err := s.db.Where("name = ?", roleName).First(role).Error
-		if err != nil {
-			return nil, fmt.Errorf("role not found %s: %w", roleName, err)
-		}
-
-		roleIds[idx] = *role.ID
-	}
-
-	return roleIds, nil
 }

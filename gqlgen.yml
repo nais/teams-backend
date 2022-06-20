@@ -70,8 +70,6 @@ models:
     fields:
       teams:
         resolver: true
-      roleBindings:
-        resolver: true
   AuditLog:
     fields:
       actor:
@@ -83,16 +81,4 @@ models:
       targetTeam:
         resolver: true
       targetUser:
-        resolver: true
-  RoleBinding:
-    fields:
-      role:
-        resolver: true
-      user:
-        resolver: true
-      team:
-        resolver: true
-  Role:
-    fields:
-      system:
         resolver: true

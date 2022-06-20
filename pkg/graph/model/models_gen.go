@@ -25,16 +25,6 @@ type AddUsersToTeamInput struct {
 	TeamID *uuid.UUID `json:"teamId"`
 }
 
-// Input for assigning a rule.
-type AssignRoleInput struct {
-	// The ID of the role.
-	RoleID *uuid.UUID `json:"roleId"`
-	// The ID of the user.
-	UserID *uuid.UUID `json:"userId"`
-	// The ID of the team.
-	TeamID *uuid.UUID `json:"teamId"`
-}
-
 // Audit log collection.
 type AuditLogs struct {
 	// Object related to pagination of the collection.
@@ -101,50 +91,12 @@ type Pagination struct {
 	Limit int `json:"limit"`
 }
 
-// Input for removing a rule.
-type RemoveRoleInput struct {
-	// The ID of the role.
-	RoleID *uuid.UUID `json:"roleId"`
-	// The ID of the user.
-	UserID *uuid.UUID `json:"userId"`
-	// The ID of the team.
-	TeamID *uuid.UUID `json:"teamId"`
-}
-
 // Input for removing users from a team.
 type RemoveUsersFromTeamInput struct {
 	// List of user IDs that should be removed from the team.
 	UserIds []*uuid.UUID `json:"userIds"`
 	// Team ID that should receive new users.
 	TeamID *uuid.UUID `json:"teamId"`
-}
-
-// Role collection.
-type Roles struct {
-	// Object related to pagination of the collection.
-	PageInfo *PageInfo `json:"pageInfo"`
-	// The list of roles in the collection.
-	Nodes []*dbmodels.Role `json:"nodes"`
-}
-
-// Input for filtering a collection of roles.
-type RolesQuery struct {
-	// Filter by role name.
-	Name *string `json:"name"`
-	// Filter by resource.
-	Resource *string `json:"resource"`
-	// Filter by access level.
-	AccessLevel *string `json:"accessLevel"`
-	// Filter by permission.
-	Permission *string `json:"permission"`
-}
-
-// Input for sorting a collection of roles.
-type RolesSort struct {
-	// Field to sort by.
-	Field RoleSortField `json:"field"`
-	// Sort direction.
-	Direction SortDirection `json:"direction"`
 }
 
 // System collection.
@@ -261,47 +213,6 @@ func (e *AuditLogSortField) UnmarshalGQL(v interface{}) error {
 }
 
 func (e AuditLogSortField) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
-}
-
-// Fields to sort the collection by.
-type RoleSortField string
-
-const (
-	// Sort by name.
-	RoleSortFieldName RoleSortField = "name"
-)
-
-var AllRoleSortField = []RoleSortField{
-	RoleSortFieldName,
-}
-
-func (e RoleSortField) IsValid() bool {
-	switch e {
-	case RoleSortFieldName:
-		return true
-	}
-	return false
-}
-
-func (e RoleSortField) String() string {
-	return string(e)
-}
-
-func (e *RoleSortField) UnmarshalGQL(v interface{}) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = RoleSortField(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid RoleSortField", str)
-	}
-	return nil
-}
-
-func (e RoleSortField) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 

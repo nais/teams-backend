@@ -2,7 +2,6 @@ package graph_test
 
 import (
 	"context"
-	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/reconcilers"
@@ -13,21 +12,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/dbmodels"
 )
-
-func getContextWithAddedRoleBinding(system *dbmodels.System, resource authz.Resource, accessLevel authz.AccessLevel, permission string) context.Context {
-	roles := []*dbmodels.RoleBinding{
-		{
-			Role: dbmodels.Role{
-				Resource:    string(resource),
-				AccessLevel: string(accessLevel),
-				Permission:  permission,
-				SystemID:    *system.ID,
-			},
-		},
-	}
-
-	return authz.ContextWithRoleBindings(context.Background(), roles)
-}
 
 func getSystem() *dbmodels.System {
 	systemId, _ := uuid.NewUUID()
@@ -60,7 +44,7 @@ func TestQueryResolver_Teams(t *testing.T) {
 	ch := make(chan reconcilers.Input, 100)
 	system := getSystem()
 
-	ctx := getContextWithAddedRoleBinding(system, authz.ResourceTeams, authz.AccessLevelRead, authz.PermissionAllow)
+	ctx := context.Background()
 	resolver := graph.NewResolver(db, "example.com", system, ch, nil).Query()
 
 	t.Run("No filter or sort", func(t *testing.T) {
@@ -85,10 +69,4 @@ func TestQueryResolver_Teams(t *testing.T) {
 		assert.Equal(t, "b", teams.Nodes[1].Slug.String())
 		assert.Equal(t, "a", teams.Nodes[2].Slug.String())
 	})
-}
-
-func TestQueryResolver_TeamsNoPermission(t *testing.T) {
-	resolver := graph.NewResolver(test.GetTestDB(), "example.com", getSystem(), make(chan reconcilers.Input, 100), nil).Query()
-	_, err := resolver.Teams(context.Background(), nil, nil, nil)
-	assert.EqualError(t, err, "unauthorized")
 }

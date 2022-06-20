@@ -110,18 +110,6 @@ func (r *userResolver) Teams(ctx context.Context, obj *dbmodels.User) ([]*dbmode
 	return teams, nil
 }
 
-func (r *userResolver) RoleBindings(ctx context.Context, obj *dbmodels.User, teamID *uuid.UUID) ([]*dbmodels.RoleBinding, error) {
-	roleBindings := make([]*dbmodels.RoleBinding, 0)
-	where := &dbmodels.RoleBinding{
-		TeamID: teamID,
-	}
-	err := r.db.Model(obj).Where(where).Association("RoleBindings").Find(&roleBindings)
-	if err != nil {
-		return nil, err
-	}
-	return roleBindings, nil
-}
-
 func (r *userResolver) HasAPIKey(ctx context.Context, obj *dbmodels.User) (bool, error) {
 	apiKey := &dbmodels.ApiKey{}
 	err := r.db.Where("user_id = ?", obj.ID).First(&apiKey).Error

@@ -9,8 +9,6 @@ func Migrate(db *gorm.DB) error {
 		&ApiKey{},
 		&AuditLog{},
 		&Correlation{},
-		&RoleBinding{},
-		&Role{},
 		&SystemState{},
 		&System{},
 		&SystemsTeams{},
