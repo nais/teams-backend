@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
@@ -130,6 +131,7 @@ func (s *gitHubReconciler) connectUsers(ctx context.Context, githubTeam *github.
 		return err
 	}
 
+	var targetUser *dbmodels.User
 	membersToRemove := remoteOnlyMembers(membersAccordingToGitHub, consoleUserWithGitHubUser)
 	for _, gitHubUser := range membersToRemove {
 		username := gitHubUser.GetLogin()
@@ -140,8 +142,17 @@ func (s *gitHubReconciler) connectUsers(ctx context.Context, githubTeam *github.
 			continue
 		}
 
-		// We are unable to map a remote GitHub user to a local Console user, so we can't set targetUser in the audit log
-		s.auditLogger.Logf(OpDeleteMember, corr, s.system, nil, &team, nil, "deleted member '%s' from GitHub team '%s'", username, *githubTeam.Slug)
+		targetUser = nil
+		email, err := s.getEmailFromGitHubUsername(ctx, username)
+		if err != nil {
+			log.Warnf("%s: unable to get email from GitHub username '%s' for audit log purposes: %s", OpDeleteMember, username, err)
+		}
+
+		if email != nil {
+			targetUser = dbmodels.GetUserByEmail(s.db, *email)
+		}
+
+		s.auditLogger.Logf(OpDeleteMember, corr, s.system, nil, &team, targetUser, "deleted member '%s' from GitHub team '%s'", username, *githubTeam.Slug)
 	}
 
 	membersToAdd := localOnlyMembers(consoleUserWithGitHubUser, membersAccordingToGitHub)
@@ -235,7 +246,7 @@ func (s *gitHubReconciler) mapSSOUsers(ctx context.Context, users []*dbmodels.Us
 
 // getGitHubUsernameFromEmail Look up a GitHub username from an SSO e-mail address connected to that user account.
 func (s *gitHubReconciler) getGitHubUsernameFromEmail(ctx context.Context, email string) (*string, error) {
-	var query LookupSSOUserQuery
+	var query LookupGitHubSamlUserByEmail
 
 	variables := map[string]interface{}{
 		"org":      githubv4.String(s.org),
@@ -254,6 +265,29 @@ func (s *gitHubReconciler) getGitHubUsernameFromEmail(ctx context.Context, email
 
 	username := string(nodes[0].User.Login)
 	return &username, nil
+}
+
+// getEmailFromGitHubUsername Look up a GitHub username from an SSO e-mail address connected to that user account.
+func (s *gitHubReconciler) getEmailFromGitHubUsername(ctx context.Context, username string) (*string, error) {
+	var query LookupGitHubSamlUserByGitHubUsername
+
+	variables := map[string]interface{}{
+		"org":   githubv4.String(s.org),
+		"login": githubv4.String(username),
+	}
+
+	err := s.graphClient.Query(ctx, &query, variables)
+	if err != nil {
+		return nil, err
+	}
+
+	nodes := query.Organization.SamlIdentityProvider.ExternalIdentities.Nodes
+	if len(nodes) == 0 {
+		return nil, errGitHubUserNotFound
+	}
+
+	email := strings.ToLower(string(nodes[0].SamlIdentity.Username))
+	return &email, nil
 }
 
 func httpError(expected int, resp github.Response, err error) error {

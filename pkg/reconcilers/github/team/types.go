@@ -32,20 +32,35 @@ type gitHubReconciler struct {
 	domain       string
 }
 
-type LookupSSOUser struct {
+type GitHubUser struct {
 	Login githubv4.String
 }
 
-type LookupSSOUserNode struct {
-	User LookupSSOUser
+type ExternalIdentitySamlAttributes struct {
+	Username githubv4.String
 }
 
-type LookupSSOUserQuery struct {
+type ExternalIdentity struct {
+	User         GitHubUser
+	SamlIdentity ExternalIdentitySamlAttributes
+}
+
+type LookupGitHubSamlUserByEmail struct {
 	Organization struct {
 		SamlIdentityProvider struct {
 			ExternalIdentities struct {
-				Nodes []LookupSSOUserNode
+				Nodes []ExternalIdentity
 			} `graphql:"externalIdentities(first: 1, userName: $username)"`
+		}
+	} `graphql:"organization(login: $org)"`
+}
+
+type LookupGitHubSamlUserByGitHubUsername struct {
+	Organization struct {
+		SamlIdentityProvider struct {
+			ExternalIdentities struct {
+				Nodes []ExternalIdentity
+			} `graphql:"externalIdentities(first: 1, login: $login)"`
 		}
 	} `graphql:"organization(login: $org)"`
 }

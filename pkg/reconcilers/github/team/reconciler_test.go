@@ -41,6 +41,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 	const keepLogin = "should-keep"
 	const keepEmail = "should-keep@example.com"
 	const removeLogin = "should-remove"
+	const removeEmail = "should-remove@example.com"
 
 	systemID, _ := uuid.NewUUID()
 	system := dbmodels.System{
@@ -78,6 +79,8 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 
 		configureGetTeamBySlug(teamsService, org, teamName)
 		configureCreateTeam(teamsService, org, teamName, description)
+
+		configureLookupEmail(graphClient, org, removeLogin, removeEmail)
 
 		configureRegisterLoginEmail(graphClient, org, keepEmail, keepLogin)
 		configureRegisterLoginEmail(graphClient, org, createEmail, createLogin)
@@ -161,6 +164,8 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 				},
 			}, nil).Once()
 
+		configureLookupEmail(graphClient, org, removeLogin, removeEmail)
+
 		configureRegisterLoginEmail(graphClient, org, keepEmail, keepLogin)
 		configureRegisterLoginEmail(graphClient, org, createEmail, createLogin)
 
@@ -191,11 +196,37 @@ func configureRegisterLoginEmail(graphClient *github_team_reconciler.MockGraphCl
 	).
 		Run(
 			func(args mock.Arguments) {
-				query := args.Get(1).(*github_team_reconciler.LookupSSOUserQuery)
-				query.Organization.SamlIdentityProvider.ExternalIdentities.Nodes = []github_team_reconciler.LookupSSOUserNode{
+				query := args.Get(1).(*github_team_reconciler.LookupGitHubSamlUserByEmail)
+				query.Organization.SamlIdentityProvider.ExternalIdentities.Nodes = []github_team_reconciler.ExternalIdentity{
 					{
-						User: github_team_reconciler.LookupSSOUser{
+						User: github_team_reconciler.GitHubUser{
 							Login: githubv4.String(login),
+						},
+					},
+				}
+			},
+		).
+		Once().
+		Return(nil)
+}
+
+func configureLookupEmail(graphClient *github_team_reconciler.MockGraphClient, org string, login, email string) *mock.Call {
+	return graphClient.On(
+		"Query",
+		mock.Anything,
+		mock.Anything,
+		map[string]interface{}{
+			"org":   githubv4.String(org),
+			"login": githubv4.String(login),
+		},
+	).
+		Run(
+			func(args mock.Arguments) {
+				query := args.Get(1).(*github_team_reconciler.LookupGitHubSamlUserByGitHubUsername)
+				query.Organization.SamlIdentityProvider.ExternalIdentities.Nodes = []github_team_reconciler.ExternalIdentity{
+					{
+						SamlIdentity: github_team_reconciler.ExternalIdentitySamlAttributes{
+							Username: githubv4.String(email),
 						},
 					},
 				}
