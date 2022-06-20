@@ -89,16 +89,6 @@ func (s *azureReconciler) Reconcile(ctx context.Context, input reconcilers.Input
 	return nil
 }
 
-func (s *azureReconciler) getUserByEmail(email string) *dbmodels.User {
-	localUser := &dbmodels.User{}
-	err := s.db.Where("email = ?", email).First(localUser).Error
-	if err != nil {
-		return nil
-	}
-
-	return localUser
-}
-
 func (s *azureReconciler) connectUsers(ctx context.Context, grp *azureclient.Group, corr dbmodels.Correlation, team dbmodels.Team) error {
 	members, err := s.client.ListGroupMembers(ctx, grp)
 	if err != nil {
@@ -118,7 +108,7 @@ func (s *azureReconciler) connectUsers(ctx context.Context, grp *azureclient.Gro
 		}
 
 		if _, exists := consoleUserMap[remoteEmail]; !exists {
-			consoleUserMap[remoteEmail] = s.getUserByEmail(remoteEmail)
+			consoleUserMap[remoteEmail] = dbmodels.GetUserByEmail(s.db, remoteEmail)
 		}
 
 		s.auditLogger.Logf(OpDeleteMember, corr, s.system, nil, &team, consoleUserMap[remoteEmail], "removed member '%s' from Azure group '%s'", remoteEmail, grp.MailNickname)
