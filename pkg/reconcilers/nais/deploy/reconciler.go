@@ -76,12 +76,13 @@ func (s *naisDeployReconciler) Reconcile(ctx context.Context, input reconcilers.
 	})
 
 	if err != nil {
-		return err
+		return fmt.Errorf("create JSON payload for deploy key API: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "POST", s.endpoint, bytes.NewReader(payload))
 	if err != nil {
 		return err
+		return fmt.Errorf("create request for deploy key API: %w", err)
 	}
 
 	signature := genMAC(payload, s.provisionKey)
@@ -94,12 +95,12 @@ func (s *naisDeployReconciler) Reconcile(ctx context.Context, input reconcilers.
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusCreated {
-		s.auditLogger.Logf(OpProvisionApiKey, input.Corr, s.system, nil, &input.Team, nil, "provisioned NAIS deploy API key to team '%s'", input.Team.Slug)
-		return nil
+	if resp.StatusCode != http.StatusCreated {
+		return fmt.Errorf("%s: provision NAIS deploy API key to team '%s': %s", OpProvisionApiKey, input.Team.Slug, resp.Status)
 	}
 
-	return fmt.Errorf("%s: provision NAIS deploy API key to team '%s': %s", OpProvisionApiKey, input.Team.Slug, resp.Status)
+	s.auditLogger.Logf(OpProvisionApiKey, input.Corr, s.system, nil, &input.Team, nil, "provisioned NAIS deploy API key to team '%s'", input.Team.Slug)
+	return nil
 }
 
 // genMAC generates the HMAC signature for a message provided the secret key using SHA256
