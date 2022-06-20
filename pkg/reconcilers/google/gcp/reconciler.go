@@ -75,7 +75,7 @@ func (s *gcpReconciler) Reconcile(ctx context.Context, input reconcilers.Input) 
 	client := s.config.Client(ctx)
 	svc, err := cloudresourcemanager.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
-		return fmt.Errorf("retrieve cloud resource manager client: %s", err)
+		return fmt.Errorf("retrieve cloud resource manager client: %w", err)
 	}
 
 	for environment, parentID := range s.projectParentIDs {
@@ -84,9 +84,9 @@ func (s *gcpReconciler) Reconcile(ctx context.Context, input reconcilers.Input) 
 			return err
 		}
 
-		err = saveProjectState(s.db, input.Team.ID, environment, proj.ProjectId)
+		err = s.saveProjectState(input.Team.ID, environment, proj.ProjectId)
 		if err != nil {
-			return fmt.Errorf("%s: create GCP project: project was created, but ID could not be stored in database: %s", OpCreateProject, err)
+			return fmt.Errorf("%s: create GCP project: project was created, but ID could not be stored in database: %w", OpCreateProject, err)
 		}
 
 		err = s.CreatePermissions(svc, proj.Name, input.Corr, input.Team)
@@ -94,8 +94,6 @@ func (s *gcpReconciler) Reconcile(ctx context.Context, input reconcilers.Input) 
 			return err
 		}
 	}
-
-	// FIXME: Create audit log entry
 
 	return nil
 }
@@ -116,12 +114,12 @@ func (s *gcpReconciler) CreateProject(svc *cloudresourcemanager.Service, environ
 		// 1) already created by us in this folder, or
 		// 2) someone else owns this project
 		if typedError.Code != http.StatusConflict {
-			return nil, fmt.Errorf("%s: create GCP project: %s", OpCreateProject, err)
+			return nil, fmt.Errorf("%s: create GCP project: %w", OpCreateProject, err)
 		}
 
 		query, err := svc.Projects.Search().Query("id:" + projectID).Do()
 		if err != nil {
-			return nil, fmt.Errorf("%s: create GCP project: %s", OpCreateProject, err)
+			return nil, fmt.Errorf("%s: create GCP project: %w", OpCreateProject, err)
 		}
 
 		if len(query.Projects) == 0 {
@@ -141,7 +139,7 @@ func (s *gcpReconciler) CreateProject(svc *cloudresourcemanager.Service, environ
 			var err error
 			operation, err = svc.Operations.Get(operation.Name).Do()
 			if err != nil {
-				return nil, fmt.Errorf("%s: create GCP project: %s", OpCreateProject, err)
+				return nil, fmt.Errorf("%s: create GCP project: %w", OpCreateProject, err)
 			}
 		}
 
@@ -176,7 +174,7 @@ func (s *gcpReconciler) CreatePermissions(svc *cloudresourcemanager.Service, pro
 	_, err := svc.Projects.SetIamPolicy(projectName, req).Do()
 
 	if err != nil {
-		return fmt.Errorf("%s: assign GCP project IAM permissions: %s", OpAssignPermissions, err)
+		return fmt.Errorf("%s: assign GCP project IAM permissions: %w", OpAssignPermissions, err)
 	}
 
 	s.auditLogger.Logf(OpAssignPermissions, corr, s.system, nil, &team, nil, "assigned GCP project IAM permissions for '%s'", projectName)
@@ -184,11 +182,11 @@ func (s *gcpReconciler) CreatePermissions(svc *cloudresourcemanager.Service, pro
 	return nil
 }
 
-func saveProjectState(db *gorm.DB, teamID *uuid.UUID, environment, projectID string) error {
+func (s *gcpReconciler) saveProjectState(teamID *uuid.UUID, environment, projectID string) error {
 	meta := &dbmodels.SystemState{
 		TeamID: teamID,
 		Key:    dbmodels.SystemStateGoogleProjectID + ":" + environment,
 		Value:  projectID,
 	}
-	return db.Save(meta).Error
+	return s.db.Save(meta).Error
 }
