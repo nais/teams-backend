@@ -75,7 +75,7 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 func (s *namespaceReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	svc, err := pubsub.NewClient(ctx, s.projectID, option.WithCredentialsFile(s.credentialsFile))
 	if err != nil {
-		return fmt.Errorf("retrieve pubsub client: %s", err)
+		return fmt.Errorf("retrieve pubsub client: %w", err)
 	}
 
 	// map of environment -> project ID
@@ -103,11 +103,11 @@ func (s *namespaceReconciler) Reconcile(ctx context.Context, input reconcilers.I
 
 		err = s.createNamespace(ctx, svc, input.Team, environment, gcpProjectID)
 		if err != nil {
-			return fmt.Errorf("%s: %s", OpCreateNamespace, err.Error())
+			return fmt.Errorf("%s: %w", OpCreateNamespace, err)
 		}
-	}
 
-	// FIXME: Create audit log entry
+		s.auditLogger.Logf(OpCreateNamespace, input.Corr, s.system, nil, &input.Team, nil, "request namespace creation for team '%s' in namespace '%s'", input.Team.Slug, environment)
+	}
 
 	return nil
 }
