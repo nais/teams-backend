@@ -113,6 +113,19 @@ A user account (email address) that has admin rights in the Google Workspace acc
 
 JSON file that contains the private key of the service account.
 
+### GCP Projects
+
+To create projects for the team in GCP you will need to set the following environment variables:
+
+#### `CONSOLE_GCP_ENABLED`
+
+Set to `true` to enable the reconciler.
+
+#### `CONSOLE_GCP_PROJECT_PARENT_IDS`
+
+Comma-separated list of `environment:parent_folder_id` values, where environment is appended to the project name for the
+team.
+
 ## Local development
 
 Console needs Go 1.18, and depends on a PostgreSQL database.
@@ -170,7 +183,6 @@ bin/console
   * Organization Members: `readwrite`
 
 Important: do not share the same GitHub application between tenants.
-
 
 ## ACL
 
