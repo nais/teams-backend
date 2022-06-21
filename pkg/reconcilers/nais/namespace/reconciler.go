@@ -36,7 +36,6 @@ type namespaceReconciler struct {
 	domain           string
 	auditLogger      auditlogger.AuditLogger
 	projectParentIDs map[string]string
-	topicPrefix      string
 	credentialsFile  string
 	projectID        string
 	system           dbmodels.System
@@ -51,12 +50,11 @@ func init() {
 	registry.Register(Name, NewFromConfig)
 }
 
-func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, domain, topicPrefix, credentialsFile, projectID string, projectParentIDs map[string]string) *namespaceReconciler {
+func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, domain, credentialsFile, projectID string, projectParentIDs map[string]string) *namespaceReconciler {
 	return &namespaceReconciler{
 		db:               db,
 		auditLogger:      auditLogger,
 		domain:           domain,
-		topicPrefix:      topicPrefix,
 		credentialsFile:  credentialsFile,
 		projectParentIDs: projectParentIDs,
 		projectID:        projectID,
@@ -69,7 +67,7 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
 
-	return New(db, system, auditLogger, cfg.PartnerDomain, cfg.NaisNamespace.TopicPrefix, cfg.Google.CredentialsFile, cfg.NaisNamespace.ProjectID, cfg.GCP.ProjectParentIDs), nil
+	return New(db, system, auditLogger, cfg.PartnerDomain, cfg.Google.CredentialsFile, cfg.NaisNamespace.ProjectID, cfg.GCP.ProjectParentIDs), nil
 }
 
 func (s *namespaceReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
@@ -82,18 +80,21 @@ func (s *namespaceReconciler) Reconcile(ctx context.Context, input reconcilers.I
 	projects := make(map[string]string)
 
 	// read all state variables
-	for _, state := range input.Team.SystemState {
-		if state.SystemID != *s.system.ID {
-			continue
+	/*
+		for _, state := range input.Team.SystemState {
+			if state.SystemID != *s.system.ID {
+				continue
+			}
+			if state.Key != dbmodels.SystemStateGoogleProjectID {
+				continue
+			}
+			if state.Environment == nil {
+				continue
+			}
+			projects[*state.Environment] = state.Value
 		}
-		if state.Key != dbmodels.SystemStateGoogleProjectID {
-			continue
-		}
-		if state.Environment == nil {
-			continue
-		}
-		projects[*state.Environment] = state.Value
-	}
+
+	*/
 
 	for environment := range s.projectParentIDs {
 		gcpProjectID := projects[environment]
@@ -113,6 +114,7 @@ func (s *namespaceReconciler) Reconcile(ctx context.Context, input reconcilers.I
 }
 
 func (s *namespaceReconciler) createNamespace(ctx context.Context, pubsubService *pubsub.Client, team dbmodels.Team, environment, gcpProjectID string) error {
+	const topicPrefix = "naisd-console-"
 	req := &naisdRequest{
 		Type: NaisdCreateNamespace,
 		Data: naisdData{
@@ -130,7 +132,7 @@ func (s *namespaceReconciler) createNamespace(ctx context.Context, pubsubService
 		Data: payload,
 	}
 
-	topic := s.topicPrefix + environment
+	topic := topicPrefix + environment
 	future := pubsubService.Topic(topic).Publish(ctx, msg)
 	<-future.Ready()
 	_, err = future.Get(ctx)
