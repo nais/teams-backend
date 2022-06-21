@@ -1,6 +1,7 @@
 package dbmodels
 
 import (
+	"github.com/jackc/pgtype"
 	log "github.com/sirupsen/logrus"
 	"time"
 
@@ -58,13 +59,11 @@ type Correlation struct {
 
 type SystemState struct {
 	Model
-	System      System     `gorm:""`
-	Team        *Team      `gorm:""`
-	SystemID    uuid.UUID  `gorm:"type:uuid; uniqueIndex:system_env_team_key; not null; index"`
-	TeamID      *uuid.UUID `gorm:"type:uuid; uniqueIndex:system_env_team_key; index"`
-	Environment *string    `gorm:"uniqueIndex:system_env_team_key"`
-	Key         string     `gorm:"uniqueIndex:system_env_team_key; not null"`
-	Value       string     `gorm:"not null"`
+	System   System       `gorm:""`
+	Team     Team         `gorm:""`
+	SystemID uuid.UUID    `gorm:"type:uuid; uniqueIndex:system_team_key; not null; index"`
+	TeamID   uuid.UUID    `gorm:"type:uuid; uniqueIndex:system_team_key; not null; index"`
+	State    pgtype.JSONB `gorm:"type:jsonb;default:'{}';not null"`
 }
 
 type System struct {
@@ -92,14 +91,13 @@ type TeamMetadata struct {
 type Team struct {
 	Model
 	SoftDelete
-	Slug        Slug            `gorm:"<-:create; unique; not null"`
-	Name        string          `gorm:"unique; not null"`
-	Purpose     *string         `gorm:""`
-	Metadata    []*TeamMetadata `gorm:""`
-	SystemState []*SystemState  `gorm:""`
-	Users       []*User         `gorm:"many2many:users_teams"`
-	Systems     []*System       `gorm:"many2many:systems_teams"`
-	AuditLogs   []*AuditLog     `gorm:"foreignKey:TargetTeamID"`
+	Slug      Slug            `gorm:"<-:create; unique; not null"`
+	Name      string          `gorm:"unique; not null"`
+	Purpose   *string         `gorm:""`
+	Metadata  []*TeamMetadata `gorm:""`
+	Users     []*User         `gorm:"many2many:users_teams"`
+	Systems   []*System       `gorm:"many2many:systems_teams"`
+	AuditLogs []*AuditLog     `gorm:"foreignKey:TargetTeamID"`
 }
 
 type User struct {
