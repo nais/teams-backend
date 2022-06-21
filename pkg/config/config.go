@@ -27,7 +27,7 @@ type Google struct {
 
 type GCP struct {
 	Enabled          bool              `envconfig:"CONSOLE_GCP_ENABLED"`
-	ProjectParentIDs map[string]string `envconfig:"CONSOLE_GCP_PROJECT_PARENT_IDS"` // suffix is key, parentID is value
+	ProjectParentIDs map[string]string `envconfig:"CONSOLE_GCP_PROJECT_PARENT_IDS"` // environment name is key, parentID is value
 }
 
 type NaisDeploy struct {
@@ -37,9 +37,8 @@ type NaisDeploy struct {
 }
 
 type NaisNamespace struct {
-	Enabled     bool   `envconfig:"CONSOLE_NAIS_NAMESPACE_ENABLED"`
-	TopicPrefix string `envconfig:"CONSOLE_NAIS_NAMESPACE_TOPIC_PREFIX"`
-	ProjectID   string `envconfig:"CONSOLE_NAIS_NAMESPACE_PROJECT_ID"`
+	Enabled   bool   `envconfig:"CONSOLE_NAIS_NAMESPACE_ENABLED"`
+	ProjectID string `envconfig:"CONSOLE_NAIS_NAMESPACE_PROJECT_ID"`
 }
 
 type UserSync struct {
