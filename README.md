@@ -126,6 +126,18 @@ Set to `true` to enable the reconciler.
 Comma-separated list of `environment:parent_folder_id` values, where environment is appended to the project name for the
 team.
 
+### NAIS namespace
+
+To generate NAIS namespaces for a team the following environment variables must be set:
+
+#### `CONSOLE_NAIS_NAMESPACE_ENABLED`
+
+Set to `true` to enable the reconciler.
+
+#### `CONSOLE_NAIS_NAMESPACE_PROJECT_ID`
+
+The ID of the NAIS management project.
+
 ## Local development
 
 Console needs Go 1.18, and depends on a PostgreSQL database.
