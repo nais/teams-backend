@@ -134,7 +134,7 @@ func run() error {
 	}
 
 	allTeams := make([]*dbmodels.Team, 0)
-	db.Preload("Users").Preload("SystemState").Preload("Metadata").Find(&allTeams)
+	db.Preload("Users").Preload("Metadata").Find(&allTeams)
 	for _, team := range allTeams {
 		teamReconciler <- reconcilers.Input{
 			Corr: *corr,

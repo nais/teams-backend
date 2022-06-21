@@ -128,7 +128,6 @@ func (r *mutationResolver) teamWithAssociations(teamID uuid.UUID) (*dbmodels.Tea
 	err := r.db.
 		Where("id = ?", teamID).
 		Preload("Users").
-		Preload("SystemState").
 		Preload("Metadata").
 		First(team).Error
 
