@@ -26,8 +26,8 @@ type Google struct {
 }
 
 type GCP struct {
-	Enabled          bool              `envconfig:"CONSOLE_GCP_ENABLED"`
-	ProjectParentIDs map[string]string `envconfig:"CONSOLE_GCP_PROJECT_PARENT_IDS"` // environment name is key, parentID is value
+	Enabled          bool             `envconfig:"CONSOLE_GCP_ENABLED"`
+	ProjectParentIDs map[string]int64 `envconfig:"CONSOLE_GCP_PROJECT_PARENT_IDS"` // environment name is key, parentID is value
 }
 
 type NaisDeploy struct {
