@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 
-	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/dbmodels"
@@ -25,7 +25,7 @@ type gcpReconciler struct {
 	config           *jwt.Config
 	domain           string
 	auditLogger      auditlogger.AuditLogger
-	projectParentIDs map[string]string
+	projectParentIDs map[string]int64
 	system           dbmodels.System
 }
 
@@ -39,7 +39,7 @@ func init() {
 	registry.Register(Name, NewFromConfig)
 }
 
-func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config, projectParentIDs map[string]string) *gcpReconciler {
+func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config, projectParentIDs map[string]int64) *gcpReconciler {
 	return &gcpReconciler{
 		db:               db,
 		auditLogger:      auditLogger,
@@ -84,10 +84,12 @@ func (s *gcpReconciler) Reconcile(ctx context.Context, input reconcilers.Input) 
 			return err
 		}
 
-		err = s.saveProjectState(input.Team.ID, environment, proj.ProjectId)
-		if err != nil {
-			return fmt.Errorf("%s: create GCP project: project was created, but ID could not be stored in database: %w", OpCreateProject, err)
-		}
+		/*
+			err = s.saveProjectState(input.Team.ID, environment, proj.ProjectId)
+			if err != nil {
+				return fmt.Errorf("%s: create GCP project: project was created, but ID could not be stored in database: %w", OpCreateProject, err)
+			}
+		*/
 
 		err = s.CreatePermissions(svc, proj.Name, input.Corr, input.Team)
 		if err != nil {
@@ -98,11 +100,11 @@ func (s *gcpReconciler) Reconcile(ctx context.Context, input reconcilers.Input) 
 	return nil
 }
 
-func (s *gcpReconciler) CreateProject(svc *cloudresourcemanager.Service, environment, parentID string, corr dbmodels.Correlation, team dbmodels.Team) (*cloudresourcemanager.Project, error) {
+func (s *gcpReconciler) CreateProject(svc *cloudresourcemanager.Service, environment string, parentID int64, corr dbmodels.Correlation, team dbmodels.Team) (*cloudresourcemanager.Project, error) {
 	projectID := CreateProjectID(s.domain, environment, team.Slug.String())
 
 	proj := &cloudresourcemanager.Project{
-		Parent:    parentID,
+		Parent:    "folders/" + strconv.FormatInt(parentID, 10),
 		ProjectId: projectID,
 	}
 
@@ -180,13 +182,4 @@ func (s *gcpReconciler) CreatePermissions(svc *cloudresourcemanager.Service, pro
 	s.auditLogger.Logf(OpAssignPermissions, corr, s.system, nil, &team, nil, "assigned GCP project IAM permissions for '%s'", projectName)
 
 	return nil
-}
-
-func (s *gcpReconciler) saveProjectState(teamID *uuid.UUID, environment, projectID string) error {
-	meta := &dbmodels.SystemState{
-		TeamID: teamID,
-		Key:    dbmodels.SystemStateGoogleProjectID + ":" + environment,
-		Value:  projectID,
-	}
-	return s.db.Save(meta).Error
 }

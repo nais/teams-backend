@@ -35,7 +35,7 @@ type namespaceReconciler struct {
 	config           *jwt.Config
 	domain           string
 	auditLogger      auditlogger.AuditLogger
-	projectParentIDs map[string]string
+	projectParentIDs map[string]int64
 	credentialsFile  string
 	projectID        string
 	system           dbmodels.System
@@ -50,7 +50,7 @@ func init() {
 	registry.Register(Name, NewFromConfig)
 }
 
-func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, domain, credentialsFile, projectID string, projectParentIDs map[string]string) *namespaceReconciler {
+func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, domain, credentialsFile, projectID string, projectParentIDs map[string]int64) *namespaceReconciler {
 	return &namespaceReconciler{
 		db:               db,
 		auditLogger:      auditLogger,
