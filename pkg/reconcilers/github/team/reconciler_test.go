@@ -256,6 +256,11 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		},
 	}
 
+	input := reconcilers.Input{
+		Corr: corr,
+		Team: team,
+	}
+
 	// Give the reconciler enough data to create an entire team from scratch,
 	// remove members that shouldn't be present, and add members that should.
 	t.Run("create everything from scratch", func(t *testing.T) {
@@ -276,10 +281,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		configureAddTeamMembershipBySlug(teamsService, org, teamName, createLogin)
 		configureRemoveTeamMembershipBySlug(teamsService, org, teamName, removeLogin)
 
-		err := reconciler.Reconcile(ctx, reconcilers.Input{
-			Corr: corr,
-			Team: team,
-		})
+		err := reconciler.Reconcile(ctx, input)
 
 		assert.NoError(t, err)
 		teamsService.AssertExpectations(t)
@@ -309,10 +311,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 				},
 			}, nil).Once()
 
-		err := reconciler.Reconcile(ctx, reconcilers.Input{
-			Corr: corr,
-			Team: team,
-		})
+		err := reconciler.Reconcile(ctx, input)
 
 		assert.ErrorContainsf(t, err, "server error from GitHub: 418: I'm a teapot: this is a body", err.Error())
 		teamsService.AssertExpectations(t)
