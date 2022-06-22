@@ -14,11 +14,9 @@ import (
 type consoleReconciler struct{}
 
 const (
-	Name             = "console"
-	OpReconcileStart = "console:reconcile:start"
-	OpReconcileEnd   = "console:reconcile:end"
-	OpCreateTeam     = "console:team:create"
-	OpSyncTeam       = "console:team:sync"
+	Name         = "console"
+	OpCreateTeam = "console:team:create"
+	OpSyncTeam   = "console:team:sync"
 )
 
 func init() {
