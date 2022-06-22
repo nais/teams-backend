@@ -75,21 +75,26 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 }
 
 func (r *gitHubReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
-	githubTeam, err := r.getOrCreateTeam(ctx, input.Corr, input.Team)
+	state := &GitHubState{}
+	err := dbmodels.LoadSystemState(r.db, *r.system.ID, *input.Team.ID, state)
+	if err != nil {
+		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
+	}
+
+	githubTeam, err := r.getOrCreateTeam(ctx, *state, input.Corr, input.Team)
 	if err != nil {
 		return fmt.Errorf("unable to get or create a GitHub team for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
+	}
+
+	err = dbmodels.UpdateSystemState(r.db, *r.system.ID, *input.Team.ID, GitHubState{Slug: githubTeam.Slug})
+	if err != nil {
+		log.Errorf("system state not persisted: %s", err)
 	}
 
 	return r.connectUsers(ctx, githubTeam, input.Corr, input.Team)
 }
 
-func (r *gitHubReconciler) getOrCreateTeam(ctx context.Context, corr dbmodels.Correlation, team dbmodels.Team) (*github.Team, error) {
-	state := &GitHubState{}
-	updateState, err := dbmodels.LoadSystemState(r.db, *r.system.ID, *team.ID, state)
-	if err != nil {
-		return nil, fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", team.Slug, r.system.Name, err)
-	}
-
+func (r *gitHubReconciler) getOrCreateTeam(ctx context.Context, state GitHubState, corr dbmodels.Correlation, team dbmodels.Team) (*github.Team, error) {
 	if state.Slug != nil {
 		existingTeam, resp, err := r.teamsService.GetTeamBySlug(ctx, r.org, *state.Slug)
 		if resp == nil && err != nil {
@@ -98,7 +103,6 @@ func (r *gitHubReconciler) getOrCreateTeam(ctx context.Context, corr dbmodels.Co
 
 		switch resp.StatusCode {
 		case http.StatusNotFound:
-			updateState(GitHubState{}) // clear the current state
 			break
 		case http.StatusOK:
 			return existingTeam, nil
@@ -122,12 +126,6 @@ func (r *gitHubReconciler) getOrCreateTeam(ctx context.Context, corr dbmodels.Co
 	}
 
 	r.auditLogger.Logf(OpCreate, corr, r.system, nil, &team, nil, "created GitHub team '%s'", *githubTeam.Slug)
-	err = updateState(GitHubState{
-		Slug: githubTeam.Slug,
-	})
-	if err != nil {
-		log.Errorf("system state not persisted: %s", err)
-	}
 
 	return githubTeam, nil
 }
