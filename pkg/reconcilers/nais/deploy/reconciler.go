@@ -66,7 +66,7 @@ func NewFromConfig(_ *gorm.DB, cfg *config.Config, system dbmodels.System, audit
 	return New(system, auditLogger, http.DefaultClient, cfg.NaisDeploy.Endpoint, provisionKey), nil
 }
 
-func (s *naisDeployReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
+func (r *naisDeployReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	const signatureHeader = "X-NAIS-Signature"
 
 	payload, err := json.Marshal(&ProvisionApiKeyRequest{
@@ -79,16 +79,16 @@ func (s *naisDeployReconciler) Reconcile(ctx context.Context, input reconcilers.
 		return fmt.Errorf("create JSON payload for deploy key API: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.endpoint, bytes.NewReader(payload))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, r.endpoint, bytes.NewReader(payload))
 	if err != nil {
 		return fmt.Errorf("create request for deploy key API: %w", err)
 	}
 
-	signature := genMAC(payload, s.provisionKey)
+	signature := genMAC(payload, r.provisionKey)
 	req.Header.Set(signatureHeader, signature)
 	req.Header.Set("content-type", "application/json")
 
-	resp, err := s.client.Do(req)
+	resp, err := r.client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -96,7 +96,7 @@ func (s *naisDeployReconciler) Reconcile(ctx context.Context, input reconcilers.
 
 	switch resp.StatusCode {
 	case http.StatusCreated: // first time the team key is provisioned
-		s.auditLogger.Logf(OpProvisionApiKey, input.Corr, s.system, nil, &input.Team, nil, "provisioned NAIS deploy API key to team '%s'", input.Team.Slug)
+		r.auditLogger.Logf(OpProvisionApiKey, input.Corr, r.system, nil, &input.Team, nil, "provisioned NAIS deploy API key to team '%s'", input.Team.Slug)
 		return nil
 	case http.StatusNoContent: // team key already exists
 		return nil
