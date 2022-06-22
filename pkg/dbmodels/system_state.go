@@ -26,8 +26,8 @@ func LoadSystemState(db *gorm.DB, systemId, teamId uuid.UUID, state interface{})
 	return nil
 }
 
-// UpdateSystemState Update the team state for a given system
-func UpdateSystemState(db *gorm.DB, systemId, teamId uuid.UUID, state interface{}) error {
+// SetSystemState Update the team state for a given system
+func SetSystemState(db *gorm.DB, systemId, teamId uuid.UUID, state interface{}) error {
 	systemState := &SystemState{
 		SystemID: systemId,
 		TeamID:   teamId,

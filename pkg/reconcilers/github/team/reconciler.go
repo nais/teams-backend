@@ -75,7 +75,7 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 }
 
 func (r *gitHubReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
-	state := &GitHubState{}
+	state := &reconcilers.GitHubState{}
 	err := dbmodels.LoadSystemState(r.db, *r.system.ID, *input.Team.ID, state)
 	if err != nil {
 		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
@@ -86,7 +86,7 @@ func (r *gitHubReconciler) Reconcile(ctx context.Context, input reconcilers.Inpu
 		return fmt.Errorf("unable to get or create a GitHub team for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
 	}
 
-	err = dbmodels.UpdateSystemState(r.db, *r.system.ID, *input.Team.ID, GitHubState{Slug: githubTeam.Slug})
+	err = dbmodels.SetSystemState(r.db, *r.system.ID, *input.Team.ID, reconcilers.GitHubState{Slug: githubTeam.Slug})
 	if err != nil {
 		log.Errorf("system state not persisted: %s", err)
 	}
@@ -94,7 +94,7 @@ func (r *gitHubReconciler) Reconcile(ctx context.Context, input reconcilers.Inpu
 	return r.connectUsers(ctx, githubTeam, input.Corr, input.Team)
 }
 
-func (r *gitHubReconciler) getOrCreateTeam(ctx context.Context, state GitHubState, corr dbmodels.Correlation, team dbmodels.Team) (*github.Team, error) {
+func (r *gitHubReconciler) getOrCreateTeam(ctx context.Context, state reconcilers.GitHubState, corr dbmodels.Correlation, team dbmodels.Team) (*github.Team, error) {
 	if state.Slug != nil {
 		existingTeam, resp, err := r.teamsService.GetTeamBySlug(ctx, r.org, *state.Slug)
 		if resp == nil && err != nil {

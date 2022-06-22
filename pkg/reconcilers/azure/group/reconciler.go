@@ -87,7 +87,7 @@ func (r *azureReconciler) Reconcile(ctx context.Context, input reconcilers.Input
 		r.auditLogger.Logf(OpCreate, input.Corr, r.system, nil, &input.Team, nil, "created Azure AD group: %s", grp)
 
 		id, _ := uuid.Parse(grp.ID)
-		err = dbmodels.UpdateSystemState(r.db, *r.system.ID, *input.Team.ID, reconcilers.AzureState{GroupID: &id})
+		err = dbmodels.SetSystemState(r.db, *r.system.ID, *input.Team.ID, reconcilers.AzureState{GroupID: &id})
 		if err != nil {
 			log.Errorf("system state not persisted: %s", err)
 		}

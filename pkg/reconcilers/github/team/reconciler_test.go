@@ -115,12 +115,8 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 	t.Run("existing state, github team exists", func(t *testing.T) {
 		db := test.GetTestDB()
 		db.AutoMigrate(&dbmodels.SystemState{})
-		systemState := &dbmodels.SystemState{
-			SystemID: *system.ID,
-			TeamID:   *team.ID,
-		}
-		systemState.State.Set(github_team_reconciler.GitHubState{Slug: helpers.Strp("existing-slug")})
-		db.Create(systemState)
+		dbmodels.SetSystemState(db, *system.ID, *team.ID, reconcilers.GitHubState{Slug: helpers.Strp("existing-slug")})
+
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
 		teamsService.
 			On(
@@ -159,13 +155,8 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 	t.Run("existing state, github team no longer exists", func(t *testing.T) {
 		db := test.GetTestDB()
 		db.AutoMigrate(&dbmodels.SystemState{})
-		initialState := &github_team_reconciler.GitHubState{Slug: helpers.Strp("existing-slug")}
-		systemState := &dbmodels.SystemState{
-			SystemID: *system.ID,
-			TeamID:   *team.ID,
-		}
-		systemState.State.Set(initialState)
-		db.Create(systemState)
+		initialState := &reconcilers.GitHubState{Slug: helpers.Strp("existing-slug")}
+		dbmodels.SetSystemState(db, *system.ID, *team.ID, initialState)
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
 		teamsService.
 			On(
@@ -214,9 +205,8 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		teamsService.AssertExpectations(t)
 
 		// fetch updated system state
-		updatedState := &github_team_reconciler.GitHubState{}
-		db.Where("id = ?", systemState.ID).First(systemState)
-		systemState.State.AssignTo(updatedState)
+		updatedState := &reconcilers.GitHubState{}
+		dbmodels.LoadSystemState(db, *system.ID, *team.ID, updatedState)
 		assert.Equal(t, "slug", *updatedState.Slug)
 	})
 }
@@ -295,12 +285,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 	t.Run("GetTeamBySlug error", func(t *testing.T) {
 		db := test.GetTestDB()
 		db.AutoMigrate(&dbmodels.SystemState{})
-		systemState := &dbmodels.SystemState{
-			SystemID: *system.ID,
-			TeamID:   *team.ID,
-		}
-		systemState.State.Set(github_team_reconciler.GitHubState{Slug: helpers.Strp("slug-from-state")})
-		db.Create(systemState)
+		dbmodels.SetSystemState(db, *system.ID, *team.ID, reconcilers.GitHubState{Slug: helpers.Strp("slug-from-state")})
 
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
 		graphClient := github_team_reconciler.NewMockGraphClient(t)

@@ -27,7 +27,7 @@ func TestLoadSystemState(t *testing.T) {
 		state := &stateContainer{}
 		assert.NoError(t, LoadSystemState(db, systemId, teamId, state))
 		assert.Equal(t, "", state.Value)
-		assert.NoError(t, UpdateSystemState(db, systemId, teamId, stateContainer{Value: "some value"}))
+		assert.NoError(t, SetSystemState(db, systemId, teamId, stateContainer{Value: "some value"}))
 		assert.NoError(t, LoadSystemState(db, systemId, teamId, state))
 		assert.Equal(t, "some value", state.Value)
 	})
@@ -37,7 +37,7 @@ func TestLoadSystemState(t *testing.T) {
 		db.AutoMigrate(SystemState{})
 
 		state := &stateContainer{}
-		assert.NoError(t, UpdateSystemState(db, systemId, teamId, stateContainer{Value: "some value"}))
+		assert.NoError(t, SetSystemState(db, systemId, teamId, stateContainer{Value: "some value"}))
 		assert.NoError(t, LoadSystemState(db, systemId, teamId, state))
 		assert.Equal(t, "some value", state.Value)
 	})
