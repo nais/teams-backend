@@ -9,6 +9,7 @@ func Migrate(db *gorm.DB) error {
 		&ApiKey{},
 		&AuditLog{},
 		&Correlation{},
+		&ReconcileError{},
 		&SystemState{},
 		&System{},
 		&SystemsTeams{},

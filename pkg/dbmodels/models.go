@@ -57,6 +57,18 @@ type Correlation struct {
 	SoftDelete
 }
 
+type ReconcileError struct {
+	Model
+	SoftDelete
+	Correlation   Correlation `gorm:""`
+	System        System      `gorm:""`
+	Team          Team        `gorm:""`
+	CorrelationID uuid.UUID   `gorm:"type:uuid; uniqueIndex:correlation_system_team_key; not null"`
+	SystemID      uuid.UUID   `gorm:"type:uuid; uniqueIndex:correlation_system_team_key; not null"`
+	TeamID        uuid.UUID   `gorm:"type:uuid; uniqueIndex:correlation_system_team_key; not null"`
+	Message       string      `gorm:"not null"` // Human readable error message
+}
+
 type SystemState struct {
 	Model
 	System   System       `gorm:""`
