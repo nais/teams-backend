@@ -314,15 +314,7 @@ func initReconcilers(db *gorm.DB, cfg *config.Config, logger auditlogger.AuditLo
 
 func setupDatabase(cfg *config.Config) (*gorm.DB, error) {
 	log.Infof("Connecting to database...")
-	db, err := gorm.Open(
-		postgres.New(
-			postgres.Config{
-				DSN:                  cfg.DatabaseURL,
-				PreferSimpleProtocol: true, // disables implicit prepared statement usage
-			},
-		),
-		&gorm.Config{},
-	)
+	db, err := gorm.Open(postgres.Open(cfg.DatabaseURL), &gorm.Config{})
 	if err != nil {
 		return nil, err
 	}
