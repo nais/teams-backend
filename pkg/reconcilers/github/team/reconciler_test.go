@@ -85,6 +85,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		reconciler := github_team_reconciler.New(db, system, auditLogger, org, domain, teamsService, github_team_reconciler.NewMockGraphClient(t))
 		err := reconciler.Reconcile(ctx, input)
 		assert.NoError(t, err)
+		teamsService.AssertExpectations(t)
 	})
 
 	t.Run("no existing state, github team not available", func(t *testing.T) {
@@ -108,6 +109,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		reconciler := github_team_reconciler.New(db, system, auditLogger, org, domain, teamsService, github_team_reconciler.NewMockGraphClient(t))
 		err := reconciler.Reconcile(ctx, input)
 		assert.Error(t, err)
+		teamsService.AssertExpectations(t)
 	})
 
 	t.Run("existing state, github team exists", func(t *testing.T) {
@@ -151,6 +153,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		reconciler := github_team_reconciler.New(db, system, auditLogger, org, domain, teamsService, github_team_reconciler.NewMockGraphClient(t))
 		err := reconciler.Reconcile(ctx, input)
 		assert.NoError(t, err)
+		teamsService.AssertExpectations(t)
 	})
 
 	t.Run("existing state, github team no longer exists", func(t *testing.T) {
@@ -208,6 +211,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		reconciler := github_team_reconciler.New(db, system, auditLogger, org, domain, teamsService, github_team_reconciler.NewMockGraphClient(t))
 		err := reconciler.Reconcile(ctx, input)
 		assert.NoError(t, err)
+		teamsService.AssertExpectations(t)
 
 		// fetch updated system state
 		updatedState := &github_team_reconciler.GitHubState{}
