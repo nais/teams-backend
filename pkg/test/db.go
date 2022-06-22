@@ -31,6 +31,7 @@ func stringInSlice(a string, list []string) bool {
 	return false
 }
 
+// GetTestDB Get an in-memory SQLite database instance, used for testing
 func GetTestDB() *gorm.DB {
 	if !stringInSlice(driverName, sql.Drivers()) {
 		sql.Register(driverName,
