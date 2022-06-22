@@ -3,6 +3,7 @@ package azure_group_reconciler
 import (
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 	helpers "github.com/nais/console/pkg/console"
 	log "github.com/sirupsen/logrus"
 	"strings"
@@ -18,7 +19,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// gitHubReconciler creates teams on GitHub and connects users to them.
 type azureReconciler struct {
 	db          *gorm.DB
 	system      dbmodels.System
@@ -70,18 +70,30 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 	return New(db, system, auditLogger, conf, azureclient.New(conf.Client(context.Background())), cfg.PartnerDomain), nil
 }
 
-func (s *azureReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
+func (r *azureReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
+	state := &reconcilers.AzureState{}
+	err := dbmodels.LoadSystemState(r.db, *r.system.ID, *input.Team.ID, state)
+	if err != nil {
+		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
+	}
+
 	prefixedName := teamNameWithPrefix(input.Team.Slug)
-	grp, created, err := s.client.GetOrCreateGroup(ctx, prefixedName, input.Team.Name, input.Team.Purpose)
+	grp, created, err := r.client.GetOrCreateGroup(ctx, *state, prefixedName, input.Team.Name, input.Team.Purpose)
 	if err != nil {
 		return err
 	}
 
 	if created {
-		s.auditLogger.Logf(OpCreate, input.Corr, s.system, nil, &input.Team, nil, "created Azure AD group: %s", grp)
+		r.auditLogger.Logf(OpCreate, input.Corr, r.system, nil, &input.Team, nil, "created Azure AD group: %s", grp)
+
+		id, _ := uuid.Parse(grp.ID)
+		err = dbmodels.UpdateSystemState(r.db, *r.system.ID, *input.Team.ID, reconcilers.AzureState{GroupID: &id})
+		if err != nil {
+			log.Errorf("system state not persisted: %s", err)
+		}
 	}
 
-	err = s.connectUsers(ctx, grp, input.Corr, input.Team)
+	err = r.connectUsers(ctx, grp, input.Corr, input.Team)
 	if err != nil {
 		return fmt.Errorf("%s: add members to group: %s", OpAddMembers, err)
 	}
@@ -89,45 +101,45 @@ func (s *azureReconciler) Reconcile(ctx context.Context, input reconcilers.Input
 	return nil
 }
 
-func (s *azureReconciler) connectUsers(ctx context.Context, grp *azureclient.Group, corr dbmodels.Correlation, team dbmodels.Team) error {
-	members, err := s.client.ListGroupMembers(ctx, grp)
+func (r *azureReconciler) connectUsers(ctx context.Context, grp *azureclient.Group, corr dbmodels.Correlation, team dbmodels.Team) error {
+	members, err := r.client.ListGroupMembers(ctx, grp)
 	if err != nil {
 		return fmt.Errorf("%s: list existing members in Azure group '%s': %s", OpAddMembers, grp.MailNickname, err)
 	}
 
 	consoleUserMap := make(map[string]*dbmodels.User)
-	localMembers := helpers.DomainUsers(team.Users, s.domain)
+	localMembers := helpers.DomainUsers(team.Users, r.domain)
 
 	membersToRemove := remoteOnlyMembers(members, localMembers)
 	for _, member := range membersToRemove {
 		remoteEmail := strings.ToLower(member.Mail)
-		err = s.client.RemoveMemberFromGroup(ctx, grp, member)
+		err = r.client.RemoveMemberFromGroup(ctx, grp, member)
 		if err != nil {
 			log.Warnf("%s: unable to remove member '%s' from group '%s' in Azure: %s", OpDeleteMember, remoteEmail, grp.MailNickname, err)
 			continue
 		}
 
 		if _, exists := consoleUserMap[remoteEmail]; !exists {
-			consoleUserMap[remoteEmail] = dbmodels.GetUserByEmail(s.db, remoteEmail)
+			consoleUserMap[remoteEmail] = dbmodels.GetUserByEmail(r.db, remoteEmail)
 		}
 
-		s.auditLogger.Logf(OpDeleteMember, corr, s.system, nil, &team, consoleUserMap[remoteEmail], "removed member '%s' from Azure group '%s'", remoteEmail, grp.MailNickname)
+		r.auditLogger.Logf(OpDeleteMember, corr, r.system, nil, &team, consoleUserMap[remoteEmail], "removed member '%s' from Azure group '%s'", remoteEmail, grp.MailNickname)
 	}
 
 	membersToAdd := localOnlyMembers(members, localMembers)
 	for _, consoleUser := range membersToAdd {
-		member, err := s.client.GetUser(ctx, consoleUser.Email)
+		member, err := r.client.GetUser(ctx, consoleUser.Email)
 		if err != nil {
 			log.Warnf("%s: unable to lookup user with email '%s' in Azure: %s", OpAddMember, consoleUser.Email, err)
 			continue
 		}
-		err = s.client.AddMemberToGroup(ctx, grp, member)
+		err = r.client.AddMemberToGroup(ctx, grp, member)
 		if err != nil {
 			log.Warnf("%s: unable to add member '%s' to Azure group '%s': %s", OpAddMember, consoleUser.Email, grp.MailNickname, err)
 			continue
 		}
 
-		s.auditLogger.Logf(OpAddMember, corr, s.system, nil, &team, consoleUser, "added member '%s' to Azure group '%s'", member.Mail, grp.MailNickname)
+		r.auditLogger.Logf(OpAddMember, corr, r.system, nil, &team, consoleUser, "added member '%s' to Azure group '%s'", member.Mail, grp.MailNickname)
 	}
 
 	return nil

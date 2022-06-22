@@ -3,7 +3,10 @@ package azureclient
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"github.com/google/uuid"
 	helpers "github.com/nais/console/pkg/console"
+	"github.com/nais/console/pkg/reconcilers"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
@@ -45,7 +48,7 @@ func Test_GetUser(t *testing.T) {
 	})
 
 	client := New(httpClient)
-	member, err := client.GetUser(context.TODO(), "user@example.com")
+	member, err := client.GetUser(context.Background(), "user@example.com")
 
 	assert.Equal(t, "user@example.com", member.Mail)
 	assert.Equal(t, "some-id", member.ID)
@@ -61,7 +64,7 @@ func Test_GetUserThatDoesNotExist(t *testing.T) {
 	})
 
 	client := New(httpClient)
-	member, err := client.GetUser(context.TODO(), "user@example.com")
+	member, err := client.GetUser(context.Background(), "user@example.com")
 
 	assert.Nil(t, member)
 	assert.EqualError(t, err, `404 Not Found: {"error": {"message": "user does not exist"}}`)
@@ -76,55 +79,45 @@ func Test_GetUserWithInvalidApiResponse(t *testing.T) {
 	})
 
 	client := New(httpClient)
-	member, err := client.GetUser(context.TODO(), "user@example.com")
+	member, err := client.GetUser(context.Background(), "user@example.com")
 
 	assert.Nil(t, member)
 	assert.EqualError(t, err, "invalid character 's' looking for beginning of value")
 }
 
-func Test_GetGroup(t *testing.T) {
+func Test_GetGroupById(t *testing.T) {
+	groupId := newUuid()
 	httpClient := NewTestClient(func(req *http.Request) *http.Response {
-		assert.Equal(t, "https://graph.microsoft.com/v1.0/groups?%24filter=mailNickname+eq+%27slug%27", req.URL.String())
+		assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/"+groupId.String(), req.URL.String())
 		assert.Equal(t, http.MethodGet, req.Method)
-
-		return response("200 OK", `{"value": [{"id":"group-id"}]}`)
+		return response("200 OK", fmt.Sprintf(`{
+			"id":"%s",
+			"description":"description",
+			"displayName": "name",
+			"mailNickname": "mail"
+		}`, groupId.String()))
 	})
 
 	client := New(httpClient)
-	group, err := client.GetGroupByMailNickName(context.TODO(), "slug")
+	group, err := client.GetGroupById(context.Background(), groupId)
 
 	assert.NoError(t, err)
-	assert.Equal(t, "group-id", group.ID)
+	assert.Equal(t, groupId.String(), group.ID)
 }
 
 func Test_GetGroupThatDoesNotExist(t *testing.T) {
+	groupId := newUuid()
 	httpClient := NewTestClient(func(req *http.Request) *http.Response {
-		assert.Equal(t, "https://graph.microsoft.com/v1.0/groups?%24filter=mailNickname+eq+%27slug%27", req.URL.String())
+		assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/"+groupId.String(), req.URL.String())
 		assert.Equal(t, http.MethodGet, req.Method)
-
-		return response("200 OK", `{"value": []}`)
+		return response("404 Not Found", "{}")
 	})
 
 	client := New(httpClient)
-	group, err := client.GetGroupByMailNickName(context.TODO(), "slug")
+	group, err := client.GetGroupById(context.Background(), groupId)
 
 	assert.Nil(t, group)
-	assert.EqualError(t, err, "azure group 'slug' does not exist")
-}
-
-func Test_GetGroupWithAmbiguousResult(t *testing.T) {
-	httpClient := NewTestClient(func(req *http.Request) *http.Response {
-		assert.Equal(t, "https://graph.microsoft.com/v1.0/groups?%24filter=mailNickname+eq+%27slug%27", req.URL.String())
-		assert.Equal(t, http.MethodGet, req.Method)
-
-		return response("200 OK", `{"value": [{"id":"group-id"}, {"id":"group-id-2"}]}`)
-	})
-
-	client := New(httpClient)
-	group, err := client.GetGroupByMailNickName(context.TODO(), "slug")
-
-	assert.Nil(t, group)
-	assert.EqualError(t, err, "ambiguous response; more than one search result for azure group 'slug'")
+	assert.ErrorContains(t, err, "azure group with ID")
 }
 
 func Test_CreateGroup(t *testing.T) {
@@ -150,7 +143,7 @@ func Test_CreateGroup(t *testing.T) {
 	expectedOutput := input
 	expectedOutput.ID = "some-id"
 
-	group, err := client.CreateGroup(context.TODO(), input)
+	group, err := client.CreateGroup(context.Background(), input)
 
 	assert.Equal(t, expectedOutput, group)
 	assert.NoError(t, err)
@@ -167,7 +160,7 @@ func Test_CreateGroupWithInvalidStatus(t *testing.T) {
 
 	client := New(httpClient)
 
-	group, err := client.CreateGroup(context.TODO(), &Group{
+	group, err := client.CreateGroup(context.Background(), &Group{
 		Description:  "description",
 		DisplayName:  "name",
 		MailNickname: "mail",
@@ -188,7 +181,7 @@ func Test_CreateGroupWithInvalidResponse(t *testing.T) {
 
 	client := New(httpClient)
 
-	group, err := client.CreateGroup(context.TODO(), &Group{
+	group, err := client.CreateGroup(context.Background(), &Group{
 		Description:  "description",
 		DisplayName:  "name",
 		MailNickname: "mail",
@@ -213,7 +206,7 @@ func Test_CreateGroupWithIncompleteResponse(t *testing.T) {
 
 	client := New(httpClient)
 
-	group, err := client.CreateGroup(context.TODO(), &Group{
+	group, err := client.CreateGroup(context.Background(), &Group{
 		Description:  "description",
 		DisplayName:  "name",
 		MailNickname: "mail",
@@ -223,42 +216,42 @@ func Test_CreateGroupWithIncompleteResponse(t *testing.T) {
 	assert.EqualError(t, err, "azure group 'mail' created, but no ID returned")
 }
 
-func Test_GetOrCreateGroupWhenGroupExists(t *testing.T) {
+func Test_GetOrCreateGroupWithEmptyState(t *testing.T) {
 	httpClient := NewTestClient(
 		func(req *http.Request) *http.Response {
-			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups?%24filter=mailNickname+eq+%27slug%27", req.URL.String())
-			assert.Equal(t, http.MethodGet, req.Method)
+			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups", req.URL.String())
+			assert.Equal(t, http.MethodPost, req.Method)
+			assert.Equal(t, "application/json", req.Header.Get("content-type"))
 
-			return response("200 OK", `{"value": [{"id":"group-id"}]}`)
-		},
-		func(req *http.Request) *http.Response {
-			assert.Fail(t, "Request should not occur")
-			return nil
+			return response("201 Created", `{
+				"id":"group-id",
+				"description":"description",
+				"displayName": "name",
+				"mailNickname": "mail"
+			}`)
 		},
 	)
 
 	client := New(httpClient)
-
-	group, created, err := client.GetOrCreateGroup(context.TODO(), "slug", "name", helpers.Strp("description"))
+	group, created, err := client.GetOrCreateGroup(context.Background(), reconcilers.AzureState{}, "slug", "name", helpers.Strp("description"))
 
 	assert.NoError(t, err)
 	assert.Equal(t, "group-id", group.ID)
-	assert.False(t, created)
+	assert.True(t, created)
 }
 
-func Test_GetOrCreateGroupWhenGroupDoesNotExist(t *testing.T) {
+func Test_GetOrCreateGroupWhenGroupInStateDoesNotExist(t *testing.T) {
+	groupId := newUuid()
 	httpClient := NewTestClient(
 		func(req *http.Request) *http.Response {
-			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups?%24filter=mailNickname+eq+%27slug%27", req.URL.String())
+			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/"+groupId.String(), req.URL.String())
 			assert.Equal(t, http.MethodGet, req.Method)
-
 			return response("404 Not Found", "{}")
 		},
 		func(req *http.Request) *http.Response {
 			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups", req.URL.String())
 			assert.Equal(t, http.MethodPost, req.Method)
 			assert.Equal(t, "application/json", req.Header.Get("content-type"))
-
 			return response("201 Created", `{
 				"id":"some-id",
 				"description":"description",
@@ -269,8 +262,7 @@ func Test_GetOrCreateGroupWhenGroupDoesNotExist(t *testing.T) {
 	)
 
 	client := New(httpClient)
-
-	group, created, err := client.GetOrCreateGroup(context.TODO(), "slug", "name", helpers.Strp("description"))
+	group, created, err := client.GetOrCreateGroup(context.Background(), reconcilers.AzureState{GroupID: &groupId}, "slug", "name", helpers.Strp("description"))
 
 	assert.NoError(t, err)
 	assert.Equal(t, "some-id", group.ID)
@@ -278,6 +270,36 @@ func Test_GetOrCreateGroupWhenGroupDoesNotExist(t *testing.T) {
 	assert.Equal(t, "name", group.DisplayName)
 	assert.Equal(t, "mail", group.MailNickname)
 	assert.True(t, created)
+}
+
+func Test_GetOrCreateGroupWhenGroupInStateExists(t *testing.T) {
+	groupId := newUuid()
+	httpClient := NewTestClient(
+		func(req *http.Request) *http.Response {
+			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/"+groupId.String(), req.URL.String())
+			assert.Equal(t, http.MethodGet, req.Method)
+			return response("200 OK", `{
+				"id":"some-id",
+				"description":"description",
+				"displayName": "name",
+				"mailNickname": "mail"
+			}`)
+		},
+		func(req *http.Request) *http.Response {
+			assert.Fail(t, "Request should not occur")
+			return nil
+		},
+	)
+
+	client := New(httpClient)
+	group, created, err := client.GetOrCreateGroup(context.Background(), reconcilers.AzureState{GroupID: &groupId}, "slug", "name", helpers.Strp("description"))
+
+	assert.NoError(t, err)
+	assert.Equal(t, "some-id", group.ID)
+	assert.Equal(t, "description", group.Description)
+	assert.Equal(t, "name", group.DisplayName)
+	assert.Equal(t, "mail", group.MailNickname)
+	assert.False(t, created)
 }
 
 func Test_ListGroupMembers(t *testing.T) {
@@ -297,7 +319,7 @@ func Test_ListGroupMembers(t *testing.T) {
 
 	client := New(httpClient)
 
-	members, err := client.ListGroupMembers(context.TODO(), &Group{
+	members, err := client.ListGroupMembers(context.Background(), &Group{
 		ID: "group-id",
 	})
 
@@ -319,7 +341,7 @@ func Test_ListGroupMembersWhenGroupDoesNotExist(t *testing.T) {
 
 	client := New(httpClient)
 
-	members, err := client.ListGroupMembers(context.TODO(), &Group{
+	members, err := client.ListGroupMembers(context.Background(), &Group{
 		ID:           "group-id",
 		MailNickname: "mail",
 	})
@@ -340,7 +362,7 @@ func Test_ListGroupMembersWithInvalidResponse(t *testing.T) {
 
 	client := New(httpClient)
 
-	members, err := client.ListGroupMembers(context.TODO(), &Group{
+	members, err := client.ListGroupMembers(context.Background(), &Group{
 		ID: "group-id",
 	})
 
@@ -363,7 +385,7 @@ func Test_AddMemberToGroup(t *testing.T) {
 
 	client := New(httpClient)
 
-	err := client.AddMemberToGroup(context.TODO(), &Group{
+	err := client.AddMemberToGroup(context.Background(), &Group{
 		ID: "group-id",
 	}, &Member{
 		ID:   "user-id",
@@ -386,7 +408,7 @@ func Test_AddMemberToGroupWithInvalidResponse(t *testing.T) {
 
 	client := New(httpClient)
 
-	err := client.AddMemberToGroup(context.TODO(), &Group{
+	err := client.AddMemberToGroup(context.Background(), &Group{
 		ID:           "group-id",
 		MailNickname: "group",
 	}, &Member{
@@ -409,7 +431,7 @@ func Test_RemoveMemberFromGroup(t *testing.T) {
 
 	client := New(httpClient)
 
-	err := client.RemoveMemberFromGroup(context.TODO(), &Group{
+	err := client.RemoveMemberFromGroup(context.Background(), &Group{
 		ID: "group-id",
 	}, &Member{
 		ID: "user-id",
@@ -430,7 +452,7 @@ func Test_RemoveMemberFromGroupWithInvalidResponse(t *testing.T) {
 
 	client := New(httpClient)
 
-	err := client.RemoveMemberFromGroup(context.TODO(), &Group{
+	err := client.RemoveMemberFromGroup(context.Background(), &Group{
 		ID:           "group-id",
 		MailNickname: "mail@example.com",
 	}, &Member{
@@ -451,4 +473,9 @@ func response(status string, body string) *http.Response {
 		Body:       io.NopCloser(bytes.NewBufferString(body)),
 		Header:     make(http.Header),
 	}
+}
+
+func newUuid() uuid.UUID {
+	id, _ := uuid.NewUUID()
+	return id
 }

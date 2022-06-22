@@ -5,10 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	helpers "github.com/nais/console/pkg/console"
+	"github.com/nais/console/pkg/reconcilers"
 	"io"
 	"net/http"
-	"net/url"
 )
 
 type client struct {
@@ -18,8 +19,8 @@ type client struct {
 type Client interface {
 	AddMemberToGroup(ctx context.Context, grp *Group, member *Member) error
 	CreateGroup(ctx context.Context, grp *Group) (*Group, error)
-	GetGroupByMailNickName(ctx context.Context, slug string) (*Group, error)
-	GetOrCreateGroup(ctx context.Context, slug, name string, description *string) (*Group, bool, error)
+	GetGroupById(ctx context.Context, id uuid.UUID) (*Group, error)
+	GetOrCreateGroup(ctx context.Context, state reconcilers.AzureState, slug, name string, description *string) (*Group, bool, error)
 	GetUser(ctx context.Context, email string) (*Member, error)
 	ListGroupMembers(ctx context.Context, grp *Group) ([]*Member, error)
 	ListGroupOwners(ctx context.Context, grp *Group) ([]*Owner, error)
@@ -63,10 +64,8 @@ func (s *client) GetUser(ctx context.Context, email string) (*Member, error) {
 	return user, nil
 }
 
-func (s *client) GetGroupByMailNickName(ctx context.Context, mailNickname string) (*Group, error) {
-	v := &url.Values{}
-	v.Add("$filter", fmt.Sprintf("mailNickname eq '%s'", mailNickname))
-	u := "https://graph.microsoft.com/v1.0/groups?" + v.Encode()
+func (s *client) GetGroupById(ctx context.Context, id uuid.UUID) (*Group, error) {
+	u := "https://graph.microsoft.com/v1.0/groups/" + id.String()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
@@ -77,26 +76,21 @@ func (s *client) GetGroupByMailNickName(ctx context.Context, mailNickname string
 	if err != nil {
 		return nil, err
 	}
-
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("azure group with ID '%s' does not exist", id.String())
+	}
+
 	dec := json.NewDecoder(resp.Body)
-	grp := &GroupResponse{}
+	grp := &Group{}
 	err = dec.Decode(grp)
 
 	if err != nil {
 		return nil, err
 	}
 
-	switch len(grp.Value) {
-	case 0:
-		return nil, fmt.Errorf("azure group '%s' does not exist", mailNickname)
-	case 1:
-		break
-	default:
-		return nil, fmt.Errorf("ambiguous response; more than one search result for azure group '%s'", mailNickname)
-	}
-
-	return grp.Value[0], nil
+	return grp, nil
 }
 
 func (s *client) CreateGroup(ctx context.Context, grp *Group) (*Group, error) {
@@ -141,27 +135,25 @@ func (s *client) CreateGroup(ctx context.Context, grp *Group) (*Group, error) {
 
 // GetOrCreateGroup Get or create a group fom the Graph API. The second return value informs if the group was
 // created or not.
-func (s *client) GetOrCreateGroup(ctx context.Context, mailNickname, name string, description *string) (*Group, bool, error) {
-	grp, err := s.GetGroupByMailNickName(ctx, mailNickname)
-	if err == nil {
-		return grp, false, err
+func (s *client) GetOrCreateGroup(ctx context.Context, state reconcilers.AzureState, mailNickname, name string, description *string) (*Group, bool, error) {
+	if state.GroupID != nil {
+		grp, err := s.GetGroupById(ctx, *state.GroupID)
+		if err == nil {
+			return grp, false, err
+		}
 	}
 
-	grp = &Group{
+	createdGroup, err := s.CreateGroup(ctx, &Group{
 		Description:     helpers.DerefString(description),
 		DisplayName:     name,
 		GroupTypes:      nil,
 		MailEnabled:     false,
 		MailNickname:    mailNickname,
 		SecurityEnabled: true,
-	}
-
-	createdGroup, err := s.CreateGroup(ctx, grp)
-
+	})
 	if err != nil {
 		return nil, false, err
 	}
-
 	return createdGroup, true, nil
 }
 
