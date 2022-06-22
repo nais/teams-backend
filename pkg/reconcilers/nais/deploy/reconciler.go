@@ -94,12 +94,15 @@ func (s *naisDeployReconciler) Reconcile(ctx context.Context, input reconcilers.
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusCreated {
+	switch resp.StatusCode {
+	case http.StatusCreated: // first time the team key is provisioned
+		s.auditLogger.Logf(OpProvisionApiKey, input.Corr, s.system, nil, &input.Team, nil, "provisioned NAIS deploy API key to team '%s'", input.Team.Slug)
+		return nil
+	case http.StatusNoContent: // team key already exists
+		return nil
+	default:
 		return fmt.Errorf("provision NAIS deploy API key to team '%s': %s", input.Team.Slug, resp.Status)
 	}
-
-	s.auditLogger.Logf(OpProvisionApiKey, input.Corr, s.system, nil, &input.Team, nil, "provisioned NAIS deploy API key to team '%s'", input.Team.Slug)
-	return nil
 }
 
 // genMAC generates the HMAC signature for a message provided the secret key using SHA256
