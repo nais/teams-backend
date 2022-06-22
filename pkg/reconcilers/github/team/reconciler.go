@@ -74,10 +74,6 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 	return New(db, system, auditLogger, cfg.GitHub.Organization, cfg.PartnerDomain, restClient.Teams, graphClient), nil
 }
 
-type GitHubState struct {
-	Slug *string `json:"slug"`
-}
-
 func (r *gitHubReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	githubTeam, err := r.getOrCreateTeam(ctx, input.Corr, input.Team)
 	if err != nil {

@@ -32,6 +32,10 @@ type gitHubReconciler struct {
 	domain       string
 }
 
+type GitHubState struct {
+	Slug *string `json:"slug"`
+}
+
 type GitHubUser struct {
 	Login githubv4.String
 }
