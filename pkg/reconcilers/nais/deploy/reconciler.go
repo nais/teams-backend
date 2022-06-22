@@ -79,9 +79,8 @@ func (s *naisDeployReconciler) Reconcile(ctx context.Context, input reconcilers.
 		return fmt.Errorf("create JSON payload for deploy key API: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", s.endpoint, bytes.NewReader(payload))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.endpoint, bytes.NewReader(payload))
 	if err != nil {
-		return err
 		return fmt.Errorf("create request for deploy key API: %w", err)
 	}
 
@@ -96,7 +95,7 @@ func (s *naisDeployReconciler) Reconcile(ctx context.Context, input reconcilers.
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		return fmt.Errorf("%s: provision NAIS deploy API key to team '%s': %s", OpProvisionApiKey, input.Team.Slug, resp.Status)
+		return fmt.Errorf("provision NAIS deploy API key to team '%s': %s", input.Team.Slug, resp.Status)
 	}
 
 	s.auditLogger.Logf(OpProvisionApiKey, input.Corr, s.system, nil, &input.Team, nil, "provisioned NAIS deploy API key to team '%s'", input.Team.Slug)
