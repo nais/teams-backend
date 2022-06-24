@@ -30,12 +30,6 @@ type GCP struct {
 	ProjectParentIDs map[string]int64 `envconfig:"CONSOLE_GCP_PROJECT_PARENT_IDS"` // environment name is key, parentID is value
 }
 
-type NaisDeploy struct {
-	Enabled      bool   `envconfig:"CONSOLE_NAIS_DEPLOY_ENABLED"`
-	Endpoint     string `envconfig:"CONSOLE_NAIS_DEPLOY_ENDPOINT"`
-	ProvisionKey string `envconfig:"CONSOLE_NAIS_DEPLOY_PROVISION_KEY"`
-}
-
 type NaisNamespace struct {
 	Enabled   bool   `envconfig:"CONSOLE_NAIS_NAMESPACE_ENABLED"`
 	ProjectID string `envconfig:"CONSOLE_NAIS_NAMESPACE_PROJECT_ID"`
@@ -57,7 +51,6 @@ type Config struct {
 	Google        Google
 	GCP           GCP
 	UserSync      UserSync
-	NaisDeploy    NaisDeploy
 	NaisNamespace NaisNamespace
 	OAuth         OAuth
 	PartnerDomain string `envconfig:"CONSOLE_PARTNER_DOMAIN"`
@@ -74,9 +67,6 @@ func Defaults() *Config {
 		DatabaseURL:   "postgres://console:console@localhost:3002/console?sslmode=disable",
 		FrontendURL:   "http://localhost:3001",
 		ListenAddress: "127.0.0.1:3000",
-		NaisDeploy: NaisDeploy{
-			Endpoint: "http://localhost:8080/api/v1/provision",
-		},
 		PartnerDomain: "example.com",
 		LogFormat:     "text",
 		LogLevel:      "DEBUG",
