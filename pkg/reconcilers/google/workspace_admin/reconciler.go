@@ -107,12 +107,9 @@ func (r *gcpReconciler) getOrCreateGroup(groupsService *admin_directory_v1.Group
 	groupKey := reconcilers.TeamNamePrefix + team.Slug
 	email := fmt.Sprintf("%s@%s", groupKey, r.domain)
 	newGroup := &admin_directory_v1.Group{
-		Email: email,
-		Name:  team.Name,
-		Description: helpers.StringWithFallback(
-			team.Purpose,
-			helpers.GetDefaultTeamPurpose(),
-		),
+		Email:       email,
+		Name:        team.Name,
+		Description: helpers.TeamPurpose(team.Purpose),
 	}
 	group, err := groupsService.Insert(newGroup).Do()
 	if err != nil {

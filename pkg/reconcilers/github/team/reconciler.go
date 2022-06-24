@@ -111,10 +111,7 @@ func (r *gitHubReconciler) getOrCreateTeam(ctx context.Context, state reconciler
 		}
 	}
 
-	description := helpers.StringWithFallback(
-		team.Purpose,
-		helpers.GetDefaultTeamPurpose(),
-	)
+	description := helpers.TeamPurpose(team.Purpose)
 	githubTeam, resp, err := r.teamsService.CreateTeam(ctx, r.org, github.NewTeam{
 		Name:        string(team.Slug),
 		Description: &description,
