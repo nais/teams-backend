@@ -9,3 +9,7 @@ type AzureState struct {
 type GitHubState struct {
 	Slug *string `json:"slug"`
 }
+
+type GoogleWorkspaceState struct {
+	GroupID *string `json:"groupId"`
+}

@@ -144,7 +144,10 @@ func (s *client) GetOrCreateGroup(ctx context.Context, state reconcilers.AzureSt
 	}
 
 	createdGroup, err := s.CreateGroup(ctx, &Group{
-		Description:     helpers.DerefString(description),
+		Description: helpers.StringWithFallback(
+			description,
+			helpers.GetDefaultTeamPurpose(),
+		),
 		DisplayName:     name,
 		GroupTypes:      nil,
 		MailEnabled:     false,
