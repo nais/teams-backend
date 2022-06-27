@@ -136,7 +136,7 @@ Set to `true` to enable the reconciler.
 
 #### `CONSOLE_NAIS_NAMESPACE_PROJECT_ID`
 
-The ID of the NAIS management project.
+The ID of the NAIS management project in the tenant organization in GCP.
 
 ## Local development
 
