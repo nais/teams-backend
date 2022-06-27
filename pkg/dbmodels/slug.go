@@ -56,8 +56,3 @@ func (s Slug) StringP() *string {
 	strp := string(s)
 	return &strp
 }
-
-func SlugP(s string) *Slug {
-	slug := Slug(s)
-	return &slug
-}
