@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
 
 	"cloud.google.com/go/pubsub"
 	"github.com/nais/console/pkg/auditlogger"
@@ -71,37 +72,29 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 		return fmt.Errorf("retrieve pubsub client: %w", err)
 	}
 
-	// map of environment -> project ID
-	projects := make(map[string]string)
+	gcpSystem := &dbmodels.System{}
+	err = r.db.Where("name = ?", google_gcp_reconciler.Name).First(gcpSystem).Error
+	if err != nil {
+		return fmt.Errorf("unable to load GCP system: %w", err)
+	}
 
-	// read all state variables
-	/*
-		for _, state := range input.Team.SystemState {
-			if state.SystemID != *s.system.ID {
-				continue
-			}
-			if state.Key != dbmodels.SystemStateGoogleProjectID {
-				continue
-			}
-			if state.Environment == nil {
-				continue
-			}
-			projects[*state.Environment] = state.Value
-		}
+	state := &reconcilers.GoogleGcpProjectState{}
+	err = dbmodels.LoadSystemState(r.db, *gcpSystem.ID, *input.Team.ID, state)
+	if err != nil {
+		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
+	}
 
-	*/
+	if len(state.Projects) == 0 {
+		return fmt.Errorf("no GCP project state exists for team '%s' yet", input.Team.Slug)
+	}
 
-	for environment := range r.projectParentIDs {
-		gcpProjectID := projects[environment]
-		if len(gcpProjectID) == 0 {
-			return fmt.Errorf("%s: no GCP project created for team '%s' and environment '%s'", OpCreateNamespace, input.Team.Slug, environment)
-		}
-
-		err = r.createNamespace(ctx, svc, input.Team, environment, gcpProjectID)
+	for environment, project := range state.Projects {
+		err = r.createNamespace(ctx, svc, input.Team, environment, project.ProjectID)
 		if err != nil {
-			return fmt.Errorf("%s: %w", OpCreateNamespace, err)
+			return fmt.Errorf("unable to create namespace for project '%s' in environment '%s': %w", project.ProjectID, environment, err)
 		}
 
+		// FIXME: Don't create a log entry if the namespace already exists
 		r.auditLogger.Logf(OpCreateNamespace, input.Corr, r.system, nil, &input.Team, nil, "request namespace creation for team '%s' in namespace '%s'", input.Team.Slug, environment)
 	}
 
@@ -117,7 +110,7 @@ func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, pubsubSer
 	req := &naisdRequest{
 		Type: NaisdCreateNamespace,
 		Data: naisdData{
-			Name:       team.Slug.String(),
+			Name:       string(team.Slug),
 			GcpProject: gcpProjectID,
 		},
 	}
@@ -127,14 +120,10 @@ func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, pubsubSer
 		return err
 	}
 
-	msg := &pubsub.Message{
-		Data: payload,
-	}
-
 	topic := topicPrefix + environment
+	msg := &pubsub.Message{Data: payload}
 	future := pubsubService.Topic(topic).Publish(ctx, msg)
 	<-future.Ready()
 	_, err = future.Get(ctx)
-
 	return err
 }
