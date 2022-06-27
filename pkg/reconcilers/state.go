@@ -13,3 +13,7 @@ type GitHubState struct {
 type GoogleWorkspaceState struct {
 	GroupID *string `json:"groupId"`
 }
+
+type GoogleGcpProjectState struct {
+	Projects map[string]string `json:"projects"` // key is environment, value is the generated project name (projects/<int>)
+}
