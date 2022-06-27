@@ -65,7 +65,7 @@ func run() error {
 		return err
 	}
 
-	systems, err := fixtures.EnsureSystemsExistInDatabase(ctx, db)
+	systems, err := fixtures.CreateReconcilerSystems(db)
 	if err != nil {
 		return err
 	}
@@ -206,7 +206,7 @@ func run() error {
 	return nil
 }
 
-func reconcileTeams(ctx context.Context, db *gorm.DB, recs map[dbmodels.System]reconcilers.Reconciler, reconcileInputs *map[uuid.UUID]reconcilers.Input) error {
+func reconcileTeams(ctx context.Context, db *gorm.DB, recs []reconcilers.Reconciler, reconcileInputs *map[uuid.UUID]reconcilers.Input) error {
 	const reconcileTimeout = 15 * time.Minute
 	errors := 0
 
@@ -216,14 +216,15 @@ func reconcileTeams(ctx context.Context, db *gorm.DB, recs map[dbmodels.System]r
 	for teamId, input := range *reconcileInputs {
 		teamErrors := 0
 
-		for system, reconciler := range recs {
-			log.Infof("Starting reconciler '%s' for team: '%s'", system.Name, input.Team.Name)
+		for _, reconciler := range recs {
+			name := reconciler.System().Name
+			log.Infof("Starting reconciler '%s' for team: '%s'", name, input.Team.Name)
 			err := reconciler.Reconcile(ctx, input)
 			if err != nil {
 				log.Error(err)
 				err = db.Create(&dbmodels.ReconcileError{
 					CorrelationID: *input.Corr.ID,
-					SystemID:      *system.ID,
+					SystemID:      *reconciler.System().ID,
 					TeamID:        *input.Team.ID,
 					Message:       err.Error(),
 				}).Error
@@ -236,7 +237,7 @@ func reconcileTeams(ctx context.Context, db *gorm.DB, recs map[dbmodels.System]r
 				continue
 			}
 
-			log.Infof("Successfully finished reconciler '%s' for team: '%s'", system.Name, input.Team.Name)
+			log.Infof("Successfully finished reconciler '%s' for team: '%s'", name, input.Team.Name)
 		}
 
 		if teamErrors == 0 {
@@ -287,14 +288,16 @@ func setupLogging(format, level string) error {
 	return nil
 }
 
-func initReconcilers(db *gorm.DB, cfg *config.Config, logger auditlogger.AuditLogger, systems map[string]*dbmodels.System) (map[dbmodels.System]reconcilers.Reconciler, error) {
-	recs := make(map[dbmodels.System]reconcilers.Reconciler)
-	factories := registry.Reconcilers()
+func initReconcilers(db *gorm.DB, cfg *config.Config, logger auditlogger.AuditLogger, systems map[string]*dbmodels.System) ([]reconcilers.Reconciler, error) {
+	recs := make([]reconcilers.Reconciler, 0)
+	initializers := registry.Reconcilers()
 
-	for name, factory := range factories {
+	for _, initializer := range initializers {
+		name := initializer.Name
+		factory := initializer.Factory
 		system, exists := systems[name]
 		if !exists {
-			return nil, fmt.Errorf("BUG: missing system for reconciler %s", name)
+			return nil, fmt.Errorf("BUG: missing system for reconciler '%s'", name)
 		}
 
 		rec, err := factory(db, cfg, *system, logger)
@@ -304,7 +307,7 @@ func initReconcilers(db *gorm.DB, cfg *config.Config, logger auditlogger.AuditLo
 		default:
 			return nil, fmt.Errorf("reconciler '%s': %w", name, err)
 		case nil:
-			recs[*system] = rec
+			recs = append(recs, rec)
 			log.Infof("Reconciler initialized: '%s' -> %T", system.Name, rec)
 		}
 	}

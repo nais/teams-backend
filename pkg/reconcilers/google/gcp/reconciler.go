@@ -11,7 +11,6 @@ import (
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers"
-	"github.com/nais/console/pkg/reconcilers/registry"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 	"google.golang.org/api/cloudresourcemanager/v3"
@@ -20,7 +19,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type gcpReconciler struct {
+type googleGcpReconciler struct {
 	db               *gorm.DB
 	config           *jwt.Config
 	domain           string
@@ -35,12 +34,8 @@ const (
 	OpAssignPermissions = "google:gcp:project:assign-permissions"
 )
 
-func init() {
-	registry.Register(Name, NewFromConfig)
-}
-
-func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config, projectParentIDs map[string]int64) *gcpReconciler {
-	return &gcpReconciler{
+func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config, projectParentIDs map[string]int64) *googleGcpReconciler {
+	return &googleGcpReconciler{
 		db:               db,
 		auditLogger:      auditLogger,
 		domain:           domain,
@@ -71,15 +66,15 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 	return New(db, system, auditLogger, cfg.PartnerDomain, cf, cfg.GCP.ProjectParentIDs), nil
 }
 
-func (s *gcpReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
-	client := s.config.Client(ctx)
+func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
+	client := r.config.Client(ctx)
 	svc, err := cloudresourcemanager.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
 		return fmt.Errorf("retrieve cloud resource manager client: %w", err)
 	}
 
-	for environment, parentID := range s.projectParentIDs {
-		proj, err := s.CreateProject(svc, environment, parentID, input.Corr, input.Team)
+	for environment, parentID := range r.projectParentIDs {
+		proj, err := r.CreateProject(svc, environment, parentID, input.Corr, input.Team)
 		if err != nil {
 			return err
 		}
@@ -91,7 +86,7 @@ func (s *gcpReconciler) Reconcile(ctx context.Context, input reconcilers.Input) 
 			}
 		*/
 
-		err = s.CreatePermissions(svc, proj.Name, input.Corr, input.Team)
+		err = r.CreatePermissions(svc, proj.Name, input.Corr, input.Team)
 		if err != nil {
 			return err
 		}
@@ -100,8 +95,12 @@ func (s *gcpReconciler) Reconcile(ctx context.Context, input reconcilers.Input) 
 	return nil
 }
 
-func (s *gcpReconciler) CreateProject(svc *cloudresourcemanager.Service, environment string, parentID int64, corr dbmodels.Correlation, team dbmodels.Team) (*cloudresourcemanager.Project, error) {
-	projectID := CreateProjectID(s.domain, environment, team.Slug.String())
+func (r *googleGcpReconciler) System() dbmodels.System {
+	return r.system
+}
+
+func (r *googleGcpReconciler) CreateProject(svc *cloudresourcemanager.Service, environment string, parentID int64, corr dbmodels.Correlation, team dbmodels.Team) (*cloudresourcemanager.Project, error) {
+	projectID := CreateProjectID(r.domain, environment, team.Slug.String())
 
 	proj := &cloudresourcemanager.Project{
 		Parent:    "folders/" + strconv.FormatInt(parentID, 10),
@@ -153,13 +152,13 @@ func (s *gcpReconciler) CreateProject(svc *cloudresourcemanager.Service, environ
 		return nil, err
 	}
 
-	s.auditLogger.Logf(OpCreateProject, corr, s.system, nil, &team, nil, "created GCP project '%s'", proj.Name)
+	r.auditLogger.Logf(OpCreateProject, corr, r.system, nil, &team, nil, "created GCP project '%s'", proj.Name)
 
 	return proj, nil
 }
 
-func (s *gcpReconciler) CreatePermissions(svc *cloudresourcemanager.Service, projectName string, corr dbmodels.Correlation, team dbmodels.Team) error {
-	member := fmt.Sprintf("group:%s%s@%s", reconcilers.TeamNamePrefix, team.Slug, s.domain)
+func (r *googleGcpReconciler) CreatePermissions(svc *cloudresourcemanager.Service, projectName string, corr dbmodels.Correlation, team dbmodels.Team) error {
+	member := fmt.Sprintf("group:%s%s@%s", reconcilers.TeamNamePrefix, team.Slug, r.domain)
 	const owner = "roles/owner"
 
 	req := &cloudresourcemanager.SetIamPolicyRequest{
@@ -179,7 +178,7 @@ func (s *gcpReconciler) CreatePermissions(svc *cloudresourcemanager.Service, pro
 		return fmt.Errorf("%s: assign GCP project IAM permissions: %w", OpAssignPermissions, err)
 	}
 
-	s.auditLogger.Logf(OpAssignPermissions, corr, s.system, nil, &team, nil, "assigned GCP project IAM permissions for '%s'", projectName)
+	r.auditLogger.Logf(OpAssignPermissions, corr, r.system, nil, &team, nil, "assigned GCP project IAM permissions for '%s'", projectName)
 
 	return nil
 }

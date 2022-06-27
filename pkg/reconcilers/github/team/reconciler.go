@@ -11,7 +11,6 @@ import (
 	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers"
-	"github.com/nais/console/pkg/reconcilers/registry"
 	"github.com/shurcooL/githubv4"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -31,12 +30,8 @@ const (
 
 var errGitHubUserNotFound = errors.New("GitHub user does not exist")
 
-func init() {
-	registry.Register(Name, NewFromConfig)
-}
-
-func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, org, domain string, teamsService TeamsService, graphClient GraphClient) *gitHubReconciler {
-	return &gitHubReconciler{
+func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, org, domain string, teamsService TeamsService, graphClient GraphClient) *githubTeamReconciler {
+	return &githubTeamReconciler{
 		db:           db,
 		system:       system,
 		auditLogger:  auditLogger,
@@ -73,7 +68,7 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 	return New(db, system, auditLogger, cfg.GitHub.Organization, cfg.PartnerDomain, restClient.Teams, graphClient), nil
 }
 
-func (r *gitHubReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
+func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	state := &reconcilers.GitHubState{}
 	err := dbmodels.LoadSystemState(r.db, *r.system.ID, *input.Team.ID, state)
 	if err != nil {
@@ -93,7 +88,11 @@ func (r *gitHubReconciler) Reconcile(ctx context.Context, input reconcilers.Inpu
 	return r.connectUsers(ctx, githubTeam, input.Corr, input.Team)
 }
 
-func (r *gitHubReconciler) getOrCreateTeam(ctx context.Context, state reconcilers.GitHubState, corr dbmodels.Correlation, team dbmodels.Team) (*github.Team, error) {
+func (r *githubTeamReconciler) System() dbmodels.System {
+	return r.system
+}
+
+func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconcilers.GitHubState, corr dbmodels.Correlation, team dbmodels.Team) (*github.Team, error) {
 	if state.Slug != nil {
 		existingTeam, resp, err := r.teamsService.GetTeamBySlug(ctx, r.org, *state.Slug)
 		if resp == nil && err != nil {
@@ -126,7 +125,7 @@ func (r *gitHubReconciler) getOrCreateTeam(ctx context.Context, state reconciler
 	return githubTeam, nil
 }
 
-func (r *gitHubReconciler) connectUsers(ctx context.Context, githubTeam *github.Team, corr dbmodels.Correlation, team dbmodels.Team) error {
+func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *github.Team, corr dbmodels.Correlation, team dbmodels.Team) error {
 	membersAccordingToGitHub, err := r.getTeamMembers(ctx, *githubTeam.Slug)
 	if err != nil {
 		return fmt.Errorf("%s: list existing members in GitHub team '%s': %w", OpAddMembers, *githubTeam.Slug, err)
@@ -178,7 +177,7 @@ func (r *gitHubReconciler) connectUsers(ctx context.Context, githubTeam *github.
 }
 
 // getTeamMembers Get all team members in a GitHub team using a paginated query
-func (r *gitHubReconciler) getTeamMembers(ctx context.Context, slug string) ([]*github.User, error) {
+func (r *githubTeamReconciler) getTeamMembers(ctx context.Context, slug string) ([]*github.User, error) {
 	const maxPerPage = 100
 	opt := &github.TeamListTeamMembersOptions{
 		ListOptions: github.ListOptions{
@@ -234,7 +233,7 @@ func remoteOnlyMembers(membersAccordingToGitHub []*github.User, consoleUsers map
 
 // mapSSOUsers Return a mapping of GitHub usernames to Console user objects. Console users with no matching GitHub user
 // will be ignored.
-func (r *gitHubReconciler) mapSSOUsers(ctx context.Context, users []*dbmodels.User) (map[string]*dbmodels.User, error) {
+func (r *githubTeamReconciler) mapSSOUsers(ctx context.Context, users []*dbmodels.User) (map[string]*dbmodels.User, error) {
 	userMap := make(map[string]*dbmodels.User)
 	for _, user := range users {
 		githubUsername, err := r.getGitHubUsernameFromEmail(ctx, user.Email)
@@ -252,7 +251,7 @@ func (r *gitHubReconciler) mapSSOUsers(ctx context.Context, users []*dbmodels.Us
 }
 
 // getGitHubUsernameFromEmail Look up a GitHub username from an SSO e-mail address connected to that user account.
-func (r *gitHubReconciler) getGitHubUsernameFromEmail(ctx context.Context, email string) (*string, error) {
+func (r *githubTeamReconciler) getGitHubUsernameFromEmail(ctx context.Context, email string) (*string, error) {
 	var query LookupGitHubSamlUserByEmail
 
 	variables := map[string]interface{}{
@@ -275,7 +274,7 @@ func (r *gitHubReconciler) getGitHubUsernameFromEmail(ctx context.Context, email
 }
 
 // getEmailFromGitHubUsername Look up a GitHub username from an SSO e-mail address connected to that user account.
-func (r *gitHubReconciler) getEmailFromGitHubUsername(ctx context.Context, username string) (*string, error) {
+func (r *githubTeamReconciler) getEmailFromGitHubUsername(ctx context.Context, username string) (*string, error) {
 	var query LookupGitHubSamlUserByGitHubUsername
 
 	variables := map[string]interface{}{

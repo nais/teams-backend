@@ -5,17 +5,33 @@ import (
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers"
+	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
-type ReconcilerInitializer func(*gorm.DB, *config.Config, dbmodels.System, auditlogger.AuditLogger) (reconcilers.Reconciler, error)
+type ReconcilerFactory func(*gorm.DB, *config.Config, dbmodels.System, auditlogger.AuditLogger) (reconcilers.Reconciler, error)
 
-var recs = make(map[string]ReconcilerInitializer)
-
-func Register(name string, init ReconcilerInitializer) {
-	recs[name] = init
+type ReconcilerInitializer struct {
+	Name    string
+	Factory ReconcilerFactory
 }
 
-func Reconcilers() map[string]ReconcilerInitializer {
+var recs = make([]ReconcilerInitializer, 0)
+var recNames = make(map[string]bool)
+
+func Register(name string, init ReconcilerFactory) {
+	if _, exists := recNames[name]; exists {
+		log.Warnf("reconciler '%s' has already been registered", name)
+		return
+	}
+
+	recs = append(recs, ReconcilerInitializer{
+		Name:    name,
+		Factory: init,
+	})
+	recNames[name] = true
+}
+
+func Reconcilers() []ReconcilerInitializer {
 	return recs
 }

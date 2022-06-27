@@ -21,8 +21,8 @@ type TeamsService interface {
 	RemoveTeamMembershipBySlug(ctx context.Context, org, slug, user string) (*github.Response, error)
 }
 
-// gitHubReconciler creates teams on GitHub and connects users to them.
-type gitHubReconciler struct {
+// githubTeamReconciler creates teams on GitHub and connects users to them.
+type githubTeamReconciler struct {
 	db           *gorm.DB
 	system       dbmodels.System
 	auditLogger  auditlogger.AuditLogger

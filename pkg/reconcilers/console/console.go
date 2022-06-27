@@ -7,11 +7,12 @@ import (
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/reconcilers"
-	"github.com/nais/console/pkg/reconcilers/registry"
 	"gorm.io/gorm"
 )
 
-type consoleReconciler struct{}
+type consoleReconciler struct {
+	system dbmodels.System
+}
 
 const (
 	Name         = "console"
@@ -19,18 +20,20 @@ const (
 	OpSyncTeam   = "console:team:sync"
 )
 
-func init() {
-	registry.Register(Name, NewFromConfig)
+func New(system dbmodels.System) *consoleReconciler {
+	return &consoleReconciler{
+		system: system,
+	}
 }
 
-func New() *consoleReconciler {
-	return &consoleReconciler{}
-}
-
-func NewFromConfig(_ *gorm.DB, _ *config.Config, _ dbmodels.System, _ auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
-	return New(), nil
+func NewFromConfig(_ *gorm.DB, _ *config.Config, system dbmodels.System, _ auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+	return New(system), nil
 }
 
 func (r *consoleReconciler) Reconcile(_ context.Context, _ reconcilers.Input) error {
 	return nil
+}
+
+func (r *consoleReconciler) System() dbmodels.System {
+	return r.system
 }

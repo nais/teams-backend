@@ -9,7 +9,6 @@ import (
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/google_jwt"
 	"github.com/nais/console/pkg/reconcilers"
-	"github.com/nais/console/pkg/reconcilers/registry"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/oauth2/jwt"
 	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
@@ -20,7 +19,7 @@ import (
 	"strings"
 )
 
-type gcpReconciler struct {
+type googleWorkspaceAdminReconciler struct {
 	auditLogger auditlogger.AuditLogger
 	db          *gorm.DB
 	domain      string
@@ -37,12 +36,8 @@ const (
 	OpAddToGKESecurityGroup = "google:workspace-admin:add-to-gke-security-group"
 )
 
-func init() {
-	registry.Register(Name, NewFromConfig)
-}
-
-func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config) *gcpReconciler {
-	return &gcpReconciler{
+func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config) *googleWorkspaceAdminReconciler {
+	return &googleWorkspaceAdminReconciler{
 		auditLogger: auditLogger,
 		db:          db,
 		domain:      domain,
@@ -65,7 +60,7 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 	return New(db, system, auditLogger, cfg.PartnerDomain, config), nil
 }
 
-func (r *gcpReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
+func (r *googleWorkspaceAdminReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	state := &reconcilers.GoogleWorkspaceState{}
 	err := dbmodels.LoadSystemState(r.db, *r.system.ID, *input.Team.ID, state)
 	if err != nil {
@@ -96,7 +91,11 @@ func (r *gcpReconciler) Reconcile(ctx context.Context, input reconcilers.Input) 
 	return r.addToGKESecurityGroup(srv.Members, grp, input.Corr, input.Team)
 }
 
-func (r *gcpReconciler) getOrCreateGroup(groupsService *admin_directory_v1.GroupsService, state *reconcilers.GoogleWorkspaceState, corr dbmodels.Correlation, team dbmodels.Team) (*admin_directory_v1.Group, error) {
+func (r *googleWorkspaceAdminReconciler) System() dbmodels.System {
+	return r.system
+}
+
+func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(groupsService *admin_directory_v1.GroupsService, state *reconcilers.GoogleWorkspaceState, corr dbmodels.Correlation, team dbmodels.Team) (*admin_directory_v1.Group, error) {
 	if state.GroupID != nil {
 		existingGroup, err := groupsService.Get(*state.GroupID).Do()
 		if err == nil {
@@ -121,7 +120,7 @@ func (r *gcpReconciler) getOrCreateGroup(groupsService *admin_directory_v1.Group
 	return group, nil
 }
 
-func (r *gcpReconciler) connectUsers(membersService *admin_directory_v1.MembersService, grp *admin_directory_v1.Group, corr dbmodels.Correlation, team dbmodels.Team) error {
+func (r *googleWorkspaceAdminReconciler) connectUsers(membersService *admin_directory_v1.MembersService, grp *admin_directory_v1.Group, corr dbmodels.Correlation, team dbmodels.Team) error {
 	membersAccordingToGoogle, err := membersService.List(grp.Id).Do()
 	if err != nil {
 		return fmt.Errorf("%s: list existing members in Google Directory group: %w", OpAddMembers, err)
@@ -162,7 +161,7 @@ func (r *gcpReconciler) connectUsers(membersService *admin_directory_v1.MembersS
 	return nil
 }
 
-func (r *gcpReconciler) addToGKESecurityGroup(membersService *admin_directory_v1.MembersService, grp *admin_directory_v1.Group, corr dbmodels.Correlation, team dbmodels.Team) error {
+func (r *googleWorkspaceAdminReconciler) addToGKESecurityGroup(membersService *admin_directory_v1.MembersService, grp *admin_directory_v1.Group, corr dbmodels.Correlation, team dbmodels.Team) error {
 	const groupPrefix = "gke-security-groups@"
 	groupKey := groupPrefix + r.domain
 

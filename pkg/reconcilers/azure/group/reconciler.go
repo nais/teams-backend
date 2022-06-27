@@ -13,13 +13,12 @@ import (
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers"
-	"github.com/nais/console/pkg/reconcilers/registry"
 	"golang.org/x/oauth2/clientcredentials"
 	"golang.org/x/oauth2/microsoft"
 	"gorm.io/gorm"
 )
 
-type azureReconciler struct {
+type azureGroupReconciler struct {
 	db          *gorm.DB
 	system      dbmodels.System
 	auditLogger auditlogger.AuditLogger
@@ -36,12 +35,8 @@ const (
 	OpDeleteMember = "azure:group:delete-member"
 )
 
-func init() {
-	registry.Register(Name, NewFromConfig)
-}
-
-func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, oauth clientcredentials.Config, client azureclient.Client, domain string) *azureReconciler {
-	return &azureReconciler{
+func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, oauth clientcredentials.Config, client azureclient.Client, domain string) *azureGroupReconciler {
+	return &azureGroupReconciler{
 		db:          db,
 		system:      system,
 		auditLogger: auditLogger,
@@ -70,7 +65,7 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 	return New(db, system, auditLogger, conf, azureclient.New(conf.Client(context.Background())), cfg.PartnerDomain), nil
 }
 
-func (r *azureReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
+func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	state := &reconcilers.AzureState{}
 	err := dbmodels.LoadSystemState(r.db, *r.system.ID, *input.Team.ID, state)
 	if err != nil {
@@ -101,7 +96,11 @@ func (r *azureReconciler) Reconcile(ctx context.Context, input reconcilers.Input
 	return nil
 }
 
-func (r *azureReconciler) connectUsers(ctx context.Context, grp *azureclient.Group, corr dbmodels.Correlation, team dbmodels.Team) error {
+func (r *azureGroupReconciler) System() dbmodels.System {
+	return r.system
+}
+
+func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclient.Group, corr dbmodels.Correlation, team dbmodels.Team) error {
 	members, err := r.client.ListGroupMembers(ctx, grp)
 	if err != nil {
 		return fmt.Errorf("%s: list existing members in Azure group '%s': %s", OpAddMembers, grp.MailNickname, err)
