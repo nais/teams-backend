@@ -6,24 +6,17 @@ import (
 	"strings"
 )
 
-// ProjectId: Immutable. The unique, user-assigned id of the project. It
-// must be 6 to 30 lowercase ASCII letters, digits, or hyphens. It must
-// start with a letter. Trailing hyphens are prohibited. Example:
-// `tokyo-rain-123`
-//
-// TODO: what if our deterministic "globally unique" project ID is taken?
-// The output from this function is used during generation of the GCP project.
-// This ID must be available or else the code breaks.
-func CreateProjectID(domain, environment, teamname string) string {
+// GenerateProjectID Generate a unique project ID for the team in a given environment in a deterministic fashion
+func GenerateProjectID(domain, environment, slug string) string {
 	hasher := sha256.New()
-	hasher.Write([]byte(teamname))
+	hasher.Write([]byte(slug))
 	hasher.Write([]byte{0})
 	hasher.Write([]byte(environment))
 	hasher.Write([]byte{0})
 	hasher.Write([]byte(domain))
 
 	parts := make([]string, 3)
-	parts[0] = truncate(teamname, 20)
+	parts[0] = truncate(slug, 20)
 	parts[1] = truncate(environment, 4)
 	parts[2] = truncate(hex.EncodeToString(hasher.Sum(nil)), 4)
 

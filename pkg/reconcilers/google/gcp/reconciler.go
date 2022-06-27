@@ -2,10 +2,12 @@ package google_gcp_reconciler
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
-	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
@@ -14,7 +16,6 @@ import (
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 	"google.golang.org/api/cloudresourcemanager/v3"
-	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 	"gorm.io/gorm"
 )
@@ -67,28 +68,35 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 }
 
 func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
+	state := &reconcilers.GoogleGcpProjectState{
+		Projects: make(map[string]string),
+	}
+	err := dbmodels.LoadSystemState(r.db, *r.system.ID, *input.Team.ID, state)
+	if err != nil {
+		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
+	}
+
 	client := r.config.Client(ctx)
 	svc, err := cloudresourcemanager.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
 		return fmt.Errorf("retrieve cloud resource manager client: %w", err)
 	}
 
-	for environment, parentID := range r.projectParentIDs {
-		proj, err := r.CreateProject(svc, environment, parentID, input.Corr, input.Team)
+	for environment, parentFolderID := range r.projectParentIDs {
+		project, err := r.getOrCreateProject(svc, state, environment, parentFolderID, input.Corr, input.Team)
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to get or create a GCP project for team '%s' in environment '%s': %w", input.Team.Slug, environment, err)
 		}
 
-		/*
-			err = s.saveProjectState(input.Team.ID, environment, proj.ProjectId)
-			if err != nil {
-				return fmt.Errorf("%s: create GCP project: project was created, but ID could not be stored in database: %w", OpCreateProject, err)
-			}
-		*/
-
-		err = r.CreatePermissions(svc, proj.Name, input.Corr, input.Team)
+		state.Projects[environment] = project.Name
+		err = dbmodels.SetSystemState(r.db, *r.system.ID, *input.Team.ID, state)
 		if err != nil {
-			return err
+			log.Errorf("system state not persisted: %s", err)
+		}
+
+		err = r.setProjectPermissions(svc, project.Name, input.Corr, input.Team)
+		if err != nil {
+			return fmt.Errorf("unable to set group permissions to project '%s' for team '%s' in environment '%s': %w", project.Name, input.Team.Slug, environment, err)
 		}
 	}
 
@@ -99,65 +107,52 @@ func (r *googleGcpReconciler) System() dbmodels.System {
 	return r.system
 }
 
-func (r *googleGcpReconciler) CreateProject(svc *cloudresourcemanager.Service, environment string, parentID int64, corr dbmodels.Correlation, team dbmodels.Team) (*cloudresourcemanager.Project, error) {
-	projectID := CreateProjectID(r.domain, environment, team.Slug.String())
-
-	proj := &cloudresourcemanager.Project{
-		Parent:    "folders/" + strconv.FormatInt(parentID, 10),
-		ProjectId: projectID,
+func (r *googleGcpReconciler) getOrCreateProject(svc *cloudresourcemanager.Service, state *reconcilers.GoogleGcpProjectState, environment string, parentFolderID int64, corr dbmodels.Correlation, team dbmodels.Team) (*cloudresourcemanager.Project, error) {
+	if projectNameFromState, exists := state.Projects[environment]; exists {
+		project, err := svc.Projects.Get(projectNameFromState).Do()
+		if err == nil {
+			return project, nil
+		}
 	}
 
-	operation, err := svc.Projects.Create(proj).Do()
+	projectId := GenerateProjectID(r.domain, environment, string(team.Slug))
+	project := &cloudresourcemanager.Project{
+		DisplayName: team.Name,
+		Parent:      "folders/" + strconv.FormatInt(parentFolderID, 10),
+		ProjectId:   projectId,
+	}
+	operation, err := svc.Projects.Create(project).Do()
+	if err != nil {
+		return nil, fmt.Errorf("unable to create GCP project: %w", err)
+	}
 
-	switch typedError := err.(type) {
-	case *googleapi.Error:
-		// conflict may be due to
-		// 1) already created by us in this folder, or
-		// 2) someone else owns this project
-		if typedError.Code != http.StatusConflict {
-			return nil, fmt.Errorf("%s: create GCP project: %w", OpCreateProject, err)
-		}
-
-		query, err := svc.Projects.Search().Query("id:" + projectID).Do()
+	for !operation.Done {
+		time.Sleep(1 * time.Second) // Make sure not to hammer the Operation API
+		operation, err = svc.Operations.Get(operation.Name).Do()
 		if err != nil {
-			return nil, fmt.Errorf("%s: create GCP project: %w", OpCreateProject, err)
+			return nil, fmt.Errorf("unable to poll GCP project creation: %w", err)
 		}
-
-		if len(query.Projects) == 0 {
-			return nil, fmt.Errorf("%s: create GCP project: globally unique project ID is already assigned", OpCreateProject)
-		}
-
-		for _, proj = range query.Projects {
-			if proj.ProjectId == projectID {
-				return proj, nil
-			}
-		}
-
-		return nil, fmt.Errorf("%s: create GCP project: BUG: search results for project ID returned project without correct ID", OpCreateProject)
-
-	case nil:
-		for !operation.Done {
-			var err error
-			operation, err = svc.Operations.Get(operation.Name).Do()
-			if err != nil {
-				return nil, fmt.Errorf("%s: create GCP project: %w", OpCreateProject, err)
-			}
-		}
-
-		if operation.Error != nil {
-			return nil, fmt.Errorf("%s: create GCP project: %s", OpCreateProject, operation.Error.Message)
-		}
-
-	default:
-		return nil, err
 	}
 
-	r.auditLogger.Logf(OpCreateProject, corr, r.system, nil, &team, nil, "created GCP project '%s'", proj.Name)
+	if operation.Error != nil {
+		return nil, fmt.Errorf("unable to create GCP project: %s", operation.Error.Message)
+	}
 
-	return proj, nil
+	createdProject := &cloudresourcemanager.Project{}
+	err = json.Unmarshal(operation.Response, createdProject)
+	if err != nil {
+		return nil, fmt.Errorf("unable to convert operation response to the created GCP project: %w", err)
+	}
+
+	r.auditLogger.Logf(OpCreateProject, corr, r.system, nil, &team, nil, "created GCP project '%s' for team '%s' in environment '%s'", createdProject.Name, team.Slug, environment)
+
+	return createdProject, nil
 }
 
-func (r *googleGcpReconciler) CreatePermissions(svc *cloudresourcemanager.Service, projectName string, corr dbmodels.Correlation, team dbmodels.Team) error {
+// createPermissions Give owner permissions to the team group. The group is created by the Google Workspace Admin
+// reconciler. projectName is in the "projects/{ProjectIdOrNumber}" format, and not the project ID
+func (r *googleGcpReconciler) setProjectPermissions(svc *cloudresourcemanager.Service, projectName string, corr dbmodels.Correlation, team dbmodels.Team) error {
+	// FIXME: Check state to make sure we are generating the correct group name
 	member := fmt.Sprintf("group:%s%s@%s", reconcilers.TeamNamePrefix, team.Slug, r.domain)
 	const owner = "roles/owner"
 
@@ -172,10 +167,10 @@ func (r *googleGcpReconciler) CreatePermissions(svc *cloudresourcemanager.Servic
 		},
 	}
 
+	// replace all existing policies for the project
 	_, err := svc.Projects.SetIamPolicy(projectName, req).Do()
-
 	if err != nil {
-		return fmt.Errorf("%s: assign GCP project IAM permissions: %w", OpAssignPermissions, err)
+		return fmt.Errorf("assign GCP project IAM permissions: %w", err)
 	}
 
 	r.auditLogger.Logf(OpAssignPermissions, corr, r.system, nil, &team, nil, "assigned GCP project IAM permissions for '%s'", projectName)
