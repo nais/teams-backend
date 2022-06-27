@@ -69,7 +69,7 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 
 func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	state := &reconcilers.GoogleGcpProjectState{
-		Projects: make(map[string]string),
+		Projects: make(map[string]reconcilers.GoogleGcpEnvironmentProject),
 	}
 	err := dbmodels.LoadSystemState(r.db, *r.system.ID, *input.Team.ID, state)
 	if err != nil {
@@ -87,8 +87,10 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 		if err != nil {
 			return fmt.Errorf("unable to get or create a GCP project for team '%s' in environment '%s': %w", input.Team.Slug, environment, err)
 		}
-
-		state.Projects[environment] = project.Name
+		state.Projects[environment] = reconcilers.GoogleGcpEnvironmentProject{
+			ProjectID:   project.ProjectId,
+			ProjectName: project.Name,
+		}
 		err = dbmodels.SetSystemState(r.db, *r.system.ID, *input.Team.ID, state)
 		if err != nil {
 			log.Errorf("system state not persisted: %s", err)
@@ -108,8 +110,8 @@ func (r *googleGcpReconciler) System() dbmodels.System {
 }
 
 func (r *googleGcpReconciler) getOrCreateProject(svc *cloudresourcemanager.Service, state *reconcilers.GoogleGcpProjectState, environment string, parentFolderID int64, corr dbmodels.Correlation, team dbmodels.Team) (*cloudresourcemanager.Project, error) {
-	if projectNameFromState, exists := state.Projects[environment]; exists {
-		project, err := svc.Projects.Get(projectNameFromState).Do()
+	if projectFromState, exists := state.Projects[environment]; exists {
+		project, err := svc.Projects.Get(projectFromState.ProjectName).Do()
 		if err == nil {
 			return project, nil
 		}
