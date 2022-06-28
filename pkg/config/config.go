@@ -53,7 +53,7 @@ type Config struct {
 	UserSync      UserSync
 	NaisNamespace NaisNamespace
 	OAuth         OAuth
-	PartnerDomain string `envconfig:"CONSOLE_PARTNER_DOMAIN"`
+	TenantDomain  string `envconfig:"CONSOLE_TENANT_DOMAIN"`
 	AutoLoginUser string `envconfig:"CONSOLE_AUTO_LOGIN_USER"`
 	FrontendURL   string `envconfig:"CONSOLE_FRONTEND_URL"`
 	DatabaseURL   string `envconfig:"CONSOLE_DATABASE_URL"`
@@ -67,7 +67,7 @@ func Defaults() *Config {
 		DatabaseURL:   "postgres://console:console@localhost:3002/console?sslmode=disable",
 		FrontendURL:   "http://localhost:3001",
 		ListenAddress: "127.0.0.1:3000",
-		PartnerDomain: "example.com",
+		TenantDomain:  "example.com",
 		LogFormat:     "text",
 		LogLevel:      "DEBUG",
 	}

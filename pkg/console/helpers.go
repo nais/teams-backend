@@ -40,13 +40,13 @@ func DomainUsers(users []*dbmodels.User, domain string) []*dbmodels.User {
 }
 
 // ServiceAccountEmail Generate a service account email address given the name of the service account
-func ServiceAccountEmail(name dbmodels.Slug, partnerDomain string) string {
-	return string(name) + serviceAccountSuffix(partnerDomain)
+func ServiceAccountEmail(name dbmodels.Slug, tenantDomain string) string {
+	return string(name) + serviceAccountSuffix(tenantDomain)
 }
 
 // IsServiceAccount Check if a user is a service account or not
-func IsServiceAccount(user dbmodels.User, partnerDomain string) bool {
-	return strings.HasSuffix(user.Email, serviceAccountSuffix(partnerDomain))
+func IsServiceAccount(user dbmodels.User, tenantDomain string) bool {
+	return strings.HasSuffix(user.Email, serviceAccountSuffix(tenantDomain))
 }
 
 // TeamPurpose Get a default team purpose
@@ -57,7 +57,7 @@ func TeamPurpose(purpose *string) string {
 	)
 }
 
-func serviceAccountSuffix(partnerDomain string) string {
+func serviceAccountSuffix(tenantDomain string) string {
 	const serviceAccountSuffix = "serviceaccounts.nais.io"
-	return "@" + partnerDomain + "." + serviceAccountSuffix
+	return "@" + tenantDomain + "." + serviceAccountSuffix
 }

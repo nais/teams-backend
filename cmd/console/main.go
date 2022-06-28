@@ -70,7 +70,7 @@ func run() error {
 		return err
 	}
 
-	err = fixtures.InsertInitialDataset(db, cfg.PartnerDomain)
+	err = fixtures.InsertInitialDataset(db, cfg.TenantDomain)
 	if err != nil {
 		return err
 	}
@@ -92,7 +92,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	handler := setupGraphAPI(db, cfg.PartnerDomain, systems[console_reconciler.Name], teamReconciler, logger)
+	handler := setupGraphAPI(db, cfg.TenantDomain, systems[console_reconciler.Name], teamReconciler, logger)
 	srv, err := setupHTTPServer(cfg, db, handler, authHandler, store)
 	if err != nil {
 		return err

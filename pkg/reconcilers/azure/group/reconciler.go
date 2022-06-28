@@ -62,7 +62,7 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 		},
 	}
 
-	return New(db, system, auditLogger, conf, azureclient.New(conf.Client(context.Background())), cfg.PartnerDomain), nil
+	return New(db, system, auditLogger, conf, azureclient.New(conf.Client(context.Background())), cfg.TenantDomain), nil
 }
 
 func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {

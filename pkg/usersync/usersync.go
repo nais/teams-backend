@@ -58,7 +58,7 @@ func NewFromConfig(cfg *config.Config, db *gorm.DB, system dbmodels.System, audi
 		return nil, fmt.Errorf("get google jwt config: %w", err)
 	}
 
-	return New(db, system, auditLogger, cfg.PartnerDomain, cf), nil
+	return New(db, system, auditLogger, cfg.TenantDomain, cf), nil
 }
 
 type auditLogEntry struct {
@@ -67,9 +67,9 @@ type auditLogEntry struct {
 	message string
 }
 
-// Sync Fetch all users from the partner and add them as local users in Console. If a user already exists in Console
+// Sync Fetch all users from the tenant and add them as local users in Console. If a user already exists in Console
 // the local user will remain untouched. After all users have been added we will also remove all local users that
-// matches the partner domain that does not exist in the Google Directory.
+// matches the tenant domain that does not exist in the Google Directory.
 func (s *userSynchronizer) Sync(ctx context.Context) error {
 	client := s.config.Client(ctx)
 	srv, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(client))

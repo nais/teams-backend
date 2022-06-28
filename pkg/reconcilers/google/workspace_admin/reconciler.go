@@ -57,7 +57,7 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 		return nil, fmt.Errorf("get google jwt config: %w", err)
 	}
 
-	return New(db, system, auditLogger, cfg.PartnerDomain, config), nil
+	return New(db, system, auditLogger, cfg.TenantDomain, config), nil
 }
 
 func (r *googleWorkspaceAdminReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {

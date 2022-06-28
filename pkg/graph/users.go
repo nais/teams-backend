@@ -21,7 +21,7 @@ import (
 func (r *mutationResolver) CreateServiceAccount(ctx context.Context, input model.CreateServiceAccountInput) (*dbmodels.User, error) {
 	sa := &dbmodels.User{
 		Name:  input.Name.String(),
-		Email: console.ServiceAccountEmail(*input.Name, r.partnerDomain),
+		Email: console.ServiceAccountEmail(*input.Name, r.tenantDomain),
 	}
 	err := r.createTrackedObject(ctx, sa)
 	if err != nil {
@@ -42,7 +42,7 @@ func (r *mutationResolver) UpdateServiceAccount(ctx context.Context, serviceAcco
 	}
 
 	serviceAccount.Name = string(*input.Name)
-	serviceAccount.Email = console.ServiceAccountEmail(*input.Name, r.partnerDomain)
+	serviceAccount.Email = console.ServiceAccountEmail(*input.Name, r.tenantDomain)
 
 	err = r.updateTrackedObject(ctx, serviceAccount)
 	if err != nil {
@@ -124,7 +124,7 @@ func (r *userResolver) HasAPIKey(ctx context.Context, obj *dbmodels.User) (bool,
 }
 
 func (r *userResolver) IsServiceAccount(ctx context.Context, obj *dbmodels.User) (bool, error) {
-	return console.IsServiceAccount(*obj, r.partnerDomain), nil
+	return console.IsServiceAccount(*obj, r.tenantDomain), nil
 }
 
 // User returns generated.UserResolver implementation.

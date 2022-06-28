@@ -68,7 +68,7 @@ available via api, to allow data model extension
 
 # Glossary
 
-Partner, customer?
+Tenant, customer?
 One instance per ^
 
 
@@ -76,7 +76,7 @@ One instance per ^
 
 - Do act as master
 - Do allow manual trigger of team sync
-- Do allow partner admins to contact nais team
+- Do allow tenant admins to contact nais team
 
 - Don't assume external state
 - Don't sync continuously

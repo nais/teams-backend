@@ -32,9 +32,9 @@ Customize the log format. Defaults to `text`. Can be set to `json`.
 
 The log level used in console. Defaults to `DEBUG`.
 
-### `CONSOLE_PARTNER_DOMAIN`
+### `CONSOLE_TENANT_DOMAIN`
 
-The domain for the partner. Defaults to `example.com`.
+The domain for the tenant. Defaults to `example.com`.
 
 ## Reconcilers
 

@@ -65,7 +65,7 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 	restClient := github.NewClient(httpClient)
 	graphClient := githubv4.NewClient(httpClient)
 
-	return New(db, system, auditLogger, cfg.GitHub.Organization, cfg.PartnerDomain, restClient.Teams, graphClient), nil
+	return New(db, system, auditLogger, cfg.GitHub.Organization, cfg.TenantDomain, restClient.Teams, graphClient), nil
 }
 
 func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {

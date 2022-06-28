@@ -19,7 +19,7 @@ const (
 
 // InsertInitialDataset Insert an initial dataset into the database. This will only be executed if there are currently
 // no users in the users table.
-func InsertInitialDataset(db *gorm.DB, partnerDomain string) error {
+func InsertInitialDataset(db *gorm.DB, tenantDomain string) error {
 	return db.Transaction(func(tx *gorm.DB) error {
 		// If there are any users in the database, skip creation
 		users := make([]*dbmodels.User, 0)
@@ -33,7 +33,7 @@ func InsertInitialDataset(db *gorm.DB, partnerDomain string) error {
 		log.Infof("Inserting initial root user into database.")
 		rootUser := &dbmodels.User{
 			Name:  AdminUserName,
-			Email: helpers.ServiceAccountEmail(AdminUserName, partnerDomain),
+			Email: helpers.ServiceAccountEmail(AdminUserName, tenantDomain),
 		}
 
 		err := tx.Create(rootUser).Error

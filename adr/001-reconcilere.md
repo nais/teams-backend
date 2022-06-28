@@ -12,7 +12,7 @@ Med tanke på tilgangene som integrasjonene til de eksterne systemene trenger er
 
 Vi har valgt å bruke et konsept vi kaller reconcilere, der *en* reconciler er ansvarlig for å vedlikeholde team-koblinger i *ett* eksternt system. Reconcilerne skal i utgangspunktet kunne kjøre i hvilken som helst rekkefølge, og alle følger "eventually consistent"-modellen. Eksempler på reconcilere som allerede er implementert i Console er som følger:
 
-- **GitHub team**: Reconcileren vil opprette et GitHub team i en GitHub organisasjon for Console-teamet, samt speile medlemslisten som ligger i Console så langt det lar seg gjøre. Dersom en bruker i Console ikke finnes i organisasjonen på GitHub er det ikke reconcileren, ei heller Console, sin jobb å opprette brukere. Dette må gjøres av partneren på andre måter.
+- **GitHub team**: Reconcileren vil opprette et GitHub team i en GitHub organisasjon for Console-teamet, samt speile medlemslisten som ligger i Console så langt det lar seg gjøre. Dersom en bruker i Console ikke finnes i organisasjonen på GitHub er det ikke reconcileren, ei heller Console, sin jobb å opprette brukere. Dette må gjøres av tenanten på andre måter.
 - **Azure AD group**: Reconcileren vil opprette en gruppe i en Azure AD tenant for Console-teamet, samt speile medlemslisten som ligger i Console så langt det lar seg gjøre. Manglende brukere i Azure AD blir ikke opprettet av Console eller reconcileren.
 - **GCP project**: Reconcileren vil opprette et eller flere prosjekter i GCP for Console teamet.
 
@@ -35,7 +35,7 @@ Alle reconcilere i den samme synkroniseringen vil motta det samme correlation og
 
 ### Konfigurasjon av reconcilere
 
-En partner kan selv bestemme hvilke reconcilere som skal benyttes. Alle kan aktiveres via miljøvariabler, og alle kan ha forskjellige konfigurasjonsparametre. Azure AD reconcileren trenger nøkler for å kunne prate med Microsoft Graph API, mens GitHub reconcileren trenger en rekke andre parametre. Alt dette må dokumenteres i Console slik at partneren vet hva som trengs for de forskjellige reconcilerne.
+En tenant kan selv bestemme hvilke reconcilere som skal benyttes. Alle kan aktiveres via miljøvariabler, og alle kan ha forskjellige konfigurasjonsparametre. Azure AD reconcileren trenger nøkler for å kunne prate med Microsoft Graph API, mens GitHub reconcileren trenger en rekke andre parametre. Alt dette må dokumenteres i Console slik at tenanten vet hva som trengs for de forskjellige reconcilerne.
 
 ### Synkronisering ved oppstart
 
@@ -54,7 +54,7 @@ En synkronisering av et team startes etter følgende hendelser i Console:
 
 En reconciler kan holde styr på "state" i de eksterne systemene ved behov, og dette lagres i databasen til Console.
 
-Et eksempel på et reconciler som benytter seg av state er GitHub teams. Når Console teamet først blir opprettet kommer GitHub team reconcileren til å gjøre sin første synkronisering av teamet. Den kommer da ikke til å ha noen state for teamet, så den vil forsøke å lage et nytt team i organisasjonen til partneren på GitHub. Dersom teamnavnet som Console ønsker å opprette ikke er tilgjengelig vil ikke reconcileren klare å gjennomføre synkroniseringen, og en feil blir lagret i databasen knyttet til correlation objektet, som da kan presenteres for sluttbruker slik at vedkommende kan se hvorfor GitHub teamet ikke ble opprettet. Dersom dette skjer blir ingen state for teamet lagret i Console.
+Et eksempel på et reconciler som benytter seg av state er GitHub teams. Når Console teamet først blir opprettet kommer GitHub team reconcileren til å gjøre sin første synkronisering av teamet. Den kommer da ikke til å ha noen state for teamet, så den vil forsøke å lage et nytt team i organisasjonen til tenanten på GitHub. Dersom teamnavnet som Console ønsker å opprette ikke er tilgjengelig vil ikke reconcileren klare å gjennomføre synkroniseringen, og en feil blir lagret i databasen knyttet til correlation objektet, som da kan presenteres for sluttbruker slik at vedkommende kan se hvorfor GitHub teamet ikke ble opprettet. Dersom dette skjer blir ingen state for teamet lagret i Console.
 
 Dersom teamnavnet er ledig vil Console få opprettet den eksterne ressursen, og den eksterne IDen til GitHub teamet blir lagret i Console databasen som state. GitHub reconcileren kan da benytte seg av denne IDen ved neste synkronisering av teamet.
 
@@ -72,7 +72,7 @@ Ved å benytte seg av state vil en reconciler da aldri forsøke å ta over et ek
 
 ### Manuell endring av state
 
-Ved spesielle omstendigheter kan det være at vi ønsker å manuelt endre state som ligger lagret i Console. Dette kan være at en partner allerede har et eller flere team på GitHub, eller en gruppe i Azure AD, som man da ønsker å knytte til det mye teamet i Console. Om dette er tilfelle kan da en bruker med de nødvendige rettighetene gjøre en manuell kobling i Console, slik at reconcileren tror den jobber med en ekstern ressurs den selv har opprettet tidligere. Rutiner for bruk av denne metoden er det partneren selv som må definere.
+Ved spesielle omstendigheter kan det være at vi ønsker å manuelt endre state som ligger lagret i Console. Dette kan være at en tenant allerede har et eller flere team på GitHub, eller en gruppe i Azure AD, som man da ønsker å knytte til det mye teamet i Console. Om dette er tilfelle kan da en bruker med de nødvendige rettighetene gjøre en manuell kobling i Console, slik at reconcileren tror den jobber med en ekstern ressurs den selv har opprettet tidligere. Rutiner for bruk av denne metoden er det tenanten selv som må definere.
 
 ### Sletting av eksterne ressurser
 

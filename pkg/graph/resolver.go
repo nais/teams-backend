@@ -23,16 +23,16 @@ const (
 
 type Resolver struct {
 	db             *gorm.DB
-	partnerDomain  string
+	tenantDomain   string
 	teamReconciler chan<- reconcilers.Input
 	system         *dbmodels.System
 	auditLogger    auditlogger.AuditLogger
 }
 
-func NewResolver(db *gorm.DB, partnerDomain string, system *dbmodels.System, teamReconciler chan<- reconcilers.Input, auditLogger auditlogger.AuditLogger) *Resolver {
+func NewResolver(db *gorm.DB, tenantDomain string, system *dbmodels.System, teamReconciler chan<- reconcilers.Input, auditLogger auditlogger.AuditLogger) *Resolver {
 	return &Resolver{
 		db:             db,
-		partnerDomain:  partnerDomain,
+		tenantDomain:   tenantDomain,
 		system:         system,
 		teamReconciler: teamReconciler,
 		auditLogger:    auditLogger,
