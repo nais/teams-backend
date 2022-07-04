@@ -1,23 +1,15 @@
 package roles
 
+import (
+	"errors"
+	"github.com/google/uuid"
+	"github.com/nais/console/pkg/dbmodels"
+)
+
 type Authorization string
 type Role string
 
 const (
-	AuthorizationAuditLogsRead         Authorization = "audit_logs.read"
-	AuthorizationServiceAccountsCreate Authorization = "service_accounts.create"
-	AuthorizationServiceAccountsDelete Authorization = "service_accounts.delete"
-	AuthorizationServiceAccountList    Authorization = "service_accounts.list"
-	AuthorizationServiceAccountsUpdate Authorization = "service_accounts.update"
-	AuthorizationSystemStatesDelete    Authorization = "system_states.delete"
-	AuthorizationSystemStatesRead      Authorization = "system_states.read"
-	AuthorizationSystemStatesUpdate    Authorization = "system_states.update"
-	AuthorizationTeamsCreate           Authorization = "teams.create"
-	AuthorizationTeamsDelete           Authorization = "teams.delete"
-	AuthorizationTeamsList             Authorization = "teams.list"
-	AuthorizationTeamsRead             Authorization = "teams.read"
-	AuthorizationTeamsUpdate           Authorization = "teams.update"
-
 	RoleAdmin                  Role = "Admin"
 	RoleServiceAccountCreaetor Role = "Service account creator"
 	RoleServiceAccountOwner    Role = "Service account owner"

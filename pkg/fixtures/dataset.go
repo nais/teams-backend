@@ -4,6 +4,7 @@ import (
 	"github.com/nais/console/pkg/authz"
 	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/dbmodels"
+	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/roles"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -74,19 +75,19 @@ func InsertInitialDataset(db *gorm.DB, tenantDomain string) error {
 }
 
 func createRolesAndAuthorizations(tx *gorm.DB) error {
-	auditLogsRead := &dbmodels.Authorization{Name: string(roles.AuthorizationAuditLogsRead)}
-	serviceAccountsCreate := &dbmodels.Authorization{Name: string(roles.AuthorizationServiceAccountsCreate)}
-	serviceAccountsDelete := &dbmodels.Authorization{Name: string(roles.AuthorizationServiceAccountsDelete)}
-	serviceAccountList := &dbmodels.Authorization{Name: string(roles.AuthorizationServiceAccountList)}
-	serviceAccountsUpdate := &dbmodels.Authorization{Name: string(roles.AuthorizationServiceAccountsUpdate)}
-	systemStatesDelete := &dbmodels.Authorization{Name: string(roles.AuthorizationSystemStatesDelete)}
-	systemStatesRead := &dbmodels.Authorization{Name: string(roles.AuthorizationSystemStatesRead)}
-	systemStatesUpdate := &dbmodels.Authorization{Name: string(roles.AuthorizationSystemStatesUpdate)}
-	teamsCreate := &dbmodels.Authorization{Name: string(roles.AuthorizationTeamsCreate)}
-	teamsDelete := &dbmodels.Authorization{Name: string(roles.AuthorizationTeamsDelete)}
-	teamsList := &dbmodels.Authorization{Name: string(roles.AuthorizationTeamsList)}
-	teamsRead := &dbmodels.Authorization{Name: string(roles.AuthorizationTeamsRead)}
-	teamsUpdate := &dbmodels.Authorization{Name: string(roles.AuthorizationTeamsUpdate)}
+	auditLogsRead := &dbmodels.Authorization{Name: string(model.OperationAuditLogsRead)}
+	serviceAccountsCreate := &dbmodels.Authorization{Name: string(model.OperationServiceAccountsCreate)}
+	serviceAccountsDelete := &dbmodels.Authorization{Name: string(model.OperationServiceAccountsDelete)}
+	serviceAccountList := &dbmodels.Authorization{Name: string(model.OperationServiceAccountList)}
+	serviceAccountsUpdate := &dbmodels.Authorization{Name: string(model.OperationServiceAccountsUpdate)}
+	systemStatesDelete := &dbmodels.Authorization{Name: string(model.OperationSystemStatesDelete)}
+	systemStatesRead := &dbmodels.Authorization{Name: string(model.OperationSystemStatesRead)}
+	systemStatesUpdate := &dbmodels.Authorization{Name: string(model.OperationSystemStatesUpdate)}
+	teamsCreate := &dbmodels.Authorization{Name: string(model.OperationTeamsCreate)}
+	teamsDelete := &dbmodels.Authorization{Name: string(model.OperationTeamsDelete)}
+	teamsList := &dbmodels.Authorization{Name: string(model.OperationTeamsList)}
+	teamsRead := &dbmodels.Authorization{Name: string(model.OperationTeamsRead)}
+	teamsUpdate := &dbmodels.Authorization{Name: string(model.OperationTeamsUpdate)}
 	authorizations := []*dbmodels.Authorization{
 		auditLogsRead,
 		serviceAccountsCreate,
