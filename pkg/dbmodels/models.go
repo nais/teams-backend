@@ -52,6 +52,11 @@ type AuditLog struct {
 	Message        string      `gorm:"not null"` // Human readable message (log line)
 }
 
+type Authorization struct {
+	Model
+	Name string `gorm:"unique; not null"`
+}
+
 type Correlation struct {
 	Model
 	SoftDelete
@@ -67,6 +72,19 @@ type ReconcileError struct {
 	SystemID      uuid.UUID   `gorm:"type:uuid; uniqueIndex:correlation_system_team_key; not null"`
 	TeamID        uuid.UUID   `gorm:"type:uuid; uniqueIndex:correlation_system_team_key; not null"`
 	Message       string      `gorm:"not null"` // Human readable error message
+}
+
+type Role struct {
+	Model
+	Name           string          `gorm:"unique; not null"`
+	Authorizations []Authorization `gorm:"many2many:role_authorizations"`
+}
+
+type RoleAuthorization struct {
+	Authorization   Authorization `gorm:""`
+	Role            Role          `gorm:""`
+	AuthorizationID uuid.UUID     `gorm:"type:uuid; primaryKey"`
+	RoleID          uuid.UUID     `gorm:"type:uuid; primaryKey"`
 }
 
 type SystemState struct {
@@ -99,25 +117,33 @@ type Team struct {
 	Name      string          `gorm:"unique; not null"`
 	Purpose   *string         `gorm:""`
 	Metadata  []*TeamMetadata `gorm:""`
-	Users     []*User         `gorm:"many2many:users_teams"`
-	Systems   []*System       `gorm:"many2many:systems_teams"`
+	Users     []*User         `gorm:"many2many:user_teams"`
 	AuditLogs []*AuditLog     `gorm:"foreignKey:TargetTeamID"`
 }
 
 type User struct {
 	Model
 	SoftDelete
-	Email string  `gorm:"not null; unique"`
-	Name  string  `gorm:"not null"`
-	Teams []*Team `gorm:"many2many:users_teams"`
+	Email        string     `gorm:"not null; unique"`
+	Name         string     `gorm:"not null"`
+	Teams        []*Team    `gorm:"many2many:user_teams"`
+	RoleBindings []UserRole `gorm:""`
 }
 
-type UsersTeams struct {
+type UserRole struct {
+	Role     Role       `gorm:""`
+	User     User       `gorm:""`
+	RoleID   uuid.UUID  `gorm:"type:uuid; primaryKey; index:user_role_target,unique"`
+	UserID   uuid.UUID  `gorm:"type:uuid; primaryKey; index:user_role_target,unique"`
+	TargetID *uuid.UUID `gorm:"type:uuid; index:user_role_target,unique"`
+}
+
+type UserTeam struct {
 	Model
 	Team   Team      `gorm:""`
 	User   User      `gorm:""`
-	UserID uuid.UUID `gorm:"type:uuid; not null; index:users_teams_index,unique"`
-	TeamID uuid.UUID `gorm:"type:uuid; not null; index:users_teams_index,unique"`
+	UserID uuid.UUID `gorm:"type:uuid; not null; index:user_teams_index,unique"`
+	TeamID uuid.UUID `gorm:"type:uuid; not null; index:user_teams_index,unique"`
 }
 
 // GetModel Enable callers to access the base model through an interface.
