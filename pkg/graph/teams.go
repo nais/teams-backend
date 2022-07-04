@@ -14,6 +14,7 @@ import (
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/reconcilers"
 	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
+	"github.com/nais/console/pkg/roles"
 	"gorm.io/gorm"
 )
 
@@ -37,12 +38,32 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 			return err
 		}
 
-		ut := &dbmodels.UsersTeams{
+		userTeam := &dbmodels.UserTeam{
 			UserID: *user.ID,
 			TeamID: *team.ID,
 		}
+		err = r.createTrackedObject(ctx, userTeam)
+		if err != nil {
+			return err
+		}
 
-		return r.createTrackedObject(ctx, ut)
+		teamOwner := &dbmodels.Role{}
+		err = tx.Where("name = ?", roles.RoleTeamOwner).First(teamOwner).Error
+		if err != nil {
+			return err
+		}
+
+		userRole := &dbmodels.UserRole{
+			UserID:   *user.ID,
+			RoleID:   *teamOwner.ID,
+			TargetID: team.ID,
+		}
+		err = tx.Create(userRole).Error
+		if err != nil {
+			return err
+		}
+
+		return nil
 	})
 
 	if err != nil {
@@ -89,7 +110,7 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 		}
 
 		for _, userId := range input.UserIds {
-			tm := &dbmodels.UsersTeams{
+			tm := &dbmodels.UserTeam{
 				UserID: *userId,
 				TeamID: *team.ID,
 			}
@@ -142,7 +163,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 			return fmt.Errorf("unable to create correlation for audit log")
 		}
 
-		err = tx.Where("user_id IN (?) AND team_id = ?", input.UserIds, team.ID).Delete(&dbmodels.UsersTeams{}).Error
+		err = tx.Where("user_id IN (?) AND team_id = ?", input.UserIds, team.ID).Delete(&dbmodels.UserTeam{}).Error
 		if err != nil {
 			return err
 		}
