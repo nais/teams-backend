@@ -1,12 +1,5 @@
 package roles
 
-import (
-	"errors"
-	"github.com/google/uuid"
-	"github.com/nais/console/pkg/dbmodels"
-)
-
-type Authorization string
 type Role string
 
 const (
