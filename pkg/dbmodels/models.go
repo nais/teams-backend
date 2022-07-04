@@ -84,14 +84,6 @@ type System struct {
 	Name string `gorm:"uniqueIndex; not null"`
 }
 
-type SystemsTeams struct {
-	Model
-	System   System    `gorm:"not null"`
-	Team     Team      `gorm:"not null"`
-	SystemID uuid.UUID `gorm:"type:uuid; not null; index:systems_teams_index,unique"`
-	TeamID   uuid.UUID `gorm:"type:uuid; not null; index:systems_teams_index,unique"`
-}
-
 type TeamMetadata struct {
 	Model
 	Team   Team      `gorm:""`

@@ -12,7 +12,6 @@ func Migrate(db *gorm.DB) error {
 		&ReconcileError{},
 		&SystemState{},
 		&System{},
-		&SystemsTeams{},
 		&TeamMetadata{},
 		&Team{},
 		&User{},
