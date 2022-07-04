@@ -1,17 +1,12 @@
 package fixtures
 
 import (
-	"github.com/nais/console/pkg/authz"
 	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/roles"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
-)
-
-var (
-	allAccessLevels = string(authz.AccessLevelCreate) + string(authz.AccessLevelRead) + string(authz.AccessLevelUpdate) + string(authz.AccessLevelDelete)
 )
 
 const (
