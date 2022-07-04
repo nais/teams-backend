@@ -216,6 +216,70 @@ func (e AuditLogSortField) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
+// Authorization operations.
+type Operation string
+
+const (
+	OperationAuditLogsRead         Operation = "AuditLogsRead"
+	OperationServiceAccountsCreate Operation = "ServiceAccountsCreate"
+	OperationServiceAccountsDelete Operation = "ServiceAccountsDelete"
+	OperationServiceAccountList    Operation = "ServiceAccountList"
+	OperationServiceAccountsUpdate Operation = "ServiceAccountsUpdate"
+	OperationSystemStatesDelete    Operation = "SystemStatesDelete"
+	OperationSystemStatesRead      Operation = "SystemStatesRead"
+	OperationSystemStatesUpdate    Operation = "SystemStatesUpdate"
+	OperationTeamsCreate           Operation = "TeamsCreate"
+	OperationTeamsDelete           Operation = "TeamsDelete"
+	OperationTeamsList             Operation = "TeamsList"
+	OperationTeamsRead             Operation = "TeamsRead"
+	OperationTeamsUpdate           Operation = "TeamsUpdate"
+)
+
+var AllOperation = []Operation{
+	OperationAuditLogsRead,
+	OperationServiceAccountsCreate,
+	OperationServiceAccountsDelete,
+	OperationServiceAccountList,
+	OperationServiceAccountsUpdate,
+	OperationSystemStatesDelete,
+	OperationSystemStatesRead,
+	OperationSystemStatesUpdate,
+	OperationTeamsCreate,
+	OperationTeamsDelete,
+	OperationTeamsList,
+	OperationTeamsRead,
+	OperationTeamsUpdate,
+}
+
+func (e Operation) IsValid() bool {
+	switch e {
+	case OperationAuditLogsRead, OperationServiceAccountsCreate, OperationServiceAccountsDelete, OperationServiceAccountList, OperationServiceAccountsUpdate, OperationSystemStatesDelete, OperationSystemStatesRead, OperationSystemStatesUpdate, OperationTeamsCreate, OperationTeamsDelete, OperationTeamsList, OperationTeamsRead, OperationTeamsUpdate:
+		return true
+	}
+	return false
+}
+
+func (e Operation) String() string {
+	return string(e)
+}
+
+func (e *Operation) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = Operation(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid Operation", str)
+	}
+	return nil
+}
+
+func (e Operation) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
 // Direction of the sort.
 type SortDirection string
 
