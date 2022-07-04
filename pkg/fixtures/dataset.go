@@ -1,7 +1,6 @@
 package fixtures
 
 import (
-	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/roles"
@@ -10,13 +9,13 @@ import (
 )
 
 const (
-	AdminUserName = "admin"
-	defaultApiKey = "secret" // FIXME: Get from env var
+	AdminUserName        = "nais admin"
+	AdminUserEmailPrefix = "nais" // matches the default nais admin user account in the tenant GCP org
 )
 
 // InsertInitialDataset Insert an initial dataset into the database. This will only be executed if there are currently
 // no users in the users table.
-func InsertInitialDataset(db *gorm.DB, tenantDomain string) error {
+func InsertInitialDataset(db *gorm.DB, tenantDomain string, adminApiKey string) error {
 	return db.Transaction(func(tx *gorm.DB) error {
 		// If there are any users in the database, skip creation
 		users := make([]*dbmodels.User, 0)
@@ -27,24 +26,26 @@ func InsertInitialDataset(db *gorm.DB, tenantDomain string) error {
 			return nil
 		}
 
-		log.Infof("Inserting initial root user into database.")
-		rootUser := &dbmodels.User{
+		log.Infof("Inserting initial admin user.")
+		adminUser := &dbmodels.User{
 			Name:  AdminUserName,
-			Email: helpers.ServiceAccountEmail(AdminUserName, tenantDomain),
+			Email: AdminUserEmailPrefix + "@" + tenantDomain,
 		}
 
-		err := tx.Create(rootUser).Error
+		err := tx.Create(adminUser).Error
 		if err != nil {
 			return err
 		}
 
-		apiKey := &dbmodels.ApiKey{
-			APIKey: defaultApiKey,
-			User:   *rootUser,
-		}
-		err = tx.Create(apiKey).Error
-		if err != nil {
-			return err
+		if adminApiKey != "" {
+			apiKey := &dbmodels.ApiKey{
+				APIKey: adminApiKey,
+				User:   *adminUser,
+			}
+			err = tx.Create(apiKey).Error
+			if err != nil {
+				return err
+			}
 		}
 
 		err = createRolesAndAuthorizations(tx)
@@ -59,7 +60,7 @@ func InsertInitialDataset(db *gorm.DB, tenantDomain string) error {
 		}
 		err = tx.Create(&dbmodels.UserRole{
 			RoleID: *adminRole.ID,
-			UserID: *rootUser.ID,
+			UserID: *adminUser.ID,
 		}).Error
 		if err != nil {
 			return err

@@ -70,7 +70,7 @@ func run() error {
 		return err
 	}
 
-	err = fixtures.InsertInitialDataset(db, cfg.TenantDomain)
+	err = fixtures.InsertInitialDataset(db, cfg.TenantDomain, cfg.AdminApiKey)
 	if err != nil {
 		return err
 	}

@@ -60,6 +60,7 @@ type Config struct {
 	ListenAddress string `envconfig:"CONSOLE_LISTEN_ADDRESS"`
 	LogFormat     string `envconfig:"CONSOLE_LOG_FORMAT"`
 	LogLevel      string `envconfig:"CONSOLE_LOG_LEVEL"`
+	AdminApiKey   string `envconfig:"CONSOLE_ADMIN_API_KEY"`
 }
 
 func Defaults() *Config {

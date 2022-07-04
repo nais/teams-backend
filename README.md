@@ -36,6 +36,10 @@ The log level used in console. Defaults to `DEBUG`.
 
 The domain for the tenant. Defaults to `example.com`.
 
+### `CONSOLE_ADMIN_API_KEY`
+
+Can be used to create an API key for the initial admin user. Used for local development when user sync is not enabled, and will only be used for the initial dataset. 
+
 ## Reconcilers
 
 Console uses reconcilers to sync team information to external systems, for instance GitHub or Azure AD. All reconcilers
