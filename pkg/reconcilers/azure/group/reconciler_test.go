@@ -8,7 +8,6 @@ import (
 	"github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/test"
-	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/mock"
 	"testing"
 
@@ -29,8 +28,6 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 	teamPurpose := console.Strp("My purpose")
 
 	ctx := context.Background()
-
-	hook := logrustest.NewGlobal()
 
 	creds := clientcredentials.Config{}
 
@@ -249,7 +246,6 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Return(fmt.Errorf("AddMemberToGroup failed")).
 			Once()
 
-		hook.Reset()
 		err := reconciler.Reconcile(ctx, reconcilers.Input{
 			Corr: corr,
 			Team: team,
