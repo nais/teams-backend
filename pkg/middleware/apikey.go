@@ -9,6 +9,8 @@ import (
 	"gorm.io/gorm"
 )
 
+// ApiKeyAuthentication If the request has an authorization header, we will try to pull the user who owns it from the
+// database and put the user into the context.
 func ApiKeyAuthentication(db *gorm.DB) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
@@ -18,11 +20,8 @@ func ApiKeyAuthentication(db *gorm.DB) func(next http.Handler) http.Handler {
 				return
 			}
 
-			key := &dbmodels.ApiKey{
-				APIKey: authHeader[7:],
-			}
-
-			err := db.Preload("User").First(key, "api_key = ?", key.APIKey).Error
+			key := &dbmodels.ApiKey{}
+			err := db.Preload("User").Where("api_key = ?", authHeader[7:]).First(key).Error
 			if err != nil {
 				next.ServeHTTP(w, r)
 				return

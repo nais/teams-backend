@@ -10,6 +10,8 @@ import (
 	"gorm.io/gorm"
 )
 
+// Oauth2Authentication If the request has a session cookie, look up the session from the store, and if it exists, try
+// to load the user with the email address stored in the session.
 func Oauth2Authentication(db *gorm.DB, store authn.SessionStore) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
@@ -31,7 +33,7 @@ func Oauth2Authentication(db *gorm.DB, store authn.SessionStore) func(next http.
 			}
 
 			user := &dbmodels.User{}
-			err = db.First(user, "email = ?", session.Email).Error
+			err = db.Where("email = ?", session.Email).First(user).Error
 			if err != nil {
 				next.ServeHTTP(w, r)
 				return

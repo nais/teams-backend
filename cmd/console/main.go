@@ -390,8 +390,11 @@ func setupHTTPServer(cfg *config.Config, db *gorm.DB, graphApi *graphql_handler.
 	if len(cfg.AutoLoginUser) > 0 {
 		log.Warnf("Auto-login user '%s' is ENABLED for ALL REQUESTS.", cfg.AutoLoginUser)
 		log.Warnf("THIS IS A MAJOR SECURITY ISSUE! DO NOT RUN THIS CONFIGURATION IN PRODUCTION!!!")
-		middlewares = append(middlewares, middleware.AutologinMiddleware(db, cfg.AutoLoginUser))
+		middlewares = append(middlewares, middleware.Autologin(db, cfg.AutoLoginUser))
 	}
+
+	// Append the role loader middleware after all possible authentication middlewares have been added
+	middlewares = append(middlewares, middleware.LoadUserRoles(db))
 
 	r.Route("/query", func(r chi.Router) {
 		r.Use(middlewares...)
