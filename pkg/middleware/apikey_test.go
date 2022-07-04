@@ -1,7 +1,8 @@
-package middleware
+package middleware_test
 
 import (
 	"github.com/nais/console/pkg/authz"
+	"github.com/nais/console/pkg/middleware"
 	"github.com/nais/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"net/http"
@@ -28,7 +29,7 @@ func TestApiKeyAuthentication(t *testing.T) {
 	apiKey2 := &dbmodels.ApiKey{APIKey: "user2-key", UserID: *user2.ID}
 	db.Create([]*dbmodels.ApiKey{apiKey1, apiKey2})
 
-	middleware := ApiKeyAuthentication(db)
+	middleware := middleware.ApiKeyAuthentication(db)
 	responseWriter := httptest.NewRecorder()
 
 	t.Run("No authorization header", func(t *testing.T) {
