@@ -105,7 +105,7 @@ func createRolesAndAuthorizations(tx *gorm.DB) error {
 	}
 
 	roleAdmin := &dbmodels.Role{Name: string(roles.RoleAdmin)}
-	serviceAccountCreator := &dbmodels.Role{Name: string(roles.RoleServiceAccountCreaetor)}
+	serviceAccountCreator := &dbmodels.Role{Name: string(roles.RoleServiceAccountCreator)}
 	serviceAccountOwner := &dbmodels.Role{Name: string(roles.RoleServiceAccountOwner)}
 	teamCreator := &dbmodels.Role{Name: string(roles.RoleTeamCreator)}
 	teamMember := &dbmodels.Role{Name: string(roles.RoleTeamMember)}
