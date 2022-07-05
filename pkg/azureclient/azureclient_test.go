@@ -1,47 +1,24 @@
 package azureclient
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"github.com/google/uuid"
 	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
-	"strconv"
-	"strings"
 	"testing"
 )
 
-type RoundTripFunc func(req *http.Request) *http.Response
-
-type RoundTripper struct {
-	funcs          []RoundTripFunc
-	requestCounter int
-}
-
-func (r *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	handler := r.funcs[r.requestCounter]
-	r.requestCounter++
-	return handler(req), nil
-}
-
-func NewTestClient(funcs ...RoundTripFunc) *http.Client {
-	return &http.Client{
-		Transport: &RoundTripper{
-			funcs: funcs,
-		},
-	}
-}
-
 func Test_GetUser(t *testing.T) {
-	httpClient := NewTestClient(func(req *http.Request) *http.Response {
+	httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
 		assert.Equal(t, "https://graph.microsoft.com/v1.0/users/user@example.com", req.URL.String())
 		assert.Equal(t, http.MethodGet, req.Method)
 
-		return response("200 OK", `{
+		return test.Response("200 OK", `{
 			"mail": "user@example.com",
 			"id": "some-id"
 		}`)
@@ -56,11 +33,11 @@ func Test_GetUser(t *testing.T) {
 }
 
 func Test_GetUserThatDoesNotExist(t *testing.T) {
-	httpClient := NewTestClient(func(req *http.Request) *http.Response {
+	httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
 		assert.Equal(t, "https://graph.microsoft.com/v1.0/users/user@example.com", req.URL.String())
 		assert.Equal(t, http.MethodGet, req.Method)
 
-		return response("404 Not Found", `{"error": {"message": "user does not exist"}}`)
+		return test.Response("404 Not Found", `{"error": {"message": "user does not exist"}}`)
 	})
 
 	client := New(httpClient)
@@ -71,11 +48,11 @@ func Test_GetUserThatDoesNotExist(t *testing.T) {
 }
 
 func Test_GetUserWithInvalidApiResponse(t *testing.T) {
-	httpClient := NewTestClient(func(req *http.Request) *http.Response {
+	httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
 		assert.Equal(t, "https://graph.microsoft.com/v1.0/users/user@example.com", req.URL.String())
 		assert.Equal(t, http.MethodGet, req.Method)
 
-		return response("200 OK", "some string")
+		return test.Response("200 OK", "some string")
 	})
 
 	client := New(httpClient)
@@ -87,10 +64,10 @@ func Test_GetUserWithInvalidApiResponse(t *testing.T) {
 
 func Test_GetGroupById(t *testing.T) {
 	groupId := newUuid()
-	httpClient := NewTestClient(func(req *http.Request) *http.Response {
+	httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
 		assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/"+groupId.String(), req.URL.String())
 		assert.Equal(t, http.MethodGet, req.Method)
-		return response("200 OK", fmt.Sprintf(`{
+		return test.Response("200 OK", fmt.Sprintf(`{
 			"id":"%s",
 			"description":"description",
 			"displayName": "name",
@@ -107,10 +84,10 @@ func Test_GetGroupById(t *testing.T) {
 
 func Test_GetGroupThatDoesNotExist(t *testing.T) {
 	groupId := newUuid()
-	httpClient := NewTestClient(func(req *http.Request) *http.Response {
+	httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
 		assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/"+groupId.String(), req.URL.String())
 		assert.Equal(t, http.MethodGet, req.Method)
-		return response("404 Not Found", "{}")
+		return test.Response("404 Not Found", "{}")
 	})
 
 	client := New(httpClient)
@@ -121,12 +98,12 @@ func Test_GetGroupThatDoesNotExist(t *testing.T) {
 }
 
 func Test_CreateGroup(t *testing.T) {
-	httpClient := NewTestClient(func(req *http.Request) *http.Response {
+	httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
 		assert.Equal(t, "https://graph.microsoft.com/v1.0/groups", req.URL.String())
 		assert.Equal(t, http.MethodPost, req.Method)
 		assert.Equal(t, "application/json", req.Header.Get("content-type"))
 
-		return response("201 Created", `{
+		return test.Response("201 Created", `{
 			"id":"some-id",
 			"description":"description",
 			"displayName": "name",
@@ -150,12 +127,12 @@ func Test_CreateGroup(t *testing.T) {
 }
 
 func Test_CreateGroupWithInvalidStatus(t *testing.T) {
-	httpClient := NewTestClient(func(req *http.Request) *http.Response {
+	httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
 		assert.Equal(t, "https://graph.microsoft.com/v1.0/groups", req.URL.String())
 		assert.Equal(t, http.MethodPost, req.Method)
 		assert.Equal(t, "application/json", req.Header.Get("content-type"))
 
-		return response("400 Bad Request", `{"error": {"message":"some error"}}`)
+		return test.Response("400 Bad Request", `{"error": {"message":"some error"}}`)
 	})
 
 	client := New(httpClient)
@@ -171,12 +148,12 @@ func Test_CreateGroupWithInvalidStatus(t *testing.T) {
 }
 
 func Test_CreateGroupWithInvalidResponse(t *testing.T) {
-	httpClient := NewTestClient(func(req *http.Request) *http.Response {
+	httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
 		assert.Equal(t, "https://graph.microsoft.com/v1.0/groups", req.URL.String())
 		assert.Equal(t, http.MethodPost, req.Method)
 		assert.Equal(t, "application/json", req.Header.Get("content-type"))
 
-		return response("201 Created", "response body")
+		return test.Response("201 Created", "response body")
 	})
 
 	client := New(httpClient)
@@ -192,12 +169,12 @@ func Test_CreateGroupWithInvalidResponse(t *testing.T) {
 }
 
 func Test_CreateGroupWithIncompleteResponse(t *testing.T) {
-	httpClient := NewTestClient(func(req *http.Request) *http.Response {
+	httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
 		assert.Equal(t, "https://graph.microsoft.com/v1.0/groups", req.URL.String())
 		assert.Equal(t, http.MethodPost, req.Method)
 		assert.Equal(t, "application/json", req.Header.Get("content-type"))
 
-		return response("201 Created", `{
+		return test.Response("201 Created", `{
 			"description":"description",
 			"displayName": "name",
 			"mailNickname": "mail"
@@ -217,13 +194,13 @@ func Test_CreateGroupWithIncompleteResponse(t *testing.T) {
 }
 
 func Test_GetOrCreateGroupWithEmptyState(t *testing.T) {
-	httpClient := NewTestClient(
+	httpClient := test.NewTestHttpClient(
 		func(req *http.Request) *http.Response {
 			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups", req.URL.String())
 			assert.Equal(t, http.MethodPost, req.Method)
 			assert.Equal(t, "application/json", req.Header.Get("content-type"))
 
-			return response("201 Created", `{
+			return test.Response("201 Created", `{
 				"id":"group-id",
 				"description":"description",
 				"displayName": "name",
@@ -242,17 +219,17 @@ func Test_GetOrCreateGroupWithEmptyState(t *testing.T) {
 
 func Test_GetOrCreateGroupWhenGroupInStateDoesNotExist(t *testing.T) {
 	groupId := newUuid()
-	httpClient := NewTestClient(
+	httpClient := test.NewTestHttpClient(
 		func(req *http.Request) *http.Response {
 			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/"+groupId.String(), req.URL.String())
 			assert.Equal(t, http.MethodGet, req.Method)
-			return response("404 Not Found", "{}")
+			return test.Response("404 Not Found", "{}")
 		},
 		func(req *http.Request) *http.Response {
 			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups", req.URL.String())
 			assert.Equal(t, http.MethodPost, req.Method)
 			assert.Equal(t, "application/json", req.Header.Get("content-type"))
-			return response("201 Created", `{
+			return test.Response("201 Created", `{
 				"id":"some-id",
 				"description":"description",
 				"displayName": "name",
@@ -274,11 +251,11 @@ func Test_GetOrCreateGroupWhenGroupInStateDoesNotExist(t *testing.T) {
 
 func Test_GetOrCreateGroupWhenGroupInStateExists(t *testing.T) {
 	groupId := newUuid()
-	httpClient := NewTestClient(
+	httpClient := test.NewTestHttpClient(
 		func(req *http.Request) *http.Response {
 			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/"+groupId.String(), req.URL.String())
 			assert.Equal(t, http.MethodGet, req.Method)
-			return response("200 OK", `{
+			return test.Response("200 OK", `{
 				"id":"some-id",
 				"description":"description",
 				"displayName": "name",
@@ -303,12 +280,12 @@ func Test_GetOrCreateGroupWhenGroupInStateExists(t *testing.T) {
 }
 
 func Test_ListGroupMembers(t *testing.T) {
-	httpClient := NewTestClient(
+	httpClient := test.NewTestHttpClient(
 		func(req *http.Request) *http.Response {
 			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/group-id/members", req.URL.String())
 			assert.Equal(t, http.MethodGet, req.Method)
 
-			return response("200 OK", `{
+			return test.Response("200 OK", `{
 				"value": [
 					{"id": "user-id-1"},
 					{"id": "user-id-2"}
@@ -330,12 +307,12 @@ func Test_ListGroupMembers(t *testing.T) {
 }
 
 func Test_ListGroupMembersWhenGroupDoesNotExist(t *testing.T) {
-	httpClient := NewTestClient(
+	httpClient := test.NewTestHttpClient(
 		func(req *http.Request) *http.Response {
 			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/group-id/members", req.URL.String())
 			assert.Equal(t, http.MethodGet, req.Method)
 
-			return response("404 Not Found", `{"error":{"message":"some error"}}`)
+			return test.Response("404 Not Found", `{"error":{"message":"some error"}}`)
 		},
 	)
 
@@ -351,12 +328,12 @@ func Test_ListGroupMembersWhenGroupDoesNotExist(t *testing.T) {
 }
 
 func Test_ListGroupMembersWithInvalidResponse(t *testing.T) {
-	httpClient := NewTestClient(
+	httpClient := test.NewTestHttpClient(
 		func(req *http.Request) *http.Response {
 			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/group-id/members", req.URL.String())
 			assert.Equal(t, http.MethodGet, req.Method)
 
-			return response("200 OK", "some response")
+			return test.Response("200 OK", "some response")
 		},
 	)
 
@@ -371,7 +348,7 @@ func Test_ListGroupMembersWithInvalidResponse(t *testing.T) {
 }
 
 func Test_AddMemberToGroup(t *testing.T) {
-	httpClient := NewTestClient(
+	httpClient := test.NewTestHttpClient(
 		func(req *http.Request) *http.Response {
 			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/group-id/members/$ref", req.URL.String())
 			assert.Equal(t, http.MethodPost, req.Method)
@@ -379,7 +356,7 @@ func Test_AddMemberToGroup(t *testing.T) {
 			body, _ := io.ReadAll(req.Body)
 			assert.Equal(t, `{"@odata.id":"https://graph.microsoft.com/v1.0/directoryObjects/user-id"}`, string(body))
 
-			return response("204 No Content", "")
+			return test.Response("204 No Content", "")
 		},
 	)
 
@@ -396,13 +373,13 @@ func Test_AddMemberToGroup(t *testing.T) {
 }
 
 func Test_AddMemberToGroupWithInvalidResponse(t *testing.T) {
-	httpClient := NewTestClient(
+	httpClient := test.NewTestHttpClient(
 		func(req *http.Request) *http.Response {
 			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/group-id/members/$ref", req.URL.String())
 			assert.Equal(t, http.MethodPost, req.Method)
 			assert.Equal(t, "application/json", req.Header.Get("content-type"))
 
-			return response("200 OK", "some response body")
+			return test.Response("200 OK", "some response body")
 		},
 	)
 
@@ -420,12 +397,12 @@ func Test_AddMemberToGroupWithInvalidResponse(t *testing.T) {
 }
 
 func Test_RemoveMemberFromGroup(t *testing.T) {
-	httpClient := NewTestClient(
+	httpClient := test.NewTestHttpClient(
 		func(req *http.Request) *http.Response {
 			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/group-id/members/user-id/$ref", req.URL.String())
 			assert.Equal(t, http.MethodDelete, req.Method)
 
-			return response("204 No Content", "")
+			return test.Response("204 No Content", "")
 		},
 	)
 
@@ -441,12 +418,12 @@ func Test_RemoveMemberFromGroup(t *testing.T) {
 }
 
 func Test_RemoveMemberFromGroupWithInvalidResponse(t *testing.T) {
-	httpClient := NewTestClient(
+	httpClient := test.NewTestHttpClient(
 		func(req *http.Request) *http.Response {
 			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/group-id/members/user-id/$ref", req.URL.String())
 			assert.Equal(t, http.MethodDelete, req.Method)
 
-			return response("200 OK", "some response body")
+			return test.Response("200 OK", "some response body")
 		},
 	)
 
@@ -461,18 +438,6 @@ func Test_RemoveMemberFromGroupWithInvalidResponse(t *testing.T) {
 	})
 
 	assert.EqualError(t, err, "remove member 'mail' from azure group 'mail@example.com': 200 OK: some response body")
-}
-
-func response(status string, body string) *http.Response {
-	parts := strings.Fields(status)
-	statusCode, _ := strconv.Atoi(parts[0])
-
-	return &http.Response{
-		Status:     status,
-		StatusCode: statusCode,
-		Body:       io.NopCloser(bytes.NewBufferString(body)),
-		Header:     make(http.Header),
-	}
 }
 
 func newUuid() uuid.UUID {
