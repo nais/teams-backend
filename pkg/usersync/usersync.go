@@ -9,12 +9,13 @@ import (
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/google_jwt"
 	"golang.org/x/oauth2/jwt"
+	"google.golang.org/api/option"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"strings"
 
 	"github.com/nais/console/pkg/config"
 	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
-	"google.golang.org/api/option"
 )
 
 type userSynchronizer struct {
@@ -29,7 +30,7 @@ const (
 	OpPrepare    = "usersync:prepare"
 	OpListRemote = "usersync:list:remote"
 	OpListLocal  = "usersync:list:local"
-	OpCreate     = "usersync:create"
+	OpUpsert     = "usersync:upsert"
 	OpDelete     = "usersync:delete"
 )
 
@@ -68,8 +69,8 @@ type auditLogEntry struct {
 }
 
 // Sync Fetch all users from the tenant and add them as local users in Console. If a user already exists in Console
-// the local user will remain untouched. After all users have been added we will also remove all local users that
-// matches the tenant domain that does not exist in the Google Directory.
+// the local user will get the name potentially updated. After all users have been upserted, local users that matches
+// the tenant domain that does not exist in the Google Directory will be removed.
 func (s *userSynchronizer) Sync(ctx context.Context) error {
 	client := s.config.Client(ctx)
 	srv, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(client))
@@ -91,30 +92,29 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 	auditLogEntries := make([]*auditLogEntry, 0)
 
 	err = s.db.Transaction(func(tx *gorm.DB) error {
+		// Map of user IDs that is upserted
 		userIds := make(map[uuid.UUID]struct{})
 
 		for _, remoteUser := range resp.Users {
-			localUser := &dbmodels.User{}
 			email := strings.ToLower(remoteUser.PrimaryEmail)
-
-			err = tx.Where("email = ?", email).First(localUser).Error
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				localUser = &dbmodels.User{
-					Email: email,
-					Name:  remoteUser.Name.FullName,
-				}
-
-				err = tx.Create(localUser).Error
-				if err != nil {
-					return fmt.Errorf("%s: create local user %s: %w", OpCreate, email, err)
-				}
-
-				auditLogEntries = append(auditLogEntries, &auditLogEntry{
-					action:  OpCreate,
-					message: fmt.Sprintf("Local user created: %s", localUser.Name),
-					user:    *localUser,
-				})
+			localUser := &dbmodels.User{
+				Email: email,
+				Name:  remoteUser.Name.FullName,
 			}
+
+			err = tx.Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "email"}},
+				DoUpdates: clause.AssignmentColumns([]string{"name"}),
+			}).Create(&localUser).Error
+			if err != nil {
+				return fmt.Errorf("%s: upsert local user %s: %w", OpUpsert, email, err)
+			}
+
+			auditLogEntries = append(auditLogEntries, &auditLogEntry{
+				action:  OpUpsert,
+				message: fmt.Sprintf("Local user upserted: %s", email),
+				user:    *localUser,
+			})
 
 			userIds[*localUser.ID] = struct{}{}
 		}
@@ -127,8 +127,7 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 		}
 
 		for _, localUser := range localUsers {
-			_, touched := userIds[*localUser.ID]
-			if touched {
+			if _, upserted := userIds[*localUser.ID]; upserted {
 				continue
 			}
 
@@ -139,7 +138,7 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 
 			auditLogEntries = append(auditLogEntries, &auditLogEntry{
 				action:  OpDelete,
-				message: fmt.Sprintf("Local user deleted: %s", localUser.Name),
+				message: fmt.Sprintf("Local user deleted: %s", localUser.Email),
 				user:    *localUser,
 			})
 		}
