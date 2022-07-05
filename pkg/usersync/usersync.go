@@ -8,6 +8,7 @@ import (
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/google_jwt"
+	"github.com/nais/console/pkg/roles"
 	"golang.org/x/oauth2/jwt"
 	"google.golang.org/api/option"
 	"gorm.io/gorm"
@@ -30,7 +31,8 @@ const (
 	OpPrepare    = "usersync:prepare"
 	OpListRemote = "usersync:list:remote"
 	OpListLocal  = "usersync:list:local"
-	OpUpsert     = "usersync:upsert"
+	OpCreate     = "usersync:create"
+	OpUpdate     = "usersync:update"
 	OpDelete     = "usersync:delete"
 )
 
@@ -95,6 +97,17 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 		// Map of user IDs that is upserted
 		userIds := make(map[uuid.UUID]struct{})
 
+		defaultRoleNames := []roles.Role{
+			roles.RoleTeamCreator,
+			roles.RoleTeamViewer,
+			roles.RoleServiceAccountCreator,
+		}
+		defaultRoles := make([]dbmodels.Role, 0)
+		err = tx.Where("name IN (?)", defaultRoleNames).Find(&defaultRoles).Error
+		if err != nil {
+			return fmt.Errorf("%s: find default roles: %w", OpPrepare, err)
+		}
+
 		for _, remoteUser := range resp.Users {
 			email := strings.ToLower(remoteUser.PrimaryEmail)
 			localUser := &dbmodels.User{
@@ -102,19 +115,41 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 				Name:  remoteUser.Name.FullName,
 			}
 
-			err = tx.Clauses(clause.OnConflict{
-				Columns:   []clause.Column{{Name: "email"}},
-				DoUpdates: clause.AssignmentColumns([]string{"name"}),
-			}).Create(&localUser).Error
-			if err != nil {
-				return fmt.Errorf("%s: upsert local user %s: %w", OpUpsert, email, err)
+			ret := tx.Where("email = ?", email).FirstOrCreate(localUser)
+			if ret.Error != nil {
+				return fmt.Errorf("%s: create local user %s: %w", OpCreate, email, err)
 			}
 
-			auditLogEntries = append(auditLogEntries, &auditLogEntry{
-				action:  OpUpsert,
-				message: fmt.Sprintf("Local user upserted: %s", email),
-				user:    *localUser,
-			})
+			if ret.RowsAffected > 0 {
+				auditLogEntries = append(auditLogEntries, &auditLogEntry{
+					action:  OpCreate,
+					message: fmt.Sprintf("Local user created: %s", email),
+					user:    *localUser,
+				})
+			}
+
+			if localUser.Name != remoteUser.Name.FullName {
+				localUser.Name = remoteUser.Name.FullName
+				err = tx.Save(localUser).Error
+				if err != nil {
+					return fmt.Errorf("%s: update local user %s: %w", OpUpdate, email, err)
+				}
+				auditLogEntries = append(auditLogEntries, &auditLogEntry{
+					action:  OpUpdate,
+					message: fmt.Sprintf("Local user updated: %s", email),
+					user:    *localUser,
+				})
+			}
+
+			for _, role := range defaultRoles {
+				err = tx.Clauses(clause.OnConflict{
+					Columns:   []clause.Column{{Name: "user_id"}, {Name: "role_id"}},
+					DoNothing: true,
+				}).Create(&dbmodels.UserRole{RoleID: *role.ID, UserID: *localUser.ID}).Error
+				if err != nil {
+					return fmt.Errorf("%s: attach default roles to user %s: %w", OpUpdate, email, err)
+				}
+			}
 
 			userIds[*localUser.ID] = struct{}{}
 		}
