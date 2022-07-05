@@ -9,10 +9,10 @@ import (
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/google_jwt"
 	"github.com/nais/console/pkg/roles"
-	"golang.org/x/oauth2/jwt"
 	"google.golang.org/api/option"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"net/http"
 	"strings"
 
 	"github.com/nais/console/pkg/config"
@@ -23,8 +23,8 @@ type userSynchronizer struct {
 	system      dbmodels.System
 	auditLogger auditlogger.AuditLogger
 	domain      string
-	config      *jwt.Config
 	db          *gorm.DB
+	client      *http.Client
 }
 
 const (
@@ -40,13 +40,13 @@ var (
 	ErrNotEnabled = errors.New("disabled by configuration")
 )
 
-func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config) *userSynchronizer {
+func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, domain string, client *http.Client) *userSynchronizer {
 	return &userSynchronizer{
 		db:          db,
 		system:      system,
 		auditLogger: auditLogger,
 		domain:      domain,
-		config:      config,
+		client:      client,
 	}
 }
 
@@ -61,7 +61,7 @@ func NewFromConfig(cfg *config.Config, db *gorm.DB, system dbmodels.System, audi
 		return nil, fmt.Errorf("get google jwt config: %w", err)
 	}
 
-	return New(db, system, auditLogger, cfg.TenantDomain, cf), nil
+	return New(db, system, auditLogger, cfg.TenantDomain, cf.Client(context.Background())), nil
 }
 
 type auditLogEntry struct {
@@ -74,13 +74,12 @@ type auditLogEntry struct {
 // the local user will get the name potentially updated. After all users have been upserted, local users that matches
 // the tenant domain that does not exist in the Google Directory will be removed.
 func (s *userSynchronizer) Sync(ctx context.Context) error {
-	client := s.config.Client(ctx)
-	srv, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(client))
+	srv, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(s.client))
 	if err != nil {
 		return fmt.Errorf("%s: retrieve directory client: %w", OpListRemote, err)
 	}
 
-	resp, err := srv.Users.List().Domain(s.domain).Do()
+	resp, err := srv.Users.List().Context(ctx).Domain(s.domain).Do()
 	if err != nil {
 		return fmt.Errorf("%s: list remote users: %w", OpListRemote, err)
 	}
@@ -94,7 +93,6 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 	auditLogEntries := make([]*auditLogEntry, 0)
 
 	err = s.db.Transaction(func(tx *gorm.DB) error {
-		// Map of user IDs that is upserted
 		userIds := make(map[uuid.UUID]struct{})
 
 		defaultRoleNames := []roles.Role{
