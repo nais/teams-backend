@@ -47,8 +47,7 @@ type ResolverRoot interface {
 }
 
 type DirectiveRoot struct {
-	Auth          func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
-	Authorization func(ctx context.Context, obj interface{}, next graphql.Resolver, operation model.Operation, targetted *bool) (res interface{}, err error)
+	Auth func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
 }
 
 type ComplexityRoot struct {
@@ -859,33 +858,7 @@ enum AuditLogSortField {
     created_at
 }`, BuiltIn: false},
 	{Name: "../../../graphql/directives.graphqls", Input: `"Require authentication for all requests with this directive."
-directive @auth on FIELD_DEFINITION
-
-"Require a specific authorization for the operation."
-directive @authorization(
-    "The required authorization."
-    operation: Operation!
-
-    "Whether or not the authorization targets a specific entity."
-    targetted: Boolean = false
-) on FIELD_DEFINITION
-
-"Authorization operations."
-enum Operation {
-    AuditLogsRead
-    ServiceAccountsCreate
-    ServiceAccountsDelete
-    ServiceAccountList
-    ServiceAccountsUpdate
-    SystemStatesDelete
-    SystemStatesRead
-    SystemStatesUpdate
-    TeamsCreate
-    TeamsDelete
-    TeamsList
-    TeamsRead
-    TeamsUpdate
-}`, BuiltIn: false},
+directive @auth on FIELD_DEFINITION`, BuiltIn: false},
 	{Name: "../../../graphql/scalars.graphqls", Input: `"Scalar value representing a UUID based on RFC 4122."
 scalar UUID
 
@@ -1272,30 +1245,6 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 // endregion ************************** generated!.gotpl **************************
 
 // region    ***************************** args.gotpl *****************************
-
-func (ec *executionContext) dir_authorization_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 model.Operation
-	if tmp, ok := rawArgs["operation"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("operation"))
-		arg0, err = ec.unmarshalNOperation2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐOperation(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["operation"] = arg0
-	var arg1 *bool
-	if tmp, ok := rawArgs["targetted"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetted"))
-		arg1, err = ec.unmarshalOBoolean2ᚖbool(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["targetted"] = arg1
-	return args, nil
-}
 
 func (ec *executionContext) field_Mutation_addUsersToTeam_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
@@ -8688,16 +8637,6 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 		}
 	}
 	return res
-}
-
-func (ec *executionContext) unmarshalNOperation2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐOperation(ctx context.Context, v interface{}) (model.Operation, error) {
-	var res model.Operation
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNOperation2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐOperation(ctx context.Context, sel ast.SelectionSet, v model.Operation) graphql.Marshaler {
-	return v
 }
 
 func (ec *executionContext) marshalNPageInfo2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPageInfo(ctx context.Context, sel ast.SelectionSet, v *model.PageInfo) graphql.Marshaler {

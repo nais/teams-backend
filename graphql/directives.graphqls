@@ -1,28 +1,2 @@
 "Require authentication for all requests with this directive."
 directive @auth on FIELD_DEFINITION
-
-"Require a specific authorization for the operation."
-directive @authorization(
-    "The required authorization."
-    operation: Operation!
-
-    "Whether or not the authorization targets a specific entity."
-    targetted: Boolean = false
-) on FIELD_DEFINITION
-
-"Authorization operations."
-enum Operation {
-    AuditLogsRead
-    ServiceAccountsCreate
-    ServiceAccountsDelete
-    ServiceAccountList
-    ServiceAccountsUpdate
-    SystemStatesDelete
-    SystemStatesRead
-    SystemStatesUpdate
-    TeamsCreate
-    TeamsDelete
-    TeamsList
-    TeamsRead
-    TeamsUpdate
-}

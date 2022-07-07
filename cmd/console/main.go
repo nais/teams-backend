@@ -344,7 +344,6 @@ func setupGraphAPI(db *gorm.DB, domain string, console *dbmodels.System, teamRec
 	gc := generated.Config{}
 	gc.Resolvers = resolver
 	gc.Directives.Auth = directives.Auth(db)
-	gc.Directives.Authorization = directives.Authorize()
 
 	handler := graphql_handler.NewDefaultServer(
 		generated.NewExecutableSchema(
