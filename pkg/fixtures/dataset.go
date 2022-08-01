@@ -47,7 +47,7 @@ func InsertInitialDataset(db *gorm.DB, tenantDomain string, adminApiKey string) 
 			}
 		}
 
-		err = createRolesAndAuthorizations(tx)
+		err = CreateRolesAndAuthorizations(tx)
 		if err != nil {
 			return err
 		}
@@ -69,7 +69,7 @@ func InsertInitialDataset(db *gorm.DB, tenantDomain string, adminApiKey string) 
 	})
 }
 
-func createRolesAndAuthorizations(tx *gorm.DB) error {
+func CreateRolesAndAuthorizations(tx *gorm.DB) error {
 	auditLogsRead := &dbmodels.Authorization{Name: string(roles.AuthorizationAuditLogsRead)}
 	serviceAccountsCreate := &dbmodels.Authorization{Name: string(roles.AuthorizationServiceAccountsCreate)}
 	serviceAccountsDelete := &dbmodels.Authorization{Name: string(roles.AuthorizationServiceAccountsDelete)}
