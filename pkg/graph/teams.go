@@ -20,6 +20,11 @@ import (
 
 func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*dbmodels.Team, error) {
 	user := authz.UserFromContext(ctx)
+	err := roles.RequireGlobalAuthorization(user, roles.AuthorizationTeamsCreate)
+	if err != nil {
+		return nil, err
+	}
+
 	corr := &dbmodels.Correlation{}
 	team := &dbmodels.Team{
 		Slug:    *input.Slug,
@@ -27,7 +32,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		Purpose: input.Purpose,
 	}
 
-	err := r.db.Transaction(func(tx *gorm.DB) error {
+	err = r.db.Transaction(func(tx *gorm.DB) error {
 		err := tx.Create(corr).Error
 		if err != nil {
 			return fmt.Errorf("unable to create correlation for audit log")
@@ -86,19 +91,25 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 }
 
 func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUsersToTeamInput) (*dbmodels.Team, error) {
+	user := authz.UserFromContext(ctx)
+	err := roles.RequireAuthorization(user, roles.AuthorizationTeamsUpdate, *input.TeamID)
+	if err != nil {
+		return nil, err
+	}
+
 	team := &dbmodels.Team{}
-	err := r.db.Where("id = ?", input.TeamID).First(team).Error
+	err = r.db.Where("id = ?", input.TeamID).First(team).Error
 	if err != nil {
 		return nil, err
 	}
 
-	users := make([]*dbmodels.User, 0)
-	err = r.db.Where(input.UserIds).Find(&users).Error
+	usersToAdd := make([]*dbmodels.User, 0)
+	err = r.db.Where("id IN (?)", input.UserIds).Find(&usersToAdd).Error
 	if err != nil {
 		return nil, err
 	}
 
-	if len(users) != len(input.UserIds) {
+	if len(usersToAdd) != len(input.UserIds) {
 		return nil, fmt.Errorf("one or more non-existing or duplicate user IDs given as parameter")
 	}
 
@@ -109,9 +120,25 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 			return fmt.Errorf("unable to create correlation for audit log")
 		}
 
-		for _, userId := range input.UserIds {
+		teamMember := &dbmodels.Role{}
+		err = tx.Where("name = ?", roles.RoleTeamMember).First(teamMember).Error
+		if err != nil {
+			return err
+		}
+
+		for _, user := range usersToAdd {
+			userRole := &dbmodels.UserRole{
+				UserID:   *user.ID,
+				RoleID:   *teamMember.ID,
+				TargetID: team.ID,
+			}
+			err = tx.Create(userRole).Error
+			if err != nil {
+				return err
+			}
+
 			tm := &dbmodels.UserTeam{
-				UserID: *userId,
+				UserID: *user.ID,
 				TeamID: *team.ID,
 			}
 			err = r.createTrackedObjectIgnoringDuplicates(ctx, tm)
@@ -124,6 +151,10 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 
 	if err != nil {
 		return nil, err
+	}
+
+	for _, addedUser := range usersToAdd {
+		r.auditLogger.Logf(console_reconciler.OpAddTeamMember, *corr, *r.system, user, team, addedUser, "Added user '%s' to team '%s'", addedUser.Name, team.Name)
 	}
 
 	team, err = r.teamWithAssociations(*team.ID)
@@ -140,19 +171,25 @@ func (r *mutationResolver) AddUsersToTeam(ctx context.Context, input model.AddUs
 }
 
 func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.RemoveUsersFromTeamInput) (*dbmodels.Team, error) {
+	user := authz.UserFromContext(ctx)
+	err := roles.RequireAuthorization(user, roles.AuthorizationTeamsUpdate, *input.TeamID)
+	if err != nil {
+		return nil, err
+	}
+
 	team := &dbmodels.Team{}
-	err := r.db.Where("id = ?", input.TeamID).First(team).Error
+	err = r.db.Where("id = ?", input.TeamID).First(team).Error
 	if err != nil {
 		return nil, err
 	}
 
-	users := make([]*dbmodels.User, 0)
-	err = r.db.Where(input.UserIds).Find(&users).Error
+	usersToRemove := make([]*dbmodels.User, 0)
+	err = r.db.Where("id IN (?)", input.UserIds).Find(&usersToRemove).Error
 	if err != nil {
 		return nil, err
 	}
 
-	if len(users) != len(input.UserIds) {
+	if len(usersToRemove) != len(input.UserIds) {
 		return nil, fmt.Errorf("one or more non-existing or duplicate user IDs given as parameter")
 	}
 
@@ -161,6 +198,11 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 		err = tx.Create(corr).Error
 		if err != nil {
 			return fmt.Errorf("unable to create correlation for audit log")
+		}
+
+		err = tx.Where("user_id IN (?) AND target_id = ?", input.UserIds, team.ID).Delete(&dbmodels.UserRole{}).Error
+		if err != nil {
+			return err
 		}
 
 		err = tx.Where("user_id IN (?) AND team_id = ?", input.UserIds, team.ID).Delete(&dbmodels.UserTeam{}).Error
@@ -173,6 +215,10 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 
 	if err != nil {
 		return nil, err
+	}
+
+	for _, removedUser := range usersToRemove {
+		r.auditLogger.Logf(console_reconciler.OpRemoveTeamMember, *corr, *r.system, user, team, removedUser, "Removed user '%s' from team '%s'", removedUser.Name, team.Name)
 	}
 
 	team, err = r.teamWithAssociations(*team.ID)
@@ -188,8 +234,14 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 }
 
 func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUID) (bool, error) {
+	user := authz.UserFromContext(ctx)
+	err := roles.RequireAuthorization(user, roles.AuthorizationTeamsUpdate, *teamID)
+	if err != nil {
+		return false, err
+	}
+
 	team := &dbmodels.Team{}
-	err := r.db.Where("id = ?", teamID).First(team).Error
+	err = r.db.Where("id = ?", teamID).First(team).Error
 	if err != nil {
 		return false, err
 	}
@@ -200,7 +252,7 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 		return false, fmt.Errorf("unable to create correlation for audit log")
 	}
 
-	r.auditLogger.Logf(console_reconciler.OpSyncTeam, *corr, *r.system, authz.UserFromContext(ctx), team, nil, "Manual sync requested")
+	r.auditLogger.Logf(console_reconciler.OpSyncTeam, *corr, *r.system, user, team, nil, "Manual sync requested")
 
 	team, err = r.teamWithAssociations(*team.ID)
 	if err != nil {
@@ -216,6 +268,12 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 }
 
 func (r *queryResolver) Teams(ctx context.Context, pagination *model.Pagination, query *model.TeamsQuery, sort *model.TeamsSort) (*model.Teams, error) {
+	user := authz.UserFromContext(ctx)
+	err := roles.RequireGlobalAuthorization(user, roles.AuthorizationTeamsList)
+	if err != nil {
+		return nil, err
+	}
+
 	teams := make([]*dbmodels.Team, 0)
 	if sort == nil {
 		sort = &model.TeamsSort{
@@ -231,8 +289,14 @@ func (r *queryResolver) Teams(ctx context.Context, pagination *model.Pagination,
 }
 
 func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team, error) {
+	user := authz.UserFromContext(ctx)
+	err := roles.RequireAuthorization(user, roles.AuthorizationTeamsRead, *id)
+	if err != nil {
+		return nil, err
+	}
+
 	team := &dbmodels.Team{}
-	err := r.db.Where("id = ?", id).First(team).Error
+	err = r.db.Where("id = ?", id).First(team).Error
 	if err != nil {
 		return nil, err
 	}
@@ -241,8 +305,14 @@ func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team
 }
 
 func (r *teamResolver) Users(ctx context.Context, obj *dbmodels.Team) ([]*dbmodels.User, error) {
+	user := authz.UserFromContext(ctx)
+	err := roles.RequireGlobalAuthorization(user, roles.AuthorizationUsersList)
+	if err != nil {
+		return nil, err
+	}
+
 	users := make([]*dbmodels.User, 0)
-	err := r.db.Model(obj).Association("Users").Find(&users)
+	err = r.db.Model(obj).Association("Users").Find(&users)
 	if err != nil {
 		return nil, err
 	}
@@ -250,8 +320,14 @@ func (r *teamResolver) Users(ctx context.Context, obj *dbmodels.Team) ([]*dbmode
 }
 
 func (r *teamResolver) Metadata(ctx context.Context, obj *dbmodels.Team) (map[string]interface{}, error) {
+	user := authz.UserFromContext(ctx)
+	err := roles.RequireAuthorization(user, roles.AuthorizationTeamsRead, *obj.ID)
+	if err != nil {
+		return nil, err
+	}
+
 	metadata := make([]*dbmodels.TeamMetadata, 0)
-	err := r.db.Model(obj).Association("Metadata").Find(&metadata)
+	err = r.db.Model(obj).Association("Metadata").Find(&metadata)
 	if err != nil {
 		return nil, err
 	}
@@ -266,8 +342,14 @@ func (r *teamResolver) Metadata(ctx context.Context, obj *dbmodels.Team) (map[st
 }
 
 func (r *teamResolver) AuditLogs(ctx context.Context, obj *dbmodels.Team) ([]*dbmodels.AuditLog, error) {
+	user := authz.UserFromContext(ctx)
+	err := roles.RequireAuthorization(user, roles.AuthorizationAuditLogsRead, *obj.ID)
+	if err != nil {
+		return nil, err
+	}
+
 	auditLogs := make([]*dbmodels.AuditLog, 0)
-	err := r.db.Model(obj).Association("AuditLogs").Find(&auditLogs)
+	err = r.db.Model(obj).Association("AuditLogs").Find(&auditLogs)
 	if err != nil {
 		return nil, err
 	}
