@@ -2,11 +2,15 @@ package graph_test
 
 import (
 	"context"
+	"github.com/nais/console/pkg/authz"
+	"github.com/nais/console/pkg/fixtures"
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/roles"
 	"github.com/nais/console/pkg/test"
 	"github.com/stretchr/testify/assert"
+	"gorm.io/gorm"
 	"testing"
 
 	"github.com/google/uuid"
@@ -23,9 +27,39 @@ func getSystem() *dbmodels.System {
 	return system
 }
 
-func TestQueryResolver_Teams(t *testing.T) {
+func getAdminUser(db *gorm.DB) *dbmodels.User {
+	role := &dbmodels.Role{}
+	db.Where("name = ?", roles.RoleAdmin).Find(role)
+
+	user := &dbmodels.User{
+		Email: "user@example.com",
+		Name:  "User",
+	}
+	db.Create(user)
+	userRole := &dbmodels.UserRole{
+		RoleID: *role.ID,
+		UserID: *user.ID,
+	}
+	db.Create(userRole)
+	db.
+		Model(user).
+		Preload("Role").
+		Preload("Role.Authorizations").
+		Association("RoleBindings").
+		Find(&user.RoleBindings)
+
+	return user
+}
+
+func getDb() *gorm.DB {
 	db := test.GetTestDB()
-	db.AutoMigrate(&dbmodels.Team{})
+	db.AutoMigrate(&dbmodels.Authorization{}, &dbmodels.Role{}, &dbmodels.RoleAuthorization{}, &dbmodels.User{}, &dbmodels.UserRole{})
+	fixtures.CreateRolesAndAuthorizations(db)
+	return db
+}
+
+func TestQueryResolver_Teams(t *testing.T) {
+	db := getDb()
 	db.Create([]dbmodels.Team{
 		{
 			Slug: "b",
@@ -43,8 +77,9 @@ func TestQueryResolver_Teams(t *testing.T) {
 
 	ch := make(chan reconcilers.Input, 100)
 	system := getSystem()
+	user := getAdminUser(db)
 
-	ctx := context.Background()
+	ctx := authz.ContextWithUser(context.Background(), user)
 	resolver := graph.NewResolver(db, "example.com", system, ch, nil).Query()
 
 	t.Run("No filter or sort", func(t *testing.T) {
