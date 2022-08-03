@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/jackc/pgconn"
@@ -10,6 +11,7 @@ import (
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/roles"
 	"gorm.io/gorm"
 )
 
@@ -121,4 +123,24 @@ func (r *mutationResolver) teamWithAssociations(teamID uuid.UUID) (*dbmodels.Tea
 	}
 
 	return team, nil
+}
+
+func (r *mutationResolver) userIsTeamOwner(userId, teamId uuid.UUID) (bool, error) {
+	teamOwnerRole := &dbmodels.Role{}
+	err := r.db.Where("name = ?", roles.RoleTeamOwner).First(teamOwnerRole).Error
+	if err != nil {
+		return false, err
+	}
+
+	roleBinding := &dbmodels.UserRole{}
+	err = r.db.Where("role_id = ? AND user_id = ? AND target_id = ?", teamOwnerRole.ID, userId, teamId).First(roleBinding).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	return true, nil
 }

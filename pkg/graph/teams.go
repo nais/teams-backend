@@ -268,6 +268,91 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 	return true, nil
 }
 
+func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTeamMembersInput) (*dbmodels.Team, error) {
+	user := authz.UserFromContext(ctx)
+	err := roles.RequireAuthorization(user, roles.AuthorizationTeamsUpdate, *input.TeamID)
+	if err != nil {
+		return nil, err
+	}
+
+	team := &dbmodels.Team{}
+	err = r.db.Where("id = ?", input.TeamID).First(team).Error
+	if err != nil {
+		return nil, err
+	}
+
+	usersToAdd := make([]*dbmodels.User, 0)
+	err = r.db.Where("id IN (?)", input.UserIds).Find(&usersToAdd).Error
+	if err != nil {
+		return nil, err
+	}
+
+	if len(usersToAdd) != len(input.UserIds) {
+		return nil, fmt.Errorf("one or more non-existing or duplicate user IDs given as parameter")
+	}
+
+	corr := &dbmodels.Correlation{}
+	err = r.db.Transaction(func(tx *gorm.DB) error {
+		err = tx.Create(corr).Error
+		if err != nil {
+			return fmt.Errorf("unable to create correlation for audit log")
+		}
+
+		teamMemberRole := &dbmodels.Role{}
+		err = tx.Where("name = ?", roles.RoleTeamMember).First(teamMemberRole).Error
+		if err != nil {
+			return err
+		}
+
+		for _, user := range usersToAdd {
+			isOwner, err := r.userIsTeamOwner(*user.ID, *team.ID)
+			if err != nil {
+				return err
+			}
+
+			if !isOwner {
+				err = tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&dbmodels.UserRole{
+					UserID:   *user.ID,
+					RoleID:   *teamMemberRole.ID,
+					TargetID: team.ID,
+				}).Error
+				if err != nil {
+					return err
+				}
+			}
+
+			err = r.createTrackedObjectIgnoringDuplicates(ctx, &dbmodels.UserTeam{
+				UserID: *user.ID,
+				TeamID: *team.ID,
+			})
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, addedUser := range usersToAdd {
+		r.auditLogger.Logf(console_reconciler.OpAddTeamMember, *corr, *r.system, user, team, addedUser, "Added user '%s' to team '%s' as a member", addedUser.Name, team.Name)
+	}
+
+	team, err = r.teamWithAssociations(*team.ID)
+	if err != nil {
+		return nil, fmt.Errorf("unable to fetch team: %w", err)
+	}
+
+	r.teamReconciler <- reconcilers.Input{
+		Corr: *corr,
+		Team: *team,
+	}
+
+	return team, nil
+}
+
 func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTeamOwnersInput) (*dbmodels.Team, error) {
 	user := authz.UserFromContext(ctx)
 	err := roles.RequireAuthorization(user, roles.AuthorizationTeamsUpdate, *input.TeamID)

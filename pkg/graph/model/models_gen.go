@@ -17,6 +17,14 @@ type APIKey struct {
 	APIKey string `json:"APIKey"`
 }
 
+// Input for adding users to a team as members.
+type AddTeamMembersInput struct {
+	// ID of the team that should receive new members.
+	TeamID *uuid.UUID `json:"teamId"`
+	// List of user IDs that should be added to the team as members.
+	UserIds []*uuid.UUID `json:"userIds"`
+}
+
 // Input for adding users to a team as owners.
 type AddTeamOwnersInput struct {
 	// ID of the team that should receive new owners.

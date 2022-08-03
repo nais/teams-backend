@@ -50,6 +50,19 @@ extend type Mutation {
     ): Boolean! @auth
 
     """
+    Add users to a team as team members
+
+    If one or more users are already added to the team they will not be updated. If a user is already an owner of the
+    team the user will not lose ownership.
+
+    The updated team will be returned on success.
+    """
+    addTeamMembers(
+        "Input for adding users to a team as members."
+        input: AddTeamMembersInput!
+    ): Team! @auth
+
+    """
     Add users to a team as team owners
 
     If one or more users are already added to the team, they will be granted ownership of the team. If one or more users
@@ -136,6 +149,15 @@ input AddUsersToTeamInput {
 
     "Team ID that should receive new users."
     teamId: UUID!
+}
+
+"Input for adding users to a team as members."
+input AddTeamMembersInput {
+    "ID of the team that should receive new members."
+    teamId: UUID!
+
+    "List of user IDs that should be added to the team as members."
+    userIds: [UUID!]!
 }
 
 "Input for adding users to a team as owners."
