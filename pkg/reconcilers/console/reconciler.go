@@ -17,6 +17,7 @@ type consoleReconciler struct {
 const (
 	Name               = "console"
 	OpAddTeamMember    = "console:team:add-member"
+	OpAddTeamOwner     = "console:team:add-owner"
 	OpRemoveTeamMember = "console:team:add-member"
 	OpCreateTeam       = "console:team:create"
 	OpSyncTeam         = "console:team:sync"
