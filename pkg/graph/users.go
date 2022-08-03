@@ -63,7 +63,7 @@ func (r *mutationResolver) DeleteServiceAccount(ctx context.Context, serviceAcco
 		return false, fmt.Errorf("unable to delete admin account")
 	}
 
-	err = r.deleteTrackedObject(ctx, serviceAccount)
+	err = r.db.Delete(serviceAccount).Error
 	if err != nil {
 		return false, err
 	}

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 // Model Base model that all database tables inherit.
@@ -20,16 +19,8 @@ type Model struct {
 	UpdatedAt   time.Time  `gorm:"autoUpdateTime; not null"`
 }
 
-// SoftDelete Add fields to support Gorm soft deletes
-type SoftDelete struct {
-	DeletedBy   *User          `gorm:""`
-	DeletedByID *uuid.UUID     `gorm:"type:uuid"`
-	DeletedAt   gorm.DeletedAt `gorm:"index"`
-}
-
 type ApiKey struct {
 	Model
-	SoftDelete
 	APIKey string    `gorm:"unique; not null"`
 	User   User      `gorm:""`
 	UserID uuid.UUID `gorm:"type:uuid; not null"`
@@ -37,7 +28,6 @@ type ApiKey struct {
 
 type AuditLog struct {
 	Model
-	SoftDelete
 	Actor          *User       `gorm:""` // The user or service account that performed the action
 	Correlation    Correlation `gorm:""`
 	TargetSystem   System      `gorm:""`
@@ -59,12 +49,10 @@ type Authorization struct {
 
 type Correlation struct {
 	Model
-	SoftDelete
 }
 
 type ReconcileError struct {
 	Model
-	SoftDelete
 	Correlation   Correlation `gorm:""`
 	System        System      `gorm:""`
 	Team          Team        `gorm:""`
@@ -98,7 +86,6 @@ type SystemState struct {
 
 type System struct {
 	Model
-	SoftDelete
 	Name string `gorm:"uniqueIndex; not null"`
 }
 
@@ -112,7 +99,6 @@ type TeamMetadata struct {
 
 type Team struct {
 	Model
-	SoftDelete
 	Slug      Slug            `gorm:"<-:create; unique; not null"`
 	Name      string          `gorm:"unique; not null"`
 	Purpose   *string         `gorm:""`
@@ -123,7 +109,6 @@ type Team struct {
 
 type User struct {
 	Model
-	SoftDelete
 	Email        string     `gorm:"not null; unique"`
 	Name         string     `gorm:"not null"`
 	Teams        []*Team    `gorm:"many2many:user_teams"`
@@ -150,11 +135,6 @@ type UserTeam struct {
 // This means that setting common metadata like 'created by' or 'updated by' can be abstracted.
 func (m *Model) GetModel() *Model {
 	return m
-}
-
-// GetSoftDeleteModel Enable callers to access the soft delete part of the model through an interface.
-func (s *SoftDelete) GetSoftDeleteModel() *SoftDelete {
-	return s
 }
 
 // Error Get the err message from the audit log
