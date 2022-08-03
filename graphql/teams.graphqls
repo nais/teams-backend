@@ -25,12 +25,6 @@ extend type Mutation {
         input: CreateTeamInput!
     ): Team! @auth
 
-    "Add one or more users to a team, then return the team in question."
-    addUsersToTeam(
-        "Input for adding users to a team."
-        input: AddUsersToTeamInput!
-    ): Team! @auth
-
     "Remove one or more users from a team, then return team in question."
     removeUsersFromTeam(
         "Input for removing users from a team."
@@ -140,15 +134,6 @@ input CreateTeamInput {
 
     "Team purpose."
     purpose: String
-}
-
-"Input for adding users to a team."
-input AddUsersToTeamInput {
-    "List of user IDs that should be added to the team."
-    userIds: [UUID!]!
-
-    "Team ID that should receive new users."
-    teamId: UUID!
 }
 
 "Input for adding users to a team as members."

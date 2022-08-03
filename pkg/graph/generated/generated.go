@@ -79,7 +79,6 @@ type ComplexityRoot struct {
 	Mutation struct {
 		AddTeamMembers       func(childComplexity int, input model.AddTeamMembersInput) int
 		AddTeamOwners        func(childComplexity int, input model.AddTeamOwnersInput) int
-		AddUsersToTeam       func(childComplexity int, input model.AddUsersToTeamInput) int
 		CreateAPIKey         func(childComplexity int, userID *uuid.UUID) int
 		CreateServiceAccount func(childComplexity int, input model.CreateServiceAccountInput) int
 		CreateTeam           func(childComplexity int, input model.CreateTeamInput) int
@@ -159,7 +158,6 @@ type MutationResolver interface {
 	CreateAPIKey(ctx context.Context, userID *uuid.UUID) (*model.APIKey, error)
 	DeleteAPIKey(ctx context.Context, userID *uuid.UUID) (bool, error)
 	CreateTeam(ctx context.Context, input model.CreateTeamInput) (*dbmodels.Team, error)
-	AddUsersToTeam(ctx context.Context, input model.AddUsersToTeamInput) (*dbmodels.Team, error)
 	RemoveUsersFromTeam(ctx context.Context, input model.RemoveUsersFromTeamInput) (*dbmodels.Team, error)
 	SynchronizeTeam(ctx context.Context, teamID *uuid.UUID) (bool, error)
 	AddTeamMembers(ctx context.Context, input model.AddTeamMembersInput) (*dbmodels.Team, error)
@@ -317,18 +315,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.AddTeamOwners(childComplexity, args["input"].(model.AddTeamOwnersInput)), true
-
-	case "Mutation.addUsersToTeam":
-		if e.complexity.Mutation.AddUsersToTeam == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_addUsersToTeam_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.AddUsersToTeam(childComplexity, args["input"].(model.AddUsersToTeamInput)), true
 
 	case "Mutation.createAPIKey":
 		if e.complexity.Mutation.CreateAPIKey == nil {
@@ -697,7 +683,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputAddTeamMembersInput,
 		ec.unmarshalInputAddTeamOwnersInput,
-		ec.unmarshalInputAddUsersToTeamInput,
 		ec.unmarshalInputAuditLogsQuery,
 		ec.unmarshalInputAuditLogsSort,
 		ec.unmarshalInputCreateServiceAccountInput,
@@ -1029,12 +1014,6 @@ extend type Mutation {
         input: CreateTeamInput!
     ): Team! @auth
 
-    "Add one or more users to a team, then return the team in question."
-    addUsersToTeam(
-        "Input for adding users to a team."
-        input: AddUsersToTeamInput!
-    ): Team! @auth
-
     "Remove one or more users from a team, then return team in question."
     removeUsersFromTeam(
         "Input for removing users from a team."
@@ -1144,15 +1123,6 @@ input CreateTeamInput {
 
     "Team purpose."
     purpose: String
-}
-
-"Input for adding users to a team."
-input AddUsersToTeamInput {
-    "List of user IDs that should be added to the team."
-    userIds: [UUID!]!
-
-    "Team ID that should receive new users."
-    teamId: UUID!
 }
 
 "Input for adding users to a team as members."
@@ -1342,21 +1312,6 @@ func (ec *executionContext) field_Mutation_addTeamOwners_args(ctx context.Contex
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
 		arg0, err = ec.unmarshalNAddTeamOwnersInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAddTeamOwnersInput(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["input"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_addUsersToTeam_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 model.AddUsersToTeamInput
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNAddUsersToTeamInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAddUsersToTeamInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2601,99 +2556,6 @@ func (ec *executionContext) fieldContext_Mutation_createTeam(ctx context.Context
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_createTeam_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_addUsersToTeam(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_addUsersToTeam(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		directive0 := func(rctx context.Context) (interface{}, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().AddUsersToTeam(rctx, fc.Args["input"].(model.AddUsersToTeamInput))
-		}
-		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Auth == nil {
-				return nil, errors.New("directive auth is not implemented")
-			}
-			return ec.directives.Auth(ctx, nil, directive0)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*dbmodels.Team); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/dbmodels.Team`, tmp)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*dbmodels.Team)
-	fc.Result = res
-	return ec.marshalNTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐTeam(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_addUsersToTeam(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Team_id(ctx, field)
-			case "slug":
-				return ec.fieldContext_Team_slug(ctx, field)
-			case "name":
-				return ec.fieldContext_Team_name(ctx, field)
-			case "purpose":
-				return ec.fieldContext_Team_purpose(ctx, field)
-			case "users":
-				return ec.fieldContext_Team_users(ctx, field)
-			case "metadata":
-				return ec.fieldContext_Team_metadata(ctx, field)
-			case "auditLogs":
-				return ec.fieldContext_Team_auditLogs(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Team_createdAt(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_addUsersToTeam_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -7119,37 +6981,6 @@ func (ec *executionContext) unmarshalInputAddTeamOwnersInput(ctx context.Context
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputAddUsersToTeamInput(ctx context.Context, obj interface{}) (model.AddUsersToTeamInput, error) {
-	var it model.AddUsersToTeamInput
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "userIds":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userIds"))
-			it.UserIds, err = ec.unmarshalNUUID2ᚕᚖgithubᚗcomᚋgoogleᚋuuidᚐUUIDᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "teamId":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamId"))
-			it.TeamID, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
 func (ec *executionContext) unmarshalInputAuditLogsQuery(ctx context.Context, obj interface{}) (model.AuditLogsQuery, error) {
 	var it model.AuditLogsQuery
 	asMap := map[string]interface{}{}
@@ -7848,15 +7679,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createTeam(ctx, field)
-			})
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "addUsersToTeam":
-
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_addUsersToTeam(ctx, field)
 			})
 
 			if out.Values[i] == graphql.Null {
@@ -8879,11 +8701,6 @@ func (ec *executionContext) unmarshalNAddTeamMembersInput2githubᚗcomᚋnaisᚋ
 
 func (ec *executionContext) unmarshalNAddTeamOwnersInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAddTeamOwnersInput(ctx context.Context, v interface{}) (model.AddTeamOwnersInput, error) {
 	res, err := ec.unmarshalInputAddTeamOwnersInput(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalNAddUsersToTeamInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAddUsersToTeamInput(ctx context.Context, v interface{}) (model.AddUsersToTeamInput, error) {
-	res, err := ec.unmarshalInputAddUsersToTeamInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 

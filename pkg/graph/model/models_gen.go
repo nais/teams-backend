@@ -33,14 +33,6 @@ type AddTeamOwnersInput struct {
 	UserIds []*uuid.UUID `json:"userIds"`
 }
 
-// Input for adding users to a team.
-type AddUsersToTeamInput struct {
-	// List of user IDs that should be added to the team.
-	UserIds []*uuid.UUID `json:"userIds"`
-	// Team ID that should receive new users.
-	TeamID *uuid.UUID `json:"teamId"`
-}
-
 // Audit log collection.
 type AuditLogs struct {
 	// Object related to pagination of the collection.
