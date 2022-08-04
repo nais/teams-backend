@@ -125,7 +125,7 @@ func (r *mutationResolver) teamWithAssociations(teamID uuid.UUID) (*dbmodels.Tea
 	return team, nil
 }
 
-func (r *mutationResolver) userIsTeamOwner(userId, teamId uuid.UUID) (bool, error) {
+func (r *Resolver) userIsTeamOwner(userId, teamId uuid.UUID) (bool, error) {
 	teamOwnerRole := &dbmodels.Role{}
 	err := r.db.Where("name = ?", roles.RoleTeamOwner).First(teamOwnerRole).Error
 	if err != nil {

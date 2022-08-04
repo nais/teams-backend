@@ -19,35 +19,46 @@ extend type Query {
 }
 
 extend type Mutation {
-    "Create a team, then return the created team."
+    """
+    Create a new team
+
+    The user creating the team will be granted team ownership.
+
+    The new team will be returned on success.
+    """
     createTeam(
         "Input for creation of the new team."
         input: CreateTeamInput!
     ): Team! @auth
 
-    "Remove one or more users from a team, then return team in question."
+    """
+    Remove one or more users from a team
+
+    The updated team will be returned on success.
+    """
     removeUsersFromTeam(
         "Input for removing users from a team."
         input: RemoveUsersFromTeamInput!
     ): Team! @auth
 
     """
-    Manually synchronize a team.
+    Manually synchronize a team
 
-    This action will trigger a full synchronization of the team against the configured third party systems.
+    This action will trigger a full synchronization of the team against the configured third party systems. The action
+    is asynchronous.
 
-    The action is asynchronous.
+    The team will be returned.
     """
     synchronizeTeam(
         "The ID of the team to synchronize."
         teamId: UUID!
-    ): Boolean! @auth
+    ): Team! @auth
 
     """
-    Add users to a team as team members
+    Add users to a team as regular team members
 
     If one or more users are already added to the team they will not be updated. If a user is already an owner of the
-    team the user will not lose ownership.
+    team the user will not lose ownership. Regular team members will get read-only access to the team.
 
     The updated team will be returned on success.
     """
@@ -60,13 +71,25 @@ extend type Mutation {
     Add users to a team as team owners
 
     If one or more users are already added to the team, they will be granted ownership of the team. If one or more users
-    are already owners of the team, they will not be updated.
+    are already owners of the team, they will not be updated. Team owners will get read/write access to the team.
 
     The updated team will be returned on success.
     """
     addTeamOwners(
         "Input for adding users to a team as owners."
         input: AddTeamOwnersInput!
+    ): Team! @auth
+
+    """
+    Set the member role of a user in a team
+
+    The user must already exist in the team for this mutation to succeed.
+
+    The team will be returned on success.
+    """
+    setTeamMemberRole(
+        "Input for setting the team member role."
+        input: SetTeamMemberRoleInput!
     ): Team! @auth
 }
 
@@ -95,6 +118,18 @@ type Team {
 
     "Creation time of the team."
     createdAt: Time!
+
+    "Team members."
+    members: [TeamMember!]!
+}
+
+"Team member."
+type TeamMember {
+    "User instance."
+    user: User!
+
+    "The role that the user has in the team."
+    role: TeamRole!
 }
 
 "Team collection."
@@ -163,6 +198,18 @@ input RemoveUsersFromTeamInput {
     teamId: UUID!
 }
 
+"Input for setting team member role."
+input SetTeamMemberRoleInput {
+    "The ID of the team."
+    teamId: UUID!
+
+    "The ID of the user."
+    userId: UUID!
+
+    "The team role to set."
+    role: TeamRole!
+}
+
 "Fields to sort the collection by."
 enum TeamSortField {
     "Sort by name."
@@ -173,4 +220,13 @@ enum TeamSortField {
 
     "Sort by creation time."
     created_at
+}
+
+"Available team roles."
+enum TeamRole {
+    "Regular member, read only access."
+    MEMBER
+
+    "Team owner, full access to the team."
+    OWNER
 }

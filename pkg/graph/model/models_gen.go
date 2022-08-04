@@ -107,6 +107,16 @@ type RemoveUsersFromTeamInput struct {
 	TeamID *uuid.UUID `json:"teamId"`
 }
 
+// Input for setting team member role.
+type SetTeamMemberRoleInput struct {
+	// The ID of the team.
+	TeamID *uuid.UUID `json:"teamId"`
+	// The ID of the user.
+	UserID *uuid.UUID `json:"userId"`
+	// The team role to set.
+	Role TeamRole `json:"role"`
+}
+
 // System collection.
 type Systems struct {
 	// Object related to pagination of the collection.
@@ -127,6 +137,14 @@ type SystemsSort struct {
 	Field SystemSortField `json:"field"`
 	// Sort direction.
 	Direction SortDirection `json:"direction"`
+}
+
+// Team member.
+type TeamMember struct {
+	// User instance.
+	User *dbmodels.User `json:"user"`
+	// The role that the user has in the team.
+	Role TeamRole `json:"role"`
 }
 
 // Team collection.
@@ -306,6 +324,50 @@ func (e *SystemSortField) UnmarshalGQL(v interface{}) error {
 }
 
 func (e SystemSortField) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+// Available team roles.
+type TeamRole string
+
+const (
+	// Regular member, read only access.
+	TeamRoleMember TeamRole = "MEMBER"
+	// Team owner, full access to the team.
+	TeamRoleOwner TeamRole = "OWNER"
+)
+
+var AllTeamRole = []TeamRole{
+	TeamRoleMember,
+	TeamRoleOwner,
+}
+
+func (e TeamRole) IsValid() bool {
+	switch e {
+	case TeamRoleMember, TeamRoleOwner:
+		return true
+	}
+	return false
+}
+
+func (e TeamRole) String() string {
+	return string(e)
+}
+
+func (e *TeamRole) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = TeamRole(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid TeamRole", str)
+	}
+	return nil
+}
+
+func (e TeamRole) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 

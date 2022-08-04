@@ -154,30 +154,30 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 	return team, nil
 }
 
-func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUID) (bool, error) {
+func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUID) (*dbmodels.Team, error) {
 	user := authz.UserFromContext(ctx)
 	err := roles.RequireAuthorization(user, roles.AuthorizationTeamsUpdate, *teamID)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	team := &dbmodels.Team{}
 	err = r.db.Where("id = ?", teamID).First(team).Error
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	corr := &dbmodels.Correlation{}
 	err = r.db.Create(corr).Error
 	if err != nil {
-		return false, fmt.Errorf("unable to create correlation for audit log")
+		return nil, fmt.Errorf("unable to create correlation for audit log")
 	}
 
 	r.auditLogger.Logf(console_reconciler.OpSyncTeam, *corr, *r.system, user, team, nil, "Manual sync requested")
 
 	team, err = r.teamWithAssociations(*team.ID)
 	if err != nil {
-		return false, fmt.Errorf("unable to fetch team: %w", err)
+		return nil, fmt.Errorf("unable to fetch team: %w", err)
 	}
 
 	r.teamReconciler <- reconcilers.Input{
@@ -185,7 +185,7 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 		Team: *team,
 	}
 
-	return true, nil
+	return team, nil
 }
 
 func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTeamMembersInput) (*dbmodels.Team, error) {
@@ -364,6 +364,87 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 	return team, nil
 }
 
+func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.SetTeamMemberRoleInput) (*dbmodels.Team, error) {
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *input.TeamID)
+	if err != nil {
+		return nil, err
+	}
+
+	team := &dbmodels.Team{}
+	err = r.db.Where("id = ?", input.TeamID).First(team).Error
+	if err != nil {
+		return nil, err
+	}
+
+	user := &dbmodels.User{}
+	err = r.db.Where("id = ?", input.UserID).First(user).Error
+	if err != nil {
+		return nil, err
+	}
+
+	userTeam := &dbmodels.UserTeam{}
+	err = r.db.Where("team_id = ? AND user_id = ?", team.ID, user.ID).First(userTeam).Error
+	if err != nil {
+		return nil, err
+	}
+
+	corr := &dbmodels.Correlation{}
+	err = r.db.Transaction(func(tx *gorm.DB) error {
+		err = tx.Create(corr).Error
+		if err != nil {
+			return fmt.Errorf("unable to create correlation for audit log")
+		}
+
+		teamMemberRole := &dbmodels.Role{}
+		err = tx.Where("name = ?", roles.RoleTeamMember).First(teamMemberRole).Error
+		if err != nil {
+			return err
+		}
+
+		teamOwnerRole := &dbmodels.Role{}
+		err = tx.Where("name = ?", roles.RoleTeamOwner).First(teamOwnerRole).Error
+		if err != nil {
+			return err
+		}
+
+		err = tx.Where("role_id IN (?) AND user_id = ? AND target_id = ?", []*uuid.UUID{teamMemberRole.ID, teamOwnerRole.ID}, user.ID, team.ID).Delete(&dbmodels.UserRole{}).Error
+		if err != nil {
+			return err
+		}
+
+		userRole := &dbmodels.UserRole{
+			UserID:   *user.ID,
+			RoleID:   *teamMemberRole.ID,
+			TargetID: team.ID,
+		}
+
+		if input.Role == model.TeamRoleOwner {
+			userRole.RoleID = *teamOwnerRole.ID
+		}
+
+		err = tx.Create(userRole).Error
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	r.auditLogger.Logf(console_reconciler.OpSetTeamMemberRole, *corr, *r.system, actor, team, user, "Set team member role for '%s' to '%s' in team '%s'", user.Email, input.Role, team.Name)
+
+	team, err = r.teamWithAssociations(*team.ID)
+	if err != nil {
+		return nil, fmt.Errorf("unable to fetch team: %w", err)
+	}
+
+	return team, nil
+}
+
 func (r *queryResolver) Teams(ctx context.Context, pagination *model.Pagination, query *model.TeamsQuery, sort *model.TeamsSort) (*model.Teams, error) {
 	user := authz.UserFromContext(ctx)
 	err := roles.RequireGlobalAuthorization(user, roles.AuthorizationTeamsList)
@@ -451,6 +532,39 @@ func (r *teamResolver) AuditLogs(ctx context.Context, obj *dbmodels.Team) ([]*db
 		return nil, err
 	}
 	return auditLogs, nil
+}
+
+func (r *teamResolver) Members(ctx context.Context, obj *dbmodels.Team) ([]*model.TeamMember, error) {
+	user := authz.UserFromContext(ctx)
+	err := roles.RequireGlobalAuthorization(user, roles.AuthorizationUsersList)
+	if err != nil {
+		return nil, err
+	}
+
+	users := make([]*dbmodels.User, 0)
+	err = r.db.Model(obj).Association("Users").Find(&users)
+	if err != nil {
+		return nil, err
+	}
+
+	members := make([]*model.TeamMember, len(users))
+	for idx, user := range users {
+		role := model.TeamRoleMember
+		isOwner, err := r.userIsTeamOwner(*user.ID, *obj.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		if isOwner {
+			role = model.TeamRoleOwner
+		}
+
+		members[idx] = &model.TeamMember{
+			User: user,
+			Role: role,
+		}
+	}
+	return members, nil
 }
 
 // Team returns generated.TeamResolver implementation.

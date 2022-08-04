@@ -15,12 +15,13 @@ type consoleReconciler struct {
 }
 
 const (
-	Name               = "console"
-	OpAddTeamMember    = "console:team:add-member"
-	OpAddTeamOwner     = "console:team:add-owner"
-	OpRemoveTeamMember = "console:team:add-member"
-	OpCreateTeam       = "console:team:create"
-	OpSyncTeam         = "console:team:sync"
+	Name                = "console"
+	OpAddTeamMember     = "console:team:add-member"
+	OpAddTeamOwner      = "console:team:add-owner"
+	OpCreateTeam        = "console:team:create"
+	OpRemoveTeamMember  = "console:team:add-member"
+	OpSetTeamMemberRole = "console:team:set-member-role"
+	OpSyncTeam          = "console:team:sync"
 )
 
 func New(system dbmodels.System) *consoleReconciler {
