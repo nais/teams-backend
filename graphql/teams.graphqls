@@ -213,13 +213,13 @@ input SetTeamMemberRoleInput {
 "Fields to sort the collection by."
 enum TeamSortField {
     "Sort by name."
-    name
+    NAME
 
     "Sort by slug."
-    slug
+    SLUG
 
     "Sort by creation time."
-    created_at
+    CREATED_AT
 }
 
 "Available team roles."

@@ -110,11 +110,11 @@ input UpdateServiceAccountInput {
 "Fields to sort the collection by."
 enum UserSortField {
     "Sort by name."
-    name
+    NAME
 
     "Sort by email address."
-    email
+    EMAIL
 
     "Sort by creation time."
-    created_at
+    CREATED_AT
 }

@@ -2,6 +2,7 @@ package model
 
 import (
 	"github.com/nais/console/pkg/dbmodels"
+	"strings"
 )
 
 type Query interface {
@@ -12,20 +13,24 @@ type QueryOrder interface {
 	GetOrderString() string
 }
 
+func getOrderString(field string, direction SortDirection) string {
+	return strings.ToLower(field) + " " + string(direction)
+}
+
 func (order UsersSort) GetOrderString() string {
-	return string(order.Field) + " " + string(order.Direction)
+	return getOrderString(string(order.Field), order.Direction)
 }
 
 func (order TeamsSort) GetOrderString() string {
-	return string(order.Field) + " " + string(order.Direction)
+	return getOrderString(string(order.Field), order.Direction)
 }
 
 func (order AuditLogsSort) GetOrderString() string {
-	return string(order.Field) + " " + string(order.Direction)
+	return getOrderString(string(order.Field), order.Direction)
 }
 
 func (order SystemsSort) GetOrderString() string {
-	return string(order.Field) + " " + string(order.Direction)
+	return getOrderString(string(order.Field), order.Direction)
 }
 
 func (in *UsersQuery) GetQuery() interface{} {

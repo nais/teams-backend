@@ -206,7 +206,7 @@ type AuditLogSortField string
 
 const (
 	// Sort by creation time.
-	AuditLogSortFieldCreatedAt AuditLogSortField = "created_at"
+	AuditLogSortFieldCreatedAt AuditLogSortField = "CREATED_AT"
 )
 
 var AllAuditLogSortField = []AuditLogSortField{
@@ -291,7 +291,7 @@ type SystemSortField string
 
 const (
 	// Sort by name.
-	SystemSortFieldName SystemSortField = "name"
+	SystemSortFieldName SystemSortField = "NAME"
 )
 
 var AllSystemSortField = []SystemSortField{
@@ -376,11 +376,11 @@ type TeamSortField string
 
 const (
 	// Sort by name.
-	TeamSortFieldName TeamSortField = "name"
+	TeamSortFieldName TeamSortField = "NAME"
 	// Sort by slug.
-	TeamSortFieldSlug TeamSortField = "slug"
+	TeamSortFieldSlug TeamSortField = "SLUG"
 	// Sort by creation time.
-	TeamSortFieldCreatedAt TeamSortField = "created_at"
+	TeamSortFieldCreatedAt TeamSortField = "CREATED_AT"
 )
 
 var AllTeamSortField = []TeamSortField{
@@ -423,11 +423,11 @@ type UserSortField string
 
 const (
 	// Sort by name.
-	UserSortFieldName UserSortField = "name"
+	UserSortFieldName UserSortField = "NAME"
 	// Sort by email address.
-	UserSortFieldEmail UserSortField = "email"
+	UserSortFieldEmail UserSortField = "EMAIL"
 	// Sort by creation time.
-	UserSortFieldCreatedAt UserSortField = "created_at"
+	UserSortFieldCreatedAt UserSortField = "CREATED_AT"
 )
 
 var AllUserSortField = []UserSortField{

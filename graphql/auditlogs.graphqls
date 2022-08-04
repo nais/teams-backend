@@ -87,5 +87,5 @@ input AuditLogsSort {
 "Fields to sort the collection by."
 enum AuditLogSortField {
     "Sort by creation time."
-    created_at
+    CREATED_AT
 }

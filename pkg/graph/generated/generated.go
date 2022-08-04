@@ -914,7 +914,7 @@ input AuditLogsSort {
 "Fields to sort the collection by."
 enum AuditLogSortField {
     "Sort by creation time."
-    created_at
+    CREATED_AT
 }`, BuiltIn: false},
 	{Name: "../../../graphql/directives.graphqls", Input: `"Require authentication for all requests with this directive."
 directive @auth on FIELD_DEFINITION`, BuiltIn: false},
@@ -1029,7 +1029,7 @@ input SystemsSort {
 "Fields to sort the collection by."
 enum SystemSortField {
     "Sort by name."
-    name
+    NAME
 }`, BuiltIn: false},
 	{Name: "../../../graphql/teams.graphqls", Input: `extend type Query {
     "Get a collection of teams."
@@ -1246,13 +1246,13 @@ input SetTeamMemberRoleInput {
 "Fields to sort the collection by."
 enum TeamSortField {
     "Sort by name."
-    name
+    NAME
 
     "Sort by slug."
-    slug
+    SLUG
 
     "Sort by creation time."
-    created_at
+    CREATED_AT
 }
 
 "Available team roles."
@@ -1375,13 +1375,13 @@ input UpdateServiceAccountInput {
 "Fields to sort the collection by."
 enum UserSortField {
     "Sort by name."
-    name
+    NAME
 
     "Sort by email address."
-    email
+    EMAIL
 
     "Sort by creation time."
-    created_at
+    CREATED_AT
 }`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)

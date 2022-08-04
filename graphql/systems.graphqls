@@ -48,5 +48,5 @@ input SystemsSort {
 "Fields to sort the collection by."
 enum SystemSortField {
     "Sort by name."
-    name
+    NAME
 }
