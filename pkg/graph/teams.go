@@ -20,8 +20,8 @@ import (
 )
 
 func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*dbmodels.Team, error) {
-	user := authz.UserFromContext(ctx)
-	err := roles.RequireGlobalAuthorization(user, roles.AuthorizationTeamsCreate)
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireGlobalAuthorization(actor, roles.AuthorizationTeamsCreate)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		}
 
 		userTeam := &dbmodels.UserTeam{
-			UserID: *user.ID,
+			UserID: *actor.ID,
 			TeamID: *team.ID,
 		}
 		err = r.createTrackedObject(ctx, userTeam)
@@ -60,7 +60,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		}
 
 		userRole := &dbmodels.UserRole{
-			UserID:   *user.ID,
+			UserID:   *actor.ID,
 			RoleID:   *teamOwner.ID,
 			TargetID: team.ID,
 		}
@@ -76,7 +76,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		return nil, err
 	}
 
-	r.auditLogger.Logf(console_reconciler.OpCreateTeam, *corr, *r.system, user, team, nil, "Team created")
+	r.auditLogger.Logf(console_reconciler.OpCreateTeam, *corr, *r.system, actor, team, nil, "Team created")
 
 	team, err = r.teamWithAssociations(*team.ID)
 	if err != nil {
@@ -92,8 +92,8 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 }
 
 func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.RemoveUsersFromTeamInput) (*dbmodels.Team, error) {
-	user := authz.UserFromContext(ctx)
-	err := roles.RequireAuthorization(user, roles.AuthorizationTeamsUpdate, *input.TeamID)
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *input.TeamID)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +139,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 	}
 
 	for _, removedUser := range usersToRemove {
-		r.auditLogger.Logf(console_reconciler.OpRemoveTeamMember, *corr, *r.system, user, team, removedUser, "Removed user '%s' from team '%s'", removedUser.Name, team.Name)
+		r.auditLogger.Logf(console_reconciler.OpRemoveTeamMember, *corr, *r.system, actor, team, removedUser, "Removed user '%s' from team '%s'", removedUser.Name, team.Name)
 	}
 
 	team, err = r.teamWithAssociations(*team.ID)
@@ -155,8 +155,8 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 }
 
 func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUID) (*dbmodels.Team, error) {
-	user := authz.UserFromContext(ctx)
-	err := roles.RequireAuthorization(user, roles.AuthorizationTeamsUpdate, *teamID)
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *teamID)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 		return nil, fmt.Errorf("unable to create correlation for audit log")
 	}
 
-	r.auditLogger.Logf(console_reconciler.OpSyncTeam, *corr, *r.system, user, team, nil, "Manual sync requested")
+	r.auditLogger.Logf(console_reconciler.OpSyncTeam, *corr, *r.system, actor, team, nil, "Manual sync requested")
 
 	team, err = r.teamWithAssociations(*team.ID)
 	if err != nil {
@@ -189,8 +189,8 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 }
 
 func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTeamMembersInput) (*dbmodels.Team, error) {
-	user := authz.UserFromContext(ctx)
-	err := roles.RequireAuthorization(user, roles.AuthorizationTeamsUpdate, *input.TeamID)
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *input.TeamID)
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +257,7 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 	}
 
 	for _, addedUser := range usersToAdd {
-		r.auditLogger.Logf(console_reconciler.OpAddTeamMember, *corr, *r.system, user, team, addedUser, "Added user '%s' to team '%s' as a member", addedUser.Name, team.Name)
+		r.auditLogger.Logf(console_reconciler.OpAddTeamMember, *corr, *r.system, actor, team, addedUser, "Added user '%s' to team '%s' as a member", addedUser.Name, team.Name)
 	}
 
 	team, err = r.teamWithAssociations(*team.ID)
@@ -274,8 +274,8 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 }
 
 func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTeamOwnersInput) (*dbmodels.Team, error) {
-	user := authz.UserFromContext(ctx)
-	err := roles.RequireAuthorization(user, roles.AuthorizationTeamsUpdate, *input.TeamID)
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *input.TeamID)
 	if err != nil {
 		return nil, err
 	}
@@ -348,7 +348,7 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 	}
 
 	for _, addedUser := range usersToAdd {
-		r.auditLogger.Logf(console_reconciler.OpAddTeamOwner, *corr, *r.system, user, team, addedUser, "Added user '%s' to team '%s' as owner", addedUser.Name, team.Name)
+		r.auditLogger.Logf(console_reconciler.OpAddTeamOwner, *corr, *r.system, actor, team, addedUser, "Added user '%s' to team '%s' as owner", addedUser.Name, team.Name)
 	}
 
 	team, err = r.teamWithAssociations(*team.ID)
@@ -446,8 +446,8 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 }
 
 func (r *queryResolver) Teams(ctx context.Context, pagination *model.Pagination, query *model.TeamsQuery, sort *model.TeamsSort) (*model.Teams, error) {
-	user := authz.UserFromContext(ctx)
-	err := roles.RequireGlobalAuthorization(user, roles.AuthorizationTeamsList)
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireGlobalAuthorization(actor, roles.AuthorizationTeamsList)
 	if err != nil {
 		return nil, err
 	}
@@ -467,8 +467,8 @@ func (r *queryResolver) Teams(ctx context.Context, pagination *model.Pagination,
 }
 
 func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team, error) {
-	user := authz.UserFromContext(ctx)
-	err := roles.RequireAuthorization(user, roles.AuthorizationTeamsRead, *id)
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireAuthorization(actor, roles.AuthorizationTeamsRead, *id)
 	if err != nil {
 		return nil, err
 	}
@@ -483,8 +483,8 @@ func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team
 }
 
 func (r *teamResolver) Users(ctx context.Context, obj *dbmodels.Team) ([]*dbmodels.User, error) {
-	user := authz.UserFromContext(ctx)
-	err := roles.RequireGlobalAuthorization(user, roles.AuthorizationUsersList)
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
 	if err != nil {
 		return nil, err
 	}
@@ -498,8 +498,8 @@ func (r *teamResolver) Users(ctx context.Context, obj *dbmodels.Team) ([]*dbmode
 }
 
 func (r *teamResolver) Metadata(ctx context.Context, obj *dbmodels.Team) (map[string]interface{}, error) {
-	user := authz.UserFromContext(ctx)
-	err := roles.RequireAuthorization(user, roles.AuthorizationTeamsRead, *obj.ID)
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireAuthorization(actor, roles.AuthorizationTeamsRead, *obj.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -520,8 +520,8 @@ func (r *teamResolver) Metadata(ctx context.Context, obj *dbmodels.Team) (map[st
 }
 
 func (r *teamResolver) AuditLogs(ctx context.Context, obj *dbmodels.Team) ([]*dbmodels.AuditLog, error) {
-	user := authz.UserFromContext(ctx)
-	err := roles.RequireAuthorization(user, roles.AuthorizationAuditLogsRead, *obj.ID)
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireAuthorization(actor, roles.AuthorizationAuditLogsRead, *obj.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -535,8 +535,8 @@ func (r *teamResolver) AuditLogs(ctx context.Context, obj *dbmodels.Team) ([]*db
 }
 
 func (r *teamResolver) Members(ctx context.Context, obj *dbmodels.Team) ([]*model.TeamMember, error) {
-	user := authz.UserFromContext(ctx)
-	err := roles.RequireGlobalAuthorization(user, roles.AuthorizationUsersList)
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
 	if err != nil {
 		return nil, err
 	}
