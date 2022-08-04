@@ -107,9 +107,6 @@ type Team {
     "Purpose of the team."
     purpose: String
 
-    "List of users in the team."
-    users: [User!]!
-
     "Metadata attached to the team as a key => value map."
     metadata: Map
 

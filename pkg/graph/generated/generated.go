@@ -125,7 +125,6 @@ type ComplexityRoot struct {
 		Name      func(childComplexity int) int
 		Purpose   func(childComplexity int) int
 		Slug      func(childComplexity int) int
-		Users     func(childComplexity int) int
 	}
 
 	TeamMember struct {
@@ -184,7 +183,6 @@ type QueryResolver interface {
 	Me(ctx context.Context) (*dbmodels.User, error)
 }
 type TeamResolver interface {
-	Users(ctx context.Context, obj *dbmodels.Team) ([]*dbmodels.User, error)
 	Metadata(ctx context.Context, obj *dbmodels.Team) (map[string]interface{}, error)
 	AuditLogs(ctx context.Context, obj *dbmodels.Team) ([]*dbmodels.AuditLog, error)
 
@@ -617,13 +615,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Team.Slug(childComplexity), true
-
-	case "Team.users":
-		if e.complexity.Team.Users == nil {
-			break
-		}
-
-		return e.complexity.Team.Users(childComplexity), true
 
 	case "TeamMember.role":
 		if e.complexity.TeamMember.Role == nil {
@@ -1139,9 +1130,6 @@ type Team {
 
     "Purpose of the team."
     purpose: String
-
-    "List of users in the team."
-    users: [User!]!
 
     "Metadata attached to the team as a key => value map."
     metadata: Map
@@ -2123,8 +2111,6 @@ func (ec *executionContext) fieldContext_AuditLog_targetTeam(ctx context.Context
 				return ec.fieldContext_Team_name(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "users":
-				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
@@ -2653,8 +2639,6 @@ func (ec *executionContext) fieldContext_Mutation_createTeam(ctx context.Context
 				return ec.fieldContext_Team_name(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "users":
-				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
@@ -2748,8 +2732,6 @@ func (ec *executionContext) fieldContext_Mutation_removeUsersFromTeam(ctx contex
 				return ec.fieldContext_Team_name(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "users":
-				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
@@ -2843,8 +2825,6 @@ func (ec *executionContext) fieldContext_Mutation_synchronizeTeam(ctx context.Co
 				return ec.fieldContext_Team_name(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "users":
-				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
@@ -2938,8 +2918,6 @@ func (ec *executionContext) fieldContext_Mutation_addTeamMembers(ctx context.Con
 				return ec.fieldContext_Team_name(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "users":
-				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
@@ -3033,8 +3011,6 @@ func (ec *executionContext) fieldContext_Mutation_addTeamOwners(ctx context.Cont
 				return ec.fieldContext_Team_name(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "users":
-				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
@@ -3128,8 +3104,6 @@ func (ec *executionContext) fieldContext_Mutation_setTeamMemberRole(ctx context.
 				return ec.fieldContext_Team_name(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "users":
-				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
@@ -3855,8 +3829,6 @@ func (ec *executionContext) fieldContext_Query_team(ctx context.Context, field g
 				return ec.fieldContext_Team_name(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "users":
-				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
@@ -4627,66 +4599,6 @@ func (ec *executionContext) fieldContext_Team_purpose(ctx context.Context, field
 	return fc, nil
 }
 
-func (ec *executionContext) _Team_users(ctx context.Context, field graphql.CollectedField, obj *dbmodels.Team) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Team_users(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Team().Users(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*dbmodels.User)
-	fc.Result = res
-	return ec.marshalNUser2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐUserᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Team_users(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Team",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_User_id(ctx, field)
-			case "email":
-				return ec.fieldContext_User_email(ctx, field)
-			case "name":
-				return ec.fieldContext_User_name(ctx, field)
-			case "teams":
-				return ec.fieldContext_User_teams(ctx, field)
-			case "hasAPIKey":
-				return ec.fieldContext_User_hasAPIKey(ctx, field)
-			case "isServiceAccount":
-				return ec.fieldContext_User_isServiceAccount(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_User_createdAt(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Team_metadata(ctx context.Context, field graphql.CollectedField, obj *dbmodels.Team) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Team_metadata(ctx, field)
 	if err != nil {
@@ -5089,8 +5001,6 @@ func (ec *executionContext) fieldContext_Teams_nodes(ctx context.Context, field 
 				return ec.fieldContext_Team_name(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "users":
-				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
@@ -5285,8 +5195,6 @@ func (ec *executionContext) fieldContext_User_teams(ctx context.Context, field g
 				return ec.fieldContext_Team_name(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "users":
-				return ec.fieldContext_Team_users(ctx, field)
 			case "metadata":
 				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
@@ -8556,26 +8464,6 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 
 			out.Values[i] = ec._Team_purpose(ctx, field, obj)
 
-		case "users":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Team_users(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
 		case "metadata":
 			field := field
 

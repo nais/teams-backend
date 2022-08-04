@@ -482,21 +482,6 @@ func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team
 	return team, nil
 }
 
-func (r *teamResolver) Users(ctx context.Context, obj *dbmodels.Team) ([]*dbmodels.User, error) {
-	actor := authz.UserFromContext(ctx)
-	err := roles.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
-	if err != nil {
-		return nil, err
-	}
-
-	users := make([]*dbmodels.User, 0)
-	err = r.db.Model(obj).Association("Users").Find(&users)
-	if err != nil {
-		return nil, err
-	}
-	return users, nil
-}
-
 func (r *teamResolver) Metadata(ctx context.Context, obj *dbmodels.Team) (map[string]interface{}, error) {
 	actor := authz.UserFromContext(ctx)
 	err := roles.RequireAuthorization(actor, roles.AuthorizationTeamsRead, *obj.ID)
