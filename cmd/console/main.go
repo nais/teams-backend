@@ -3,14 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
-	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/google/uuid"
+	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
 
 	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
@@ -71,6 +72,11 @@ func run() error {
 	}
 
 	err = fixtures.InsertInitialDataset(db, cfg.TenantDomain, cfg.AdminApiKey)
+	if err != nil {
+		return err
+	}
+
+	err = fixtures.SetupStaticServiceAccounts(db, cfg.StaticServiceAccounts, cfg.TenantDomain)
 	if err != nil {
 		return err
 	}
@@ -278,7 +284,6 @@ func setupLogging(format, level string) error {
 	}
 
 	lvl, err := log.ParseLevel(level)
-
 	if err != nil {
 		return err
 	}

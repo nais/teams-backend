@@ -46,21 +46,22 @@ type OAuth struct {
 }
 
 type Config struct {
-	Azure         Azure
-	GitHub        GitHub
-	Google        Google
-	GCP           GCP
-	UserSync      UserSync
-	NaisNamespace NaisNamespace
-	OAuth         OAuth
-	TenantDomain  string `envconfig:"CONSOLE_TENANT_DOMAIN"`
-	AutoLoginUser string `envconfig:"CONSOLE_AUTO_LOGIN_USER"`
-	FrontendURL   string `envconfig:"CONSOLE_FRONTEND_URL"`
-	DatabaseURL   string `envconfig:"CONSOLE_DATABASE_URL"`
-	ListenAddress string `envconfig:"CONSOLE_LISTEN_ADDRESS"`
-	LogFormat     string `envconfig:"CONSOLE_LOG_FORMAT"`
-	LogLevel      string `envconfig:"CONSOLE_LOG_LEVEL"`
-	AdminApiKey   string `envconfig:"CONSOLE_ADMIN_API_KEY"`
+	Azure                 Azure
+	GitHub                GitHub
+	Google                Google
+	GCP                   GCP
+	UserSync              UserSync
+	NaisNamespace         NaisNamespace
+	OAuth                 OAuth
+	TenantDomain          string `envconfig:"CONSOLE_TENANT_DOMAIN"`
+	AutoLoginUser         string `envconfig:"CONSOLE_AUTO_LOGIN_USER"`
+	FrontendURL           string `envconfig:"CONSOLE_FRONTEND_URL"`
+	DatabaseURL           string `envconfig:"CONSOLE_DATABASE_URL"`
+	ListenAddress         string `envconfig:"CONSOLE_LISTEN_ADDRESS"`
+	LogFormat             string `envconfig:"CONSOLE_LOG_FORMAT"`
+	LogLevel              string `envconfig:"CONSOLE_LOG_LEVEL"`
+	AdminApiKey           string `envconfig:"CONSOLE_ADMIN_API_KEY"`
+	StaticServiceAccounts string `envconfig:"CONSOLE_STATIC_SERVICE_ACCOUNTS"`
 }
 
 func Defaults() *Config {
