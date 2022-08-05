@@ -38,8 +38,34 @@ The domain for the tenant. Defaults to `example.com`.
 
 ### `CONSOLE_ADMIN_API_KEY`
 
-Can be used to create an API key for the initial admin user. Used for local development when user sync is not enabled, and will only be used for the initial dataset. 
+Can be used to create an API key for the initial admin user. Used for local development when user sync is not enabled, and will only be used for the initial dataset.
 
+### `CONSOLE_STATIC_SERVICE_ACCOUNTS`
+
+Can be used to create a set of service accounts with roles and API keys. The value must be JSON-encoded. Example:
+
+```json
+[
+  {
+    "name": "nais-service-account-1",
+    "apiKey": "key1",
+    "roles": ["Team viewer", "User viewer"]
+  },
+  {
+    "name": "nais-service-account-2",
+    "apiKey": "key2",
+    "roles": ["Team creator"]
+  }
+]
+```
+The names **must** begin with `nais-`. This is a reserved prefix, and service accounts with this prefix can not be created
+using the GraphQL API.
+
+The roles specified must be valid role names. See [pkg/roles/roles.go](pkg/roles/roles.go) for all role names.
+
+The service accounts will be re-created every time the application starts. Use the API to delete one or more of 
+the service accounts, it is not sufficient to simply remove the service account from the JSON structure in the environment 
+variable.
 ## Reconcilers
 
 Console uses reconcilers to sync team information to external systems, for instance GitHub or Azure AD. All reconcilers
