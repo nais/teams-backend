@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	AdminUserName        = "nais admin"
-	AdminUserEmailPrefix = "nais" // matches the default nais admin user account in the tenant GCP org
+	AdminUserName        = "Console User"
+	AdminUserEmailPrefix = "console" // matches the default nais admin user account in the tenant GCP org
 )
 
 // InsertInitialDataset Insert an initial dataset into the database. This will only be executed if there are currently
