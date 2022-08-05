@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/authz"
@@ -32,6 +33,10 @@ func (r *mutationResolver) CreateServiceAccount(ctx context.Context, input model
 	serviceAccount := &dbmodels.User{
 		Name:  input.Name.String(),
 		Email: console.ServiceAccountEmail(*input.Name, r.tenantDomain),
+	}
+
+	if strings.HasPrefix(serviceAccount.Name, fixtures.NaisServiceAccountPrefix) {
+		return nil, fmt.Errorf("'%s' is a reserved prefix", fixtures.NaisServiceAccountPrefix)
 	}
 
 	err = r.db.Transaction(func(tx *gorm.DB) error {

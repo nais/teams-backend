@@ -16,7 +16,7 @@ type ServiceAccount struct {
 	APIKey string   `json:"apiKey"`
 }
 
-const ServiceAccountPrefix = "nais-"
+const NaisServiceAccountPrefix = "nais-"
 
 // SetupStaticServiceAccounts Create a set of service accounts with roles and API keys
 func SetupStaticServiceAccounts(db *gorm.DB, serviceAccountsRaw, tenantDomain string) error {
@@ -28,8 +28,8 @@ func SetupStaticServiceAccounts(db *gorm.DB, serviceAccountsRaw, tenantDomain st
 		}
 
 		for _, serviceAccount := range serviceAccounts {
-			if !strings.HasPrefix(serviceAccount.Name, ServiceAccountPrefix) {
-				return fmt.Errorf("service account is missing required '%s' prefix: '%s'", ServiceAccountPrefix, serviceAccount.Name)
+			if !strings.HasPrefix(serviceAccount.Name, NaisServiceAccountPrefix) {
+				return fmt.Errorf("service account is missing required '%s' prefix: '%s'", NaisServiceAccountPrefix, serviceAccount.Name)
 			}
 
 			if len(serviceAccount.Roles) == 0 {
