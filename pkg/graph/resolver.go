@@ -46,7 +46,7 @@ type Model interface {
 	GetModel() *dbmodels.Model
 }
 
-func (r *Resolver) createTrackedObject(ctx context.Context, newObject Model) error {
+func (r *Resolver) createTrackedObject(ctx context.Context, db *gorm.DB, newObject Model) error {
 	user := authz.UserFromContext(ctx)
 	if user == nil {
 		return fmt.Errorf("context has no user")
@@ -54,11 +54,11 @@ func (r *Resolver) createTrackedObject(ctx context.Context, newObject Model) err
 	model := newObject.GetModel()
 	model.CreatedBy = user
 	model.UpdatedBy = user
-	return r.db.Create(newObject).Error
+	return db.Create(newObject).Error
 }
 
-func (r *Resolver) createTrackedObjectIgnoringDuplicates(ctx context.Context, obj Model) error {
-	err := r.createTrackedObject(ctx, obj)
+func (r *Resolver) createTrackedObjectIgnoringDuplicates(ctx context.Context, db *gorm.DB, obj Model) error {
+	err := r.createTrackedObject(ctx, db, obj)
 
 	if err == nil {
 		return nil

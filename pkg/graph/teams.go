@@ -39,7 +39,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 			return fmt.Errorf("unable to create correlation for audit log")
 		}
 
-		err = r.createTrackedObject(ctx, team)
+		err = r.createTrackedObject(ctx, tx, team)
 		if err != nil {
 			return err
 		}
@@ -48,7 +48,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 			UserID: *actor.ID,
 			TeamID: *team.ID,
 		}
-		err = r.createTrackedObject(ctx, userTeam)
+		err = r.createTrackedObject(ctx, tx, userTeam)
 		if err != nil {
 			return err
 		}
@@ -241,7 +241,7 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 				}
 			}
 
-			err = r.createTrackedObjectIgnoringDuplicates(ctx, &dbmodels.UserTeam{
+			err = r.createTrackedObjectIgnoringDuplicates(ctx, tx, &dbmodels.UserTeam{
 				UserID: *user.ID,
 				TeamID: *team.ID,
 			})
@@ -332,7 +332,7 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 				return err
 			}
 
-			err = r.createTrackedObjectIgnoringDuplicates(ctx, &dbmodels.UserTeam{
+			err = r.createTrackedObjectIgnoringDuplicates(ctx, tx, &dbmodels.UserTeam{
 				UserID: *user.ID,
 				TeamID: *team.ID,
 			})
