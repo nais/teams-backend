@@ -10,6 +10,7 @@ import (
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/roles"
 	"gorm.io/gorm"
+	"strings"
 )
 
 const (
@@ -79,4 +80,13 @@ func UserIsTeamOwner(db *gorm.DB, userId, teamId uuid.UUID) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func GetUserByEmail(db *gorm.DB, email string) *dbmodels.User {
+	user := &dbmodels.User{}
+	err := db.Where("email = ?", strings.ToLower(email)).First(user).Error
+	if err != nil {
+		return nil
+	}
+	return user
 }

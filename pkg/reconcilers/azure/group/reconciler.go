@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	helpers "github.com/nais/console/pkg/console"
+	"github.com/nais/console/pkg/db"
 	log "github.com/sirupsen/logrus"
 	"strings"
 
@@ -119,7 +120,7 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 		}
 
 		if _, exists := consoleUserMap[remoteEmail]; !exists {
-			consoleUserMap[remoteEmail] = dbmodels.GetUserByEmail(r.db, remoteEmail)
+			consoleUserMap[remoteEmail] = db.GetUserByEmail(r.db, remoteEmail)
 		}
 
 		r.auditLogger.Logf(OpDeleteMember, corr, r.system, nil, &team, consoleUserMap[remoteEmail], "removed member '%s' from Azure group '%s'", remoteEmail, grp.MailNickname)

@@ -6,6 +6,7 @@ import (
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	helpers "github.com/nais/console/pkg/console"
+	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/google_jwt"
 	"github.com/nais/console/pkg/reconcilers"
@@ -139,7 +140,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(membersService *admin_dire
 		}
 
 		if _, exists := consoleUserMap[remoteMemberEmail]; !exists {
-			consoleUserMap[remoteMemberEmail] = dbmodels.GetUserByEmail(r.db, remoteMemberEmail)
+			consoleUserMap[remoteMemberEmail] = db.GetUserByEmail(r.db, remoteMemberEmail)
 		}
 
 		r.auditLogger.Logf(OpDeleteMember, corr, r.system, nil, &team, consoleUserMap[remoteMemberEmail], "deleted member '%s' from Google Directory group '%s'", member.Email, grp.Email)

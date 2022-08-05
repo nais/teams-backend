@@ -1,6 +1,7 @@
-package dbmodels
+package db
 
 import (
+	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -8,8 +9,8 @@ import (
 
 func TestGetUserByEmail(t *testing.T) {
 	db := test.GetTestDB()
-	db.AutoMigrate(User{})
-	user := &User{
+	db.AutoMigrate(&dbmodels.User{})
+	user := &dbmodels.User{
 		Name:  "User",
 		Email: "user@example.com",
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	helpers "github.com/nais/console/pkg/console"
+	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/shurcooL/githubv4"
@@ -155,7 +156,7 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 		}
 
 		if email != nil {
-			targetUser = dbmodels.GetUserByEmail(r.db, *email)
+			targetUser = db.GetUserByEmail(r.db, *email)
 		}
 
 		r.auditLogger.Logf(OpDeleteMember, corr, r.system, nil, &team, targetUser, "deleted member '%s' from GitHub team '%s'", username, *githubTeam.Slug)
