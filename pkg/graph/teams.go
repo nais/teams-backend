@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/authz"
+	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
@@ -39,7 +40,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 			return fmt.Errorf("unable to create correlation for audit log")
 		}
 
-		err = r.createTrackedObject(ctx, tx, team)
+		err = db.CreateTrackedObject(ctx, tx, team)
 		if err != nil {
 			return err
 		}
@@ -48,7 +49,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 			UserID: *actor.ID,
 			TeamID: *team.ID,
 		}
-		err = r.createTrackedObject(ctx, tx, userTeam)
+		err = db.CreateTrackedObject(ctx, tx, userTeam)
 		if err != nil {
 			return err
 		}
@@ -225,7 +226,7 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 		}
 
 		for _, user := range usersToAdd {
-			isOwner, err := r.userIsTeamOwner(*user.ID, *team.ID)
+			isOwner, err := db.UserIsTeamOwner(tx, *user.ID, *team.ID)
 			if err != nil {
 				return err
 			}
@@ -241,7 +242,7 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 				}
 			}
 
-			err = r.createTrackedObjectIgnoringDuplicates(ctx, tx, &dbmodels.UserTeam{
+			err = db.CreateTrackedObjectIgnoringDuplicates(ctx, tx, &dbmodels.UserTeam{
 				UserID: *user.ID,
 				TeamID: *team.ID,
 			})
@@ -332,7 +333,7 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 				return err
 			}
 
-			err = r.createTrackedObjectIgnoringDuplicates(ctx, tx, &dbmodels.UserTeam{
+			err = db.CreateTrackedObjectIgnoringDuplicates(ctx, tx, &dbmodels.UserTeam{
 				UserID: *user.ID,
 				TeamID: *team.ID,
 			})
@@ -535,7 +536,7 @@ func (r *teamResolver) Members(ctx context.Context, obj *dbmodels.Team) ([]*mode
 	members := make([]*model.TeamMember, len(users))
 	for idx, user := range users {
 		role := model.TeamRoleMember
-		isOwner, err := r.userIsTeamOwner(*user.ID, *obj.ID)
+		isOwner, err := db.UserIsTeamOwner(r.db, *user.ID, *obj.ID)
 		if err != nil {
 			return nil, err
 		}

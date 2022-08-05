@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/console"
+	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/fixtures"
 	"github.com/nais/console/pkg/graph/generated"
@@ -39,7 +40,7 @@ func (r *mutationResolver) CreateServiceAccount(ctx context.Context, input model
 			return fmt.Errorf("unable to create correlation for audit log")
 		}
 
-		err = r.createTrackedObject(ctx, tx, serviceAccount)
+		err = db.CreateTrackedObject(ctx, tx, serviceAccount)
 		if err != nil {
 			return err
 		}
@@ -70,7 +71,7 @@ func (r *mutationResolver) UpdateServiceAccount(ctx context.Context, serviceAcco
 	serviceAccount.Name = string(*input.Name)
 	serviceAccount.Email = console.ServiceAccountEmail(*input.Name, r.tenantDomain)
 
-	err = r.updateTrackedObject(ctx, serviceAccount)
+	err = db.UpdateTrackedObject(ctx, r.db, serviceAccount)
 	if err != nil {
 		return nil, err
 	}
