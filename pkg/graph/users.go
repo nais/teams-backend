@@ -15,19 +15,45 @@ import (
 	"github.com/nais/console/pkg/fixtures"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
+	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
+	"github.com/nais/console/pkg/roles"
 	"gorm.io/gorm"
 )
 
 func (r *mutationResolver) CreateServiceAccount(ctx context.Context, input model.CreateServiceAccountInput) (*dbmodels.User, error) {
-	sa := &dbmodels.User{
-		Name:  input.Name.String(),
-		Email: console.ServiceAccountEmail(*input.Name, r.tenantDomain),
-	}
-	err := r.createTrackedObject(ctx, sa)
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireGlobalAuthorization(actor, roles.AuthorizationServiceAccountsCreate)
 	if err != nil {
 		return nil, err
 	}
-	return sa, nil
+
+	corr := &dbmodels.Correlation{}
+	serviceAccount := &dbmodels.User{
+		Name:  input.Name.String(),
+		Email: console.ServiceAccountEmail(*input.Name, r.tenantDomain),
+	}
+
+	err = r.db.Transaction(func(tx *gorm.DB) error {
+		err = tx.Create(corr).Error
+		if err != nil {
+			return fmt.Errorf("unable to create correlation for audit log")
+		}
+
+		err = r.createTrackedObject(ctx, tx, serviceAccount)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	r.auditLogger.Logf(console_reconciler.OpCreateServiceAccount, *corr, *r.system, actor, nil, serviceAccount, "Service account created")
+
+	return serviceAccount, nil
 }
 
 func (r *mutationResolver) UpdateServiceAccount(ctx context.Context, serviceAccountID *uuid.UUID, input model.UpdateServiceAccountInput) (*dbmodels.User, error) {
