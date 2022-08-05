@@ -1,27 +1,17 @@
 package graph
 
 import (
-	"context"
-	"errors"
-	"fmt"
 	"github.com/google/uuid"
-	"github.com/jackc/pgconn"
 	"github.com/nais/console/pkg/auditlogger"
-	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/reconcilers"
-	"github.com/nais/console/pkg/roles"
 	"gorm.io/gorm"
 )
 
 // This file will not be regenerated automatically.
 //
 // It serves as dependency injection for your app, add any dependencies you require here.
-
-const (
-	DuplicateErrorCode = "23505"
-)
 
 type Resolver struct {
 	db             *gorm.DB
@@ -39,50 +29,6 @@ func NewResolver(db *gorm.DB, tenantDomain string, system *dbmodels.System, team
 		teamReconciler: teamReconciler,
 		auditLogger:    auditLogger,
 	}
-}
-
-// Model Enables abstracted access to CreatedBy and UpdatedBy for generic database models.
-type Model interface {
-	GetModel() *dbmodels.Model
-}
-
-func (r *Resolver) createTrackedObject(ctx context.Context, db *gorm.DB, newObject Model) error {
-	user := authz.UserFromContext(ctx)
-	if user == nil {
-		return fmt.Errorf("context has no user")
-	}
-	model := newObject.GetModel()
-	model.CreatedBy = user
-	model.UpdatedBy = user
-	return db.Create(newObject).Error
-}
-
-func (r *Resolver) createTrackedObjectIgnoringDuplicates(ctx context.Context, db *gorm.DB, obj Model) error {
-	err := r.createTrackedObject(ctx, db, obj)
-
-	if err == nil {
-		return nil
-	}
-
-	switch t := err.(type) {
-	case *pgconn.PgError:
-		if t.Code == DuplicateErrorCode {
-			return nil
-		}
-	}
-
-	return err
-}
-
-func (r *Resolver) updateTrackedObject(ctx context.Context, updatedObject Model) error {
-	user := authz.UserFromContext(ctx)
-	if user == nil {
-		return fmt.Errorf("context has no user")
-	}
-
-	model := updatedObject.GetModel()
-	model.UpdatedBy = user
-	return r.db.Updates(updatedObject).Error
 }
 
 // Run a query to get data from the database. Populates `collection` and returns pagination metadata.
@@ -123,24 +69,4 @@ func (r *mutationResolver) teamWithAssociations(teamID uuid.UUID) (*dbmodels.Tea
 	}
 
 	return team, nil
-}
-
-func (r *Resolver) userIsTeamOwner(userId, teamId uuid.UUID) (bool, error) {
-	teamOwnerRole := &dbmodels.Role{}
-	err := r.db.Where("name = ?", roles.RoleTeamOwner).First(teamOwnerRole).Error
-	if err != nil {
-		return false, err
-	}
-
-	roleBinding := &dbmodels.UserRole{}
-	err = r.db.Where("role_id = ? AND user_id = ? AND target_id = ?", teamOwnerRole.ID, userId, teamId).First(roleBinding).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false, nil
-		}
-
-		return false, err
-	}
-
-	return true, nil
 }
