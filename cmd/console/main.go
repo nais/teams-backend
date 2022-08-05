@@ -76,9 +76,11 @@ func run() error {
 		return err
 	}
 
-	err = fixtures.SetupStaticServiceAccounts(db, cfg.StaticServiceAccounts, cfg.TenantDomain)
-	if err != nil {
-		return err
+	if cfg.StaticServiceAccounts != "" {
+		err = fixtures.SetupStaticServiceAccounts(db, cfg.StaticServiceAccounts, cfg.TenantDomain)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Control channels for goroutine communication
