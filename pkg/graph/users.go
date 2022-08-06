@@ -29,7 +29,7 @@ func (r *mutationResolver) CreateServiceAccount(ctx context.Context, input model
 		return nil, err
 	}
 
-	name := input.Name.String()
+	name := string(*input.Name)
 	if strings.HasPrefix(name, fixtures.NaisServiceAccountPrefix) {
 		return nil, fmt.Errorf("'%s' is a reserved prefix", fixtures.NaisServiceAccountPrefix)
 	}
@@ -80,13 +80,30 @@ func (r *mutationResolver) UpdateServiceAccount(ctx context.Context, serviceAcco
 		return nil, fmt.Errorf("unable to update admin account")
 	}
 
-	serviceAccount.Name = string(*input.Name)
+	name := string(*input.Name)
+	if strings.HasPrefix(name, fixtures.NaisServiceAccountPrefix) {
+		return nil, fmt.Errorf("'%s' is a reserved prefix", fixtures.NaisServiceAccountPrefix)
+	}
+
+	serviceAccount.Name = name
 	serviceAccount.Email = console.ServiceAccountEmail(*input.Name, r.tenantDomain)
 
-	err = db.UpdateTrackedObject(ctx, r.db, serviceAccount)
-	if err != nil {
-		return nil, err
-	}
+	corr := &dbmodels.Correlation{}
+	err = r.db.Transaction(func(tx *gorm.DB) error {
+		err = tx.Create(corr).Error
+		if err != nil {
+			return fmt.Errorf("unable to create correlation for audit log")
+		}
+
+		err = db.UpdateTrackedObject(ctx, tx, serviceAccount)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	r.auditLogger.Logf(console_reconciler.OpUpdateServiceAccount, *corr, *r.system, actor, nil, serviceAccount, "Service account updated")
 
 	return serviceAccount, nil
 }
