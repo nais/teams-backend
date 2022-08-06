@@ -98,6 +98,7 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 		defaultRoleNames := []roles.Role{
 			roles.RoleTeamCreator,
 			roles.RoleTeamViewer,
+			roles.RoleUserViewer,
 			roles.RoleServiceAccountCreator,
 		}
 		defaultRoles := make([]dbmodels.Role, 0)
