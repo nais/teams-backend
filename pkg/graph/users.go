@@ -103,14 +103,24 @@ func (r *mutationResolver) UpdateServiceAccount(ctx context.Context, serviceAcco
 		return nil
 	})
 
+	if err != nil {
+		return nil, err
+	}
+
 	r.auditLogger.Logf(console_reconciler.OpUpdateServiceAccount, *corr, *r.system, actor, nil, serviceAccount, "Service account updated")
 
 	return serviceAccount, nil
 }
 
 func (r *mutationResolver) DeleteServiceAccount(ctx context.Context, serviceAccountID *uuid.UUID) (bool, error) {
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireAuthorization(actor, roles.AuthorizationServiceAccountsDelete, *serviceAccountID)
+	if err != nil {
+		return false, err
+	}
+
 	serviceAccount := &dbmodels.User{}
-	err := r.db.Where("id = ?", serviceAccountID).First(serviceAccount).Error
+	err = r.db.Where("id = ?", serviceAccountID).First(serviceAccount).Error
 	if err != nil {
 		return false, err
 	}
@@ -119,10 +129,30 @@ func (r *mutationResolver) DeleteServiceAccount(ctx context.Context, serviceAcco
 		return false, fmt.Errorf("unable to delete admin account")
 	}
 
-	err = r.db.Delete(serviceAccount).Error
+	if strings.HasPrefix(serviceAccount.Name, fixtures.NaisServiceAccountPrefix) {
+		return false, fmt.Errorf("unable to delete static service account")
+	}
+
+	corr := &dbmodels.Correlation{}
+	err = r.db.Transaction(func(tx *gorm.DB) error {
+		err = tx.Create(corr).Error
+		if err != nil {
+			return fmt.Errorf("unable to create correlation for audit log")
+		}
+
+		err = tx.Delete(serviceAccount).Error
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
 	if err != nil {
 		return false, err
 	}
+
+	r.auditLogger.Logf(console_reconciler.OpDeleteServiceAccount, *corr, *r.system, actor, nil, serviceAccount, "Service account deleted")
 
 	return true, nil
 }

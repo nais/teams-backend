@@ -20,6 +20,7 @@ const (
 	OpAddTeamOwner         = "console:team:add-owner"
 	OpCreateServiceAccount = "console:service-account:create"
 	OpCreateTeam           = "console:team:create"
+	OpDeleteServiceAccount = "console:service-account:delete"
 	OpRemoveTeamMember     = "console:team:add-member"
 	OpSetTeamMemberRole    = "console:team:set-member-role"
 	OpSyncTeam             = "console:team:sync"
