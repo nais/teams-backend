@@ -73,7 +73,8 @@ func CreateRolesAndAuthorizations(tx *gorm.DB) error {
 	auditLogsRead := &dbmodels.Authorization{Name: string(roles.AuthorizationAuditLogsRead)}
 	serviceAccountsCreate := &dbmodels.Authorization{Name: string(roles.AuthorizationServiceAccountsCreate)}
 	serviceAccountsDelete := &dbmodels.Authorization{Name: string(roles.AuthorizationServiceAccountsDelete)}
-	serviceAccountList := &dbmodels.Authorization{Name: string(roles.AuthorizationServiceAccountList)}
+	serviceAccountsList := &dbmodels.Authorization{Name: string(roles.AuthorizationServiceAccountsList)}
+	serviceAccountsRead := &dbmodels.Authorization{Name: string(roles.AuthorizationServiceAccountsRead)}
 	serviceAccountsUpdate := &dbmodels.Authorization{Name: string(roles.AuthorizationServiceAccountsUpdate)}
 	systemStatesDelete := &dbmodels.Authorization{Name: string(roles.AuthorizationSystemStatesDelete)}
 	systemStatesRead := &dbmodels.Authorization{Name: string(roles.AuthorizationSystemStatesRead)}
@@ -88,7 +89,8 @@ func CreateRolesAndAuthorizations(tx *gorm.DB) error {
 		auditLogsRead,
 		serviceAccountsCreate,
 		serviceAccountsDelete,
-		serviceAccountList,
+		serviceAccountsList,
+		serviceAccountsRead,
 		serviceAccountsUpdate,
 		systemStatesDelete,
 		systemStatesRead,
@@ -123,7 +125,8 @@ func CreateRolesAndAuthorizations(tx *gorm.DB) error {
 		{Role: *roleAdmin, Authorization: *auditLogsRead},
 		{Role: *roleAdmin, Authorization: *serviceAccountsCreate},
 		{Role: *roleAdmin, Authorization: *serviceAccountsDelete},
-		{Role: *roleAdmin, Authorization: *serviceAccountList},
+		{Role: *roleAdmin, Authorization: *serviceAccountsList},
+		{Role: *roleAdmin, Authorization: *serviceAccountsRead},
 		{Role: *roleAdmin, Authorization: *serviceAccountsUpdate},
 		{Role: *roleAdmin, Authorization: *systemStatesDelete},
 		{Role: *roleAdmin, Authorization: *systemStatesRead},
@@ -138,6 +141,7 @@ func CreateRolesAndAuthorizations(tx *gorm.DB) error {
 		{Role: *serviceAccountCreator, Authorization: *serviceAccountsCreate},
 
 		{Role: *serviceAccountOwner, Authorization: *serviceAccountsDelete},
+		{Role: *serviceAccountOwner, Authorization: *serviceAccountsRead},
 		{Role: *serviceAccountOwner, Authorization: *serviceAccountsUpdate},
 
 		{Role: *teamCreator, Authorization: *teamsCreate},
