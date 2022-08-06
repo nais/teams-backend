@@ -231,8 +231,14 @@ func (r *userResolver) Teams(ctx context.Context, obj *dbmodels.User) ([]*dbmode
 }
 
 func (r *userResolver) HasAPIKey(ctx context.Context, obj *dbmodels.User) (bool, error) {
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireAuthorization(actor, roles.AuthorizationServiceAccountsRead, *obj.ID)
+	if err != nil {
+		return false, err
+	}
+
 	apiKey := &dbmodels.ApiKey{}
-	err := r.db.Where("user_id = ?", obj.ID).First(&apiKey).Error
+	err = r.db.Where("user_id = ?", obj.ID).First(&apiKey).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return false, nil
@@ -244,6 +250,12 @@ func (r *userResolver) HasAPIKey(ctx context.Context, obj *dbmodels.User) (bool,
 }
 
 func (r *userResolver) IsServiceAccount(ctx context.Context, obj *dbmodels.User) (bool, error) {
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireAuthorization(actor, roles.AuthorizationServiceAccountsRead, *obj.ID)
+	if err != nil {
+		return false, err
+	}
+
 	return console.IsServiceAccount(*obj, r.tenantDomain), nil
 }
 
