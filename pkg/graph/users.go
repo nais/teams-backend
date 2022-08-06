@@ -29,14 +29,15 @@ func (r *mutationResolver) CreateServiceAccount(ctx context.Context, input model
 		return nil, err
 	}
 
-	corr := &dbmodels.Correlation{}
-	serviceAccount := &dbmodels.User{
-		Name:  input.Name.String(),
-		Email: console.ServiceAccountEmail(*input.Name, r.tenantDomain),
+	name := input.Name.String()
+	if strings.HasPrefix(name, fixtures.NaisServiceAccountPrefix) {
+		return nil, fmt.Errorf("'%s' is a reserved prefix", fixtures.NaisServiceAccountPrefix)
 	}
 
-	if strings.HasPrefix(serviceAccount.Name, fixtures.NaisServiceAccountPrefix) {
-		return nil, fmt.Errorf("'%s' is a reserved prefix", fixtures.NaisServiceAccountPrefix)
+	corr := &dbmodels.Correlation{}
+	serviceAccount := &dbmodels.User{
+		Name:  name,
+		Email: console.ServiceAccountEmail(*input.Name, r.tenantDomain),
 	}
 
 	err = r.db.Transaction(func(tx *gorm.DB) error {
@@ -63,8 +64,14 @@ func (r *mutationResolver) CreateServiceAccount(ctx context.Context, input model
 }
 
 func (r *mutationResolver) UpdateServiceAccount(ctx context.Context, serviceAccountID *uuid.UUID, input model.UpdateServiceAccountInput) (*dbmodels.User, error) {
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireAuthorization(actor, roles.AuthorizationServiceAccountsUpdate, *serviceAccountID)
+	if err != nil {
+		return nil, err
+	}
+
 	serviceAccount := &dbmodels.User{}
-	err := r.db.Where("id = ?", serviceAccountID).First(serviceAccount).Error
+	err = r.db.Where("id = ?", serviceAccountID).First(serviceAccount).Error
 	if err != nil {
 		return nil, err
 	}
