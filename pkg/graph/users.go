@@ -51,6 +51,22 @@ func (r *mutationResolver) CreateServiceAccount(ctx context.Context, input model
 			return err
 		}
 
+		serviceAccountOwner := &dbmodels.Role{}
+		err = tx.Where("name = ?", roles.RoleServiceAccountOwner).First(serviceAccountOwner).Error
+		if err != nil {
+			return err
+		}
+
+		userRole := &dbmodels.UserRole{
+			UserID:   *actor.ID,
+			RoleID:   *serviceAccountOwner.ID,
+			TargetID: serviceAccount.ID,
+		}
+		err = tx.Create(userRole).Error
+		if err != nil {
+			return err
+		}
+
 		return nil
 	})
 
