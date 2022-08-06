@@ -216,8 +216,14 @@ func (r *queryResolver) Me(ctx context.Context) (*dbmodels.User, error) {
 }
 
 func (r *userResolver) Teams(ctx context.Context, obj *dbmodels.User) ([]*dbmodels.Team, error) {
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireGlobalAuthorization(actor, roles.AuthorizationTeamsList)
+	if err != nil {
+		return nil, err
+	}
+
 	teams := make([]*dbmodels.Team, 0)
-	err := r.db.Model(obj).Association("Teams").Find(&teams)
+	err = r.db.Model(obj).Association("Teams").Find(&teams)
 	if err != nil {
 		return nil, err
 	}
