@@ -158,6 +158,12 @@ func (r *mutationResolver) DeleteServiceAccount(ctx context.Context, serviceAcco
 }
 
 func (r *queryResolver) Users(ctx context.Context, pagination *model.Pagination, query *model.UsersQuery, sort *model.UsersSort) (*model.Users, error) {
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
+	if err != nil {
+		return nil, err
+	}
+
 	users := make([]*dbmodels.User, 0)
 
 	if sort == nil {
@@ -175,8 +181,14 @@ func (r *queryResolver) Users(ctx context.Context, pagination *model.Pagination,
 }
 
 func (r *queryResolver) User(ctx context.Context, id *uuid.UUID) (*dbmodels.User, error) {
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
+	if err != nil {
+		return nil, err
+	}
+
 	user := &dbmodels.User{}
-	err := r.db.Where("id = ?", id).First(user).Error
+	err = r.db.Where("id = ?", id).First(user).Error
 	if err != nil {
 		return nil, err
 	}
