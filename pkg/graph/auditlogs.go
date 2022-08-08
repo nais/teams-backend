@@ -6,13 +6,15 @@ package graph
 import (
 	"context"
 
+	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
+	"github.com/nais/console/pkg/roles"
 )
 
 func (r *auditLogResolver) TargetSystem(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.System, error) {
-	var system *dbmodels.System
+	system := &dbmodels.System{}
 	err := r.db.Model(&obj).Association("TargetSystem").Find(&system)
 	if err != nil {
 		return nil, err
@@ -21,7 +23,7 @@ func (r *auditLogResolver) TargetSystem(ctx context.Context, obj *dbmodels.Audit
 }
 
 func (r *auditLogResolver) Correlation(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.Correlation, error) {
-	var corr *dbmodels.Correlation
+	corr := &dbmodels.Correlation{}
 	err := r.db.Model(&obj).Association("Correlation").Find(&corr)
 	if err != nil {
 		return nil, err
@@ -33,8 +35,15 @@ func (r *auditLogResolver) Actor(ctx context.Context, obj *dbmodels.AuditLog) (*
 	if obj.ActorID == nil {
 		return nil, nil
 	}
-	var actor *dbmodels.User
-	err := r.db.Model(&obj).Association("Actor").Find(&actor)
+
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
+	if err != nil {
+		return nil, err
+	}
+
+	actor = &dbmodels.User{}
+	err = r.db.Model(&obj).Association("Actor").Find(&actor)
 	if err != nil {
 		return nil, err
 	}
@@ -45,8 +54,15 @@ func (r *auditLogResolver) TargetUser(ctx context.Context, obj *dbmodels.AuditLo
 	if obj.TargetUserID == nil {
 		return nil, nil
 	}
-	var targetUser *dbmodels.User
-	err := r.db.Model(&obj).Association("TargetUser").Find(&targetUser)
+
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
+	if err != nil {
+		return nil, err
+	}
+
+	targetUser := &dbmodels.User{}
+	err = r.db.Model(&obj).Association("TargetUser").Find(&targetUser)
 	if err != nil {
 		return nil, err
 	}
@@ -57,8 +73,15 @@ func (r *auditLogResolver) TargetTeam(ctx context.Context, obj *dbmodels.AuditLo
 	if obj.TargetTeamID == nil {
 		return nil, nil
 	}
-	var team *dbmodels.Team
-	err := r.db.Model(&obj).Association("TargetTeam").Find(&team)
+
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireAuthorization(actor, roles.AuthorizationTeamsRead, *obj.TargetTeamID)
+	if err != nil {
+		return nil, err
+	}
+
+	team := &dbmodels.Team{}
+	err = r.db.Model(&obj).Association("TargetTeam").Find(&team)
 	if err != nil {
 		return nil, err
 	}
@@ -66,6 +89,12 @@ func (r *auditLogResolver) TargetTeam(ctx context.Context, obj *dbmodels.AuditLo
 }
 
 func (r *queryResolver) AuditLogs(ctx context.Context, pagination *model.Pagination, query *model.AuditLogsQuery, sort *model.AuditLogsSort) (*model.AuditLogs, error) {
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireGlobalAuthorization(actor, roles.AuthorizationAuditLogsRead)
+	if err != nil {
+		return nil, err
+	}
+
 	auditLogs := make([]*dbmodels.AuditLog, 0)
 
 	if sort == nil {
