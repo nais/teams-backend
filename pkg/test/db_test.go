@@ -5,6 +5,6 @@ import (
 )
 
 func TestGetTestDBCanRunMultipleTimes(t *testing.T) {
-	_ = GetTestDB()
-	_ = GetTestDB()
+	_, _ = GetTestDB()
+	_, _ = GetTestDB()
 }

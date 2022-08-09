@@ -1,9 +1,10 @@
-package azureclient
+package azureclient_test
 
 import (
 	"context"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/nais/console/pkg/azureclient"
 	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/test"
@@ -24,7 +25,7 @@ func Test_GetUser(t *testing.T) {
 		}`)
 	})
 
-	client := New(httpClient)
+	client := azureclient.New(httpClient)
 	member, err := client.GetUser(context.Background(), "user@example.com")
 
 	assert.Equal(t, "user@example.com", member.Mail)
@@ -40,7 +41,7 @@ func Test_GetUserThatDoesNotExist(t *testing.T) {
 		return test.Response("404 Not Found", `{"error": {"message": "user does not exist"}}`)
 	})
 
-	client := New(httpClient)
+	client := azureclient.New(httpClient)
 	member, err := client.GetUser(context.Background(), "user@example.com")
 
 	assert.Nil(t, member)
@@ -55,7 +56,7 @@ func Test_GetUserWithInvalidApiResponse(t *testing.T) {
 		return test.Response("200 OK", "some string")
 	})
 
-	client := New(httpClient)
+	client := azureclient.New(httpClient)
 	member, err := client.GetUser(context.Background(), "user@example.com")
 
 	assert.Nil(t, member)
@@ -75,7 +76,7 @@ func Test_GetGroupById(t *testing.T) {
 		}`, groupId.String()))
 	})
 
-	client := New(httpClient)
+	client := azureclient.New(httpClient)
 	group, err := client.GetGroupById(context.Background(), groupId)
 
 	assert.NoError(t, err)
@@ -90,7 +91,7 @@ func Test_GetGroupThatDoesNotExist(t *testing.T) {
 		return test.Response("404 Not Found", "{}")
 	})
 
-	client := New(httpClient)
+	client := azureclient.New(httpClient)
 	group, err := client.GetGroupById(context.Background(), groupId)
 
 	assert.Nil(t, group)
@@ -111,8 +112,8 @@ func Test_CreateGroup(t *testing.T) {
 		}`)
 	})
 
-	client := New(httpClient)
-	input := &Group{
+	client := azureclient.New(httpClient)
+	input := &azureclient.Group{
 		Description:  "description",
 		DisplayName:  "name",
 		MailNickname: "mail",
@@ -135,9 +136,9 @@ func Test_CreateGroupWithInvalidStatus(t *testing.T) {
 		return test.Response("400 Bad Request", `{"error": {"message":"some error"}}`)
 	})
 
-	client := New(httpClient)
+	client := azureclient.New(httpClient)
 
-	group, err := client.CreateGroup(context.Background(), &Group{
+	group, err := client.CreateGroup(context.Background(), &azureclient.Group{
 		Description:  "description",
 		DisplayName:  "name",
 		MailNickname: "mail",
@@ -156,9 +157,9 @@ func Test_CreateGroupWithInvalidResponse(t *testing.T) {
 		return test.Response("201 Created", "response body")
 	})
 
-	client := New(httpClient)
+	client := azureclient.New(httpClient)
 
-	group, err := client.CreateGroup(context.Background(), &Group{
+	group, err := client.CreateGroup(context.Background(), &azureclient.Group{
 		Description:  "description",
 		DisplayName:  "name",
 		MailNickname: "mail",
@@ -181,9 +182,9 @@ func Test_CreateGroupWithIncompleteResponse(t *testing.T) {
 		}`)
 	})
 
-	client := New(httpClient)
+	client := azureclient.New(httpClient)
 
-	group, err := client.CreateGroup(context.Background(), &Group{
+	group, err := client.CreateGroup(context.Background(), &azureclient.Group{
 		Description:  "description",
 		DisplayName:  "name",
 		MailNickname: "mail",
@@ -209,7 +210,7 @@ func Test_GetOrCreateGroupWithEmptyState(t *testing.T) {
 		},
 	)
 
-	client := New(httpClient)
+	client := azureclient.New(httpClient)
 	group, created, err := client.GetOrCreateGroup(context.Background(), reconcilers.AzureState{}, "slug", "name", helpers.Strp("description"))
 
 	assert.NoError(t, err)
@@ -238,7 +239,7 @@ func Test_GetOrCreateGroupWhenGroupInStateDoesNotExist(t *testing.T) {
 		},
 	)
 
-	client := New(httpClient)
+	client := azureclient.New(httpClient)
 	group, created, err := client.GetOrCreateGroup(context.Background(), reconcilers.AzureState{GroupID: &groupId}, "slug", "name", helpers.Strp("description"))
 
 	assert.NoError(t, err)
@@ -268,7 +269,7 @@ func Test_GetOrCreateGroupWhenGroupInStateExists(t *testing.T) {
 		},
 	)
 
-	client := New(httpClient)
+	client := azureclient.New(httpClient)
 	group, created, err := client.GetOrCreateGroup(context.Background(), reconcilers.AzureState{GroupID: &groupId}, "slug", "name", helpers.Strp("description"))
 
 	assert.NoError(t, err)
@@ -294,9 +295,9 @@ func Test_ListGroupMembers(t *testing.T) {
 		},
 	)
 
-	client := New(httpClient)
+	client := azureclient.New(httpClient)
 
-	members, err := client.ListGroupMembers(context.Background(), &Group{
+	members, err := client.ListGroupMembers(context.Background(), &azureclient.Group{
 		ID: "group-id",
 	})
 
@@ -316,9 +317,9 @@ func Test_ListGroupMembersWhenGroupDoesNotExist(t *testing.T) {
 		},
 	)
 
-	client := New(httpClient)
+	client := azureclient.New(httpClient)
 
-	members, err := client.ListGroupMembers(context.Background(), &Group{
+	members, err := client.ListGroupMembers(context.Background(), &azureclient.Group{
 		ID:           "group-id",
 		MailNickname: "mail",
 	})
@@ -337,9 +338,9 @@ func Test_ListGroupMembersWithInvalidResponse(t *testing.T) {
 		},
 	)
 
-	client := New(httpClient)
+	client := azureclient.New(httpClient)
 
-	members, err := client.ListGroupMembers(context.Background(), &Group{
+	members, err := client.ListGroupMembers(context.Background(), &azureclient.Group{
 		ID: "group-id",
 	})
 
@@ -360,11 +361,11 @@ func Test_AddMemberToGroup(t *testing.T) {
 		},
 	)
 
-	client := New(httpClient)
+	client := azureclient.New(httpClient)
 
-	err := client.AddMemberToGroup(context.Background(), &Group{
+	err := client.AddMemberToGroup(context.Background(), &azureclient.Group{
 		ID: "group-id",
-	}, &Member{
+	}, &azureclient.Member{
 		ID:   "user-id",
 		Mail: "mail@example.com",
 	})
@@ -383,12 +384,12 @@ func Test_AddMemberToGroupWithInvalidResponse(t *testing.T) {
 		},
 	)
 
-	client := New(httpClient)
+	client := azureclient.New(httpClient)
 
-	err := client.AddMemberToGroup(context.Background(), &Group{
+	err := client.AddMemberToGroup(context.Background(), &azureclient.Group{
 		ID:           "group-id",
 		MailNickname: "group",
-	}, &Member{
+	}, &azureclient.Member{
 		ID:   "user-id",
 		Mail: "mail@example.com",
 	})
@@ -406,11 +407,11 @@ func Test_RemoveMemberFromGroup(t *testing.T) {
 		},
 	)
 
-	client := New(httpClient)
+	client := azureclient.New(httpClient)
 
-	err := client.RemoveMemberFromGroup(context.Background(), &Group{
+	err := client.RemoveMemberFromGroup(context.Background(), &azureclient.Group{
 		ID: "group-id",
-	}, &Member{
+	}, &azureclient.Member{
 		ID: "user-id",
 	})
 
@@ -427,12 +428,12 @@ func Test_RemoveMemberFromGroupWithInvalidResponse(t *testing.T) {
 		},
 	)
 
-	client := New(httpClient)
+	client := azureclient.New(httpClient)
 
-	err := client.RemoveMemberFromGroup(context.Background(), &Group{
+	err := client.RemoveMemberFromGroup(context.Background(), &azureclient.Group{
 		ID:           "group-id",
 		MailNickname: "mail@example.com",
-	}, &Member{
+	}, &azureclient.Member{
 		ID:   "user-id",
 		Mail: "mail",
 	})

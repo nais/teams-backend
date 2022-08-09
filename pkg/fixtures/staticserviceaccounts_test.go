@@ -10,9 +10,7 @@ import (
 )
 
 func TestSetupStaticServiceAccounts(t *testing.T) {
-	db := test.GetTestDB()
-	db.AutoMigrate(&dbmodels.ApiKey{}, &dbmodels.Role{}, &dbmodels.UserRole{})
-	fixtures.CreateRolesAndAuthorizations(db)
+	db, _ := test.GetTestDBWithRoles()
 
 	t.Run("empty string", func(t *testing.T) {
 		err := fixtures.SetupStaticServiceAccounts(db, "", "example.com")

@@ -8,23 +8,16 @@ import (
 	"github.com/nais/console/pkg/usersync"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"gorm.io/gorm"
 	"net/http"
 	"testing"
 )
-
-func getTestDB() *gorm.DB {
-	db := test.GetTestDB()
-	db.AutoMigrate(&dbmodels.Correlation{}, &dbmodels.Role{}, &dbmodels.System{})
-	return db
-}
 
 func TestSync(t *testing.T) {
 	system := &dbmodels.System{Name: "console"}
 	mockAuditLogger := &auditlogger.MockAuditLogger{}
 
 	t.Run("Server error from Google", func(t *testing.T) {
-		db := getTestDB()
+		db, _ := test.GetTestDB()
 		db.Create(system)
 
 		httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
@@ -37,7 +30,7 @@ func TestSync(t *testing.T) {
 	})
 
 	t.Run("No remote users", func(t *testing.T) {
-		db := getTestDB()
+		db, _ := test.GetTestDB()
 		db.Create(system)
 
 		httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
@@ -50,7 +43,7 @@ func TestSync(t *testing.T) {
 	})
 
 	t.Run("Create, update and delete users", func(t *testing.T) {
-		db := getTestDB()
+		db, _ := test.GetTestDB()
 		db.Create(system)
 		db.Create([]*dbmodels.User{
 			{Email: "delete-me@example.com", Name: "Delete Me"},   // Will be deleted

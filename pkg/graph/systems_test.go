@@ -14,8 +14,7 @@ import (
 )
 
 func TestQueryResolver_Systems(t *testing.T) {
-	db := test.GetTestDB()
-	db.AutoMigrate(&dbmodels.System{})
+	db, _ := test.GetTestDB()
 	db.Create([]dbmodels.System{
 		{
 			Name: "B",

@@ -51,8 +51,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 	auditLogger.On("Logf", github_team_reconciler.OpCreate, corr, system, mock.Anything, &team, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	t.Run("no existing state, github team available", func(t *testing.T) {
-		db := test.GetTestDB()
-		db.AutoMigrate(&dbmodels.SystemState{})
+		db, _ := test.GetTestDB()
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
 		teamsService.
 			On(
@@ -89,8 +88,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 	})
 
 	t.Run("no existing state, github team not available", func(t *testing.T) {
-		db := test.GetTestDB()
-		db.AutoMigrate(&dbmodels.SystemState{})
+		db, _ := test.GetTestDB()
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
 		teamsService.
 			On(
@@ -113,8 +111,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 	})
 
 	t.Run("existing state, github team exists", func(t *testing.T) {
-		db := test.GetTestDB()
-		db.AutoMigrate(&dbmodels.SystemState{})
+		db, _ := test.GetTestDB()
 		dbmodels.SetSystemState(db, *system.ID, *team.ID, reconcilers.GitHubState{Slug: helpers.Strp("existing-slug")})
 
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
@@ -153,8 +150,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 	})
 
 	t.Run("existing state, github team no longer exists", func(t *testing.T) {
-		db := test.GetTestDB()
-		db.AutoMigrate(&dbmodels.SystemState{})
+		db, _ := test.GetTestDB()
 		initialState := &reconcilers.GitHubState{Slug: helpers.Strp("existing-slug")}
 		dbmodels.SetSystemState(db, *system.ID, *team.ID, initialState)
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
@@ -258,8 +254,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 	// Give the reconciler enough data to create an entire team from scratch,
 	// remove members that shouldn't be present, and add members that should.
 	t.Run("create everything from scratch", func(t *testing.T) {
-		db := test.GetTestDB()
-		db.AutoMigrate(&dbmodels.SystemState{})
+		db, _ := test.GetTestDB()
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
 		graphClient := github_team_reconciler.NewMockGraphClient(t)
 		reconciler := github_team_reconciler.New(db, system, auditLogger, org, domain, teamsService, graphClient)
@@ -283,8 +278,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 	})
 
 	t.Run("GetTeamBySlug error", func(t *testing.T) {
-		db := test.GetTestDB()
-		db.AutoMigrate(&dbmodels.SystemState{})
+		db, _ := test.GetTestDB()
 		dbmodels.SetSystemState(db, *system.ID, *team.ID, reconcilers.GitHubState{Slug: helpers.Strp("slug-from-state")})
 
 		teamsService := github_team_reconciler.NewMockTeamsService(t)

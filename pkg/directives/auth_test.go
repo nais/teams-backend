@@ -13,8 +13,7 @@ import (
 func TestAuth(t *testing.T) {
 	var obj interface{}
 	var nextHandler func(ctx context.Context) (res interface{}, err error)
-	db := test.GetTestDB()
-	db.AutoMigrate(dbmodels.User{})
+	db, _ := test.GetTestDB()
 
 	user := &dbmodels.User{
 		Name:  "user1",

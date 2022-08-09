@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"github.com/google/uuid"
 	sqliteGo "github.com/mattn/go-sqlite3"
+	"github.com/nais/console/pkg/dbmodels"
+	"github.com/nais/console/pkg/fixtures"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -31,8 +33,9 @@ func stringInSlice(a string, list []string) bool {
 	return false
 }
 
-// GetTestDB Get an in-memory SQLite database instance, used for testing
-func GetTestDB() *gorm.DB {
+// GetTestDB Get an in-memory SQLite database instance, used for testing. This function will also run DB migration so
+// all tables should be present.
+func GetTestDB() (*gorm.DB, error) {
 	if !stringInSlice(driverName, sql.Drivers()) {
 		sql.Register(driverName,
 			&sqliteGo.SQLiteDriver{
@@ -50,5 +53,24 @@ func GetTestDB() *gorm.DB {
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
 
-	return db
+	err := dbmodels.Migrate(db)
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
+}
+
+// GetTestDBWithRoles Get a complete test database with all roles added
+func GetTestDBWithRoles() (*gorm.DB, error) {
+	db, err := GetTestDB()
+	if err != nil {
+		return nil, err
+	}
+
+	err = fixtures.CreateRolesAndAuthorizations(db)
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }

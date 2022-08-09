@@ -12,8 +12,7 @@ import (
 )
 
 func TestLoadUserRoles(t *testing.T) {
-	db := test.GetTestDB()
-	db.AutoMigrate(&dbmodels.Authorization{}, &dbmodels.Role{}, &dbmodels.RoleAuthorization{}, &dbmodels.User{}, &dbmodels.UserRole{})
+	db, _ := test.GetTestDB()
 	user1 := &dbmodels.User{Email: "user1@example.com"}
 	user2 := &dbmodels.User{Email: "user2@example.com"}
 	db.Create([]*dbmodels.User{user1, user2})

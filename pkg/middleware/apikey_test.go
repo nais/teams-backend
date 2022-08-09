@@ -18,8 +18,7 @@ func getRequest() *http.Request {
 }
 
 func TestApiKeyAuthentication(t *testing.T) {
-	db := test.GetTestDB()
-	db.AutoMigrate(&dbmodels.ApiKey{}, &dbmodels.User{})
+	db, _ := test.GetTestDB()
 	user1 := &dbmodels.User{Email: "user1@example.com"}
 	user2 := &dbmodels.User{Email: "user2@example.com"}
 	user3 := &dbmodels.User{Email: "user3@example.com"}

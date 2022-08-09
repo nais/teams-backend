@@ -66,8 +66,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 	}
 
 	t.Run("happy case", func(t *testing.T) {
-		db := test.GetTestDB()
-		db.AutoMigrate(&dbmodels.SystemState{})
+		db, _ := test.GetTestDB()
 		auditLogger := auditlogger.New(db)
 
 		mockClient := &azureclient.MockClient{}
@@ -104,8 +103,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 	})
 
 	t.Run("GetOrCreateGroup fail", func(t *testing.T) {
-		db := test.GetTestDB()
-		db.AutoMigrate(&dbmodels.SystemState{})
+		db, _ := test.GetTestDB()
 		auditLogger := auditlogger.New(db)
 
 		mockClient := &azureclient.MockClient{}
@@ -126,8 +124,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 	})
 
 	t.Run("ListGroupMembers fail", func(t *testing.T) {
-		db := test.GetTestDB()
-		db.AutoMigrate(&dbmodels.SystemState{})
+		db, _ := test.GetTestDB()
 		auditLogger := auditlogger.New(db)
 
 		mockClient := &azureclient.MockClient{}
@@ -152,8 +149,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 	})
 
 	t.Run("RemoveMemberFromGroup fail", func(t *testing.T) {
-		db := test.GetTestDB()
-		db.AutoMigrate(&dbmodels.SystemState{})
+		db, _ := test.GetTestDB()
 
 		mockClient := &azureclient.MockClient{}
 		mockAuditLogger := &auditlogger.MockAuditLogger{}
@@ -188,8 +184,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 	})
 
 	t.Run("GetUser fail", func(t *testing.T) {
-		db := test.GetTestDB()
-		db.AutoMigrate(&dbmodels.SystemState{})
+		db, _ := test.GetTestDB()
 		auditLogger := auditlogger.New(db)
 
 		mockClient := &azureclient.MockClient{}
@@ -222,8 +217,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 	})
 
 	t.Run("AddMemberToGroup fail", func(t *testing.T) {
-		db := test.GetTestDB()
-		db.AutoMigrate(&dbmodels.SystemState{})
+		db, _ := test.GetTestDB()
 
 		mockClient := &azureclient.MockClient{}
 		mockAuditLogger := &auditlogger.MockAuditLogger{}

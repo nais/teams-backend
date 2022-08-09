@@ -3,7 +3,6 @@ package graph_test
 import (
 	"context"
 	"github.com/nais/console/pkg/authz"
-	"github.com/nais/console/pkg/fixtures"
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/reconcilers"
@@ -51,15 +50,8 @@ func getAdminUser(db *gorm.DB) *dbmodels.User {
 	return user
 }
 
-func getDb() *gorm.DB {
-	db := test.GetTestDB()
-	db.AutoMigrate(&dbmodels.Authorization{}, &dbmodels.Role{}, &dbmodels.RoleAuthorization{}, &dbmodels.User{}, &dbmodels.UserRole{})
-	fixtures.CreateRolesAndAuthorizations(db)
-	return db
-}
-
 func TestQueryResolver_Teams(t *testing.T) {
-	db := getDb()
+	db, _ := test.GetTestDBWithRoles()
 	db.Create([]dbmodels.Team{
 		{
 			Slug: "b",
