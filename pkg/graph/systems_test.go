@@ -15,7 +15,7 @@ import (
 
 func TestQueryResolver_Systems(t *testing.T) {
 	db, _ := test.GetTestDB()
-	db.Create([]dbmodels.System{
+	systems := []*dbmodels.System{
 		{
 			Name: "B",
 		},
@@ -25,14 +25,14 @@ func TestQueryResolver_Systems(t *testing.T) {
 		{
 			Name: "C",
 		},
-	})
+	}
+	db.Create(systems)
 
 	ch := make(chan reconcilers.Input, 100)
-	system := getSystem()
 	ctx := context.Background()
 
 	logger := auditlogger.New(db)
-	resolver := graph.NewResolver(db, "example.com", system, ch, logger).Query()
+	resolver := graph.NewResolver(db, "example.com", systems[0], ch, logger).Query()
 
 	t.Run("No filter or sort", func(t *testing.T) {
 		systems, err := resolver.Systems(ctx, nil, nil, nil)

@@ -329,13 +329,6 @@ func setupDatabase(cfg *config.Config) (*gorm.DB, error) {
 		return nil, err
 	}
 	log.Infof("Successfully connected to database.")
-
-	// uuid-ossp is needed for PostgreSQL to generate UUIDs as primary keys
-	err = db.Exec(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`).Error
-	if err != nil {
-		return nil, fmt.Errorf("install postgres uuid extension: %w", err)
-	}
-
 	log.Infof("Migrating database schema...")
 	err = dbmodels.Migrate(db)
 	if err != nil {

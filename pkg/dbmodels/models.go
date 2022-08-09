@@ -3,6 +3,7 @@ package dbmodels
 import (
 	"github.com/jackc/pgtype"
 	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 	"time"
 
 	"github.com/google/uuid"
@@ -10,7 +11,7 @@ import (
 
 // Model Base model that all database tables inherit.
 type Model struct {
-	ID          *uuid.UUID `gorm:"type:uuid; primaryKey; default:(uuid_generate_v4())"`
+	ID          *uuid.UUID `gorm:"type:uuid; primaryKey"`
 	CreatedAt   time.Time  `gorm:"<-:create; autoCreateTime; index; not null"`
 	CreatedBy   *User      `gorm:""`
 	UpdatedBy   *User      `gorm:""`
@@ -186,4 +187,18 @@ func uuidAsString(id *uuid.UUID) string {
 	}
 
 	return id.String()
+}
+
+func (m *Model) BeforeCreate(tx *gorm.DB) error {
+	if m.ID != nil {
+		return nil
+	}
+
+	id, err := uuid.NewUUID()
+	if err != nil {
+		return err
+	}
+
+	m.ID = &id
+	return nil
 }

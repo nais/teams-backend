@@ -12,19 +12,8 @@ import (
 	"gorm.io/gorm"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/nais/console/pkg/dbmodels"
 )
-
-func getSystem() *dbmodels.System {
-	systemId, _ := uuid.NewUUID()
-	system := &dbmodels.System{
-		Model: dbmodels.Model{
-			ID: &systemId,
-		},
-	}
-	return system
-}
 
 func getAdminUser(db *gorm.DB) *dbmodels.User {
 	role := &dbmodels.Role{}
@@ -68,7 +57,8 @@ func TestQueryResolver_Teams(t *testing.T) {
 	})
 
 	ch := make(chan reconcilers.Input, 100)
-	system := getSystem()
+	system := &dbmodels.System{}
+	db.Create(system)
 	user := getAdminUser(db)
 
 	ctx := authz.ContextWithUser(context.Background(), user)
