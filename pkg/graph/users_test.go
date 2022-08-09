@@ -58,3 +58,34 @@ func TestQueryResolver_Users(t *testing.T) {
 		assert.Equal(t, "A", users.Nodes[3].Name)
 	})
 }
+
+func TestUserResolver_Roles(t *testing.T) {
+	db, _ := test.GetTestDB()
+	role := &dbmodels.Role{Name: "Some role"}
+	userWithRoles := &dbmodels.User{Email: "a@example.com"}
+	userWithNoRoles := &dbmodels.User{Email: "b@example.com"}
+	system := &dbmodels.System{}
+	db.Create(role)
+	db.Create(userWithRoles)
+	db.Create(userWithNoRoles)
+	db.Create(system)
+	roleBinding := &dbmodels.UserRole{UserID: *userWithRoles.ID, RoleID: *role.ID}
+	db.Create(roleBinding)
+
+	ch := make(chan reconcilers.Input, 100)
+
+	resolver := graph.NewResolver(db, "example.com", system, ch, auditlogger.New(db)).User()
+	ctx := context.Background()
+
+	t.Run("No roles", func(t *testing.T) {
+		roles, err := resolver.Roles(ctx, userWithNoRoles)
+		assert.NoError(t, err)
+		assert.Len(t, roles, 0)
+	})
+
+	t.Run("User with roles", func(t *testing.T) {
+		roles, err := resolver.Roles(ctx, userWithRoles)
+		assert.NoError(t, err)
+		assert.Len(t, roles, 1)
+	})
+}

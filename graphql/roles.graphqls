@@ -18,6 +18,18 @@ type Authorization {
     name: String!
 }
 
+"Role binding type."
+type RoleBinding {
+    "The connected role."
+    role: Role!
+
+    "Whether or not the role is global."
+    isGlobal: Boolean!
+
+    "Optional target of the role binding."
+    targetId: UUID
+}
+
 "Role collection."
 type Roles {
     "Object related to pagination of the collection."

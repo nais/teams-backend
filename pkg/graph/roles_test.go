@@ -54,7 +54,7 @@ func TestQueryResolver_Roles(t *testing.T) {
 	})
 }
 
-func TestQueryResolver_Authorizations(t *testing.T) {
+func TestRoleResolver_Authorizations(t *testing.T) {
 	db, _ := test.GetTestDB()
 	emptyRole := &dbmodels.Role{Name: "Empty role"}
 	db.Create(emptyRole)
@@ -83,5 +83,74 @@ func TestQueryResolver_Authorizations(t *testing.T) {
 		authorizations, err := resolver.Authorizations(ctx, roleWithAuthorizations)
 		assert.NoError(t, err)
 		assert.Len(t, authorizations, 2)
+	})
+}
+
+func TestRoleBindingResolver_Role(t *testing.T) {
+	db, _ := test.GetTestDB()
+
+	system := &dbmodels.System{}
+	role := &dbmodels.Role{Name: "Some role"}
+	user := &dbmodels.User{Email: "user@example.com"}
+	db.Create(role)
+	db.Create(user)
+	db.Create(system)
+
+	userRole := &dbmodels.UserRole{
+		UserID: *user.ID,
+		RoleID: *role.ID,
+	}
+	db.Create(userRole)
+
+	ch := make(chan reconcilers.Input, 100)
+
+	resolver := graph.NewResolver(db, "example.com", system, ch, auditlogger.New(db)).RoleBinding()
+
+	role, err := resolver.Role(context.Background(), userRole)
+	assert.NoError(t, err)
+	assert.Equal(t, "Some role", role.Name)
+}
+
+func TestRoleBindingResolver_IsGlobal(t *testing.T) {
+	db, _ := test.GetTestDB()
+
+	team := &dbmodels.Team{Slug: "slug", Name: "name"}
+	system := &dbmodels.System{}
+	role1 := &dbmodels.Role{Name: "Some role"}
+	role2 := &dbmodels.Role{Name: "Some other role"}
+	user := &dbmodels.User{Email: "user@example.com"}
+	db.Create(team)
+	db.Create(role1)
+	db.Create(role2)
+	db.Create(user)
+	db.Create(system)
+
+	globalUserRole := &dbmodels.UserRole{
+		UserID: *user.ID,
+		RoleID: *role1.ID,
+	}
+	targettedUserRole := &dbmodels.UserRole{
+		UserID:   *user.ID,
+		RoleID:   *role2.ID,
+		TargetID: team.ID,
+	}
+	db.Create(globalUserRole)
+	db.Create(targettedUserRole)
+
+	ch := make(chan reconcilers.Input, 100)
+
+	resolver := graph.NewResolver(db, "example.com", system, ch, auditlogger.New(db)).RoleBinding()
+	ctx := context.Background()
+
+	t.Run("Global role", func(t *testing.T) {
+		isGlobal, err := resolver.IsGlobal(ctx, globalUserRole)
+		assert.NoError(t, err)
+		assert.True(t, isGlobal)
+	})
+
+	t.Run("Targetted role", func(t *testing.T) {
+		isGlobal, err := resolver.IsGlobal(ctx, targettedUserRole)
+		assert.NoError(t, err)
+		assert.False(t, isGlobal)
 	})
 }

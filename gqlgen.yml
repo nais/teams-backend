@@ -44,6 +44,12 @@ autobind:
 # modelgen, the others will be allowed when binding to fields. Configure them to
 # your liking
 models:
+  RoleBinding:
+    model:
+      - github.com/nais/console/pkg/dbmodels.UserRole
+    fields:
+      role:
+        resolver: true
   UUID:
     model:
       - github.com/nais/console/pkg/dbmodels.UUID
@@ -68,6 +74,8 @@ models:
         resolver: true
   User:
     fields:
+      roles:
+        resolver: true
       teams:
         resolver: true
   Role:

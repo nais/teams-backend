@@ -258,6 +258,15 @@ func (r *userResolver) IsServiceAccount(ctx context.Context, obj *dbmodels.User)
 	return console.IsServiceAccount(*obj, r.tenantDomain), nil
 }
 
+func (r *userResolver) Roles(ctx context.Context, obj *dbmodels.User) ([]*dbmodels.UserRole, error) {
+	roleBindings := make([]*dbmodels.UserRole, 0)
+	err := r.db.Where("user_id = ?", obj.ID).Find(&roleBindings).Error
+	if err != nil {
+		return nil, err
+	}
+	return roleBindings, nil
+}
+
 // User returns generated.UserResolver implementation.
 func (r *Resolver) User() generated.UserResolver { return &userResolver{r} }
 

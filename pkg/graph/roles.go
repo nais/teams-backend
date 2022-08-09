@@ -37,7 +37,24 @@ func (r *roleResolver) Authorizations(ctx context.Context, obj *dbmodels.Role) (
 	return authorizations, nil
 }
 
+func (r *roleBindingResolver) Role(ctx context.Context, obj *dbmodels.UserRole) (*dbmodels.Role, error) {
+	role := &dbmodels.Role{}
+	err := r.db.Where("id = ?", obj.RoleID).First(role).Error
+	if err != nil {
+		return nil, err
+	}
+	return role, nil
+}
+
+func (r *roleBindingResolver) IsGlobal(ctx context.Context, obj *dbmodels.UserRole) (bool, error) {
+	return obj.TargetID == nil, nil
+}
+
 // Role returns generated.RoleResolver implementation.
 func (r *Resolver) Role() generated.RoleResolver { return &roleResolver{r} }
 
+// RoleBinding returns generated.RoleBindingResolver implementation.
+func (r *Resolver) RoleBinding() generated.RoleBindingResolver { return &roleBindingResolver{r} }
+
 type roleResolver struct{ *Resolver }
+type roleBindingResolver struct{ *Resolver }
