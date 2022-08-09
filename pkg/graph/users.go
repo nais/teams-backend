@@ -237,8 +237,7 @@ func (r *userResolver) HasAPIKey(ctx context.Context, obj *dbmodels.User) (bool,
 		return false, err
 	}
 
-	apiKey := &dbmodels.ApiKey{}
-	err = r.db.Where("user_id = ?", obj.ID).First(&apiKey).Error
+	err = r.db.Where("user_id = ?", obj.ID).First(&dbmodels.ApiKey{}).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return false, nil
