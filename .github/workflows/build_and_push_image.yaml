@@ -46,6 +46,7 @@ jobs:
             type=semver,pattern=v{{major}}.{{minor}}
             type=semver,pattern=v{{major}}
             type=sha
+            type=raw,value={{date 'YYYYMMDDhhmmss'}}-{{sha}}
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
