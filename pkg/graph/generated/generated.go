@@ -1512,7 +1512,7 @@ type User {
     "Creation time of the user."
     createdAt: Time!
 
-    "Role attached to the user."
+    "Roles attached to the user."
     roles: [RoleBinding!]!
 }
 
