@@ -107,6 +107,28 @@ type RemoveUsersFromTeamInput struct {
 	TeamID *uuid.UUID `json:"teamId"`
 }
 
+// Role collection.
+type Roles struct {
+	// Object related to pagination of the collection.
+	PageInfo *PageInfo `json:"pageInfo"`
+	// The list of role objects in the collection.
+	Nodes []*dbmodels.Role `json:"nodes"`
+}
+
+// Input for filtering a collection of roles.
+type RolesQuery struct {
+	// Filter by role name.
+	Name *string `json:"name"`
+}
+
+// Input for sorting a collection of roles.
+type RolesSort struct {
+	// Field to sort by.
+	Field RoleSortField `json:"field"`
+	// Sort direction.
+	Direction SortDirection `json:"direction"`
+}
+
 // Input for setting team member role.
 type SetTeamMemberRoleInput struct {
 	// The ID of the team.
@@ -239,6 +261,47 @@ func (e *AuditLogSortField) UnmarshalGQL(v interface{}) error {
 }
 
 func (e AuditLogSortField) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+// Fields to sort the collection by.
+type RoleSortField string
+
+const (
+	// Sort by name.
+	RoleSortFieldName RoleSortField = "NAME"
+)
+
+var AllRoleSortField = []RoleSortField{
+	RoleSortFieldName,
+}
+
+func (e RoleSortField) IsValid() bool {
+	switch e {
+	case RoleSortFieldName:
+		return true
+	}
+	return false
+}
+
+func (e RoleSortField) String() string {
+	return string(e)
+}
+
+func (e *RoleSortField) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = RoleSortField(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid RoleSortField", str)
+	}
+	return nil
+}
+
+func (e RoleSortField) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 

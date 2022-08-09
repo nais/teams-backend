@@ -15,13 +15,14 @@ import (
 	"github.com/nais/console/pkg/dbmodels"
 )
 
-func getAdminUser(db *gorm.DB) *dbmodels.User {
+// getAdminUser Create a user object with the admin role, insert it into the provided database, and return the user
+func getAdminUser(db *gorm.DB, name, email string) *dbmodels.User {
 	role := &dbmodels.Role{}
 	db.Where("name = ?", roles.RoleAdmin).Find(role)
 
 	user := &dbmodels.User{
-		Email: "user@example.com",
-		Name:  "User",
+		Email: email,
+		Name:  name,
 	}
 	db.Create(user)
 	userRole := &dbmodels.UserRole{
@@ -59,7 +60,7 @@ func TestQueryResolver_Teams(t *testing.T) {
 	ch := make(chan reconcilers.Input, 100)
 	system := &dbmodels.System{}
 	db.Create(system)
-	user := getAdminUser(db)
+	user := getAdminUser(db, "user", "user@example.com")
 
 	ctx := authz.ContextWithUser(context.Background(), user)
 	resolver := graph.NewResolver(db, "example.com", system, ch, nil).Query()

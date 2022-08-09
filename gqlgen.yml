@@ -70,6 +70,10 @@ models:
     fields:
       teams:
         resolver: true
+  Role:
+    fields:
+      authorizations:
+        resolver: true
   AuditLog:
     fields:
       actor:
