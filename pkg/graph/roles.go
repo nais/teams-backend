@@ -28,15 +28,6 @@ func (r *queryResolver) Roles(ctx context.Context, pagination *model.Pagination,
 	}, err
 }
 
-func (r *roleResolver) Authorizations(ctx context.Context, obj *dbmodels.Role) ([]*dbmodels.Authorization, error) {
-	authorizations := make([]*dbmodels.Authorization, 0)
-	err := r.db.Model(obj).Association("Authorizations").Find(&authorizations)
-	if err != nil {
-		return nil, err
-	}
-	return authorizations, nil
-}
-
 func (r *roleBindingResolver) Role(ctx context.Context, obj *dbmodels.UserRole) (*dbmodels.Role, error) {
 	role := &dbmodels.Role{}
 	err := r.db.Where("id = ?", obj.RoleID).First(role).Error
@@ -50,11 +41,7 @@ func (r *roleBindingResolver) IsGlobal(ctx context.Context, obj *dbmodels.UserRo
 	return obj.TargetID == nil, nil
 }
 
-// Role returns generated.RoleResolver implementation.
-func (r *Resolver) Role() generated.RoleResolver { return &roleResolver{r} }
-
 // RoleBinding returns generated.RoleBindingResolver implementation.
 func (r *Resolver) RoleBinding() generated.RoleBindingResolver { return &roleBindingResolver{r} }
 
-type roleResolver struct{ *Resolver }
 type roleBindingResolver struct{ *Resolver }

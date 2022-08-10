@@ -54,38 +54,6 @@ func TestQueryResolver_Roles(t *testing.T) {
 	})
 }
 
-func TestRoleResolver_Authorizations(t *testing.T) {
-	db, _ := test.GetTestDB()
-	emptyRole := &dbmodels.Role{Name: "Empty role"}
-	db.Create(emptyRole)
-
-	roleWithAuthorizations := &dbmodels.Role{Name: "Non-empty role", Authorizations: []dbmodels.Authorization{
-		{Name: "authz-1"},
-		{Name: "authz-2"},
-	}}
-	db.Create(roleWithAuthorizations)
-	system := &dbmodels.System{}
-	db.Create(system)
-
-	ch := make(chan reconcilers.Input, 100)
-	ctx := context.Background()
-
-	logger := auditlogger.New(db)
-	resolver := graph.NewResolver(db, "example.com", system, ch, logger).Role()
-
-	t.Run("Role with no authorizations", func(t *testing.T) {
-		authorizations, err := resolver.Authorizations(ctx, emptyRole)
-		assert.NoError(t, err)
-		assert.Len(t, authorizations, 0)
-	})
-
-	t.Run("Role with authorizations", func(t *testing.T) {
-		authorizations, err := resolver.Authorizations(ctx, roleWithAuthorizations)
-		assert.NoError(t, err)
-		assert.Len(t, authorizations, 2)
-	})
-}
-
 func TestRoleBindingResolver_Role(t *testing.T) {
 	db, _ := test.GetTestDB()
 

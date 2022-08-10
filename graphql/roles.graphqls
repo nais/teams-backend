@@ -12,12 +12,6 @@ extend type Query {
     ): Roles! @auth
 }
 
-"Authorization type."
-type Authorization {
-    "Name of the authorization."
-    name: String!
-}
-
 "Role binding type."
 type RoleBinding {
     "The connected role."
@@ -41,14 +35,8 @@ type Roles {
 
 "Role type."
 type Role {
-    "ID of the role."
-    id: UUID!
-
     "Name of the role."
     name: String!
-
-    "Authorizations included in the role."
-    authorizations: [Authorization!]!
 }
 
 "Input for filtering a collection of roles."

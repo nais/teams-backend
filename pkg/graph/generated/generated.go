@@ -42,7 +42,6 @@ type ResolverRoot interface {
 	AuditLog() AuditLogResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
-	Role() RoleResolver
 	RoleBinding() RoleBindingResolver
 	Team() TeamResolver
 	User() UserResolver
@@ -72,10 +71,6 @@ type ComplexityRoot struct {
 	AuditLogs struct {
 		Nodes    func(childComplexity int) int
 		PageInfo func(childComplexity int) int
-	}
-
-	Authorization struct {
-		Name func(childComplexity int) int
 	}
 
 	Correlation struct {
@@ -114,9 +109,7 @@ type ComplexityRoot struct {
 	}
 
 	Role struct {
-		Authorizations func(childComplexity int) int
-		ID             func(childComplexity int) int
-		Name           func(childComplexity int) int
+		Name func(childComplexity int) int
 	}
 
 	RoleBinding struct {
@@ -207,9 +200,6 @@ type QueryResolver interface {
 	Users(ctx context.Context, pagination *model.Pagination, query *model.UsersQuery, sort *model.UsersSort) (*model.Users, error)
 	User(ctx context.Context, id *uuid.UUID) (*dbmodels.User, error)
 	Me(ctx context.Context) (*dbmodels.User, error)
-}
-type RoleResolver interface {
-	Authorizations(ctx context.Context, obj *dbmodels.Role) ([]*dbmodels.Authorization, error)
 }
 type RoleBindingResolver interface {
 	Role(ctx context.Context, obj *dbmodels.UserRole) (*dbmodels.Role, error)
@@ -327,13 +317,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.AuditLogs.PageInfo(childComplexity), true
-
-	case "Authorization.name":
-		if e.complexity.Authorization.Name == nil {
-			break
-		}
-
-		return e.complexity.Authorization.Name(childComplexity), true
 
 	case "Correlation.id":
 		if e.complexity.Correlation.ID == nil {
@@ -585,20 +568,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.Users(childComplexity, args["pagination"].(*model.Pagination), args["query"].(*model.UsersQuery), args["sort"].(*model.UsersSort)), true
-
-	case "Role.authorizations":
-		if e.complexity.Role.Authorizations == nil {
-			break
-		}
-
-		return e.complexity.Role.Authorizations(childComplexity), true
-
-	case "Role.id":
-		if e.complexity.Role.ID == nil {
-			break
-		}
-
-		return e.complexity.Role.ID(childComplexity), true
 
 	case "Role.name":
 		if e.complexity.Role.Name == nil {
@@ -1042,12 +1011,6 @@ directive @auth on FIELD_DEFINITION`, BuiltIn: false},
     ): Roles! @auth
 }
 
-"Authorization type."
-type Authorization {
-    "Name of the authorization."
-    name: String!
-}
-
 "Role binding type."
 type RoleBinding {
     "The connected role."
@@ -1071,14 +1034,8 @@ type Roles {
 
 "Role type."
 type Role {
-    "ID of the role."
-    id: UUID!
-
     "Name of the role."
     name: String!
-
-    "Authorizations included in the role."
-    authorizations: [Authorization!]!
 }
 
 "Input for filtering a collection of roles."
@@ -2601,50 +2558,6 @@ func (ec *executionContext) fieldContext_AuditLogs_nodes(ctx context.Context, fi
 				return ec.fieldContext_AuditLog_createdAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type AuditLog", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Authorization_name(ctx context.Context, field graphql.CollectedField, obj *dbmodels.Authorization) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Authorization_name(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Name, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Authorization_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Authorization",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -4601,50 +4514,6 @@ func (ec *executionContext) fieldContext_Query___schema(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Role_id(ctx context.Context, field graphql.CollectedField, obj *dbmodels.Role) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Role_id(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ID, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*uuid.UUID)
-	fc.Result = res
-	return ec.marshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Role_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Role",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type UUID does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Role_name(ctx context.Context, field graphql.CollectedField, obj *dbmodels.Role) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Role_name(ctx, field)
 	if err != nil {
@@ -4689,54 +4558,6 @@ func (ec *executionContext) fieldContext_Role_name(ctx context.Context, field gr
 	return fc, nil
 }
 
-func (ec *executionContext) _Role_authorizations(ctx context.Context, field graphql.CollectedField, obj *dbmodels.Role) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Role_authorizations(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Role().Authorizations(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*dbmodels.Authorization)
-	fc.Result = res
-	return ec.marshalNAuthorization2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐAuthorizationᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Role_authorizations(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Role",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "name":
-				return ec.fieldContext_Authorization_name(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Authorization", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _RoleBinding_role(ctx context.Context, field graphql.CollectedField, obj *dbmodels.UserRole) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_RoleBinding_role(ctx, field)
 	if err != nil {
@@ -4776,12 +4597,8 @@ func (ec *executionContext) fieldContext_RoleBinding_role(ctx context.Context, f
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Role_id(ctx, field)
 			case "name":
 				return ec.fieldContext_Role_name(ctx, field)
-			case "authorizations":
-				return ec.fieldContext_Role_authorizations(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Role", field.Name)
 		},
@@ -4965,12 +4782,8 @@ func (ec *executionContext) fieldContext_Roles_nodes(ctx context.Context, field 
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Role_id(ctx, field)
 			case "name":
 				return ec.fieldContext_Role_name(ctx, field)
-			case "authorizations":
-				return ec.fieldContext_Role_authorizations(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Role", field.Name)
 		},
@@ -8809,34 +8622,6 @@ func (ec *executionContext) _AuditLogs(ctx context.Context, sel ast.SelectionSet
 	return out
 }
 
-var authorizationImplementors = []string{"Authorization"}
-
-func (ec *executionContext) _Authorization(ctx context.Context, sel ast.SelectionSet, obj *dbmodels.Authorization) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, authorizationImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("Authorization")
-		case "name":
-
-			out.Values[i] = ec._Authorization_name(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
 var correlationImplementors = []string{"Correlation"}
 
 func (ec *executionContext) _Correlation(ctx context.Context, sel ast.SelectionSet, obj *dbmodels.Correlation) graphql.Marshaler {
@@ -9272,40 +9057,13 @@ func (ec *executionContext) _Role(ctx context.Context, sel ast.SelectionSet, obj
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Role")
-		case "id":
-
-			out.Values[i] = ec._Role_id(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
-			}
 		case "name":
 
 			out.Values[i] = ec._Role_name(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
-		case "authorizations":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Role_authorizations(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -10249,60 +10007,6 @@ func (ec *executionContext) marshalNAuditLogs2ᚖgithubᚗcomᚋnaisᚋconsole�
 		return graphql.Null
 	}
 	return ec._AuditLogs(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalNAuthorization2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐAuthorizationᚄ(ctx context.Context, sel ast.SelectionSet, v []*dbmodels.Authorization) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNAuthorization2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐAuthorization(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) marshalNAuthorization2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐAuthorization(ctx context.Context, sel ast.SelectionSet, v *dbmodels.Authorization) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._Authorization(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
