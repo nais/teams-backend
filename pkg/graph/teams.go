@@ -17,7 +17,6 @@ import (
 	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
 	"github.com/nais/console/pkg/roles"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*dbmodels.Team, error) {
@@ -35,7 +34,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 	}
 
 	err = r.db.Transaction(func(tx *gorm.DB) error {
-		err := tx.Create(corr).Error
+		err = tx.Create(corr).Error
 		if err != nil {
 			return fmt.Errorf("unable to create correlation for audit log")
 		}
@@ -65,7 +64,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 			RoleID:   *teamOwner.ID,
 			TargetID: team.ID,
 		}
-		err = tx.Create(userRole).Error
+		err = db.CreateTrackedObject(ctx, tx, userRole)
 		if err != nil {
 			return err
 		}
@@ -232,11 +231,11 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 			}
 
 			if !isOwner {
-				err = tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&dbmodels.UserRole{
+				err = db.CreateTrackedObjectIgnoringDuplicates(ctx, tx, &dbmodels.UserRole{
 					UserID:   *user.ID,
 					RoleID:   *teamMemberRole.ID,
 					TargetID: team.ID,
-				}).Error
+				})
 				if err != nil {
 					return err
 				}
@@ -324,11 +323,11 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 
 		for _, user := range usersToAdd {
 			// Ignore duplicate conflict that can occur if the user is already an owner of the team
-			err = tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&dbmodels.UserRole{
+			err = db.CreateTrackedObjectIgnoringDuplicates(ctx, tx, &dbmodels.UserRole{
 				UserID:   *user.ID,
 				RoleID:   *teamOwnerRole.ID,
 				TargetID: team.ID,
-			}).Error
+			})
 			if err != nil {
 				return err
 			}
@@ -424,7 +423,7 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 			userRole.RoleID = *teamOwnerRole.ID
 		}
 
-		err = tx.Create(userRole).Error
+		err = db.CreateTrackedObject(ctx, tx, userRole)
 		if err != nil {
 			return err
 		}

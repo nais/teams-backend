@@ -117,10 +117,11 @@ type User struct {
 }
 
 type UserRole struct {
+	Model
 	Role     Role       `gorm:""`
 	User     User       `gorm:""`
-	RoleID   uuid.UUID  `gorm:"type:uuid; primaryKey; index:user_role_target,unique"`
-	UserID   uuid.UUID  `gorm:"type:uuid; primaryKey; index:user_role_target,unique"`
+	RoleID   uuid.UUID  `gorm:"type:uuid; not null; index:user_role_target,unique"`
+	UserID   uuid.UUID  `gorm:"type:uuid; not null; index:user_role_target,unique"`
 	TargetID *uuid.UUID `gorm:"type:uuid; index:user_role_target,unique"`
 }
 
