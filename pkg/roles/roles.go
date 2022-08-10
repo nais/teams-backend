@@ -25,6 +25,7 @@ const (
 	AuthorizationTeamsRead             Authorization = "teams.read"
 	AuthorizationTeamsUpdate           Authorization = "teams.update"
 	AuthorizationUsersList             Authorization = "users.list"
+	AuthorizationUsersUpdate           Authorization = "users.update"
 
 	RoleAdmin                 Role = "Admin"
 	RoleServiceAccountCreator Role = "Service account creator"
@@ -33,6 +34,7 @@ const (
 	RoleTeamMember            Role = "Team member"
 	RoleTeamOwner             Role = "Team owner"
 	RoleTeamViewer            Role = "Team viewer"
+	RoleUserEditor            Role = "User editor"
 	RoleUserViewer            Role = "User viewer"
 )
 

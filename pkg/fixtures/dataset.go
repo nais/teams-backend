@@ -85,6 +85,7 @@ func CreateRolesAndAuthorizations(tx *gorm.DB) error {
 	teamsRead := &dbmodels.Authorization{Name: string(roles.AuthorizationTeamsRead)}
 	teamsUpdate := &dbmodels.Authorization{Name: string(roles.AuthorizationTeamsUpdate)}
 	usersList := &dbmodels.Authorization{Name: string(roles.AuthorizationUsersList)}
+	usersUpdate := &dbmodels.Authorization{Name: string(roles.AuthorizationUsersUpdate)}
 	authorizations := []*dbmodels.Authorization{
 		auditLogsRead,
 		serviceAccountsCreate,
@@ -101,6 +102,7 @@ func CreateRolesAndAuthorizations(tx *gorm.DB) error {
 		teamsRead,
 		teamsUpdate,
 		usersList,
+		usersUpdate,
 	}
 	err := tx.Create(authorizations).Error
 	if err != nil {
@@ -114,6 +116,7 @@ func CreateRolesAndAuthorizations(tx *gorm.DB) error {
 	teamMember := &dbmodels.Role{Name: string(roles.RoleTeamMember)}
 	teamOwner := &dbmodels.Role{Name: string(roles.RoleTeamOwner)}
 	teamViewer := &dbmodels.Role{Name: string(roles.RoleTeamViewer)}
+	userEditor := &dbmodels.Role{Name: string(roles.RoleUserEditor)}
 	userViewer := &dbmodels.Role{Name: string(roles.RoleUserViewer)}
 
 	err = tx.Create([]*dbmodels.Role{roleAdmin, serviceAccountCreator, serviceAccountOwner, teamCreator, teamMember, teamOwner, teamViewer, userViewer}).Error
@@ -137,6 +140,7 @@ func CreateRolesAndAuthorizations(tx *gorm.DB) error {
 		{Role: *roleAdmin, Authorization: *teamsRead},
 		{Role: *roleAdmin, Authorization: *teamsUpdate},
 		{Role: *roleAdmin, Authorization: *usersList},
+		{Role: *roleAdmin, Authorization: *usersUpdate},
 
 		{Role: *serviceAccountCreator, Authorization: *serviceAccountsCreate},
 
@@ -157,6 +161,9 @@ func CreateRolesAndAuthorizations(tx *gorm.DB) error {
 		{Role: *teamViewer, Authorization: *teamsList},
 		{Role: *teamViewer, Authorization: *teamsRead},
 		{Role: *teamViewer, Authorization: *auditLogsRead},
+
+		{Role: *userEditor, Authorization: *usersList},
+		{Role: *userEditor, Authorization: *usersUpdate},
 
 		{Role: *userViewer, Authorization: *usersList},
 	}
