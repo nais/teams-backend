@@ -34,7 +34,7 @@ const (
 	RoleTeamMember            Role = "Team member"
 	RoleTeamOwner             Role = "Team owner"
 	RoleTeamViewer            Role = "Team viewer"
-	RoleUserEditor            Role = "User editor"
+	RoleUserAdmin             Role = "User admin"
 	RoleUserViewer            Role = "User viewer"
 )
 
