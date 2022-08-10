@@ -259,8 +259,14 @@ func (r *userResolver) IsServiceAccount(ctx context.Context, obj *dbmodels.User)
 }
 
 func (r *userResolver) Roles(ctx context.Context, obj *dbmodels.User) ([]*dbmodels.UserRole, error) {
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireAuthorizationOrTargetMatch(actor, roles.AuthorizationUsersUpdate, *obj.ID)
+	if err != nil {
+		return nil, err
+	}
+
 	roleBindings := make([]*dbmodels.UserRole, 0)
-	err := r.db.Where("user_id = ?", obj.ID).Find(&roleBindings).Error
+	err = r.db.Where("user_id = ?", obj.ID).Find(&roleBindings).Error
 	if err != nil {
 		return nil, err
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/roles"
 	"github.com/nais/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -77,15 +78,27 @@ func TestUserResolver_Roles(t *testing.T) {
 	resolver := graph.NewResolver(db, "example.com", system, ch, auditlogger.New(db)).User()
 	ctx := context.Background()
 
+	t.Run("No user in context", func(t *testing.T) {
+		userRoles, err := resolver.Roles(ctx, userWithNoRoles)
+		assert.ErrorIs(t, err, roles.ErrNotAuthorized)
+		assert.Nil(t, userRoles)
+	})
+
+	t.Run("Not authorized", func(t *testing.T) {
+		userRoles, err := resolver.Roles(authz.ContextWithUser(ctx, userWithRoles), userWithNoRoles)
+		assert.ErrorIs(t, err, roles.ErrNotAuthorized)
+		assert.Nil(t, userRoles)
+	})
+
 	t.Run("No roles", func(t *testing.T) {
-		roles, err := resolver.Roles(ctx, userWithNoRoles)
+		userRoles, err := resolver.Roles(authz.ContextWithUser(ctx, userWithNoRoles), userWithNoRoles)
 		assert.NoError(t, err)
-		assert.Len(t, roles, 0)
+		assert.Len(t, userRoles, 0)
 	})
 
 	t.Run("User with roles", func(t *testing.T) {
-		roles, err := resolver.Roles(ctx, userWithRoles)
+		userRoles, err := resolver.Roles(authz.ContextWithUser(ctx, userWithRoles), userWithRoles)
 		assert.NoError(t, err)
-		assert.Len(t, roles, 1)
+		assert.Len(t, userRoles, 1)
 	})
 }

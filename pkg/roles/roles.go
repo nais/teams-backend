@@ -40,16 +40,16 @@ const (
 
 var ErrNotAuthorized = errors.New("not authorized")
 
-// RequireGlobalAuthorization Require a user to have a specific authorization through a globally assigned role. The role
-// bindings must already be attached to the user.
-func RequireGlobalAuthorization(user *dbmodels.User, requiredAuthorization Authorization) error {
-	if user == nil {
+// RequireGlobalAuthorization Require an actor to have a specific authorization through a globally assigned role. The
+// role bindings must already be attached to the actor.
+func RequireGlobalAuthorization(actor *dbmodels.User, requiredAuthorization Authorization) error {
+	if actor == nil {
 		return ErrNotAuthorized
 	}
 
 	authorizations := make(map[dbmodels.Authorization]struct{})
 
-	for _, roleBinding := range user.RoleBindings {
+	for _, roleBinding := range actor.RoleBindings {
 		if roleBinding.TargetID == nil {
 			for _, authorization := range roleBinding.Role.Authorizations {
 				authorizations[authorization] = struct{}{}
@@ -60,16 +60,16 @@ func RequireGlobalAuthorization(user *dbmodels.User, requiredAuthorization Autho
 	return authorized(authorizations, requiredAuthorization)
 }
 
-// RequireAuthorization Require a user to have a specific authorization through a globally assigned or a correctly
-// targetted role. The role bindings must already be attached to the user.
-func RequireAuthorization(user *dbmodels.User, requiredAuthorization Authorization, target uuid.UUID) error {
-	if user == nil {
+// RequireAuthorization Require an actor to have a specific authorization through a globally assigned or a correctly
+// targetted role. The role bindings must already be attached to the actor.
+func RequireAuthorization(actor *dbmodels.User, requiredAuthorization Authorization, target uuid.UUID) error {
+	if actor == nil {
 		return ErrNotAuthorized
 	}
 
 	authorizations := make(map[dbmodels.Authorization]struct{})
 
-	for _, roleBinding := range user.RoleBindings {
+	for _, roleBinding := range actor.RoleBindings {
 		if roleBinding.TargetID == nil || *roleBinding.TargetID == target {
 			for _, authorization := range roleBinding.Role.Authorizations {
 				authorizations[authorization] = struct{}{}
@@ -78,6 +78,17 @@ func RequireAuthorization(user *dbmodels.User, requiredAuthorization Authorizati
 	}
 
 	return authorized(authorizations, requiredAuthorization)
+}
+
+// RequireAuthorizationOrTargetMatch Require an actor to have a specific authorization through a globally assigned or a
+// correctly targetted role. The role bindings must already be attached to the actor. If the actor matches the target,
+// the action will be allowed.
+func RequireAuthorizationOrTargetMatch(actor *dbmodels.User, requiredAuthorization Authorization, target uuid.UUID) error {
+	if actor != nil && *actor.ID == target {
+		return nil
+	}
+
+	return RequireAuthorization(actor, requiredAuthorization, target)
 }
 
 // authorized Check if one of the authorizations in the map matches the required authorization.
