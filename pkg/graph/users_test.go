@@ -7,7 +7,6 @@ import (
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/reconcilers"
-	"github.com/nais/console/pkg/roles"
 	"github.com/nais/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -80,13 +79,13 @@ func TestUserResolver_Roles(t *testing.T) {
 
 	t.Run("No user in context", func(t *testing.T) {
 		userRoles, err := resolver.Roles(ctx, userWithNoRoles)
-		assert.ErrorIs(t, err, roles.ErrNotAuthorized)
+		assert.ErrorIs(t, err, authz.ErrNotAuthorized)
 		assert.Nil(t, userRoles)
 	})
 
 	t.Run("Not authorized", func(t *testing.T) {
 		userRoles, err := resolver.Roles(authz.ContextWithUser(ctx, userWithRoles), userWithNoRoles)
-		assert.ErrorIs(t, err, roles.ErrNotAuthorized)
+		assert.ErrorIs(t, err, authz.ErrNotAuthorized)
 		assert.Nil(t, userRoles)
 	})
 

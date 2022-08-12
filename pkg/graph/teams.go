@@ -21,7 +21,7 @@ import (
 
 func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*dbmodels.Team, error) {
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireGlobalAuthorization(actor, roles.AuthorizationTeamsCreate)
+	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationTeamsCreate)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 
 func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, input model.UpdateTeamInput) (*dbmodels.Team, error) {
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *teamID)
+	err := authz.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *teamID)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +147,7 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, in
 
 func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.RemoveUsersFromTeamInput) (*dbmodels.Team, error) {
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *input.TeamID)
+	err := authz.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *input.TeamID)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +210,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 
 func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUID) (*dbmodels.Team, error) {
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *teamID)
+	err := authz.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *teamID)
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +244,7 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 
 func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTeamMembersInput) (*dbmodels.Team, error) {
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *input.TeamID)
+	err := authz.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *input.TeamID)
 	if err != nil {
 		return nil, err
 	}
@@ -329,7 +329,7 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 
 func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTeamOwnersInput) (*dbmodels.Team, error) {
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *input.TeamID)
+	err := authz.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *input.TeamID)
 	if err != nil {
 		return nil, err
 	}
@@ -420,7 +420,7 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 
 func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.SetTeamMemberRoleInput) (*dbmodels.Team, error) {
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *input.TeamID)
+	err := authz.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *input.TeamID)
 	if err != nil {
 		return nil, err
 	}
@@ -501,7 +501,7 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 
 func (r *queryResolver) Teams(ctx context.Context, pagination *model.Pagination, query *model.TeamsQuery, sort *model.TeamsSort) (*model.Teams, error) {
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireGlobalAuthorization(actor, roles.AuthorizationTeamsList)
+	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationTeamsList)
 	if err != nil {
 		return nil, err
 	}
@@ -522,7 +522,7 @@ func (r *queryResolver) Teams(ctx context.Context, pagination *model.Pagination,
 
 func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team, error) {
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireAuthorization(actor, roles.AuthorizationTeamsRead, *id)
+	err := authz.RequireAuthorization(actor, roles.AuthorizationTeamsRead, *id)
 	if err != nil {
 		return nil, err
 	}
@@ -538,7 +538,7 @@ func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team
 
 func (r *teamResolver) Metadata(ctx context.Context, obj *dbmodels.Team) (map[string]interface{}, error) {
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireAuthorization(actor, roles.AuthorizationTeamsRead, *obj.ID)
+	err := authz.RequireAuthorization(actor, roles.AuthorizationTeamsRead, *obj.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -560,7 +560,7 @@ func (r *teamResolver) Metadata(ctx context.Context, obj *dbmodels.Team) (map[st
 
 func (r *teamResolver) AuditLogs(ctx context.Context, obj *dbmodels.Team) ([]*dbmodels.AuditLog, error) {
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireAuthorization(actor, roles.AuthorizationAuditLogsRead, *obj.ID)
+	err := authz.RequireAuthorization(actor, roles.AuthorizationAuditLogsRead, *obj.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -575,7 +575,7 @@ func (r *teamResolver) AuditLogs(ctx context.Context, obj *dbmodels.Team) ([]*db
 
 func (r *teamResolver) Members(ctx context.Context, obj *dbmodels.Team) ([]*model.TeamMember, error) {
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
+	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
 	if err != nil {
 		return nil, err
 	}

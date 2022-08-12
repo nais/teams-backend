@@ -24,7 +24,7 @@ import (
 
 func (r *mutationResolver) CreateServiceAccount(ctx context.Context, input model.CreateServiceAccountInput) (*dbmodels.User, error) {
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireGlobalAuthorization(actor, roles.AuthorizationServiceAccountsCreate)
+	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationServiceAccountsCreate)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func (r *mutationResolver) CreateServiceAccount(ctx context.Context, input model
 
 func (r *mutationResolver) UpdateServiceAccount(ctx context.Context, serviceAccountID *uuid.UUID, input model.UpdateServiceAccountInput) (*dbmodels.User, error) {
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireAuthorization(actor, roles.AuthorizationServiceAccountsUpdate, *serviceAccountID)
+	err := authz.RequireAuthorization(actor, roles.AuthorizationServiceAccountsUpdate, *serviceAccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +130,7 @@ func (r *mutationResolver) UpdateServiceAccount(ctx context.Context, serviceAcco
 
 func (r *mutationResolver) DeleteServiceAccount(ctx context.Context, serviceAccountID *uuid.UUID) (bool, error) {
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireAuthorization(actor, roles.AuthorizationServiceAccountsDelete, *serviceAccountID)
+	err := authz.RequireAuthorization(actor, roles.AuthorizationServiceAccountsDelete, *serviceAccountID)
 	if err != nil {
 		return false, err
 	}
@@ -175,7 +175,7 @@ func (r *mutationResolver) DeleteServiceAccount(ctx context.Context, serviceAcco
 
 func (r *queryResolver) Users(ctx context.Context, pagination *model.Pagination, query *model.UsersQuery, sort *model.UsersSort) (*model.Users, error) {
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
+	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +198,7 @@ func (r *queryResolver) Users(ctx context.Context, pagination *model.Pagination,
 
 func (r *queryResolver) User(ctx context.Context, id *uuid.UUID) (*dbmodels.User, error) {
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
+	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +217,7 @@ func (r *queryResolver) Me(ctx context.Context) (*dbmodels.User, error) {
 
 func (r *userResolver) Teams(ctx context.Context, obj *dbmodels.User) ([]*dbmodels.Team, error) {
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireGlobalAuthorization(actor, roles.AuthorizationTeamsList)
+	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationTeamsList)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +232,7 @@ func (r *userResolver) Teams(ctx context.Context, obj *dbmodels.User) ([]*dbmode
 
 func (r *userResolver) HasAPIKey(ctx context.Context, obj *dbmodels.User) (bool, error) {
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireAuthorization(actor, roles.AuthorizationServiceAccountsRead, *obj.ID)
+	err := authz.RequireAuthorization(actor, roles.AuthorizationServiceAccountsRead, *obj.ID)
 	if err != nil {
 		return false, err
 	}
@@ -250,7 +250,7 @@ func (r *userResolver) HasAPIKey(ctx context.Context, obj *dbmodels.User) (bool,
 
 func (r *userResolver) IsServiceAccount(ctx context.Context, obj *dbmodels.User) (bool, error) {
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireAuthorization(actor, roles.AuthorizationServiceAccountsRead, *obj.ID)
+	err := authz.RequireAuthorization(actor, roles.AuthorizationServiceAccountsRead, *obj.ID)
 	if err != nil {
 		return false, err
 	}
@@ -260,7 +260,7 @@ func (r *userResolver) IsServiceAccount(ctx context.Context, obj *dbmodels.User)
 
 func (r *userResolver) Roles(ctx context.Context, obj *dbmodels.User) ([]*dbmodels.UserRole, error) {
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireAuthorizationOrTargetMatch(actor, roles.AuthorizationUsersUpdate, *obj.ID)
+	err := authz.RequireAuthorizationOrTargetMatch(actor, roles.AuthorizationUsersUpdate, *obj.ID)
 	if err != nil {
 		return nil, err
 	}

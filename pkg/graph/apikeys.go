@@ -21,7 +21,7 @@ import (
 
 func (r *mutationResolver) CreateAPIKey(ctx context.Context, userID *uuid.UUID) (*model.APIKey, error) {
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireAuthorization(actor, roles.AuthorizationServiceAccountsUpdate, *userID)
+	err := authz.RequireAuthorization(actor, roles.AuthorizationServiceAccountsUpdate, *userID)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (r *mutationResolver) CreateAPIKey(ctx context.Context, userID *uuid.UUID) 
 
 func (r *mutationResolver) DeleteAPIKey(ctx context.Context, userID *uuid.UUID) (bool, error) {
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireAuthorization(actor, roles.AuthorizationServiceAccountsUpdate, *userID)
+	err := authz.RequireAuthorization(actor, roles.AuthorizationServiceAccountsUpdate, *userID)
 	if err != nil {
 		return false, err
 	}

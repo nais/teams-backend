@@ -37,7 +37,7 @@ func (r *auditLogResolver) Actor(ctx context.Context, obj *dbmodels.AuditLog) (*
 	}
 
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
+	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func (r *auditLogResolver) TargetUser(ctx context.Context, obj *dbmodels.AuditLo
 	}
 
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
+	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (r *auditLogResolver) TargetTeam(ctx context.Context, obj *dbmodels.AuditLo
 	}
 
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireAuthorization(actor, roles.AuthorizationTeamsRead, *obj.TargetTeamID)
+	err := authz.RequireAuthorization(actor, roles.AuthorizationTeamsRead, *obj.TargetTeamID)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func (r *auditLogResolver) TargetTeam(ctx context.Context, obj *dbmodels.AuditLo
 
 func (r *queryResolver) AuditLogs(ctx context.Context, pagination *model.Pagination, query *model.AuditLogsQuery, sort *model.AuditLogsSort) (*model.AuditLogs, error) {
 	actor := authz.UserFromContext(ctx)
-	err := roles.RequireGlobalAuthorization(actor, roles.AuthorizationAuditLogsRead)
+	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationAuditLogsRead)
 	if err != nil {
 		return nil, err
 	}
