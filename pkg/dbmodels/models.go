@@ -18,7 +18,7 @@ type Model struct {
 	UpdatedBy   *User      `gorm:""`
 	CreatedByID *uuid.UUID `gorm:"type:uuid"`
 	UpdatedByID *uuid.UUID `gorm:"type:uuid"`
-	UpdatedAt   time.Time  `gorm:"autoUpdateTime; not null"`
+	UpdatedAt   time.Time  `gorm:"autoUpdateTime"`
 }
 
 type ApiKey struct {
