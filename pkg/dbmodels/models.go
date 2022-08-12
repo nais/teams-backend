@@ -1,10 +1,11 @@
 package dbmodels
 
 import (
+	"time"
+
 	"github.com/jackc/pgtype"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -12,7 +13,7 @@ import (
 // Model Base model that all database tables inherit.
 type Model struct {
 	ID          *uuid.UUID `gorm:"type:uuid; primaryKey"`
-	CreatedAt   time.Time  `gorm:"<-:create; autoCreateTime; index; not null"`
+	CreatedAt   time.Time  `gorm:"<-:create; default:CURRENT_TIMESTAMP; index; not null"`
 	CreatedBy   *User      `gorm:""`
 	UpdatedBy   *User      `gorm:""`
 	CreatedByID *uuid.UUID `gorm:"type:uuid"`
