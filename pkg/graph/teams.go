@@ -91,6 +91,60 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 	return team, nil
 }
 
+func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, input model.UpdateTeamInput) (*dbmodels.Team, error) {
+	actor := authz.UserFromContext(ctx)
+	err := roles.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *teamID)
+	if err != nil {
+		return nil, err
+	}
+
+	team := &dbmodels.Team{}
+	err = r.db.Where("id = ?", teamID).First(team).Error
+	if err != nil {
+		return nil, err
+	}
+
+	corr := &dbmodels.Correlation{}
+	err = r.db.Transaction(func(tx *gorm.DB) error {
+		err = tx.Create(corr).Error
+		if err != nil {
+			return fmt.Errorf("unable to create correlation for audit log")
+		}
+
+		if input.Name != nil {
+			team.Name = *input.Name
+		}
+
+		if input.Purpose != nil {
+			team.Purpose = input.Purpose
+		}
+
+		err = db.UpdateTrackedObject(ctx, tx, team)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	r.auditLogger.Logf(console_reconciler.OpUpdateTeam, *corr, *r.system, actor, team, nil, "Team updated")
+
+	team, err = r.teamWithAssociations(*team.ID)
+	if err != nil {
+		return nil, fmt.Errorf("unable to fetch team: %w", err)
+	}
+	r.teamReconciler <- reconcilers.Input{
+		Corr: *corr,
+		Team: *team,
+	}
+
+	return team, nil
+}
+
 func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.RemoveUsersFromTeamInput) (*dbmodels.Team, error) {
 	actor := authz.UserFromContext(ctx)
 	err := roles.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *input.TeamID)

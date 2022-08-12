@@ -71,7 +71,7 @@ type CreateServiceAccountInput struct {
 
 // Input for creating a new team.
 type CreateTeamInput struct {
-	// Team slug.
+	// Team slug. This value immutable.
 	Slug *dbmodels.Slug `json:"slug"`
 	// Team name.
 	Name string `json:"name"`
@@ -197,6 +197,14 @@ type TeamsSort struct {
 type UpdateServiceAccountInput struct {
 	// The new name of the service account. The email address will be automatically updated.
 	Name *dbmodels.Slug `json:"name"`
+}
+
+// Input for updating an existing team.
+type UpdateTeamInput struct {
+	// Team name.
+	Name *string `json:"name"`
+	// Team purpose.
+	Purpose *string `json:"purpose"`
 }
 
 // User collection.

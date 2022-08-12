@@ -27,6 +27,7 @@ const (
 	OpSetTeamMemberRole    = "console:team:set-member-role"
 	OpSyncTeam             = "console:team:sync"
 	OpUpdateServiceAccount = "console:service-account:update"
+	OpUpdateTeam           = "console:team:update"
 )
 
 func New(system dbmodels.System) *consoleReconciler {
