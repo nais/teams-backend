@@ -1,6 +1,9 @@
 package reconcilers
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+	"github.com/nais/console/pkg/dbmodels"
+)
 
 type AzureState struct {
 	GroupID *uuid.UUID `json:"groupId"`
@@ -21,4 +24,8 @@ type GoogleGcpProjectState struct {
 type GoogleGcpEnvironmentProject struct {
 	ProjectID   string `json:"projectId"`   // Unique of the project, for instance `my-project-123`
 	ProjectName string `json:"projectName"` // Unique project name, for instance `projects/<int>`
+}
+
+type GoogleGcpNaisNamespaceState struct {
+	Namespaces map[string]dbmodels.Slug `json:"namespaces"` // Key is the environment for the team namespace
 }

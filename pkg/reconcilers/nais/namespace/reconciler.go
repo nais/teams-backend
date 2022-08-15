@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
+	log "github.com/sirupsen/logrus"
 
 	"cloud.google.com/go/pubsub"
 	"github.com/nais/console/pkg/auditlogger"
@@ -72,30 +73,45 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 		return fmt.Errorf("retrieve pubsub client: %w", err)
 	}
 
+	namespaceState := &reconcilers.GoogleGcpNaisNamespaceState{
+		Namespaces: make(map[string]dbmodels.Slug),
+	}
+	err = dbmodels.LoadSystemState(r.db, *r.system.ID, *input.Team.ID, namespaceState)
+	if err != nil {
+		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
+	}
+
 	gcpSystem := &dbmodels.System{}
 	err = r.db.Where("name = ?", google_gcp_reconciler.Name).First(gcpSystem).Error
 	if err != nil {
 		return fmt.Errorf("unable to load GCP system: %w", err)
 	}
 
-	state := &reconcilers.GoogleGcpProjectState{}
-	err = dbmodels.LoadSystemState(r.db, *gcpSystem.ID, *input.Team.ID, state)
+	gcpProjectState := &reconcilers.GoogleGcpProjectState{}
+	err = dbmodels.LoadSystemState(r.db, *gcpSystem.ID, *input.Team.ID, gcpProjectState)
 	if err != nil {
 		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
 	}
 
-	if len(state.Projects) == 0 {
+	if len(gcpProjectState.Projects) == 0 {
 		return fmt.Errorf("no GCP project state exists for team '%s' yet", input.Team.Slug)
 	}
 
-	for environment, project := range state.Projects {
+	for environment, project := range gcpProjectState.Projects {
 		err = r.createNamespace(ctx, svc, input.Team, environment, project.ProjectID)
 		if err != nil {
 			return fmt.Errorf("unable to create namespace for project '%s' in environment '%s': %w", project.ProjectID, environment, err)
 		}
 
-		// FIXME: Don't create a log entry if the namespace already exists
-		r.auditLogger.Logf(OpCreateNamespace, input.Corr, r.system, nil, &input.Team, nil, "request namespace creation for team '%s' in namespace '%s'", input.Team.Slug, environment)
+		if _, requested := namespaceState.Namespaces[environment]; !requested {
+			r.auditLogger.Logf(OpCreateNamespace, input.Corr, r.system, nil, &input.Team, nil, "request namespace creation for team '%s' in environment '%s'", input.Team.Slug, environment)
+			namespaceState.Namespaces[environment] = input.Team.Slug
+		}
+	}
+
+	err = dbmodels.SetSystemState(r.db, *r.system.ID, *input.Team.ID, namespaceState)
+	if err != nil {
+		log.Errorf("system state not persisted: %s", err)
 	}
 
 	return nil
