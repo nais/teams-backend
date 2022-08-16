@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/nais/console/pkg/sqlc"
 	"net/http"
 	"net/url"
 	"os"
@@ -56,7 +57,6 @@ func run() error {
 	}
 
 	err = setupLogging(cfg.LogFormat, cfg.LogLevel)
-
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,12 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	handler := setupGraphAPI(db, cfg.TenantDomain, systems[console_reconciler.Name], teamReconciler, logger)
+
+	handler, err := setupGraphAPI(db, cfg.TenantDomain, systems[console_reconciler.Name], teamReconciler, logger)
+	if err != nil {
+		return err
+	}
+
 	srv, err := setupHTTPServer(cfg, db, handler, authHandler, store)
 	if err != nil {
 		return err
@@ -340,8 +345,12 @@ func setupDatabase(cfg *config.Config) (*gorm.DB, error) {
 	return db, nil
 }
 
-func setupGraphAPI(db *gorm.DB, domain string, console *dbmodels.System, teamReconciler chan<- reconcilers.Input, logger auditlogger.AuditLogger) *graphql_handler.Server {
-	resolver := graph.NewResolver(db, domain, console, teamReconciler, logger)
+func setupGraphAPI(db *gorm.DB, domain string, console *dbmodels.System, teamReconciler chan<- reconcilers.Input, logger auditlogger.AuditLogger) (*graphql_handler.Server, error) {
+	dbc, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	resolver := graph.NewResolver(sqlc.New(dbc), db, domain, console, teamReconciler, logger)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
 	gc.Directives.Auth = directives.Auth(db)
@@ -352,7 +361,7 @@ func setupGraphAPI(db *gorm.DB, domain string, console *dbmodels.System, teamRec
 		),
 	)
 	handler.SetErrorPresenter(graph.GetErrorPresenter())
-	return handler
+	return handler, nil
 }
 
 func corsConfig() cors.Options {

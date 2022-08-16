@@ -6,6 +6,7 @@ import (
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/sqlc"
 	"gorm.io/gorm"
 )
 
@@ -14,6 +15,7 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
+	queries        *sqlc.Queries
 	db             *gorm.DB
 	tenantDomain   string
 	teamReconciler chan<- reconcilers.Input
@@ -21,8 +23,9 @@ type Resolver struct {
 	auditLogger    auditlogger.AuditLogger
 }
 
-func NewResolver(db *gorm.DB, tenantDomain string, system *dbmodels.System, teamReconciler chan<- reconcilers.Input, auditLogger auditlogger.AuditLogger) *Resolver {
+func NewResolver(queries *sqlc.Queries, db *gorm.DB, tenantDomain string, system *dbmodels.System, teamReconciler chan<- reconcilers.Input, auditLogger auditlogger.AuditLogger) *Resolver {
 	return &Resolver{
+		queries:        queries,
 		db:             db,
 		tenantDomain:   tenantDomain,
 		system:         system,
