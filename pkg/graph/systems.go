@@ -6,23 +6,13 @@ package graph
 import (
 	"context"
 
-	"github.com/nais/console/pkg/dbmodels"
-	"github.com/nais/console/pkg/graph/model"
+	"github.com/nais/console/pkg/sqlc"
 )
 
-func (r *queryResolver) Systems(ctx context.Context, pagination *model.Pagination, query *model.SystemsQuery, sort *model.SystemsSort) (*model.Systems, error) {
-	systems := make([]*dbmodels.System, 0)
-
-	if sort == nil {
-		sort = &model.SystemsSort{
-			Field:     model.SystemSortFieldName,
-			Direction: model.SortDirectionAsc,
-		}
+func (r *queryResolver) Systems(ctx context.Context) ([]*sqlc.System, error) {
+	systems, err := r.queries.GetSystems(ctx)
+	if err != nil {
+		return nil, err
 	}
-	pageInfo, err := r.paginatedQuery(pagination, query, sort, &dbmodels.System{}, &systems)
-
-	return &model.Systems{
-		PageInfo: pageInfo,
-		Nodes:    systems,
-	}, err
+	return systems, nil
 }

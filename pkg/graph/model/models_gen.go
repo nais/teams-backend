@@ -139,28 +139,6 @@ type SetTeamMemberRoleInput struct {
 	Role TeamRole `json:"role"`
 }
 
-// System collection.
-type Systems struct {
-	// Object related to pagination of the collection.
-	PageInfo *PageInfo `json:"pageInfo"`
-	// The list of system objects in the collection.
-	Nodes []*dbmodels.System `json:"nodes"`
-}
-
-// Input for filtering a collection of systems.
-type SystemsQuery struct {
-	// Filter by system name.
-	Name *string `json:"name"`
-}
-
-// Input for sorting a collection of systems.
-type SystemsSort struct {
-	// Field to sort by.
-	Field SystemSortField `json:"field"`
-	// Sort direction.
-	Direction SortDirection `json:"direction"`
-}
-
 // Team member.
 type TeamMember struct {
 	// User instance.
@@ -354,47 +332,6 @@ func (e *SortDirection) UnmarshalGQL(v interface{}) error {
 }
 
 func (e SortDirection) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
-}
-
-// Fields to sort the collection by.
-type SystemSortField string
-
-const (
-	// Sort by name.
-	SystemSortFieldName SystemSortField = "NAME"
-)
-
-var AllSystemSortField = []SystemSortField{
-	SystemSortFieldName,
-}
-
-func (e SystemSortField) IsValid() bool {
-	switch e {
-	case SystemSortFieldName:
-		return true
-	}
-	return false
-}
-
-func (e SystemSortField) String() string {
-	return string(e)
-}
-
-func (e *SystemSortField) UnmarshalGQL(v interface{}) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = SystemSortField(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid SystemSortField", str)
-	}
-	return nil
-}
-
-func (e SystemSortField) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 

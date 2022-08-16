@@ -29,10 +29,6 @@ func (order AuditLogsSort) GetOrderString() string {
 	return getOrderString(string(order.Field), order.Direction)
 }
 
-func (order SystemsSort) GetOrderString() string {
-	return getOrderString(string(order.Field), order.Direction)
-}
-
 func (order RolesSort) GetOrderString() string {
 	return getOrderString(string(order.Field), order.Direction)
 }
@@ -71,20 +67,6 @@ func (in *TeamsQuery) GetQuery() interface{} {
 	}
 
 	return team
-}
-
-func (in *SystemsQuery) GetQuery() interface{} {
-	if in == nil {
-		return &dbmodels.System{}
-	}
-
-	system := &dbmodels.System{}
-
-	if in.Name != nil {
-		system.Name = *in.Name
-	}
-
-	return system
 }
 
 func (in *AuditLogsQuery) GetQuery() interface{} {

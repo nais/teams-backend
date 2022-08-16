@@ -11,11 +11,11 @@ import (
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/roles"
+	"github.com/nais/console/pkg/sqlc"
 )
 
-func (r *auditLogResolver) TargetSystem(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.System, error) {
-	system := &dbmodels.System{}
-	err := r.db.Model(&obj).Association("TargetSystem").Find(&system)
+func (r *auditLogResolver) TargetSystem(ctx context.Context, obj *dbmodels.AuditLog) (*sqlc.System, error) {
+	system, err := r.queries.GetSystem(ctx, obj.TargetSystemID)
 	if err != nil {
 		return nil, err
 	}
