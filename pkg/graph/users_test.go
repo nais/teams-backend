@@ -7,6 +7,7 @@ import (
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -31,7 +32,8 @@ func TestQueryResolver_Users(t *testing.T) {
 	ctx := authz.ContextWithUser(context.Background(), adminUser)
 
 	logger := auditlogger.New(db)
-	resolver := graph.NewResolver(db, "example.com", system, ch, logger).Query()
+	dbc, _ := db.DB()
+	resolver := graph.NewResolver(sqlc.New(dbc), db, "example.com", system, ch, logger).Query()
 
 	t.Run("No filter or sort", func(t *testing.T) {
 		users, err := resolver.Users(ctx, nil, nil, nil)
@@ -73,8 +75,8 @@ func TestUserResolver_Roles(t *testing.T) {
 	db.Create(roleBinding)
 
 	ch := make(chan reconcilers.Input, 100)
-
-	resolver := graph.NewResolver(db, "example.com", system, ch, auditlogger.New(db)).User()
+	dbc, _ := db.DB()
+	resolver := graph.NewResolver(sqlc.New(dbc), db, "example.com", system, ch, auditlogger.New(db)).User()
 	ctx := context.Background()
 
 	t.Run("No user in context", func(t *testing.T) {

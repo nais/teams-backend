@@ -6,6 +6,7 @@ import (
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -28,7 +29,8 @@ func TestQueryResolver_Roles(t *testing.T) {
 	ctx := context.Background()
 
 	logger := auditlogger.New(db)
-	resolver := graph.NewResolver(db, "example.com", system, ch, logger).Query()
+	dbc, _ := db.DB()
+	resolver := graph.NewResolver(sqlc.New(dbc), db, "example.com", system, ch, logger).Query()
 
 	t.Run("No filter or sort", func(t *testing.T) {
 		roles, err := resolver.Roles(ctx, nil, nil, nil)
@@ -71,8 +73,9 @@ func TestRoleBindingResolver_Role(t *testing.T) {
 	db.Create(userRole)
 
 	ch := make(chan reconcilers.Input, 100)
+	dbc, _ := db.DB()
 
-	resolver := graph.NewResolver(db, "example.com", system, ch, auditlogger.New(db)).RoleBinding()
+	resolver := graph.NewResolver(sqlc.New(dbc), db, "example.com", system, ch, auditlogger.New(db)).RoleBinding()
 
 	role, err := resolver.Role(context.Background(), userRole)
 	assert.NoError(t, err)
@@ -107,7 +110,8 @@ func TestRoleBindingResolver_IsGlobal(t *testing.T) {
 
 	ch := make(chan reconcilers.Input, 100)
 
-	resolver := graph.NewResolver(db, "example.com", system, ch, auditlogger.New(db)).RoleBinding()
+	dbc, _ := db.DB()
+	resolver := graph.NewResolver(sqlc.New(dbc), db, "example.com", system, ch, auditlogger.New(db)).RoleBinding()
 	ctx := context.Background()
 
 	t.Run("Global role", func(t *testing.T) {

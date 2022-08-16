@@ -29,12 +29,4 @@ func TestSortInputs(t *testing.T) {
 		}
 		assert.Equal(t, "name ASC", order.GetOrderString())
 	})
-
-	t.Run("System sorting", func(t *testing.T) {
-		order := SystemsSort{
-			Field:     "name",
-			Direction: "ASC",
-		}
-		assert.Equal(t, "name ASC", order.GetOrderString())
-	})
 }

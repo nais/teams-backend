@@ -7,6 +7,7 @@ import (
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/roles"
+	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
@@ -63,7 +64,8 @@ func TestQueryResolver_Teams(t *testing.T) {
 	user := getAdminUser(db, "user", "user@example.com")
 
 	ctx := authz.ContextWithUser(context.Background(), user)
-	resolver := graph.NewResolver(db, "example.com", system, ch, nil).Query()
+	dbc, _ := db.DB()
+	resolver := graph.NewResolver(sqlc.New(dbc), db, "example.com", system, ch, nil).Query()
 
 	t.Run("No filter or sort", func(t *testing.T) {
 		teams, err := resolver.Teams(ctx, nil, nil, nil)

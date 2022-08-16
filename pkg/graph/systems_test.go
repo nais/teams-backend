@@ -4,8 +4,8 @@ import (
 	"context"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/graph"
-	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -16,15 +16,9 @@ import (
 func TestQueryResolver_Systems(t *testing.T) {
 	db, _ := test.GetTestDB()
 	systems := []*dbmodels.System{
-		{
-			Name: "B",
-		},
-		{
-			Name: "A",
-		},
-		{
-			Name: "C",
-		},
+		{Name: "B"},
+		{Name: "A"},
+		{Name: "C"},
 	}
 	db.Create(systems)
 
@@ -32,28 +26,16 @@ func TestQueryResolver_Systems(t *testing.T) {
 	ctx := context.Background()
 
 	logger := auditlogger.New(db)
-	resolver := graph.NewResolver(db, "example.com", systems[0], ch, logger).Query()
+	dbc, _ := db.DB()
+	resolver := graph.NewResolver(sqlc.New(dbc), db, "example.com", systems[0], ch, logger).Query()
 
 	t.Run("No filter or sort", func(t *testing.T) {
-		systems, err := resolver.Systems(ctx, nil, nil, nil)
+		systems, err := resolver.Systems(ctx)
 		assert.NoError(t, err)
 
-		assert.Len(t, systems.Nodes, 3)
-		assert.Equal(t, "A", systems.Nodes[0].Name)
-		assert.Equal(t, "B", systems.Nodes[1].Name)
-		assert.Equal(t, "C", systems.Nodes[2].Name)
-	})
-
-	t.Run("Sort name DESC", func(t *testing.T) {
-		systems, err := resolver.Systems(ctx, nil, nil, &model.SystemsSort{
-			Field:     model.SystemSortFieldName,
-			Direction: model.SortDirectionDesc,
-		})
-		assert.NoError(t, err)
-
-		assert.Len(t, systems.Nodes, 3)
-		assert.Equal(t, "C", systems.Nodes[0].Name)
-		assert.Equal(t, "B", systems.Nodes[1].Name)
-		assert.Equal(t, "A", systems.Nodes[2].Name)
+		assert.Len(t, systems, 3)
+		assert.Equal(t, "A", systems[0].Name)
+		assert.Equal(t, "B", systems[1].Name)
+		assert.Equal(t, "C", systems[2].Name)
 	})
 }
