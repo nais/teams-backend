@@ -11,7 +11,6 @@ import (
 	"github.com/nais/console/pkg/roles"
 	"google.golang.org/api/option"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"net/http"
 	"strings"
 
@@ -37,7 +36,13 @@ const (
 )
 
 var (
-	ErrNotEnabled = errors.New("disabled by configuration")
+	ErrNotEnabled    = errors.New("disabled by configuration")
+	DefaultRoleNames = []roles.Role{
+		roles.RoleTeamCreator,
+		roles.RoleTeamViewer,
+		roles.RoleUserViewer,
+		roles.RoleServiceAccountCreator,
+	}
 )
 
 func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, domain string, client *http.Client) *userSynchronizer {
@@ -95,14 +100,8 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 	err = s.db.Transaction(func(tx *gorm.DB) error {
 		userIds := make(map[uuid.UUID]struct{})
 
-		defaultRoleNames := []roles.Role{
-			roles.RoleTeamCreator,
-			roles.RoleTeamViewer,
-			roles.RoleUserViewer,
-			roles.RoleServiceAccountCreator,
-		}
 		defaultRoles := make([]dbmodels.Role, 0)
-		err = tx.Where("name IN (?)", defaultRoleNames).Find(&defaultRoles).Error
+		err = tx.Where("name IN (?)", DefaultRoleNames).Find(&defaultRoles).Error
 		if err != nil {
 			return fmt.Errorf("%s: find default roles: %w", OpPrepare, err)
 		}
@@ -141,10 +140,11 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 			}
 
 			for _, role := range defaultRoles {
-				err = tx.Clauses(clause.OnConflict{
-					Columns:   []clause.Column{{Name: "user_id"}, {Name: "role_id"}, {Name: "target_id"}},
-					DoNothing: true,
-				}).Create(&dbmodels.UserRole{RoleID: *role.ID, UserID: *localUser.ID}).Error
+				userRole := &dbmodels.UserRole{
+					RoleID: *role.ID,
+					UserID: *localUser.ID,
+				}
+				err = tx.Where("role_id = ? AND user_id = ? AND target_id IS NULL", role.ID, localUser.ID).FirstOrCreate(userRole).Error
 				if err != nil {
 					return fmt.Errorf("%s: attach default roles to user %s: %w", OpUpdate, email, err)
 				}

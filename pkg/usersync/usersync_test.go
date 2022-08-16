@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/dbmodels"
-	"github.com/nais/console/pkg/roles"
 	"github.com/nais/console/pkg/test"
 	"github.com/nais/console/pkg/usersync"
 	"github.com/stretchr/testify/assert"
@@ -85,30 +84,31 @@ func TestSync(t *testing.T) {
 		mockAuditLogger.AssertExpectations(t)
 	})
 
-	t.Run("Handle conflict for user roles", func(t *testing.T) {
+	t.Run("Don't insert duplicate role bindings", func(t *testing.T) {
 		db, _ := test.GetTestDBWithRoles()
 		db.Create(system)
-		user := &dbmodels.User{Email: "user@example.com"}
-		role := &dbmodels.Role{}
-		db.Where("name = ?", roles.RoleTeamCreator).First(role)
-		db.Create([]*dbmodels.User{user})
-		db.Create(&dbmodels.UserRole{RoleID: *role.ID, UserID: *user.ID})
+		user1 := &dbmodels.User{Email: "user1@example.com"}
+		user2 := &dbmodels.User{Email: "user2@example.com"}
+		db.Create([]*dbmodels.User{user1, user2})
 
-		httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
+		roundtripFunc := func(req *http.Request) *http.Response {
 			return test.Response("200 OK", `{"users":[`+
-				`{"primaryEmail":"user@example.com","name":{"fullName":"User Name"}}]}`) // Will be created
-		})
+				`{"primaryEmail":"user1@example.com","name":{"fullName":"Name 1"}},`+
+				`{"primaryEmail":"user2@example.com","name":{"fullName":"Name 2"}}`+
+				`]}`)
+		}
+		httpClient := test.NewTestHttpClient(roundtripFunc, roundtripFunc)
 
-		mockAuditLogger.
-			On("Logf", usersync.OpUpdate, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(func(targetUser *dbmodels.User) bool {
-				return targetUser.Name == "User Name"
-			}), mock.Anything).
-			Return(nil).
-			Once()
+		ctx := context.Background()
+		us := usersync.New(db, *system, auditlogger.New(db), "example.com", httpClient)
+		assert.NoError(t, us.Sync(ctx))
+		assert.NoError(t, us.Sync(ctx)) // Run twice, should only add role bindngs once
 
-		usersync := usersync.New(db, *system, mockAuditLogger, "example.com", httpClient)
-		err := usersync.Sync(context.Background())
-		assert.NoError(t, err)
-		mockAuditLogger.AssertExpectations(t)
+		var count1, count2 int64
+		db.Model(&dbmodels.UserRole{}).Where("user_id = ?", user1.ID).Count(&count1)
+		db.Model(&dbmodels.UserRole{}).Where("user_id = ?", user2.ID).Count(&count2)
+
+		assert.EqualValues(t, len(usersync.DefaultRoleNames), count1)
+		assert.EqualValues(t, len(usersync.DefaultRoleNames), count2)
 	})
 }
