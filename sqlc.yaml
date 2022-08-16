@@ -1,0 +1,11 @@
+version: 2
+sql:
+  - engine: postgresql
+    schema: sqlc/schemas
+    queries: sqlc/queries
+    gen:
+      go:
+        package: sqlc
+        out: pkg/sqlc
+        emit_result_struct_pointers: true # set to true to be compliant with gqlgen's resolvers
+        emit_prepared_queries: true
