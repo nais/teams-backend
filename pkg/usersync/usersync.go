@@ -142,7 +142,7 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 
 			for _, role := range defaultRoles {
 				err = tx.Clauses(clause.OnConflict{
-					Columns:   []clause.Column{{Name: "user_id"}, {Name: "role_id"}},
+					Columns:   []clause.Column{{Name: "user_id"}, {Name: "role_id"}, {Name: "target_id"}},
 					DoNothing: true,
 				}).Create(&dbmodels.UserRole{RoleID: *role.ID, UserID: *localUser.ID}).Error
 				if err != nil {
