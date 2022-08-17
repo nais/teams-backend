@@ -11,6 +11,25 @@ import (
 	"github.com/google/uuid"
 )
 
+const createSystem = `-- name: CreateSystem :one
+INSERT INTO systems (name) VALUES ($1)
+RETURNING id, created_at, created_by_id, updated_by_id, updated_at, name
+`
+
+func (q *Queries) CreateSystem(ctx context.Context, name string) (*System, error) {
+	row := q.queryRow(ctx, q.createSystemStmt, createSystem, name)
+	var i System
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.CreatedByID,
+		&i.UpdatedByID,
+		&i.UpdatedAt,
+		&i.Name,
+	)
+	return &i, err
+}
+
 const getSystem = `-- name: GetSystem :one
 SELECT id, created_at, created_by_id, updated_by_id, updated_at, name FROM systems
 WHERE id = $1 LIMIT 1

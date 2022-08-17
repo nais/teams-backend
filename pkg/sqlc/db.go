@@ -24,6 +24,9 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.createSystemStmt, err = db.PrepareContext(ctx, createSystem); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateSystem: %w", err)
+	}
 	if q.getRoleStmt, err = db.PrepareContext(ctx, getRole); err != nil {
 		return nil, fmt.Errorf("error preparing query GetRole: %w", err)
 	}
@@ -47,6 +50,11 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
+	if q.createSystemStmt != nil {
+		if cerr := q.createSystemStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createSystemStmt: %w", cerr)
+		}
+	}
 	if q.getRoleStmt != nil {
 		if cerr := q.getRoleStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getRoleStmt: %w", cerr)
@@ -116,6 +124,7 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 type Queries struct {
 	db               DBTX
 	tx               *sql.Tx
+	createSystemStmt *sql.Stmt
 	getRoleStmt      *sql.Stmt
 	getRolesStmt     *sql.Stmt
 	getSystemStmt    *sql.Stmt
@@ -128,6 +137,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
 		db:               tx,
 		tx:               tx,
+		createSystemStmt: q.createSystemStmt,
 		getRoleStmt:      q.getRoleStmt,
 		getRolesStmt:     q.getRolesStmt,
 		getSystemStmt:    q.getSystemStmt,

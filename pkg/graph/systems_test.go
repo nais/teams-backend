@@ -15,19 +15,21 @@ import (
 
 func TestQueryResolver_Systems(t *testing.T) {
 	db, _ := test.GetTestDB()
-	systems := []*dbmodels.System{
-		{Name: "B"},
-		{Name: "A"},
-		{Name: "C"},
-	}
-	db.Create(systems)
+	dbc, _ := db.DB()
+	queries := sqlc.New(dbc)
+
+	ctx := context.Background()
+	queries.CreateSystem(ctx, "B")
+	queries.CreateSystem(ctx, "A")
+	queries.CreateSystem(ctx, "C")
 
 	ch := make(chan reconcilers.Input, 100)
-	ctx := context.Background()
+
+	system := &dbmodels.System{}
+	db.First(system)
 
 	logger := auditlogger.New(db)
-	dbc, _ := db.DB()
-	resolver := graph.NewResolver(sqlc.New(dbc), db, "example.com", systems[0], ch, logger).Query()
+	resolver := graph.NewResolver(queries, db, "example.com", system, ch, logger).Query()
 
 	t.Run("Get systems", func(t *testing.T) {
 		systems, err := resolver.Systems(ctx)
