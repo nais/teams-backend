@@ -102,7 +102,7 @@ type ComplexityRoot struct {
 	Query struct {
 		AuditLogs func(childComplexity int, pagination *model.Pagination, query *model.AuditLogsQuery, sort *model.AuditLogsSort) int
 		Me        func(childComplexity int) int
-		Roles     func(childComplexity int, pagination *model.Pagination, query *model.RolesQuery, sort *model.RolesSort) int
+		Roles     func(childComplexity int) int
 		Systems   func(childComplexity int) int
 		Team      func(childComplexity int, id *uuid.UUID) int
 		Teams     func(childComplexity int, pagination *model.Pagination, query *model.TeamsQuery, sort *model.TeamsSort) int
@@ -118,11 +118,6 @@ type ComplexityRoot struct {
 		IsGlobal func(childComplexity int) int
 		Role     func(childComplexity int) int
 		TargetID func(childComplexity int) int
-	}
-
-	Roles struct {
-		Nodes    func(childComplexity int) int
-		PageInfo func(childComplexity int) int
 	}
 
 	System struct {
@@ -191,7 +186,7 @@ type MutationResolver interface {
 }
 type QueryResolver interface {
 	AuditLogs(ctx context.Context, pagination *model.Pagination, query *model.AuditLogsQuery, sort *model.AuditLogsSort) (*model.AuditLogs, error)
-	Roles(ctx context.Context, pagination *model.Pagination, query *model.RolesQuery, sort *model.RolesSort) (*model.Roles, error)
+	Roles(ctx context.Context) ([]*sqlc.Role, error)
 	Systems(ctx context.Context) ([]*sqlc.System, error)
 	Teams(ctx context.Context, pagination *model.Pagination, query *model.TeamsQuery, sort *model.TeamsSort) (*model.Teams, error)
 	Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team, error)
@@ -200,8 +195,9 @@ type QueryResolver interface {
 	Me(ctx context.Context) (*dbmodels.User, error)
 }
 type RoleBindingResolver interface {
-	Role(ctx context.Context, obj *dbmodels.UserRole) (*dbmodels.Role, error)
-	IsGlobal(ctx context.Context, obj *dbmodels.UserRole) (bool, error)
+	Role(ctx context.Context, obj *sqlc.UserRole) (*sqlc.Role, error)
+	IsGlobal(ctx context.Context, obj *sqlc.UserRole) (bool, error)
+	TargetID(ctx context.Context, obj *sqlc.UserRole) (*uuid.UUID, error)
 }
 type TeamResolver interface {
 	Metadata(ctx context.Context, obj *dbmodels.Team) (map[string]interface{}, error)
@@ -214,7 +210,7 @@ type UserResolver interface {
 	HasAPIKey(ctx context.Context, obj *dbmodels.User) (bool, error)
 	IsServiceAccount(ctx context.Context, obj *dbmodels.User) (bool, error)
 
-	Roles(ctx context.Context, obj *dbmodels.User) ([]*dbmodels.UserRole, error)
+	Roles(ctx context.Context, obj *dbmodels.User) ([]*sqlc.UserRole, error)
 }
 
 type executableSchema struct {
@@ -512,12 +508,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		args, err := ec.field_Query_roles_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Query.Roles(childComplexity, args["pagination"].(*model.Pagination), args["query"].(*model.RolesQuery), args["sort"].(*model.RolesSort)), true
+		return e.complexity.Query.Roles(childComplexity), true
 
 	case "Query.systems":
 		if e.complexity.Query.Systems == nil {
@@ -601,20 +592,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.RoleBinding.TargetID(childComplexity), true
-
-	case "Roles.nodes":
-		if e.complexity.Roles.Nodes == nil {
-			break
-		}
-
-		return e.complexity.Roles.Nodes(childComplexity), true
-
-	case "Roles.pageInfo":
-		if e.complexity.Roles.PageInfo == nil {
-			break
-		}
-
-		return e.complexity.Roles.PageInfo(childComplexity), true
 
 	case "System.id":
 		if e.complexity.System.ID == nil {
@@ -800,8 +777,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputCreateTeamInput,
 		ec.unmarshalInputPagination,
 		ec.unmarshalInputRemoveUsersFromTeamInput,
-		ec.unmarshalInputRolesQuery,
-		ec.unmarshalInputRolesSort,
 		ec.unmarshalInputSetTeamMemberRoleInput,
 		ec.unmarshalInputTeamsQuery,
 		ec.unmarshalInputTeamsSort,
@@ -988,17 +963,8 @@ enum AuditLogSortField {
 	{Name: "../../../graphql/directives.graphqls", Input: `"Require authentication for all requests with this directive."
 directive @auth on FIELD_DEFINITION`, BuiltIn: false},
 	{Name: "../../../graphql/roles.graphqls", Input: `extend type Query {
-    "Get a collection of roles."
-    roles(
-        "Pagination options."
-        pagination: Pagination
-
-        "Input for filtering the query."
-        query: RolesQuery
-
-        "Input for sorting the collection. If omitted the collection will be sorted by the name of the role in ascending order."
-        sort: RolesSort
-    ): Roles! @auth
+    "Get a collection of roles, sorted by name."
+    roles: [Role!]! @auth
 }
 
 "Role binding type."
@@ -1013,40 +979,10 @@ type RoleBinding {
     targetId: UUID
 }
 
-"Role collection."
-type Roles {
-    "Object related to pagination of the collection."
-    pageInfo: PageInfo!
-
-    "The list of role objects in the collection."
-    nodes: [Role!]!
-}
-
 "Role type."
 type Role {
     "Name of the role."
     name: String!
-}
-
-"Input for filtering a collection of roles."
-input RolesQuery {
-    "Filter by role name."
-    name: String
-}
-
-"Input for sorting a collection of roles."
-input RolesSort {
-    "Field to sort by."
-    field: RoleSortField!
-
-    "Sort direction."
-    direction: SortDirection!
-}
-
-"Fields to sort the collection by."
-enum RoleSortField {
-    "Sort by name."
-    NAME
 }`, BuiltIn: false},
 	{Name: "../../../graphql/scalars.graphqls", Input: `"Scalar value representing a UUID based on RFC 4122."
 scalar UUID
@@ -1743,39 +1679,6 @@ func (ec *executionContext) field_Query_auditLogs_args(ctx context.Context, rawA
 	if tmp, ok := rawArgs["sort"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sort"))
 		arg2, err = ec.unmarshalOAuditLogsSort2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAuditLogsSort(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["sort"] = arg2
-	return args, nil
-}
-
-func (ec *executionContext) field_Query_roles_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 *model.Pagination
-	if tmp, ok := rawArgs["pagination"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pagination"))
-		arg0, err = ec.unmarshalOPagination2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPagination(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["pagination"] = arg0
-	var arg1 *model.RolesQuery
-	if tmp, ok := rawArgs["query"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("query"))
-		arg1, err = ec.unmarshalORolesQuery2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRolesQuery(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["query"] = arg1
-	var arg2 *model.RolesSort
-	if tmp, ok := rawArgs["sort"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sort"))
-		arg2, err = ec.unmarshalORolesSort2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRolesSort(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -3867,7 +3770,7 @@ func (ec *executionContext) _Query_roles(ctx context.Context, field graphql.Coll
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Roles(rctx, fc.Args["pagination"].(*model.Pagination), fc.Args["query"].(*model.RolesQuery), fc.Args["sort"].(*model.RolesSort))
+			return ec.resolvers.Query().Roles(rctx)
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -3883,10 +3786,10 @@ func (ec *executionContext) _Query_roles(ctx context.Context, field graphql.Coll
 		if tmp == nil {
 			return nil, nil
 		}
-		if data, ok := tmp.(*model.Roles); ok {
+		if data, ok := tmp.([]*sqlc.Role); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/graph/model.Roles`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/nais/console/pkg/sqlc.Role`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3898,9 +3801,9 @@ func (ec *executionContext) _Query_roles(ctx context.Context, field graphql.Coll
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Roles)
+	res := resTmp.([]*sqlc.Role)
 	fc.Result = res
-	return ec.marshalNRoles2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRoles(ctx, field.Selections, res)
+	return ec.marshalNRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐRoleᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_roles(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3911,24 +3814,11 @@ func (ec *executionContext) fieldContext_Query_roles(ctx context.Context, field 
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "pageInfo":
-				return ec.fieldContext_Roles_pageInfo(ctx, field)
-			case "nodes":
-				return ec.fieldContext_Roles_nodes(ctx, field)
+			case "name":
+				return ec.fieldContext_Role_name(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Roles", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type Role", field.Name)
 		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_roles_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
 	}
 	return fc, nil
 }
@@ -4562,7 +4452,7 @@ func (ec *executionContext) fieldContext_Query___schema(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Role_name(ctx context.Context, field graphql.CollectedField, obj *dbmodels.Role) (ret graphql.Marshaler) {
+func (ec *executionContext) _Role_name(ctx context.Context, field graphql.CollectedField, obj *sqlc.Role) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Role_name(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -4606,7 +4496,7 @@ func (ec *executionContext) fieldContext_Role_name(ctx context.Context, field gr
 	return fc, nil
 }
 
-func (ec *executionContext) _RoleBinding_role(ctx context.Context, field graphql.CollectedField, obj *dbmodels.UserRole) (ret graphql.Marshaler) {
+func (ec *executionContext) _RoleBinding_role(ctx context.Context, field graphql.CollectedField, obj *sqlc.UserRole) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_RoleBinding_role(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -4632,9 +4522,9 @@ func (ec *executionContext) _RoleBinding_role(ctx context.Context, field graphql
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*dbmodels.Role)
+	res := resTmp.(*sqlc.Role)
 	fc.Result = res
-	return ec.marshalNRole2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐRole(ctx, field.Selections, res)
+	return ec.marshalNRole2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐRole(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_RoleBinding_role(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4654,7 +4544,7 @@ func (ec *executionContext) fieldContext_RoleBinding_role(ctx context.Context, f
 	return fc, nil
 }
 
-func (ec *executionContext) _RoleBinding_isGlobal(ctx context.Context, field graphql.CollectedField, obj *dbmodels.UserRole) (ret graphql.Marshaler) {
+func (ec *executionContext) _RoleBinding_isGlobal(ctx context.Context, field graphql.CollectedField, obj *sqlc.UserRole) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_RoleBinding_isGlobal(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -4698,7 +4588,7 @@ func (ec *executionContext) fieldContext_RoleBinding_isGlobal(ctx context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) _RoleBinding_targetId(ctx context.Context, field graphql.CollectedField, obj *dbmodels.UserRole) (ret graphql.Marshaler) {
+func (ec *executionContext) _RoleBinding_targetId(ctx context.Context, field graphql.CollectedField, obj *sqlc.UserRole) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_RoleBinding_targetId(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -4712,7 +4602,7 @@ func (ec *executionContext) _RoleBinding_targetId(ctx context.Context, field gra
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.TargetID, nil
+		return ec.resolvers.RoleBinding().TargetID(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4730,110 +4620,10 @@ func (ec *executionContext) fieldContext_RoleBinding_targetId(ctx context.Contex
 	fc = &graphql.FieldContext{
 		Object:     "RoleBinding",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type UUID does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Roles_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.Roles) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Roles_pageInfo(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.PageInfo, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.PageInfo)
-	fc.Result = res
-	return ec.marshalNPageInfo2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPageInfo(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Roles_pageInfo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Roles",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "results":
-				return ec.fieldContext_PageInfo_results(ctx, field)
-			case "offset":
-				return ec.fieldContext_PageInfo_offset(ctx, field)
-			case "limit":
-				return ec.fieldContext_PageInfo_limit(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Roles_nodes(ctx context.Context, field graphql.CollectedField, obj *model.Roles) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Roles_nodes(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Nodes, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*dbmodels.Role)
-	fc.Result = res
-	return ec.marshalNRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐRoleᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Roles_nodes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Roles",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "name":
-				return ec.fieldContext_Role_name(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Role", field.Name)
 		},
 	}
 	return fc, nil
@@ -5871,9 +5661,9 @@ func (ec *executionContext) _User_roles(ctx context.Context, field graphql.Colle
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*dbmodels.UserRole)
+	res := resTmp.([]*sqlc.UserRole)
 	fc.Result = res
-	return ec.marshalNRoleBinding2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐUserRoleᚄ(ctx, field.Selections, res)
+	return ec.marshalNRoleBinding2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUserRoleᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_User_roles(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -8063,60 +7853,6 @@ func (ec *executionContext) unmarshalInputRemoveUsersFromTeamInput(ctx context.C
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputRolesQuery(ctx context.Context, obj interface{}) (model.RolesQuery, error) {
-	var it model.RolesQuery
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "name":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-			it.Name, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputRolesSort(ctx context.Context, obj interface{}) (model.RolesSort, error) {
-	var it model.RolesSort
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "field":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
-			it.Field, err = ec.unmarshalNRoleSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRoleSortField(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "direction":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
-			it.Direction, err = ec.unmarshalNSortDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSortDirection(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
 func (ec *executionContext) unmarshalInputSetTeamMemberRoleInput(ctx context.Context, obj interface{}) (model.SetTeamMemberRoleInput, error) {
 	var it model.SetTeamMemberRoleInput
 	asMap := map[string]interface{}{}
@@ -8981,7 +8717,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 
 var roleImplementors = []string{"Role"}
 
-func (ec *executionContext) _Role(ctx context.Context, sel ast.SelectionSet, obj *dbmodels.Role) graphql.Marshaler {
+func (ec *executionContext) _Role(ctx context.Context, sel ast.SelectionSet, obj *sqlc.Role) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, roleImplementors)
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
@@ -9009,7 +8745,7 @@ func (ec *executionContext) _Role(ctx context.Context, sel ast.SelectionSet, obj
 
 var roleBindingImplementors = []string{"RoleBinding"}
 
-func (ec *executionContext) _RoleBinding(ctx context.Context, sel ast.SelectionSet, obj *dbmodels.UserRole) graphql.Marshaler {
+func (ec *executionContext) _RoleBinding(ctx context.Context, sel ast.SelectionSet, obj *sqlc.UserRole) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, roleBindingImplementors)
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
@@ -9058,44 +8794,22 @@ func (ec *executionContext) _RoleBinding(ctx context.Context, sel ast.SelectionS
 
 			})
 		case "targetId":
+			field := field
 
-			out.Values[i] = ec._RoleBinding_targetId(ctx, field, obj)
-
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var rolesImplementors = []string{"Roles"}
-
-func (ec *executionContext) _Roles(ctx context.Context, sel ast.SelectionSet, obj *model.Roles) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, rolesImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("Roles")
-		case "pageInfo":
-
-			out.Values[i] = ec._Roles_pageInfo(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RoleBinding_targetId(ctx, field, obj)
+				return res
 			}
-		case "nodes":
 
-			out.Values[i] = ec._Roles_nodes(ctx, field, obj)
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
 
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -9975,11 +9689,11 @@ func (ec *executionContext) unmarshalNRemoveUsersFromTeamInput2githubᚗcomᚋna
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNRole2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐRole(ctx context.Context, sel ast.SelectionSet, v dbmodels.Role) graphql.Marshaler {
+func (ec *executionContext) marshalNRole2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐRole(ctx context.Context, sel ast.SelectionSet, v sqlc.Role) graphql.Marshaler {
 	return ec._Role(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐRoleᚄ(ctx context.Context, sel ast.SelectionSet, v []*dbmodels.Role) graphql.Marshaler {
+func (ec *executionContext) marshalNRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐRoleᚄ(ctx context.Context, sel ast.SelectionSet, v []*sqlc.Role) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -10003,7 +9717,7 @@ func (ec *executionContext) marshalNRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋp
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNRole2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐRole(ctx, sel, v[i])
+			ret[i] = ec.marshalNRole2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐRole(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -10023,7 +9737,7 @@ func (ec *executionContext) marshalNRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋp
 	return ret
 }
 
-func (ec *executionContext) marshalNRole2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐRole(ctx context.Context, sel ast.SelectionSet, v *dbmodels.Role) graphql.Marshaler {
+func (ec *executionContext) marshalNRole2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐRole(ctx context.Context, sel ast.SelectionSet, v *sqlc.Role) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -10033,7 +9747,7 @@ func (ec *executionContext) marshalNRole2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkg�
 	return ec._Role(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNRoleBinding2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐUserRoleᚄ(ctx context.Context, sel ast.SelectionSet, v []*dbmodels.UserRole) graphql.Marshaler {
+func (ec *executionContext) marshalNRoleBinding2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUserRoleᚄ(ctx context.Context, sel ast.SelectionSet, v []*sqlc.UserRole) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -10057,7 +9771,7 @@ func (ec *executionContext) marshalNRoleBinding2ᚕᚖgithubᚗcomᚋnaisᚋcons
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNRoleBinding2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐUserRole(ctx, sel, v[i])
+			ret[i] = ec.marshalNRoleBinding2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUserRole(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -10077,7 +9791,7 @@ func (ec *executionContext) marshalNRoleBinding2ᚕᚖgithubᚗcomᚋnaisᚋcons
 	return ret
 }
 
-func (ec *executionContext) marshalNRoleBinding2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐUserRole(ctx context.Context, sel ast.SelectionSet, v *dbmodels.UserRole) graphql.Marshaler {
+func (ec *executionContext) marshalNRoleBinding2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUserRole(ctx context.Context, sel ast.SelectionSet, v *sqlc.UserRole) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -10085,30 +9799,6 @@ func (ec *executionContext) marshalNRoleBinding2ᚖgithubᚗcomᚋnaisᚋconsole
 		return graphql.Null
 	}
 	return ec._RoleBinding(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalNRoleSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRoleSortField(ctx context.Context, v interface{}) (model.RoleSortField, error) {
-	var res model.RoleSortField
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNRoleSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRoleSortField(ctx context.Context, sel ast.SelectionSet, v model.RoleSortField) graphql.Marshaler {
-	return v
-}
-
-func (ec *executionContext) marshalNRoles2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRoles(ctx context.Context, sel ast.SelectionSet, v model.Roles) graphql.Marshaler {
-	return ec._Roles(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNRoles2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRoles(ctx context.Context, sel ast.SelectionSet, v *model.Roles) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._Roles(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNSetTeamMemberRoleInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSetTeamMemberRoleInput(ctx context.Context, v interface{}) (model.SetTeamMemberRoleInput, error) {
@@ -10872,22 +10562,6 @@ func (ec *executionContext) unmarshalOPagination2ᚖgithubᚗcomᚋnaisᚋconsol
 		return nil, nil
 	}
 	res, err := ec.unmarshalInputPagination(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalORolesQuery2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRolesQuery(ctx context.Context, v interface{}) (*model.RolesQuery, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputRolesQuery(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalORolesSort2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRolesSort(ctx context.Context, v interface{}) (*model.RolesSort, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputRolesSort(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 

@@ -50,7 +50,8 @@ models:
 
   RoleBinding:
     model:
-      - github.com/nais/console/pkg/dbmodels.UserRole
+      - github.com/nais/console/pkg/sqlc.UserRole # manual mapping that can be removed when autobind is pointed to the sqlc models
+
     fields:
       role:
         resolver: true
@@ -83,6 +84,8 @@ models:
       teams:
         resolver: true
   Role:
+    model:
+      - github.com/nais/console/pkg/sqlc.Role # manual mapping that can be removed when autobind is pointed to the sqlc models
     fields:
       authorizations:
         resolver: true

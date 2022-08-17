@@ -19,6 +19,7 @@ import (
 	"github.com/nais/console/pkg/graph/model"
 	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
 	"github.com/nais/console/pkg/roles"
+	"github.com/nais/console/pkg/sqlc"
 	"gorm.io/gorm"
 )
 
@@ -258,19 +259,18 @@ func (r *userResolver) IsServiceAccount(ctx context.Context, obj *dbmodels.User)
 	return console.IsServiceAccount(*obj, r.tenantDomain), nil
 }
 
-func (r *userResolver) Roles(ctx context.Context, obj *dbmodels.User) ([]*dbmodels.UserRole, error) {
+func (r *userResolver) Roles(ctx context.Context, obj *dbmodels.User) ([]*sqlc.UserRole, error) {
 	actor := authz.UserFromContext(ctx)
 	err := authz.RequireAuthorizationOrTargetMatch(actor, roles.AuthorizationUsersUpdate, *obj.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	roleBindings := make([]*dbmodels.UserRole, 0)
-	err = r.db.Where("user_id = ?", obj.ID).Find(&roleBindings).Error
+	userRoles, err := r.queries.GetUserRoles(ctx, *obj.ID)
 	if err != nil {
 		return nil, err
 	}
-	return roleBindings, nil
+	return userRoles, nil
 }
 
 // User returns generated.UserResolver implementation.

@@ -6,39 +6,37 @@ package graph
 import (
 	"context"
 
-	"github.com/nais/console/pkg/dbmodels"
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/graph/generated"
-	"github.com/nais/console/pkg/graph/model"
+	"github.com/nais/console/pkg/sqlc"
 )
 
-func (r *queryResolver) Roles(ctx context.Context, pagination *model.Pagination, query *model.RolesQuery, sort *model.RolesSort) (*model.Roles, error) {
-	roles := make([]*dbmodels.Role, 0)
-
-	if sort == nil {
-		sort = &model.RolesSort{
-			Field:     model.RoleSortFieldName,
-			Direction: model.SortDirectionAsc,
-		}
+func (r *queryResolver) Roles(ctx context.Context) ([]*sqlc.Role, error) {
+	roles, err := r.queries.GetRoles(ctx)
+	if err != nil {
+		return nil, err
 	}
-	pageInfo, err := r.paginatedQuery(pagination, query, sort, &dbmodels.Role{}, &roles)
-
-	return &model.Roles{
-		PageInfo: pageInfo,
-		Nodes:    roles,
-	}, err
+	return roles, nil
 }
 
-func (r *roleBindingResolver) Role(ctx context.Context, obj *dbmodels.UserRole) (*dbmodels.Role, error) {
-	role := &dbmodels.Role{}
-	err := r.db.Where("id = ?", obj.RoleID).First(role).Error
+func (r *roleBindingResolver) Role(ctx context.Context, obj *sqlc.UserRole) (*sqlc.Role, error) {
+	role, err := r.queries.GetRole(ctx, obj.RoleID)
 	if err != nil {
 		return nil, err
 	}
 	return role, nil
 }
 
-func (r *roleBindingResolver) IsGlobal(ctx context.Context, obj *dbmodels.UserRole) (bool, error) {
-	return obj.TargetID == nil, nil
+func (r *roleBindingResolver) IsGlobal(ctx context.Context, obj *sqlc.UserRole) (bool, error) {
+	return !obj.TargetID.Valid, nil
+}
+
+func (r *roleBindingResolver) TargetID(ctx context.Context, obj *sqlc.UserRole) (*uuid.UUID, error) {
+	if obj.TargetID.Valid {
+		return &obj.TargetID.UUID, nil
+	}
+
+	return nil, nil
 }
 
 // RoleBinding returns generated.RoleBindingResolver implementation.
