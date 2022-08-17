@@ -29,7 +29,7 @@ func TestQueryResolver_Systems(t *testing.T) {
 	dbc, _ := db.DB()
 	resolver := graph.NewResolver(sqlc.New(dbc), db, "example.com", systems[0], ch, logger).Query()
 
-	t.Run("No filter or sort", func(t *testing.T) {
+	t.Run("Get systems", func(t *testing.T) {
 		systems, err := resolver.Systems(ctx)
 		assert.NoError(t, err)
 
