@@ -15,6 +15,7 @@ test:
 
 generate:
 	go run github.com/99designs/gqlgen generate --verbose
+	go run github.com/kyleconroy/sqlc/cmd/sqlc generate
 
 alpine:
 	go build -a -installsuffix cgo -o bin/console -ldflags "-s $(LDFLAGS)" cmd/console/main.go
