@@ -42,6 +42,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getSystemsStmt, err = db.PrepareContext(ctx, getSystems); err != nil {
 		return nil, fmt.Errorf("error preparing query GetSystems: %w", err)
 	}
+	if q.getUserStmt, err = db.PrepareContext(ctx, getUser); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUser: %w", err)
+	}
 	if q.getUserRoleStmt, err = db.PrepareContext(ctx, getUserRole); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserRole: %w", err)
 	}
@@ -81,6 +84,11 @@ func (q *Queries) Close() error {
 	if q.getSystemsStmt != nil {
 		if cerr := q.getSystemsStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getSystemsStmt: %w", cerr)
+		}
+	}
+	if q.getUserStmt != nil {
+		if cerr := q.getUserStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserStmt: %w", cerr)
 		}
 	}
 	if q.getUserRoleStmt != nil {
@@ -138,6 +146,7 @@ type Queries struct {
 	getSystemStmt       *sql.Stmt
 	getSystemByNameStmt *sql.Stmt
 	getSystemsStmt      *sql.Stmt
+	getUserStmt         *sql.Stmt
 	getUserRoleStmt     *sql.Stmt
 	getUserRolesStmt    *sql.Stmt
 }
@@ -152,6 +161,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getSystemStmt:       q.getSystemStmt,
 		getSystemByNameStmt: q.getSystemByNameStmt,
 		getSystemsStmt:      q.getSystemsStmt,
+		getUserStmt:         q.getUserStmt,
 		getUserRoleStmt:     q.getUserRoleStmt,
 		getUserRolesStmt:    q.getUserRolesStmt,
 	}
