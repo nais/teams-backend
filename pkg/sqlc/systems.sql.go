@@ -12,12 +12,17 @@ import (
 )
 
 const createSystem = `-- name: CreateSystem :one
-INSERT INTO systems (name) VALUES ($1)
+INSERT INTO systems (id, name) VALUES ($1, $2)
 RETURNING id, created_at, created_by_id, updated_by_id, updated_at, name
 `
 
-func (q *Queries) CreateSystem(ctx context.Context, name string) (*System, error) {
-	row := q.queryRow(ctx, q.createSystemStmt, createSystem, name)
+type CreateSystemParams struct {
+	ID   uuid.UUID
+	Name string
+}
+
+func (q *Queries) CreateSystem(ctx context.Context, arg CreateSystemParams) (*System, error) {
+	row := q.queryRow(ctx, q.createSystemStmt, createSystem, arg.ID, arg.Name)
 	var i System
 	err := row.Scan(
 		&i.ID,
@@ -37,6 +42,25 @@ WHERE id = $1 LIMIT 1
 
 func (q *Queries) GetSystem(ctx context.Context, id uuid.UUID) (*System, error) {
 	row := q.queryRow(ctx, q.getSystemStmt, getSystem, id)
+	var i System
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.CreatedByID,
+		&i.UpdatedByID,
+		&i.UpdatedAt,
+		&i.Name,
+	)
+	return &i, err
+}
+
+const getSystemByName = `-- name: GetSystemByName :one
+SELECT id, created_at, created_by_id, updated_by_id, updated_at, name FROM systems
+WHERE name = $1 LIMIT 1
+`
+
+func (q *Queries) GetSystemByName(ctx context.Context, name string) (*System, error) {
+	row := q.queryRow(ctx, q.getSystemByNameStmt, getSystemByName, name)
 	var i System
 	err := row.Scan(
 		&i.ID,
