@@ -24,7 +24,7 @@ docker:
 	docker build -t ghcr.io/nais/console:latest .
 
 mocks:
-	mockery --inpackage --case snake --srcpkg ./pkg/azureclient --name Client
-	mockery --inpackage --case snake --srcpkg ./pkg/reconcilers/github/team --name TeamsService
-	mockery --inpackage --case snake --srcpkg ./pkg/reconcilers/github/team --name GraphClient
-	mockery --inpackage --case snake --srcpkg ./pkg/auditlogger --name AuditLogger
+	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/azureclient --name Client
+	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/reconcilers/github/team --name TeamsService
+	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/reconcilers/github/team --name GraphClient
+	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/auditlogger --name AuditLogger
