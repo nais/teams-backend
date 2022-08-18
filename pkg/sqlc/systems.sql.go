@@ -22,7 +22,7 @@ type CreateSystemParams struct {
 }
 
 func (q *Queries) CreateSystem(ctx context.Context, arg CreateSystemParams) (*System, error) {
-	row := q.queryRow(ctx, q.createSystemStmt, createSystem, arg.ID, arg.Name)
+	row := q.db.QueryRow(ctx, createSystem, arg.ID, arg.Name)
 	var i System
 	err := row.Scan(
 		&i.ID,
@@ -41,7 +41,7 @@ WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetSystem(ctx context.Context, id uuid.UUID) (*System, error) {
-	row := q.queryRow(ctx, q.getSystemStmt, getSystem, id)
+	row := q.db.QueryRow(ctx, getSystem, id)
 	var i System
 	err := row.Scan(
 		&i.ID,
@@ -60,7 +60,7 @@ WHERE name = $1 LIMIT 1
 `
 
 func (q *Queries) GetSystemByName(ctx context.Context, name string) (*System, error) {
-	row := q.queryRow(ctx, q.getSystemByNameStmt, getSystemByName, name)
+	row := q.db.QueryRow(ctx, getSystemByName, name)
 	var i System
 	err := row.Scan(
 		&i.ID,
@@ -79,7 +79,7 @@ ORDER BY name ASC
 `
 
 func (q *Queries) GetSystems(ctx context.Context) ([]*System, error) {
-	rows, err := q.query(ctx, q.getSystemsStmt, getSystems)
+	rows, err := q.db.Query(ctx, getSystems)
 	if err != nil {
 		return nil, err
 	}
@@ -98,9 +98,6 @@ func (q *Queries) GetSystems(ctx context.Context) ([]*System, error) {
 			return nil, err
 		}
 		items = append(items, &i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

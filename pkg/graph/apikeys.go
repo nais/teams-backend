@@ -26,7 +26,7 @@ func (r *mutationResolver) CreateAPIKey(ctx context.Context, userID *uuid.UUID) 
 	}
 
 	serviceAccount := &dbmodels.User{}
-	err = r.db.Where("id = ?", userID).First(serviceAccount).Error
+	err = r.gorm.Where("id = ?", userID).First(serviceAccount).Error
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func (r *mutationResolver) CreateAPIKey(ctx context.Context, userID *uuid.UUID) 
 		APIKey: base64.RawURLEncoding.EncodeToString(buf),
 		UserID: *userID,
 	}
-	err = r.db.Transaction(func(tx *gorm.DB) error {
+	err = r.gorm.Transaction(func(tx *gorm.DB) error {
 		err = tx.Where("user_id = ?", key.UserID).Delete(&dbmodels.ApiKey{}).Error
 		if err != nil {
 			return err
@@ -78,7 +78,7 @@ func (r *mutationResolver) DeleteAPIKey(ctx context.Context, userID *uuid.UUID) 
 	}
 
 	serviceAccount := &dbmodels.User{}
-	err = r.db.Where("id = ?", userID).First(serviceAccount).Error
+	err = r.gorm.Where("id = ?", userID).First(serviceAccount).Error
 	if err != nil {
 		return false, err
 	}
@@ -88,7 +88,7 @@ func (r *mutationResolver) DeleteAPIKey(ctx context.Context, userID *uuid.UUID) 
 		return false, err
 	}
 
-	err = r.db.Where("user_id = ?", userID).Delete(&dbmodels.ApiKey{}).Error
+	err = r.gorm.Where("user_id = ?", userID).Delete(&dbmodels.ApiKey{}).Error
 	if err != nil {
 		return false, err
 	}

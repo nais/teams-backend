@@ -5,6 +5,7 @@ package graph
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/graph/generated"
@@ -17,6 +18,10 @@ func (r *queryResolver) Roles(ctx context.Context) ([]*sqlc.Role, error) {
 		return nil, err
 	}
 	return roles, nil
+}
+
+func (r *roleResolver) Name(ctx context.Context, obj *sqlc.Role) (string, error) {
+	panic(fmt.Errorf("not implemented"))
 }
 
 func (r *roleBindingResolver) Role(ctx context.Context, obj *sqlc.UserRole) (*sqlc.Role, error) {
@@ -39,7 +44,11 @@ func (r *roleBindingResolver) TargetID(ctx context.Context, obj *sqlc.UserRole) 
 	return nil, nil
 }
 
+// Role returns generated.RoleResolver implementation.
+func (r *Resolver) Role() generated.RoleResolver { return &roleResolver{r} }
+
 // RoleBinding returns generated.RoleBindingResolver implementation.
 func (r *Resolver) RoleBinding() generated.RoleBindingResolver { return &roleBindingResolver{r} }
 
+type roleResolver struct{ *Resolver }
 type roleBindingResolver struct{ *Resolver }

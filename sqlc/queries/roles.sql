@@ -13,3 +13,6 @@ WHERE user_id = $1;
 -- name: GetUserRole :one
 SELECT * FROM user_roles
 WHERE id = $1 LIMIT 1;
+
+-- name: GetRoleByName :one
+SELECT * FROM roles WHERE name = $1 LIMIT 1;

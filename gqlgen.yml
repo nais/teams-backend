@@ -70,6 +70,8 @@ models:
       - github.com/99designs/gqlgen/graphql.Int64
       - github.com/99designs/gqlgen/graphql.Int32
   Team:
+    model:
+      - github.com/nais/console/pkg/sqlc.Team # manual mapping that can be removed when autobind is pointed to the sqlc models
     fields:
       users:
         resolver: true

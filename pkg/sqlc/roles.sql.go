@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/nais/console/pkg/roles"
 )
 
 const getRole = `-- name: GetRole :one
@@ -17,7 +18,25 @@ WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetRole(ctx context.Context, id uuid.UUID) (*Role, error) {
-	row := q.queryRow(ctx, q.getRoleStmt, getRole, id)
+	row := q.db.QueryRow(ctx, getRole, id)
+	var i Role
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.CreatedByID,
+		&i.UpdatedByID,
+		&i.UpdatedAt,
+		&i.Name,
+	)
+	return &i, err
+}
+
+const getRoleByName = `-- name: GetRoleByName :one
+SELECT id, created_at, created_by_id, updated_by_id, updated_at, name FROM roles WHERE name = $1 LIMIT 1
+`
+
+func (q *Queries) GetRoleByName(ctx context.Context, name roles.Role) (*Role, error) {
+	row := q.db.QueryRow(ctx, getRoleByName, name)
 	var i Role
 	err := row.Scan(
 		&i.ID,
@@ -36,7 +55,7 @@ ORDER BY name ASC
 `
 
 func (q *Queries) GetRoles(ctx context.Context) ([]*Role, error) {
-	rows, err := q.query(ctx, q.getRolesStmt, getRoles)
+	rows, err := q.db.Query(ctx, getRoles)
 	if err != nil {
 		return nil, err
 	}
@@ -56,9 +75,6 @@ func (q *Queries) GetRoles(ctx context.Context) ([]*Role, error) {
 		}
 		items = append(items, &i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -71,7 +87,7 @@ WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetUserRole(ctx context.Context, id uuid.UUID) (*UserRole, error) {
-	row := q.queryRow(ctx, q.getUserRoleStmt, getUserRole, id)
+	row := q.db.QueryRow(ctx, getUserRole, id)
 	var i UserRole
 	err := row.Scan(
 		&i.ID,
@@ -92,7 +108,7 @@ WHERE user_id = $1
 `
 
 func (q *Queries) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*UserRole, error) {
-	rows, err := q.query(ctx, q.getUserRolesStmt, getUserRoles, userID)
+	rows, err := q.db.Query(ctx, getUserRoles, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -113,9 +129,6 @@ func (q *Queries) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*UserRo
 			return nil, err
 		}
 		items = append(items, &i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

@@ -6,10 +6,11 @@ package sqlc
 
 import (
 	"database/sql"
-	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgtype"
+	"github.com/nais/console/pkg/roles"
 )
 
 type ApiKey struct {
@@ -72,7 +73,7 @@ type Role struct {
 	CreatedByID uuid.NullUUID
 	UpdatedByID uuid.NullUUID
 	UpdatedAt   sql.NullTime
-	Name        string
+	Name        roles.Role
 }
 
 type RoleAuthorization struct {
@@ -97,7 +98,7 @@ type SystemState struct {
 	UpdatedAt   sql.NullTime
 	SystemID    uuid.UUID
 	TeamID      uuid.UUID
-	State       json.RawMessage
+	State       pgtype.JSONB
 }
 
 type Team struct {

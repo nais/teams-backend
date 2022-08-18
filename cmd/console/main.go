@@ -3,13 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/nais/console/pkg/sqlc"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/jackc/pgx/v4"
+	"github.com/nais/console/pkg/sqlc"
 
 	"github.com/google/uuid"
 	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
@@ -61,12 +63,12 @@ func run() error {
 		return err
 	}
 
-	db, err := setupDatabase(cfg)
+	gormDB, err := setupDatabase(cfg)
 	if err != nil {
 		return err
 	}
 
-	dbc, err := db.DB()
+	dbc, err := pgx.Connect(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return err
 	}
@@ -77,13 +79,13 @@ func run() error {
 		return err
 	}
 
-	err = fixtures.InsertInitialDataset(db, cfg.TenantDomain, cfg.AdminApiKey)
+	err = fixtures.InsertInitialDataset(gormDB, cfg.TenantDomain, cfg.AdminApiKey)
 	if err != nil {
 		return err
 	}
 
 	if cfg.StaticServiceAccounts != "" {
-		err = fixtures.SetupStaticServiceAccounts(db, cfg.StaticServiceAccounts, cfg.TenantDomain)
+		err = fixtures.SetupStaticServiceAccounts(gormDB, cfg.StaticServiceAccounts, cfg.TenantDomain)
 		if err != nil {
 			return err
 		}
@@ -92,9 +94,9 @@ func run() error {
 	// Control channels for goroutine communication
 	const maxQueueSize = 4096
 	teamReconciler := make(chan reconcilers.Input, maxQueueSize)
-	logger := auditlogger.New(db)
+	logger := auditlogger.New(gormDB)
 
-	recs, err := initReconcilers(db, cfg, logger, systems)
+	recs, err := initReconcilers(gormDB, cfg, logger, systems)
 	if err != nil {
 		return err
 	}
@@ -107,12 +109,12 @@ func run() error {
 		return err
 	}
 
-	handler, err := setupGraphAPI(queries, db, cfg.TenantDomain, systems[console_reconciler.Name], teamReconciler, logger)
+	handler, err := setupGraphAPI(queries, gormDB, dbc, cfg.TenantDomain, systems[console_reconciler.Name], teamReconciler, logger)
 	if err != nil {
 		return err
 	}
 
-	srv, err := setupHTTPServer(cfg, db, handler, authHandler, store)
+	srv, err := setupHTTPServer(cfg, gormDB, handler, authHandler, store)
 	if err != nil {
 		return err
 	}
@@ -156,7 +158,7 @@ func run() error {
 	}
 
 	allTeams := make([]*dbmodels.Team, 0)
-	db.Preload("Users").Preload("Metadata").Find(&allTeams)
+	gormDB.Preload("Users").Preload("Metadata").Find(&allTeams)
 	for _, team := range allTeams {
 		teamReconciler <- reconcilers.Input{
 			Corr: *corr,
@@ -166,7 +168,7 @@ func run() error {
 
 	// User synchronizer
 	userSyncTimer := time.NewTimer(1 * time.Second)
-	userSyncer, err := usersync.NewFromConfig(cfg, queries, db, systems[console_reconciler.Name], logger)
+	userSyncer, err := usersync.NewFromConfig(cfg, queries, gormDB, systems[console_reconciler.Name], logger)
 	if err != nil {
 		userSyncTimer.Stop()
 		if err != usersync.ErrNotEnabled {
@@ -194,7 +196,7 @@ func run() error {
 		case <-reconcileTimer.C:
 			log.Infof("Running reconcile of %d teams...", len(pendingTeams))
 
-			err = reconcileTeams(ctx, db, recs, &pendingTeams)
+			err = reconcileTeams(ctx, gormDB, recs, &pendingTeams)
 
 			if err != nil {
 				log.Error(err)
@@ -354,11 +356,11 @@ func setupDatabase(cfg *config.Config) (*gorm.DB, error) {
 	return db, nil
 }
 
-func setupGraphAPI(queries *sqlc.Queries, db *gorm.DB, domain string, console sqlc.System, teamReconciler chan<- reconcilers.Input, logger auditlogger.AuditLogger) (*graphql_handler.Server, error) {
-	resolver := graph.NewResolver(queries, db, domain, console, teamReconciler, logger)
+func setupGraphAPI(queries *sqlc.Queries, gormHandle *gorm.DB, db *pgx.Conn, domain string, console sqlc.System, teamReconciler chan<- reconcilers.Input, logger auditlogger.AuditLogger) (*graphql_handler.Server, error) {
+	resolver := graph.NewResolver(queries, gormHandle, db, domain, console, teamReconciler, logger)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
-	gc.Directives.Auth = directives.Auth(db)
+	gc.Directives.Auth = directives.Auth(gormHandle)
 
 	handler := graphql_handler.NewDefaultServer(
 		generated.NewExecutableSchema(

@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/dbmodels"
+	"github.com/nais/console/pkg/sqlc"
 )
 
 // API key type.
@@ -130,7 +131,7 @@ type Teams struct {
 	// Object related to pagination of the collection.
 	PageInfo *PageInfo `json:"pageInfo"`
 	// The list of team objects in the collection.
-	Nodes []*dbmodels.Team `json:"nodes"`
+	Nodes []*sqlc.Team `json:"nodes"`
 }
 
 // Input for filtering a collection of teams.

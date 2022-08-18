@@ -44,7 +44,7 @@ func (r *mutationResolver) CreateServiceAccount(ctx context.Context, input model
 		Email: console.ServiceAccountEmail(*input.Name, r.tenantDomain),
 	}
 
-	err = r.db.Transaction(func(tx *gorm.DB) error {
+	err = r.gorm.Transaction(func(tx *gorm.DB) error {
 		err = db.CreateTrackedObject(ctx, tx, serviceAccount)
 		if err != nil {
 			return err
@@ -86,7 +86,7 @@ func (r *mutationResolver) UpdateServiceAccount(ctx context.Context, serviceAcco
 	}
 
 	serviceAccount := &dbmodels.User{}
-	err = r.db.Where("id = ?", serviceAccountID).First(serviceAccount).Error
+	err = r.gorm.Where("id = ?", serviceAccountID).First(serviceAccount).Error
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func (r *mutationResolver) UpdateServiceAccount(ctx context.Context, serviceAcco
 		return nil, err
 	}
 
-	err = r.db.Transaction(func(tx *gorm.DB) error {
+	err = r.gorm.Transaction(func(tx *gorm.DB) error {
 		err = db.UpdateTrackedObject(ctx, tx, serviceAccount)
 		if err != nil {
 			return err
@@ -134,7 +134,7 @@ func (r *mutationResolver) DeleteServiceAccount(ctx context.Context, serviceAcco
 	}
 
 	serviceAccount := &dbmodels.User{}
-	err = r.db.Where("id = ?", serviceAccountID).First(serviceAccount).Error
+	err = r.gorm.Where("id = ?", serviceAccountID).First(serviceAccount).Error
 	if err != nil {
 		return false, err
 	}
@@ -151,7 +151,7 @@ func (r *mutationResolver) DeleteServiceAccount(ctx context.Context, serviceAcco
 	if err != nil {
 		return false, err
 	}
-	err = r.db.Delete(serviceAccount).Error
+	err = r.gorm.Delete(serviceAccount).Error
 	if err != nil {
 		return false, err
 	}
@@ -192,7 +192,7 @@ func (r *queryResolver) User(ctx context.Context, id *uuid.UUID) (*dbmodels.User
 	}
 
 	user := &dbmodels.User{}
-	err = r.db.Where("id = ?", id).First(user).Error
+	err = r.gorm.Where("id = ?", id).First(user).Error
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +203,7 @@ func (r *queryResolver) Me(ctx context.Context) (*dbmodels.User, error) {
 	return authz.UserFromContext(ctx), nil
 }
 
-func (r *userResolver) Teams(ctx context.Context, obj *dbmodels.User) ([]*dbmodels.Team, error) {
+func (r *userResolver) Teams(ctx context.Context, obj *dbmodels.User) ([]*sqlc.Team, error) {
 	actor := authz.UserFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationTeamsList)
 	if err != nil {
@@ -211,7 +211,7 @@ func (r *userResolver) Teams(ctx context.Context, obj *dbmodels.User) ([]*dbmode
 	}
 
 	teams := make([]*dbmodels.Team, 0)
-	err = r.db.Model(obj).Association("Teams").Find(&teams)
+	err = r.gorm.Model(obj).Association("Teams").Find(&teams)
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +225,7 @@ func (r *userResolver) HasAPIKey(ctx context.Context, obj *dbmodels.User) (bool,
 		return false, err
 	}
 
-	err = r.db.Where("user_id = ?", obj.ID).First(&dbmodels.ApiKey{}).Error
+	err = r.gorm.Where("user_id = ?", obj.ID).First(&dbmodels.ApiKey{}).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return false, nil

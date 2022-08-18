@@ -3,7 +3,9 @@ package graph
 import (
 	"context"
 	"fmt"
+
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v4"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/model"
@@ -18,16 +20,18 @@ import (
 
 type Resolver struct {
 	queries        *sqlc.Queries
-	db             *gorm.DB
+	gorm           *gorm.DB
+	db             *pgx.Conn
 	tenantDomain   string
 	teamReconciler chan<- reconcilers.Input
 	system         sqlc.System
 	auditLogger    auditlogger.AuditLogger
 }
 
-func NewResolver(queries *sqlc.Queries, db *gorm.DB, tenantDomain string, system sqlc.System, teamReconciler chan<- reconcilers.Input, auditLogger auditlogger.AuditLogger) *Resolver {
+func NewResolver(queries *sqlc.Queries, gormHandle *gorm.DB, db *pgx.Conn, tenantDomain string, system sqlc.System, teamReconciler chan<- reconcilers.Input, auditLogger auditlogger.AuditLogger) *Resolver {
 	return &Resolver{
 		queries:        queries,
+		gorm:           gormHandle,
 		db:             db,
 		tenantDomain:   tenantDomain,
 		system:         system,
@@ -57,7 +61,7 @@ func (r *Resolver) paginatedQuery(pagination *model.Pagination, query model.Quer
 			Limit:  50,
 		}
 	}
-	db := r.db.Model(dbModel).Where(query.GetQuery()).Order(sort.GetOrderString())
+	db := r.gorm.Model(dbModel).Where(query.GetQuery()).Order(sort.GetOrderString())
 	pageInfo, db := r.withPagination(pagination, db)
 	return pageInfo, db.Find(collection).Error
 }
@@ -76,7 +80,7 @@ func (r *Resolver) withPagination(pagination *model.Pagination, db *gorm.DB) (*m
 
 func (r *mutationResolver) teamWithAssociations(teamID uuid.UUID) (*dbmodels.Team, error) {
 	team := &dbmodels.Team{}
-	err := r.db.
+	err := r.gorm.
 		Where("id = ?", teamID).
 		Preload("Users").
 		Preload("Metadata").

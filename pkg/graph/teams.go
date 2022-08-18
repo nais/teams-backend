@@ -5,6 +5,7 @@ package graph
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -16,10 +17,11 @@ import (
 	"github.com/nais/console/pkg/reconcilers"
 	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
 	"github.com/nais/console/pkg/roles"
+	"github.com/nais/console/pkg/sqlc"
 	"gorm.io/gorm"
 )
 
-func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*dbmodels.Team, error) {
+func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*sqlc.Team, error) {
 	actor := authz.UserFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationTeamsCreate)
 	if err != nil {
@@ -30,66 +32,82 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 	if err != nil {
 		return nil, err
 	}
-	team := &dbmodels.Team{
-		Slug:    *input.Slug,
-		Name:    input.Name,
-		Purpose: input.Purpose,
+
+	teamUUID, err := uuid.NewUUID()
+	if err != nil {
+		return nil, err
 	}
 
-	err = r.db.Transaction(func(tx *gorm.DB) error {
-		err = db.CreateTrackedObject(ctx, tx, team)
-		if err != nil {
-			return err
-		}
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
 
-		userTeam := &dbmodels.UserTeam{
-			UserID: *actor.ID,
-			TeamID: *team.ID,
-		}
-		err = db.CreateTrackedObject(ctx, tx, userTeam)
-		if err != nil {
-			return err
-		}
+	qtx := r.queries.WithTx(tx)
 
-		teamOwner := &dbmodels.Role{}
-		err = tx.Where("name = ?", roles.RoleTeamOwner).First(teamOwner).Error
-		if err != nil {
-			return err
-		}
-
-		userRole := &dbmodels.UserRole{
-			UserID:   *actor.ID,
-			RoleID:   *teamOwner.ID,
-			TargetID: team.ID,
-		}
-		err = db.CreateTrackedObject(ctx, tx, userRole)
-		if err != nil {
-			return err
-		}
-
-		return nil
+	team, err := qtx.CreateTeam(ctx, sqlc.CreateTeamParams{
+		ID:          teamUUID,
+		Slug:        string(*input.Slug),
+		Name:        input.Name,
+		Purpose:     sql.NullString{String: *input.Purpose},
+		CreatedByID: uuid.NullUUID{UUID: *actor.ID},
 	})
+	if err != nil {
+		return nil, err
+	}
 
+	userTeamUUID, err := uuid.NewUUID()
+	if err != nil {
+		return nil, err
+	}
+
+	err = qtx.AddUserToTeam(ctx, sqlc.AddUserToTeamParams{
+		ID:          userTeamUUID,
+		UserID:      *actor.ID,
+		TeamID:      team.ID,
+		CreatedByID: uuid.NullUUID{UUID: *actor.ID},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	role, err := qtx.GetRoleByName(ctx, roles.RoleTeamOwner)
+	if err != nil {
+		return nil, err
+	}
+
+	userRoleUUID, err := uuid.NewUUID()
+	if err != nil {
+		return nil, err
+	}
+
+	err = qtx.AddRoleToUser(ctx, sqlc.AddRoleToUserParams{
+		ID:          userRoleUUID,
+		UserID:      *actor.ID,
+		RoleID:      role.ID,
+		CreatedByID: uuid.NullUUID{UUID: *actor.ID},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	err = tx.Commit(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	r.auditLogger.Logf(console_reconciler.OpCreateTeam, *corr, r.system, actor, team, nil, "Team created")
-
-	team, err = r.teamWithAssociations(*team.ID)
+	i, err := r.newReconcilerInput(ctx, team.ID, *corr)
 	if err != nil {
-		return nil, fmt.Errorf("unable to fetch team: %w", err)
+		return nil, err
 	}
 
-	r.teamReconciler <- reconcilers.Input{
-		Corr: *corr,
-		Team: *team,
-	}
-
+	r.teamReconciler <- *i
 	return team, nil
 }
 
-func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, input model.UpdateTeamInput) (*dbmodels.Team, error) {
+func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, input model.UpdateTeamInput) (*sqlc.Team, error) {
 	actor := authz.UserFromContext(ctx)
 	err := authz.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *teamID)
 	if err != nil {
@@ -97,7 +115,7 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, in
 	}
 
 	team := &dbmodels.Team{}
-	err = r.db.Where("id = ?", teamID).First(team).Error
+	err = r.gorm.Where("id = ?", teamID).First(team).Error
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +125,7 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, in
 		return nil, err
 	}
 
-	err = r.db.Transaction(func(tx *gorm.DB) error {
+	err = r.gorm.Transaction(func(tx *gorm.DB) error {
 		if input.Name != nil {
 			team.Name = *input.Name
 		}
@@ -142,7 +160,7 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, in
 	return team, nil
 }
 
-func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.RemoveUsersFromTeamInput) (*dbmodels.Team, error) {
+func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.RemoveUsersFromTeamInput) (*sqlc.Team, error) {
 	actor := authz.UserFromContext(ctx)
 	err := authz.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *input.TeamID)
 	if err != nil {
@@ -150,13 +168,13 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 	}
 
 	team := &dbmodels.Team{}
-	err = r.db.Where("id = ?", input.TeamID).First(team).Error
+	err = r.gorm.Where("id = ?", input.TeamID).First(team).Error
 	if err != nil {
 		return nil, err
 	}
 
 	usersToRemove := make([]*dbmodels.User, 0)
-	err = r.db.Where("id IN (?)", input.UserIds).Find(&usersToRemove).Error
+	err = r.gorm.Where("id IN (?)", input.UserIds).Find(&usersToRemove).Error
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +188,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 		return nil, err
 	}
 
-	err = r.db.Transaction(func(tx *gorm.DB) error {
+	err = r.gorm.Transaction(func(tx *gorm.DB) error {
 		err = tx.Where("user_id IN (?) AND target_id = ?", input.UserIds, team.ID).Delete(&dbmodels.UserRole{}).Error
 		if err != nil {
 			return err
@@ -204,7 +222,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 	return team, nil
 }
 
-func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUID) (*dbmodels.Team, error) {
+func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUID) (*sqlc.Team, error) {
 	actor := authz.UserFromContext(ctx)
 	err := authz.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *teamID)
 	if err != nil {
@@ -212,7 +230,7 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 	}
 
 	team := &dbmodels.Team{}
-	err = r.db.Where("id = ?", teamID).First(team).Error
+	err = r.gorm.Where("id = ?", teamID).First(team).Error
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +255,7 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 	return team, nil
 }
 
-func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTeamMembersInput) (*dbmodels.Team, error) {
+func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTeamMembersInput) (*sqlc.Team, error) {
 	actor := authz.UserFromContext(ctx)
 	err := authz.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *input.TeamID)
 	if err != nil {
@@ -245,13 +263,13 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 	}
 
 	team := &dbmodels.Team{}
-	err = r.db.Where("id = ?", input.TeamID).First(team).Error
+	err = r.gorm.Where("id = ?", input.TeamID).First(team).Error
 	if err != nil {
 		return nil, err
 	}
 
 	usersToAdd := make([]*dbmodels.User, 0)
-	err = r.db.Where("id IN (?)", input.UserIds).Find(&usersToAdd).Error
+	err = r.gorm.Where("id IN (?)", input.UserIds).Find(&usersToAdd).Error
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +282,7 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 	if err != nil {
 		return nil, err
 	}
-	err = r.db.Transaction(func(tx *gorm.DB) error {
+	err = r.gorm.Transaction(func(tx *gorm.DB) error {
 		teamMemberRole := &dbmodels.Role{}
 		err = tx.Where("name = ?", roles.RoleTeamMember).First(teamMemberRole).Error
 		if err != nil {
@@ -320,7 +338,7 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 	return team, nil
 }
 
-func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTeamOwnersInput) (*dbmodels.Team, error) {
+func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTeamOwnersInput) (*sqlc.Team, error) {
 	actor := authz.UserFromContext(ctx)
 	err := authz.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *input.TeamID)
 	if err != nil {
@@ -328,13 +346,13 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 	}
 
 	team := &dbmodels.Team{}
-	err = r.db.Where("id = ?", input.TeamID).First(team).Error
+	err = r.gorm.Where("id = ?", input.TeamID).First(team).Error
 	if err != nil {
 		return nil, err
 	}
 
 	usersToAdd := make([]*dbmodels.User, 0)
-	err = r.db.Where("id IN (?)", input.UserIds).Find(&usersToAdd).Error
+	err = r.gorm.Where("id IN (?)", input.UserIds).Find(&usersToAdd).Error
 	if err != nil {
 		return nil, err
 	}
@@ -347,7 +365,7 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 	if err != nil {
 		return nil, err
 	}
-	err = r.db.Transaction(func(tx *gorm.DB) error {
+	err = r.gorm.Transaction(func(tx *gorm.DB) error {
 		// Remove the team member role that the user potentially has
 		teamMemberRole := &dbmodels.Role{}
 		err = tx.Where("name = ?", roles.RoleTeamMember).First(teamMemberRole).Error
@@ -409,7 +427,7 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 	return team, nil
 }
 
-func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.SetTeamMemberRoleInput) (*dbmodels.Team, error) {
+func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.SetTeamMemberRoleInput) (*sqlc.Team, error) {
 	actor := authz.UserFromContext(ctx)
 	err := authz.RequireAuthorization(actor, roles.AuthorizationTeamsUpdate, *input.TeamID)
 	if err != nil {
@@ -417,19 +435,19 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 	}
 
 	team := &dbmodels.Team{}
-	err = r.db.Where("id = ?", input.TeamID).First(team).Error
+	err = r.gorm.Where("id = ?", input.TeamID).First(team).Error
 	if err != nil {
 		return nil, err
 	}
 
 	user := &dbmodels.User{}
-	err = r.db.Where("id = ?", input.UserID).First(user).Error
+	err = r.gorm.Where("id = ?", input.UserID).First(user).Error
 	if err != nil {
 		return nil, err
 	}
 
 	userTeam := &dbmodels.UserTeam{}
-	err = r.db.Where("team_id = ? AND user_id = ?", team.ID, user.ID).First(userTeam).Error
+	err = r.gorm.Where("team_id = ? AND user_id = ?", team.ID, user.ID).First(userTeam).Error
 	if err != nil {
 		return nil, err
 	}
@@ -438,7 +456,7 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 	if err != nil {
 		return nil, err
 	}
-	err = r.db.Transaction(func(tx *gorm.DB) error {
+	err = r.gorm.Transaction(func(tx *gorm.DB) error {
 		teamMemberRole := &dbmodels.Role{}
 		err = tx.Where("name = ?", roles.RoleTeamMember).First(teamMemberRole).Error
 		if err != nil {
@@ -509,7 +527,7 @@ func (r *queryResolver) Teams(ctx context.Context, pagination *model.Pagination,
 	}, err
 }
 
-func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team, error) {
+func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*sqlc.Team, error) {
 	actor := authz.UserFromContext(ctx)
 	err := authz.RequireAuthorization(actor, roles.AuthorizationTeamsRead, *id)
 	if err != nil {
@@ -517,7 +535,7 @@ func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team
 	}
 
 	team := &dbmodels.Team{}
-	err = r.db.Where("id = ?", id).First(team).Error
+	err = r.gorm.Where("id = ?", id).First(team).Error
 	if err != nil {
 		return nil, err
 	}
@@ -525,7 +543,15 @@ func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*dbmodels.Team
 	return team, nil
 }
 
-func (r *teamResolver) Metadata(ctx context.Context, obj *dbmodels.Team) (map[string]interface{}, error) {
+func (r *teamResolver) Slug(ctx context.Context, obj *sqlc.Team) (*dbmodels.Slug, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
+func (r *teamResolver) Purpose(ctx context.Context, obj *sqlc.Team) (*string, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
+func (r *teamResolver) Metadata(ctx context.Context, obj *sqlc.Team) (map[string]interface{}, error) {
 	actor := authz.UserFromContext(ctx)
 	err := authz.RequireAuthorization(actor, roles.AuthorizationTeamsRead, *obj.ID)
 	if err != nil {
@@ -533,7 +559,7 @@ func (r *teamResolver) Metadata(ctx context.Context, obj *dbmodels.Team) (map[st
 	}
 
 	metadata := make([]*dbmodels.TeamMetadata, 0)
-	err = r.db.Model(obj).Association("Metadata").Find(&metadata)
+	err = r.gorm.Model(obj).Association("Metadata").Find(&metadata)
 	if err != nil {
 		return nil, err
 	}
@@ -547,7 +573,7 @@ func (r *teamResolver) Metadata(ctx context.Context, obj *dbmodels.Team) (map[st
 	return kv, nil
 }
 
-func (r *teamResolver) AuditLogs(ctx context.Context, obj *dbmodels.Team) ([]*dbmodels.AuditLog, error) {
+func (r *teamResolver) AuditLogs(ctx context.Context, obj *sqlc.Team) ([]*dbmodels.AuditLog, error) {
 	actor := authz.UserFromContext(ctx)
 	err := authz.RequireAuthorization(actor, roles.AuthorizationAuditLogsRead, *obj.ID)
 	if err != nil {
@@ -555,14 +581,14 @@ func (r *teamResolver) AuditLogs(ctx context.Context, obj *dbmodels.Team) ([]*db
 	}
 
 	auditLogs := make([]*dbmodels.AuditLog, 0)
-	err = r.db.Model(obj).Association("AuditLogs").Find(&auditLogs)
+	err = r.gorm.Model(obj).Association("AuditLogs").Find(&auditLogs)
 	if err != nil {
 		return nil, err
 	}
 	return auditLogs, nil
 }
 
-func (r *teamResolver) Members(ctx context.Context, obj *dbmodels.Team) ([]*model.TeamMember, error) {
+func (r *teamResolver) Members(ctx context.Context, obj *sqlc.Team) ([]*model.TeamMember, error) {
 	actor := authz.UserFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
 	if err != nil {
@@ -570,7 +596,7 @@ func (r *teamResolver) Members(ctx context.Context, obj *dbmodels.Team) ([]*mode
 	}
 
 	users := make([]*dbmodels.User, 0)
-	err = r.db.Model(obj).Association("Users").Find(&users)
+	err = r.gorm.Model(obj).Association("Users").Find(&users)
 	if err != nil {
 		return nil, err
 	}
@@ -578,7 +604,7 @@ func (r *teamResolver) Members(ctx context.Context, obj *dbmodels.Team) ([]*mode
 	members := make([]*model.TeamMember, len(users))
 	for idx, user := range users {
 		role := model.TeamRoleMember
-		isOwner, err := db.UserIsTeamOwner(r.db, *user.ID, *obj.ID)
+		isOwner, err := db.UserIsTeamOwner(r.gorm, *user.ID, *obj.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -599,3 +625,28 @@ func (r *teamResolver) Members(ctx context.Context, obj *dbmodels.Team) ([]*mode
 func (r *Resolver) Team() generated.TeamResolver { return &teamResolver{r} }
 
 type teamResolver struct{ *Resolver }
+
+func (r *mutationResolver) newReconcilerInput(ctx context.Context, id uuid.UUID, corr sqlc.Correlation) (*reconcilers.Input, error) {
+	var err error
+	team, err := r.queries.GetTeam(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	members, err := r.queries.GetTeamMembers(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	metadata, err := r.queries.GetTeamMetadata(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &reconcilers.Input{
+		Corr:     corr,
+		Team:     team,
+		Members:  members,
+		Metadata: metadata,
+	}, nil
+}

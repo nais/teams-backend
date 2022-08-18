@@ -24,7 +24,7 @@ func (r *auditLogResolver) TargetSystem(ctx context.Context, obj *dbmodels.Audit
 
 func (r *auditLogResolver) Correlation(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.Correlation, error) {
 	corr := &dbmodels.Correlation{}
-	err := r.db.Model(&obj).Association("Correlation").Find(&corr)
+	err := r.gorm.Model(&obj).Association("Correlation").Find(&corr)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (r *auditLogResolver) Actor(ctx context.Context, obj *dbmodels.AuditLog) (*
 	}
 
 	actor = &dbmodels.User{}
-	err = r.db.Model(&obj).Association("Actor").Find(&actor)
+	err = r.gorm.Model(&obj).Association("Actor").Find(&actor)
 	if err != nil {
 		return nil, err
 	}
@@ -62,14 +62,14 @@ func (r *auditLogResolver) TargetUser(ctx context.Context, obj *dbmodels.AuditLo
 	}
 
 	targetUser := &dbmodels.User{}
-	err = r.db.Model(&obj).Association("TargetUser").Find(&targetUser)
+	err = r.gorm.Model(&obj).Association("TargetUser").Find(&targetUser)
 	if err != nil {
 		return nil, err
 	}
 	return targetUser, nil
 }
 
-func (r *auditLogResolver) TargetTeam(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.Team, error) {
+func (r *auditLogResolver) TargetTeam(ctx context.Context, obj *dbmodels.AuditLog) (*sqlc.Team, error) {
 	if obj.TargetTeamID == nil {
 		return nil, nil
 	}
@@ -81,7 +81,7 @@ func (r *auditLogResolver) TargetTeam(ctx context.Context, obj *dbmodels.AuditLo
 	}
 
 	team := &dbmodels.Team{}
-	err = r.db.Model(&obj).Association("TargetTeam").Find(&team)
+	err = r.gorm.Model(&obj).Association("TargetTeam").Find(&team)
 	if err != nil {
 		return nil, err
 	}

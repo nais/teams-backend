@@ -17,7 +17,7 @@ RETURNING id, created_at, created_by_id, updated_by_id, updated_at
 `
 
 func (q *Queries) CreateCorrelation(ctx context.Context, id uuid.UUID) (*Correlation, error) {
-	row := q.queryRow(ctx, q.createCorrelationStmt, createCorrelation, id)
+	row := q.db.QueryRow(ctx, createCorrelation, id)
 	var i Correlation
 	err := row.Scan(
 		&i.ID,

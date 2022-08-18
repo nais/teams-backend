@@ -15,6 +15,8 @@ test:
 
 generate:
 	go run github.com/99designs/gqlgen generate --verbose
+
+generate-sqlc:
 	go run github.com/kyleconroy/sqlc/cmd/sqlc generate
 
 alpine:
