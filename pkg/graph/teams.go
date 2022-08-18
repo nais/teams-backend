@@ -76,7 +76,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		return nil, err
 	}
 
-	r.auditLogger.Logf(console_reconciler.OpCreateTeam, *corr, *r.system, actor, team, nil, "Team created")
+	r.auditLogger.Logf(console_reconciler.OpCreateTeam, *corr, r.system, actor, team, nil, "Team created")
 
 	team, err = r.teamWithAssociations(*team.ID)
 	if err != nil {
@@ -131,7 +131,7 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, in
 		return nil, err
 	}
 
-	r.auditLogger.Logf(console_reconciler.OpUpdateTeam, *corr, *r.system, actor, team, nil, "Team updated")
+	r.auditLogger.Logf(console_reconciler.OpUpdateTeam, *corr, r.system, actor, team, nil, "Team updated")
 
 	team, err = r.teamWithAssociations(*team.ID)
 	if err != nil {
@@ -193,7 +193,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 	}
 
 	for _, removedUser := range usersToRemove {
-		r.auditLogger.Logf(console_reconciler.OpRemoveTeamMember, *corr, *r.system, actor, team, removedUser, "Removed user '%s' from team '%s'", removedUser.Name, team.Name)
+		r.auditLogger.Logf(console_reconciler.OpRemoveTeamMember, *corr, r.system, actor, team, removedUser, "Removed user '%s' from team '%s'", removedUser.Name, team.Name)
 	}
 
 	team, err = r.teamWithAssociations(*team.ID)
@@ -227,7 +227,7 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 		return nil, fmt.Errorf("unable to create correlation for audit log")
 	}
 
-	r.auditLogger.Logf(console_reconciler.OpSyncTeam, *corr, *r.system, actor, team, nil, "Manual sync requested")
+	r.auditLogger.Logf(console_reconciler.OpSyncTeam, *corr, r.system, actor, team, nil, "Manual sync requested")
 
 	team, err = r.teamWithAssociations(*team.ID)
 	if err != nil {
@@ -311,7 +311,7 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 	}
 
 	for _, addedUser := range usersToAdd {
-		r.auditLogger.Logf(console_reconciler.OpAddTeamMember, *corr, *r.system, actor, team, addedUser, "Added user '%s' to team '%s' as a member", addedUser.Name, team.Name)
+		r.auditLogger.Logf(console_reconciler.OpAddTeamMember, *corr, r.system, actor, team, addedUser, "Added user '%s' to team '%s' as a member", addedUser.Name, team.Name)
 	}
 
 	team, err = r.teamWithAssociations(*team.ID)
@@ -402,7 +402,7 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 	}
 
 	for _, addedUser := range usersToAdd {
-		r.auditLogger.Logf(console_reconciler.OpAddTeamOwner, *corr, *r.system, actor, team, addedUser, "Added user '%s' to team '%s' as owner", addedUser.Name, team.Name)
+		r.auditLogger.Logf(console_reconciler.OpAddTeamOwner, *corr, r.system, actor, team, addedUser, "Added user '%s' to team '%s' as owner", addedUser.Name, team.Name)
 	}
 
 	team, err = r.teamWithAssociations(*team.ID)
@@ -489,7 +489,7 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 		return nil, err
 	}
 
-	r.auditLogger.Logf(console_reconciler.OpSetTeamMemberRole, *corr, *r.system, actor, team, user, "Set team member role for '%s' to '%s' in team '%s'", user.Email, input.Role, team.Name)
+	r.auditLogger.Logf(console_reconciler.OpSetTeamMemberRole, *corr, r.system, actor, team, user, "Set team member role for '%s' to '%s' in team '%s'", user.Email, input.Role, team.Name)
 
 	team, err = r.teamWithAssociations(*team.ID)
 	if err != nil {

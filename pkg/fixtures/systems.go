@@ -1,17 +1,18 @@
 package fixtures
 
 import (
+	"context"
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/reconcilers/azure/group"
 	"github.com/nais/console/pkg/reconcilers/console"
 	"github.com/nais/console/pkg/reconcilers/github/team"
 	"github.com/nais/console/pkg/reconcilers/google/gcp"
 	"github.com/nais/console/pkg/reconcilers/google/workspace_admin"
 	"github.com/nais/console/pkg/reconcilers/nais/namespace"
+	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers/registry"
-	"gorm.io/gorm"
 )
 
 // registerReconcilers Register reconcilers in the registry. The order the reconcilers are registered in, is the same as
@@ -28,26 +29,31 @@ func registerReconcilers() {
 }
 
 // CreateReconcilerSystems Ensure system entries exists in the database for all reconcilers
-func CreateReconcilerSystems(db *gorm.DB) (map[string]*dbmodels.System, error) {
+func CreateReconcilerSystems(ctx context.Context, queries *sqlc.Queries) (map[string]sqlc.System, error) {
 	registerReconcilers()
 
 	recs := registry.Reconcilers()
-	systems := make(map[string]*dbmodels.System)
+	systems := make(map[string]sqlc.System)
 	for _, rec := range recs {
-		system := &dbmodels.System{
-			Name: rec.Name,
-		}
-
-		log.Infof("Ensure system '%s' exists in the database...", rec.Name)
-		err := db.Where("name = ?", rec.Name).FirstOrCreate(system).Error
+		system, err := queries.GetSystemByName(ctx, rec.Name)
 		if err != nil {
-			return nil, err
+			log.Infof("Create missing system entry '%s'", rec.Name)
+			id, err := uuid.NewUUID()
+			if err != nil {
+				return nil, err
+			}
+			system, err = queries.CreateSystem(ctx, sqlc.CreateSystemParams{
+				ID:   id,
+				Name: rec.Name,
+			})
+			if err != nil {
+				return nil, err
+			}
 		}
 
-		systems[rec.Name] = system
+		systems[rec.Name] = *system
 	}
 
 	log.Infof("All systems have been added to the database.")
-
 	return systems, nil
 }

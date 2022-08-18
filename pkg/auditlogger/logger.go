@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/dbmodels"
+	"github.com/nais/console/pkg/sqlc"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -13,7 +14,7 @@ type auditLogger struct {
 }
 
 type AuditLogger interface {
-	Logf(action string, corr dbmodels.Correlation, targetSystem dbmodels.System, actor *dbmodels.User, targetTeam *dbmodels.Team, targetUser *dbmodels.User, message string, messageArgs ...interface{}) error
+	Logf(action string, corr dbmodels.Correlation, targetSystem sqlc.System, actor *dbmodels.User, targetTeam *dbmodels.Team, targetUser *dbmodels.User, message string, messageArgs ...interface{}) error
 }
 
 func New(db *gorm.DB) AuditLogger {
@@ -22,7 +23,7 @@ func New(db *gorm.DB) AuditLogger {
 	}
 }
 
-func (l *auditLogger) Logf(action string, corr dbmodels.Correlation, targetSystem dbmodels.System, actor *dbmodels.User, targetTeam *dbmodels.Team, targetUser *dbmodels.User, message string, messageArgs ...interface{}) error {
+func (l *auditLogger) Logf(action string, corr dbmodels.Correlation, targetSystem sqlc.System, actor *dbmodels.User, targetTeam *dbmodels.Team, targetUser *dbmodels.User, message string, messageArgs ...interface{}) error {
 	var actorId *uuid.UUID
 	var targetTeamId *uuid.UUID
 	var targetUserId *uuid.UUID
@@ -39,14 +40,20 @@ func (l *auditLogger) Logf(action string, corr dbmodels.Correlation, targetSyste
 		targetUserId = targetUser.ID
 	}
 
+	system := &dbmodels.System{}
+	err := l.db.Where("id = ?", targetSystem.ID).First(system).Error
+	if err != nil {
+		return fmt.Errorf("unable to fetch system entry from DB: %w", err)
+	}
+
 	logEntry := &dbmodels.AuditLog{
 		Action:         action,
 		Actor:          actor,
 		ActorID:        actorId,
 		Correlation:    corr,
 		CorrelationID:  *corr.ID,
-		TargetSystem:   targetSystem,
-		TargetSystemID: *targetSystem.ID,
+		TargetSystem:   *system,
+		TargetSystemID: *system.ID,
 		TargetTeam:     targetTeam,
 		TargetUser:     targetUser,
 		TargetTeamID:   targetTeamId,
@@ -54,7 +61,7 @@ func (l *auditLogger) Logf(action string, corr dbmodels.Correlation, targetSyste
 
 		Message: fmt.Sprintf(message, messageArgs...),
 	}
-	err := l.db.Omit(clause.Associations).Create(logEntry).Error
+	err = l.db.Omit(clause.Associations).Create(logEntry).Error
 	if err != nil {
 		return fmt.Errorf("store audit log line in database: %s", err)
 	}

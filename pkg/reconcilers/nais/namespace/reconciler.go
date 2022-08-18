@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
+	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
 
 	"cloud.google.com/go/pubsub"
@@ -39,7 +40,7 @@ type naisNamespaceReconciler struct {
 	projectParentIDs map[string]int64
 	credentialsFile  string
 	projectID        string
-	system           dbmodels.System
+	system           sqlc.System
 }
 
 const (
@@ -47,7 +48,7 @@ const (
 	OpCreateNamespace = "nais:namespace:create-namespace"
 )
 
-func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, domain, credentialsFile, projectID string, projectParentIDs map[string]int64) *naisNamespaceReconciler {
+func New(db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, domain, credentialsFile, projectID string, projectParentIDs map[string]int64) *naisNamespaceReconciler {
 	return &naisNamespaceReconciler{
 		db:               db,
 		auditLogger:      auditLogger,
@@ -59,7 +60,7 @@ func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogge
 	}
 }
 
-func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(db *gorm.DB, cfg *config.Config, system sqlc.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.NaisNamespace.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
@@ -76,7 +77,7 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	namespaceState := &reconcilers.GoogleGcpNaisNamespaceState{
 		Namespaces: make(map[string]dbmodels.Slug),
 	}
-	err = dbmodels.LoadSystemState(r.db, *r.system.ID, *input.Team.ID, namespaceState)
+	err = dbmodels.LoadSystemState(r.db, r.system.ID, *input.Team.ID, namespaceState)
 	if err != nil {
 		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
 	}
@@ -109,7 +110,7 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 		}
 	}
 
-	err = dbmodels.SetSystemState(r.db, *r.system.ID, *input.Team.ID, namespaceState)
+	err = dbmodels.SetSystemState(r.db, r.system.ID, *input.Team.ID, namespaceState)
 	if err != nil {
 		log.Errorf("system state not persisted: %s", err)
 	}
@@ -117,7 +118,7 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	return nil
 }
 
-func (r *naisNamespaceReconciler) System() dbmodels.System {
+func (r *naisNamespaceReconciler) System() sqlc.System {
 	return r.system
 }
 

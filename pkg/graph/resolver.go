@@ -19,11 +19,11 @@ type Resolver struct {
 	db             *gorm.DB
 	tenantDomain   string
 	teamReconciler chan<- reconcilers.Input
-	system         *dbmodels.System
+	system         sqlc.System
 	auditLogger    auditlogger.AuditLogger
 }
 
-func NewResolver(queries *sqlc.Queries, db *gorm.DB, tenantDomain string, system *dbmodels.System, teamReconciler chan<- reconcilers.Input, auditLogger auditlogger.AuditLogger) *Resolver {
+func NewResolver(queries *sqlc.Queries, db *gorm.DB, tenantDomain string, system sqlc.System, teamReconciler chan<- reconcilers.Input, auditLogger auditlogger.AuditLogger) *Resolver {
 	return &Resolver{
 		queries:        queries,
 		db:             db,

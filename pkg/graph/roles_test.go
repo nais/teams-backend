@@ -5,6 +5,7 @@ import (
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/reconcilers"
+	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -14,22 +15,20 @@ import (
 )
 
 func TestQueryResolver_Roles(t *testing.T) {
-	db, _ := test.GetTestDB()
+	ctx := context.Background()
+	db, queries, _ := test.GetTestDBAndQueries()
 	roles := []*dbmodels.Role{
 		{Name: "B"},
 		{Name: "A"},
 		{Name: "C"},
 	}
-	system := &dbmodels.System{}
+	system := &sqlc.System{Name: console_reconciler.Name}
 	db.Create(roles)
-	db.Create(system)
 
 	ch := make(chan reconcilers.Input, 100)
-	ctx := context.Background()
 
 	logger := auditlogger.New(db)
-	dbc, _ := db.DB()
-	resolver := graph.NewResolver(sqlc.New(dbc), db, "example.com", system, ch, logger).Query()
+	resolver := graph.NewResolver(queries, db, "example.com", *system, ch, logger).Query()
 
 	t.Run("Get roles", func(t *testing.T) {
 		roles, err := resolver.Roles(ctx)
@@ -43,15 +42,14 @@ func TestQueryResolver_Roles(t *testing.T) {
 }
 
 func TestRoleBindingResolver_Role(t *testing.T) {
-	db, _ := test.GetTestDB()
+	ctx := context.Background()
+	db, queries, _ := test.GetTestDBAndQueries()
 
-	system := &dbmodels.System{}
+	system := &sqlc.System{Name: console_reconciler.Name}
 	role := &dbmodels.Role{Name: "Some role"}
 	user := &dbmodels.User{Email: "user@example.com"}
 	db.Create(role)
 	db.Create(user)
-	db.Create(system)
-
 	userRole := &sqlc.UserRole{
 		UserID: *user.ID,
 		RoleID: *role.ID,
@@ -59,20 +57,20 @@ func TestRoleBindingResolver_Role(t *testing.T) {
 	db.Create(userRole)
 
 	ch := make(chan reconcilers.Input, 100)
-	dbc, _ := db.DB()
 
-	resolver := graph.NewResolver(sqlc.New(dbc), db, "example.com", system, ch, auditlogger.New(db)).RoleBinding()
+	resolver := graph.NewResolver(queries, db, "example.com", *system, ch, auditlogger.New(db)).RoleBinding()
 
-	retrievedRole, err := resolver.Role(context.Background(), userRole)
+	retrievedRole, err := resolver.Role(ctx, userRole)
 	assert.NoError(t, err)
 	assert.Equal(t, "Some role", retrievedRole.Name)
 }
 
 func TestRoleBindingResolver_IsGlobal(t *testing.T) {
-	db, _ := test.GetTestDB()
+	ctx := context.Background()
+	db, queries, _ := test.GetTestDBAndQueries()
 
 	team := &dbmodels.Team{Slug: "slug", Name: "name"}
-	system := &dbmodels.System{}
+	system := &sqlc.System{Name: console_reconciler.Name}
 	role1 := &dbmodels.Role{Name: "Some role"}
 	role2 := &dbmodels.Role{Name: "Some other role"}
 	user := &dbmodels.User{Email: "user@example.com"}
@@ -80,7 +78,6 @@ func TestRoleBindingResolver_IsGlobal(t *testing.T) {
 	db.Create(role1)
 	db.Create(role2)
 	db.Create(user)
-	db.Create(system)
 
 	globalUserRole := &dbmodels.UserRole{
 		UserID: *user.ID,
@@ -96,10 +93,7 @@ func TestRoleBindingResolver_IsGlobal(t *testing.T) {
 
 	ch := make(chan reconcilers.Input, 100)
 
-	dbc, _ := db.DB()
-	queries := sqlc.New(dbc)
-	resolver := graph.NewResolver(queries, db, "example.com", system, ch, auditlogger.New(db)).RoleBinding()
-	ctx := context.Background()
+	resolver := graph.NewResolver(queries, db, "example.com", *system, ch, auditlogger.New(db)).RoleBinding()
 
 	t.Run("Global role", func(t *testing.T) {
 		userRole, _ := queries.GetUserRole(ctx, *globalUserRole.ID)

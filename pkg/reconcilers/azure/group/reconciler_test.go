@@ -7,6 +7,8 @@ import (
 	"github.com/nais/console/pkg/azureclient"
 	"github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/reconcilers"
+	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
+	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/pkg/test"
 	"github.com/stretchr/testify/mock"
 	"testing"
@@ -54,7 +56,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		Email: keepMember.Mail,
 	}
 	corr := dbmodels.Correlation{Model: modelWithId()}
-	system := dbmodels.System{Model: modelWithId()}
+	system := sqlc.System{Name: console_reconciler.Name}
 	team := dbmodels.Team{
 		Model:   modelWithId(),
 		Slug:    teamSlug,

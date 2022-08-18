@@ -7,6 +7,7 @@ import (
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/reconcilers"
+	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -16,24 +17,23 @@ import (
 )
 
 func TestQueryResolver_Users(t *testing.T) {
-	db, _ := test.GetTestDBWithRoles()
+	ctx := context.Background()
+	db, queries, _ := test.GetTestDBAndQueriesWithRoles()
 	users := []*dbmodels.User{
 		{Name: "A", Email: "b@example.com"},
 		{Name: "B", Email: "a@example.com"},
 		{Name: "C", Email: "c@example.com"},
 	}
-	system := &dbmodels.System{}
+	system := &sqlc.System{Name: console_reconciler.Name}
 	db.Create(users)
-	db.Create(system)
 
 	ch := make(chan reconcilers.Input, 100)
 
 	adminUser := getAdminUser(db, "D", "d@example.com")
-	ctx := authz.ContextWithUser(context.Background(), adminUser)
+	ctx = authz.ContextWithUser(ctx, adminUser)
 
 	logger := auditlogger.New(db)
-	dbc, _ := db.DB()
-	resolver := graph.NewResolver(sqlc.New(dbc), db, "example.com", system, ch, logger).Query()
+	resolver := graph.NewResolver(queries, db, "example.com", *system, ch, logger).Query()
 
 	t.Run("No filter or sort", func(t *testing.T) {
 		users, err := resolver.Users(ctx, nil, nil, nil)
@@ -62,22 +62,20 @@ func TestQueryResolver_Users(t *testing.T) {
 }
 
 func TestUserResolver_Roles(t *testing.T) {
-	db, _ := test.GetTestDB()
+	ctx := context.Background()
+	db, queries, _ := test.GetTestDBAndQueries()
 	role := &dbmodels.Role{Name: "Some role"}
 	userWithRoles := &dbmodels.User{Email: "a@example.com"}
 	userWithNoRoles := &dbmodels.User{Email: "b@example.com"}
-	system := &dbmodels.System{}
+	system := &sqlc.System{Name: console_reconciler.Name}
 	db.Create(role)
 	db.Create(userWithRoles)
 	db.Create(userWithNoRoles)
-	db.Create(system)
 	roleBinding := &dbmodels.UserRole{UserID: *userWithRoles.ID, RoleID: *role.ID}
 	db.Create(roleBinding)
 
 	ch := make(chan reconcilers.Input, 100)
-	dbc, _ := db.DB()
-	resolver := graph.NewResolver(sqlc.New(dbc), db, "example.com", system, ch, auditlogger.New(db)).User()
-	ctx := context.Background()
+	resolver := graph.NewResolver(queries, db, "example.com", *system, ch, auditlogger.New(db)).User()
 
 	t.Run("No user in context", func(t *testing.T) {
 		userRoles, err := resolver.Roles(ctx, userWithNoRoles)

@@ -6,6 +6,7 @@ import (
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/reconcilers"
+	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
 	"github.com/nais/console/pkg/roles"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/pkg/test"
@@ -42,7 +43,8 @@ func getAdminUser(db *gorm.DB, name, email string) *dbmodels.User {
 }
 
 func TestQueryResolver_Teams(t *testing.T) {
-	db, _ := test.GetTestDBWithRoles()
+	ctx := context.Background()
+	db, queries, _ := test.GetTestDBAndQueriesWithRoles()
 	db.Create([]dbmodels.Team{
 		{
 			Slug: "b",
@@ -59,13 +61,11 @@ func TestQueryResolver_Teams(t *testing.T) {
 	})
 
 	ch := make(chan reconcilers.Input, 100)
-	system := &dbmodels.System{}
-	db.Create(system)
+	system := &sqlc.System{Name: console_reconciler.Name}
 	user := getAdminUser(db, "user", "user@example.com")
 
-	ctx := authz.ContextWithUser(context.Background(), user)
-	dbc, _ := db.DB()
-	resolver := graph.NewResolver(sqlc.New(dbc), db, "example.com", system, ch, nil).Query()
+	ctx = authz.ContextWithUser(ctx, user)
+	resolver := graph.NewResolver(queries, db, "example.com", *system, ch, nil).Query()
 
 	t.Run("No filter or sort", func(t *testing.T) {
 		teams, err := resolver.Teams(ctx, nil, nil, nil)

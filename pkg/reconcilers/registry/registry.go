@@ -3,13 +3,13 @@ package registry
 import (
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
-	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
-type ReconcilerFactory func(*gorm.DB, *config.Config, dbmodels.System, auditlogger.AuditLogger) (reconcilers.Reconciler, error)
+type ReconcilerFactory func(*gorm.DB, *config.Config, sqlc.System, auditlogger.AuditLogger) (reconcilers.Reconciler, error)
 
 type ReconcilerInitializer struct {
 	Name    string

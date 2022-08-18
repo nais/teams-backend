@@ -75,7 +75,7 @@ func (r *mutationResolver) CreateServiceAccount(ctx context.Context, input model
 		return nil, err
 	}
 
-	r.auditLogger.Logf(console_reconciler.OpCreateServiceAccount, *corr, *r.system, actor, nil, serviceAccount, "Service account created")
+	r.auditLogger.Logf(console_reconciler.OpCreateServiceAccount, *corr, r.system, actor, nil, serviceAccount, "Service account created")
 
 	return serviceAccount, nil
 }
@@ -124,7 +124,7 @@ func (r *mutationResolver) UpdateServiceAccount(ctx context.Context, serviceAcco
 		return nil, err
 	}
 
-	r.auditLogger.Logf(console_reconciler.OpUpdateServiceAccount, *corr, *r.system, actor, nil, serviceAccount, "Service account updated")
+	r.auditLogger.Logf(console_reconciler.OpUpdateServiceAccount, *corr, r.system, actor, nil, serviceAccount, "Service account updated")
 
 	return serviceAccount, nil
 }
@@ -169,7 +169,7 @@ func (r *mutationResolver) DeleteServiceAccount(ctx context.Context, serviceAcco
 		return false, err
 	}
 
-	r.auditLogger.Logf(console_reconciler.OpDeleteServiceAccount, *corr, *r.system, actor, nil, serviceAccount, "Service account deleted")
+	r.auditLogger.Logf(console_reconciler.OpDeleteServiceAccount, *corr, r.system, actor, nil, serviceAccount, "Service account deleted")
 
 	return true, nil
 }

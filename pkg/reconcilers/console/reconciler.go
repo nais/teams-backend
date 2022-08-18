@@ -2,7 +2,7 @@ package console_reconciler
 
 import (
 	"context"
-	"github.com/nais/console/pkg/dbmodels"
+	"github.com/nais/console/pkg/sqlc"
 
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
@@ -11,7 +11,7 @@ import (
 )
 
 type consoleReconciler struct {
-	system dbmodels.System
+	system sqlc.System
 }
 
 const (
@@ -30,13 +30,13 @@ const (
 	OpUpdateTeam           = "console:team:update"
 )
 
-func New(system dbmodels.System) *consoleReconciler {
+func New(system sqlc.System) *consoleReconciler {
 	return &consoleReconciler{
 		system: system,
 	}
 }
 
-func NewFromConfig(_ *gorm.DB, _ *config.Config, system dbmodels.System, _ auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(_ *gorm.DB, _ *config.Config, system sqlc.System, _ auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	return New(system), nil
 }
 
@@ -44,6 +44,6 @@ func (r *consoleReconciler) Reconcile(_ context.Context, _ reconcilers.Input) er
 	return nil
 }
 
-func (r *consoleReconciler) System() dbmodels.System {
+func (r *consoleReconciler) System() sqlc.System {
 	return r.system
 }

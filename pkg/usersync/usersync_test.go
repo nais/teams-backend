@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/dbmodels"
+	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
+	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/pkg/test"
 	"github.com/nais/console/pkg/usersync"
 	"github.com/stretchr/testify/assert"
@@ -13,12 +15,11 @@ import (
 )
 
 func TestSync(t *testing.T) {
-	system := &dbmodels.System{Name: "console"}
+	system := &sqlc.System{Name: console_reconciler.Name}
 	mockAuditLogger := &auditlogger.MockAuditLogger{}
 
 	t.Run("Server error from Google", func(t *testing.T) {
 		db, _ := test.GetTestDB()
-		db.Create(system)
 
 		httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
 			return test.Response("500 Internal Server Error", `{"error": "some error"}`)
@@ -31,7 +32,6 @@ func TestSync(t *testing.T) {
 
 	t.Run("No remote users", func(t *testing.T) {
 		db, _ := test.GetTestDB()
-		db.Create(system)
 
 		httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
 			return test.Response("200 OK", `{"users":[]}`)
@@ -44,7 +44,7 @@ func TestSync(t *testing.T) {
 
 	t.Run("Create, update and delete users", func(t *testing.T) {
 		db, _ := test.GetTestDB()
-		db.Create(system)
+
 		db.Create([]*dbmodels.User{
 			{Email: "delete-me@example.com", Name: "Delete Me"},   // Will be deleted
 			{Email: "dont-delete-me@service-account.example.com"}, // Will not be touched
@@ -86,7 +86,7 @@ func TestSync(t *testing.T) {
 
 	t.Run("Don't insert duplicate role bindings", func(t *testing.T) {
 		db, _ := test.GetTestDBWithRoles()
-		db.Create(system)
+
 		user1 := &dbmodels.User{Email: "user1@example.com"}
 		user2 := &dbmodels.User{Email: "user2@example.com"}
 		db.Create([]*dbmodels.User{user1, user2})

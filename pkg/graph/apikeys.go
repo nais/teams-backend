@@ -66,7 +66,7 @@ func (r *mutationResolver) CreateAPIKey(ctx context.Context, userID *uuid.UUID) 
 		return nil, err
 	}
 
-	r.auditLogger.Logf(console_reconciler.OpCreateApiKey, *corr, *r.system, actor, nil, serviceAccount, "API key created")
+	r.auditLogger.Logf(console_reconciler.OpCreateApiKey, *corr, r.system, actor, nil, serviceAccount, "API key created")
 
 	return &model.APIKey{
 		APIKey: key.APIKey,
@@ -105,7 +105,7 @@ func (r *mutationResolver) DeleteAPIKey(ctx context.Context, userID *uuid.UUID) 
 		return false, err
 	}
 
-	r.auditLogger.Logf(console_reconciler.OpDeleteApiKey, *corr, *r.system, actor, nil, serviceAccount, "API key deleted")
+	r.auditLogger.Logf(console_reconciler.OpDeleteApiKey, *corr, r.system, actor, nil, serviceAccount, "API key deleted")
 
 	return true, nil
 }

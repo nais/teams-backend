@@ -9,6 +9,7 @@ import (
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/google_jwt"
 	"github.com/nais/console/pkg/roles"
+	"github.com/nais/console/pkg/sqlc"
 	"google.golang.org/api/option"
 	"gorm.io/gorm"
 	"net/http"
@@ -19,7 +20,7 @@ import (
 )
 
 type userSynchronizer struct {
-	system      dbmodels.System
+	system      sqlc.System
 	auditLogger auditlogger.AuditLogger
 	domain      string
 	db          *gorm.DB
@@ -45,7 +46,7 @@ var (
 	}
 )
 
-func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, domain string, client *http.Client) *userSynchronizer {
+func New(db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, domain string, client *http.Client) *userSynchronizer {
 	return &userSynchronizer{
 		db:          db,
 		system:      system,
@@ -55,7 +56,7 @@ func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogge
 	}
 }
 
-func NewFromConfig(cfg *config.Config, db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger) (*userSynchronizer, error) {
+func NewFromConfig(cfg *config.Config, db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger) (*userSynchronizer, error) {
 	if !cfg.UserSync.Enabled {
 		return nil, ErrNotEnabled
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"strconv"
@@ -26,7 +27,7 @@ type googleGcpReconciler struct {
 	domain           string
 	auditLogger      auditlogger.AuditLogger
 	projectParentIDs map[string]int64
-	system           dbmodels.System
+	system           sqlc.System
 }
 
 const (
@@ -35,7 +36,7 @@ const (
 	OpAssignPermissions = "google:gcp:project:assign-permissions"
 )
 
-func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config, projectParentIDs map[string]int64) *googleGcpReconciler {
+func New(db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config, projectParentIDs map[string]int64) *googleGcpReconciler {
 	return &googleGcpReconciler{
 		db:               db,
 		auditLogger:      auditLogger,
@@ -46,7 +47,7 @@ func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogge
 	}
 }
 
-func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(db *gorm.DB, cfg *config.Config, system sqlc.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.GCP.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
@@ -71,7 +72,7 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 	state := &reconcilers.GoogleGcpProjectState{
 		Projects: make(map[string]reconcilers.GoogleGcpEnvironmentProject),
 	}
-	err := dbmodels.LoadSystemState(r.db, *r.system.ID, *input.Team.ID, state)
+	err := dbmodels.LoadSystemState(r.db, r.system.ID, *input.Team.ID, state)
 	if err != nil {
 		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
 	}
@@ -91,7 +92,7 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 			ProjectID:   project.ProjectId,
 			ProjectName: project.Name,
 		}
-		err = dbmodels.SetSystemState(r.db, *r.system.ID, *input.Team.ID, state)
+		err = dbmodels.SetSystemState(r.db, r.system.ID, *input.Team.ID, state)
 		if err != nil {
 			log.Errorf("system state not persisted: %s", err)
 		}
@@ -105,7 +106,7 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 	return nil
 }
 
-func (r *googleGcpReconciler) System() dbmodels.System {
+func (r *googleGcpReconciler) System() sqlc.System {
 	return r.system
 }
 
@@ -175,6 +176,7 @@ func (r *googleGcpReconciler) setProjectPermissions(svc *cloudresourcemanager.Se
 		return fmt.Errorf("assign GCP project IAM permissions: %w", err)
 	}
 
+	// FIXME: No need to log if no changes are made
 	r.auditLogger.Logf(OpAssignPermissions, corr, r.system, nil, &team, nil, "assigned GCP project IAM permissions for '%s'", projectName)
 
 	return nil

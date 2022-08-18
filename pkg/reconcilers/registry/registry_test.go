@@ -3,16 +3,16 @@ package registry_test
 import (
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
-	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/reconcilers/registry"
+	"github.com/nais/console/pkg/sqlc"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 	"testing"
 )
 
 func reconciler() registry.ReconcilerFactory {
-	return func(*gorm.DB, *config.Config, dbmodels.System, auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+	return func(*gorm.DB, *config.Config, sqlc.System, auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 		return nil, nil
 	}
 }

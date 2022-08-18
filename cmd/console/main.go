@@ -66,7 +66,13 @@ func run() error {
 		return err
 	}
 
-	systems, err := fixtures.CreateReconcilerSystems(db)
+	dbc, err := db.DB()
+	if err != nil {
+		return err
+	}
+	queries := sqlc.New(dbc)
+
+	systems, err := fixtures.CreateReconcilerSystems(ctx, queries)
 	if err != nil {
 		return err
 	}
@@ -101,7 +107,7 @@ func run() error {
 		return err
 	}
 
-	handler, err := setupGraphAPI(db, cfg.TenantDomain, systems[console_reconciler.Name], teamReconciler, logger)
+	handler, err := setupGraphAPI(queries, db, cfg.TenantDomain, systems[console_reconciler.Name], teamReconciler, logger)
 	if err != nil {
 		return err
 	}
@@ -157,7 +163,7 @@ func run() error {
 
 	// User synchronizer
 	userSyncTimer := time.NewTimer(1 * time.Second)
-	userSyncer, err := usersync.NewFromConfig(cfg, db, *systems[console_reconciler.Name], logger)
+	userSyncer, err := usersync.NewFromConfig(cfg, db, systems[console_reconciler.Name], logger)
 	if err != nil {
 		userSyncTimer.Stop()
 		if err != usersync.ErrNotEnabled {
@@ -301,7 +307,7 @@ func setupLogging(format, level string) error {
 	return nil
 }
 
-func initReconcilers(db *gorm.DB, cfg *config.Config, logger auditlogger.AuditLogger, systems map[string]*dbmodels.System) ([]reconcilers.Reconciler, error) {
+func initReconcilers(db *gorm.DB, cfg *config.Config, logger auditlogger.AuditLogger, systems map[string]sqlc.System) ([]reconcilers.Reconciler, error) {
 	recs := make([]reconcilers.Reconciler, 0)
 	initializers := registry.Reconcilers()
 
@@ -313,7 +319,7 @@ func initReconcilers(db *gorm.DB, cfg *config.Config, logger auditlogger.AuditLo
 			return nil, fmt.Errorf("BUG: missing system for reconciler '%s'", name)
 		}
 
-		rec, err := factory(db, cfg, *system, logger)
+		rec, err := factory(db, cfg, system, logger)
 		switch err {
 		case reconcilers.ErrReconcilerNotEnabled:
 			log.Warnf("Reconciler '%s' is disabled through configuration", name)
@@ -345,12 +351,8 @@ func setupDatabase(cfg *config.Config) (*gorm.DB, error) {
 	return db, nil
 }
 
-func setupGraphAPI(db *gorm.DB, domain string, console *dbmodels.System, teamReconciler chan<- reconcilers.Input, logger auditlogger.AuditLogger) (*graphql_handler.Server, error) {
-	dbc, err := db.DB()
-	if err != nil {
-		return nil, err
-	}
-	resolver := graph.NewResolver(sqlc.New(dbc), db, domain, console, teamReconciler, logger)
+func setupGraphAPI(queries *sqlc.Queries, db *gorm.DB, domain string, console sqlc.System, teamReconciler chan<- reconcilers.Input, logger auditlogger.AuditLogger) (*graphql_handler.Server, error) {
+	resolver := graph.NewResolver(queries, db, domain, console, teamReconciler, logger)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
 	gc.Directives.Auth = directives.Auth(db)

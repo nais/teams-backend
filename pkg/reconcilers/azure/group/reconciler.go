@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
 	"strings"
 
@@ -21,7 +22,7 @@ import (
 
 type azureGroupReconciler struct {
 	db          *gorm.DB
-	system      dbmodels.System
+	system      sqlc.System
 	auditLogger auditlogger.AuditLogger
 	oauth       clientcredentials.Config
 	client      azureclient.Client
@@ -36,7 +37,7 @@ const (
 	OpDeleteMember = "azure:group:delete-member"
 )
 
-func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, oauth clientcredentials.Config, client azureclient.Client, domain string) *azureGroupReconciler {
+func New(db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, oauth clientcredentials.Config, client azureclient.Client, domain string) *azureGroupReconciler {
 	return &azureGroupReconciler{
 		db:          db,
 		system:      system,
@@ -47,7 +48,7 @@ func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogge
 	}
 }
 
-func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(db *gorm.DB, cfg *config.Config, system sqlc.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.Azure.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
@@ -68,7 +69,7 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 
 func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	state := &reconcilers.AzureState{}
-	err := dbmodels.LoadSystemState(r.db, *r.system.ID, *input.Team.ID, state)
+	err := dbmodels.LoadSystemState(r.db, r.system.ID, *input.Team.ID, state)
 	if err != nil {
 		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
 	}
@@ -83,7 +84,7 @@ func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.
 		r.auditLogger.Logf(OpCreate, input.Corr, r.system, nil, &input.Team, nil, "created Azure AD group: %s", grp)
 
 		id, _ := uuid.Parse(grp.ID)
-		err = dbmodels.SetSystemState(r.db, *r.system.ID, *input.Team.ID, reconcilers.AzureState{GroupID: &id})
+		err = dbmodels.SetSystemState(r.db, r.system.ID, *input.Team.ID, reconcilers.AzureState{GroupID: &id})
 		if err != nil {
 			log.Errorf("system state not persisted: %s", err)
 		}
@@ -97,7 +98,7 @@ func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.
 	return nil
 }
 
-func (r *azureGroupReconciler) System() dbmodels.System {
+func (r *azureGroupReconciler) System() sqlc.System {
 	return r.system
 }
 

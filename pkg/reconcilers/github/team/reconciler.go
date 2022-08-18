@@ -12,6 +12,7 @@ import (
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/sqlc"
 	"github.com/shurcooL/githubv4"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -31,7 +32,7 @@ const (
 
 var errGitHubUserNotFound = errors.New("GitHub user does not exist")
 
-func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, org, domain string, teamsService TeamsService, graphClient GraphClient) *githubTeamReconciler {
+func New(db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, org, domain string, teamsService TeamsService, graphClient GraphClient) *githubTeamReconciler {
 	return &githubTeamReconciler{
 		db:           db,
 		system:       system,
@@ -43,7 +44,7 @@ func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogge
 	}
 }
 
-func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(db *gorm.DB, cfg *config.Config, system sqlc.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.GitHub.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
@@ -71,7 +72,7 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 
 func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	state := &reconcilers.GitHubState{}
-	err := dbmodels.LoadSystemState(r.db, *r.system.ID, *input.Team.ID, state)
+	err := dbmodels.LoadSystemState(r.db, r.system.ID, *input.Team.ID, state)
 	if err != nil {
 		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
 	}
@@ -81,7 +82,7 @@ func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.
 		return fmt.Errorf("unable to get or create a GitHub team for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
 	}
 
-	err = dbmodels.SetSystemState(r.db, *r.system.ID, *input.Team.ID, reconcilers.GitHubState{Slug: githubTeam.Slug})
+	err = dbmodels.SetSystemState(r.db, r.system.ID, *input.Team.ID, reconcilers.GitHubState{Slug: githubTeam.Slug})
 	if err != nil {
 		log.Errorf("system state not persisted: %s", err)
 	}
@@ -89,7 +90,7 @@ func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.
 	return r.connectUsers(ctx, githubTeam, input.Corr, input.Team)
 }
 
-func (r *githubTeamReconciler) System() dbmodels.System {
+func (r *githubTeamReconciler) System() sqlc.System {
 	return r.system
 }
 

@@ -10,6 +10,7 @@ import (
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/google_jwt"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/oauth2/jwt"
 	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
@@ -25,7 +26,7 @@ type googleWorkspaceAdminReconciler struct {
 	db          *gorm.DB
 	domain      string
 	config      *jwt.Config
-	system      dbmodels.System
+	system      sqlc.System
 }
 
 const (
@@ -37,7 +38,7 @@ const (
 	OpAddToGKESecurityGroup = "google:workspace-admin:add-to-gke-security-group"
 )
 
-func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config) *googleWorkspaceAdminReconciler {
+func New(db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config) *googleWorkspaceAdminReconciler {
 	return &googleWorkspaceAdminReconciler{
 		auditLogger: auditLogger,
 		db:          db,
@@ -47,7 +48,7 @@ func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogge
 	}
 }
 
-func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(db *gorm.DB, cfg *config.Config, system sqlc.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.Google.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
@@ -63,7 +64,7 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 
 func (r *googleWorkspaceAdminReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	state := &reconcilers.GoogleWorkspaceState{}
-	err := dbmodels.LoadSystemState(r.db, *r.system.ID, *input.Team.ID, state)
+	err := dbmodels.LoadSystemState(r.db, r.system.ID, *input.Team.ID, state)
 	if err != nil {
 		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
 	}
@@ -79,7 +80,7 @@ func (r *googleWorkspaceAdminReconciler) Reconcile(ctx context.Context, input re
 		return fmt.Errorf("unable to get or create a Google Workspace group for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
 	}
 
-	err = dbmodels.SetSystemState(r.db, *r.system.ID, *input.Team.ID, reconcilers.GoogleWorkspaceState{GroupID: &grp.Id})
+	err = dbmodels.SetSystemState(r.db, r.system.ID, *input.Team.ID, reconcilers.GoogleWorkspaceState{GroupID: &grp.Id})
 	if err != nil {
 		log.Errorf("system state not persisted: %s", err)
 	}
@@ -92,7 +93,7 @@ func (r *googleWorkspaceAdminReconciler) Reconcile(ctx context.Context, input re
 	return r.addToGKESecurityGroup(srv.Members, grp, input.Corr, input.Team)
 }
 
-func (r *googleWorkspaceAdminReconciler) System() dbmodels.System {
+func (r *googleWorkspaceAdminReconciler) System() sqlc.System {
 	return r.system
 }
 
