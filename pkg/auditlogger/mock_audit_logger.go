@@ -15,14 +15,14 @@ type MockAuditLogger struct {
 }
 
 // Logf provides a mock function with given fields: action, corr, targetSystem, actor, targetTeam, targetUser, message, messageArgs
-func (_m *MockAuditLogger) Logf(action string, corr dbmodels.Correlation, targetSystem sqlc.System, actor *dbmodels.User, targetTeam *dbmodels.Team, targetUser *dbmodels.User, message string, messageArgs ...interface{}) error {
+func (_m *MockAuditLogger) Logf(action string, corr sqlc.Correlation, targetSystem sqlc.System, actor *dbmodels.User, targetTeam *dbmodels.Team, targetUser *dbmodels.User, message string, messageArgs ...interface{}) error {
 	var _ca []interface{}
 	_ca = append(_ca, action, corr, targetSystem, actor, targetTeam, targetUser, message)
 	_ca = append(_ca, messageArgs...)
 	ret := _m.Called(_ca...)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, dbmodels.Correlation, sqlc.System, *dbmodels.User, *dbmodels.Team, *dbmodels.User, string, ...interface{}) error); ok {
+	if rf, ok := ret.Get(0).(func(string, sqlc.Correlation, sqlc.System, *dbmodels.User, *dbmodels.Team, *dbmodels.User, string, ...interface{}) error); ok {
 		r0 = rf(action, corr, targetSystem, actor, targetTeam, targetUser, message, messageArgs...)
 	} else {
 		r0 = ret.Error(0)

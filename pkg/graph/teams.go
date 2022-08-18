@@ -26,7 +26,10 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		return nil, err
 	}
 
-	corr := &dbmodels.Correlation{}
+	corr, err := r.createCorrelation(ctx)
+	if err != nil {
+		return nil, err
+	}
 	team := &dbmodels.Team{
 		Slug:    *input.Slug,
 		Name:    input.Name,
@@ -34,11 +37,6 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 	}
 
 	err = r.db.Transaction(func(tx *gorm.DB) error {
-		err = tx.Create(corr).Error
-		if err != nil {
-			return fmt.Errorf("unable to create correlation for audit log")
-		}
-
 		err = db.CreateTrackedObject(ctx, tx, team)
 		if err != nil {
 			return err
@@ -104,13 +102,12 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, in
 		return nil, err
 	}
 
-	corr := &dbmodels.Correlation{}
-	err = r.db.Transaction(func(tx *gorm.DB) error {
-		err = tx.Create(corr).Error
-		if err != nil {
-			return fmt.Errorf("unable to create correlation for audit log")
-		}
+	corr, err := r.createCorrelation(ctx)
+	if err != nil {
+		return nil, err
+	}
 
+	err = r.db.Transaction(func(tx *gorm.DB) error {
 		if input.Name != nil {
 			team.Name = *input.Name
 		}
@@ -168,13 +165,12 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 		return nil, fmt.Errorf("one or more non-existing or duplicate user IDs given as parameter")
 	}
 
-	corr := &dbmodels.Correlation{}
-	err = r.db.Transaction(func(tx *gorm.DB) error {
-		err = tx.Create(corr).Error
-		if err != nil {
-			return fmt.Errorf("unable to create correlation for audit log")
-		}
+	corr, err := r.createCorrelation(ctx)
+	if err != nil {
+		return nil, err
+	}
 
+	err = r.db.Transaction(func(tx *gorm.DB) error {
 		err = tx.Where("user_id IN (?) AND target_id = ?", input.UserIds, team.ID).Delete(&dbmodels.UserRole{}).Error
 		if err != nil {
 			return err
@@ -221,10 +217,9 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 		return nil, err
 	}
 
-	corr := &dbmodels.Correlation{}
-	err = r.db.Create(corr).Error
+	corr, err := r.createCorrelation(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create correlation for audit log")
+		return nil, err
 	}
 
 	r.auditLogger.Logf(console_reconciler.OpSyncTeam, *corr, r.system, actor, team, nil, "Manual sync requested")
@@ -265,13 +260,11 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 		return nil, fmt.Errorf("one or more non-existing or duplicate user IDs given as parameter")
 	}
 
-	corr := &dbmodels.Correlation{}
+	corr, err := r.createCorrelation(ctx)
+	if err != nil {
+		return nil, err
+	}
 	err = r.db.Transaction(func(tx *gorm.DB) error {
-		err = tx.Create(corr).Error
-		if err != nil {
-			return fmt.Errorf("unable to create correlation for audit log")
-		}
-
 		teamMemberRole := &dbmodels.Role{}
 		err = tx.Where("name = ?", roles.RoleTeamMember).First(teamMemberRole).Error
 		if err != nil {
@@ -350,13 +343,11 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 		return nil, fmt.Errorf("one or more non-existing or duplicate user IDs given as parameter")
 	}
 
-	corr := &dbmodels.Correlation{}
+	corr, err := r.createCorrelation(ctx)
+	if err != nil {
+		return nil, err
+	}
 	err = r.db.Transaction(func(tx *gorm.DB) error {
-		err = tx.Create(corr).Error
-		if err != nil {
-			return fmt.Errorf("unable to create correlation for audit log")
-		}
-
 		// Remove the team member role that the user potentially has
 		teamMemberRole := &dbmodels.Role{}
 		err = tx.Where("name = ?", roles.RoleTeamMember).First(teamMemberRole).Error
@@ -443,13 +434,11 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 		return nil, err
 	}
 
-	corr := &dbmodels.Correlation{}
+	corr, err := r.createCorrelation(ctx)
+	if err != nil {
+		return nil, err
+	}
 	err = r.db.Transaction(func(tx *gorm.DB) error {
-		err = tx.Create(corr).Error
-		if err != nil {
-			return fmt.Errorf("unable to create correlation for audit log")
-		}
-
 		teamMemberRole := &dbmodels.Role{}
 		err = tx.Where("name = ?", roles.RoleTeamMember).First(teamMemberRole).Error
 		if err != nil {

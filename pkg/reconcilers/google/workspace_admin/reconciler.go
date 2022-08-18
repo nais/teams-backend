@@ -97,7 +97,7 @@ func (r *googleWorkspaceAdminReconciler) System() sqlc.System {
 	return r.system
 }
 
-func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(groupsService *admin_directory_v1.GroupsService, state *reconcilers.GoogleWorkspaceState, corr dbmodels.Correlation, team dbmodels.Team) (*admin_directory_v1.Group, error) {
+func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(groupsService *admin_directory_v1.GroupsService, state *reconcilers.GoogleWorkspaceState, corr sqlc.Correlation, team dbmodels.Team) (*admin_directory_v1.Group, error) {
 	if state.GroupID != nil {
 		existingGroup, err := groupsService.Get(*state.GroupID).Do()
 		if err == nil {
@@ -122,7 +122,7 @@ func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(groupsService *admin_d
 	return group, nil
 }
 
-func (r *googleWorkspaceAdminReconciler) connectUsers(membersService *admin_directory_v1.MembersService, grp *admin_directory_v1.Group, corr dbmodels.Correlation, team dbmodels.Team) error {
+func (r *googleWorkspaceAdminReconciler) connectUsers(membersService *admin_directory_v1.MembersService, grp *admin_directory_v1.Group, corr sqlc.Correlation, team dbmodels.Team) error {
 	membersAccordingToGoogle, err := membersService.List(grp.Id).Do()
 	if err != nil {
 		return fmt.Errorf("%s: list existing members in Google Directory group: %w", OpAddMembers, err)
@@ -163,7 +163,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(membersService *admin_dire
 	return nil
 }
 
-func (r *googleWorkspaceAdminReconciler) addToGKESecurityGroup(membersService *admin_directory_v1.MembersService, grp *admin_directory_v1.Group, corr dbmodels.Correlation, team dbmodels.Team) error {
+func (r *googleWorkspaceAdminReconciler) addToGKESecurityGroup(membersService *admin_directory_v1.MembersService, grp *admin_directory_v1.Group, corr sqlc.Correlation, team dbmodels.Team) error {
 	const groupPrefix = "gke-security-groups@"
 	groupKey := groupPrefix + r.domain
 

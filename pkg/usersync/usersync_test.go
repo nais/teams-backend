@@ -19,31 +19,31 @@ func TestSync(t *testing.T) {
 	mockAuditLogger := &auditlogger.MockAuditLogger{}
 
 	t.Run("Server error from Google", func(t *testing.T) {
-		db, _ := test.GetTestDB()
+		db, queries, _ := test.GetTestDBAndQueries()
 
 		httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
 			return test.Response("500 Internal Server Error", `{"error": "some error"}`)
 		})
 
-		usersync := usersync.New(db, *system, mockAuditLogger, "example.com", httpClient)
+		usersync := usersync.New(queries, db, *system, mockAuditLogger, "example.com", httpClient)
 		err := usersync.Sync(context.Background())
 		assert.ErrorContains(t, err, "usersync:list:remote: list remote users")
 	})
 
 	t.Run("No remote users", func(t *testing.T) {
-		db, _ := test.GetTestDB()
+		db, queries, _ := test.GetTestDBAndQueries()
 
 		httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
 			return test.Response("200 OK", `{"users":[]}`)
 		})
 
-		usersync := usersync.New(db, *system, mockAuditLogger, "example.com", httpClient)
+		usersync := usersync.New(queries, db, *system, mockAuditLogger, "example.com", httpClient)
 		err := usersync.Sync(context.Background())
 		assert.NoError(t, err)
 	})
 
 	t.Run("Create, update and delete users", func(t *testing.T) {
-		db, _ := test.GetTestDB()
+		db, queries, _ := test.GetTestDBAndQueries()
 
 		db.Create([]*dbmodels.User{
 			{Email: "delete-me@example.com", Name: "Delete Me"},   // Will be deleted
@@ -78,14 +78,14 @@ func TestSync(t *testing.T) {
 			Return(nil).
 			Once()
 
-		usersync := usersync.New(db, *system, mockAuditLogger, "example.com", httpClient)
+		usersync := usersync.New(queries, db, *system, mockAuditLogger, "example.com", httpClient)
 		err := usersync.Sync(context.Background())
 		assert.NoError(t, err)
 		mockAuditLogger.AssertExpectations(t)
 	})
 
 	t.Run("Don't insert duplicate role bindings", func(t *testing.T) {
-		db, _ := test.GetTestDBWithRoles()
+		db, queries, _ := test.GetTestDBAndQueriesWithRoles()
 
 		user1 := &dbmodels.User{Email: "user1@example.com"}
 		user2 := &dbmodels.User{Email: "user2@example.com"}
@@ -100,7 +100,7 @@ func TestSync(t *testing.T) {
 		httpClient := test.NewTestHttpClient(roundtripFunc, roundtripFunc)
 
 		ctx := context.Background()
-		us := usersync.New(db, *system, auditlogger.New(db), "example.com", httpClient)
+		us := usersync.New(queries, db, *system, auditlogger.New(db), "example.com", httpClient)
 		assert.NoError(t, us.Sync(ctx))
 		assert.NoError(t, us.Sync(ctx)) // Run twice, should only add role bindngs once
 

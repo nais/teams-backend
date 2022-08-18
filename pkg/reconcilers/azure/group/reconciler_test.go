@@ -55,7 +55,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 	keepUser := &dbmodels.User{
 		Email: keepMember.Mail,
 	}
-	corr := dbmodels.Correlation{Model: modelWithId()}
+	corr := sqlc.Correlation{}
 	system := sqlc.System{Name: console_reconciler.Name}
 	team := dbmodels.Team{
 		Model:   modelWithId(),

@@ -20,6 +20,7 @@ import (
 )
 
 type userSynchronizer struct {
+	queries     *sqlc.Queries
 	system      sqlc.System
 	auditLogger auditlogger.AuditLogger
 	domain      string
@@ -46,8 +47,9 @@ var (
 	}
 )
 
-func New(db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, domain string, client *http.Client) *userSynchronizer {
+func New(queries *sqlc.Queries, db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, domain string, client *http.Client) *userSynchronizer {
 	return &userSynchronizer{
+		queries:     queries,
 		db:          db,
 		system:      system,
 		auditLogger: auditLogger,
@@ -56,7 +58,7 @@ func New(db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, d
 	}
 }
 
-func NewFromConfig(cfg *config.Config, db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger) (*userSynchronizer, error) {
+func NewFromConfig(cfg *config.Config, queries *sqlc.Queries, db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger) (*userSynchronizer, error) {
 	if !cfg.UserSync.Enabled {
 		return nil, ErrNotEnabled
 	}
@@ -67,7 +69,7 @@ func NewFromConfig(cfg *config.Config, db *gorm.DB, system sqlc.System, auditLog
 		return nil, fmt.Errorf("get google jwt config: %w", err)
 	}
 
-	return New(db, system, auditLogger, cfg.TenantDomain, cf.Client(context.Background())), nil
+	return New(queries, db, system, auditLogger, cfg.TenantDomain, cf.Client(context.Background())), nil
 }
 
 type auditLogEntry struct {
@@ -90,8 +92,11 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 		return fmt.Errorf("%s: list remote users: %w", OpListRemote, err)
 	}
 
-	corr := &dbmodels.Correlation{}
-	err = s.db.Create(corr).Error
+	id, err := uuid.NewUUID()
+	if err != nil {
+		return fmt.Errorf("%s: unable to create UUID for correlation: %w", OpPrepare, err)
+	}
+	corr, err := s.queries.CreateCorrelation(ctx, id)
 	if err != nil {
 		return fmt.Errorf("%s: unable to create correlation for audit logs: %w", OpPrepare, err)
 	}

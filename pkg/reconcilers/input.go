@@ -1,9 +1,12 @@
 package reconcilers
 
-import "github.com/nais/console/pkg/dbmodels"
+import (
+	"github.com/nais/console/pkg/dbmodels"
+	"github.com/nais/console/pkg/sqlc"
+)
 
 // Input Input for reconcilers
 type Input struct {
-	Corr dbmodels.Correlation
+	Corr sqlc.Correlation
 	Team dbmodels.Team
 }

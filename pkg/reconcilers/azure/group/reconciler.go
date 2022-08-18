@@ -102,7 +102,7 @@ func (r *azureGroupReconciler) System() sqlc.System {
 	return r.system
 }
 
-func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclient.Group, corr dbmodels.Correlation, team dbmodels.Team) error {
+func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclient.Group, corr sqlc.Correlation, team dbmodels.Team) error {
 	members, err := r.client.ListGroupMembers(ctx, grp)
 	if err != nil {
 		return fmt.Errorf("%s: list existing members in Azure group '%s': %s", OpAddMembers, grp.MailNickname, err)

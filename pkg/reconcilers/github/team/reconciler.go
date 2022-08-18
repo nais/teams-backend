@@ -94,7 +94,7 @@ func (r *githubTeamReconciler) System() sqlc.System {
 	return r.system
 }
 
-func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconcilers.GitHubState, corr dbmodels.Correlation, team dbmodels.Team) (*github.Team, error) {
+func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconcilers.GitHubState, corr sqlc.Correlation, team dbmodels.Team) (*github.Team, error) {
 	if state.Slug != nil {
 		existingTeam, resp, err := r.teamsService.GetTeamBySlug(ctx, r.org, *state.Slug)
 		if resp == nil && err != nil {
@@ -127,7 +127,7 @@ func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconc
 	return githubTeam, nil
 }
 
-func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *github.Team, corr dbmodels.Correlation, team dbmodels.Team) error {
+func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *github.Team, corr sqlc.Correlation, team dbmodels.Team) error {
 	membersAccordingToGitHub, err := r.getTeamMembers(ctx, *githubTeam.Slug)
 	if err != nil {
 		return fmt.Errorf("%s: list existing members in GitHub team '%s': %w", OpAddMembers, *githubTeam.Slug, err)

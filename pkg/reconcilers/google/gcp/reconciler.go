@@ -110,7 +110,7 @@ func (r *googleGcpReconciler) System() sqlc.System {
 	return r.system
 }
 
-func (r *googleGcpReconciler) getOrCreateProject(svc *cloudresourcemanager.Service, state *reconcilers.GoogleGcpProjectState, environment string, parentFolderID int64, corr dbmodels.Correlation, team dbmodels.Team) (*cloudresourcemanager.Project, error) {
+func (r *googleGcpReconciler) getOrCreateProject(svc *cloudresourcemanager.Service, state *reconcilers.GoogleGcpProjectState, environment string, parentFolderID int64, corr sqlc.Correlation, team dbmodels.Team) (*cloudresourcemanager.Project, error) {
 	if projectFromState, exists := state.Projects[environment]; exists {
 		project, err := svc.Projects.Get(projectFromState.ProjectName).Do()
 		if err == nil {
@@ -154,7 +154,7 @@ func (r *googleGcpReconciler) getOrCreateProject(svc *cloudresourcemanager.Servi
 
 // createPermissions Give owner permissions to the team group. The group is created by the Google Workspace Admin
 // reconciler. projectName is in the "projects/{ProjectIdOrNumber}" format, and not the project ID
-func (r *googleGcpReconciler) setProjectPermissions(svc *cloudresourcemanager.Service, projectName string, corr dbmodels.Correlation, team dbmodels.Team) error {
+func (r *googleGcpReconciler) setProjectPermissions(svc *cloudresourcemanager.Service, projectName string, corr sqlc.Correlation, team dbmodels.Team) error {
 	// FIXME: Check state to make sure we are generating the correct group name
 	member := fmt.Sprintf("group:%s%s@%s", reconcilers.TeamNamePrefix, team.Slug, r.domain)
 	const owner = "roles/owner"

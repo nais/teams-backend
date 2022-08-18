@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
-	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/authz"
@@ -38,17 +37,15 @@ func (r *mutationResolver) CreateAPIKey(ctx context.Context, userID *uuid.UUID) 
 		return nil, err
 	}
 
-	corr := &dbmodels.Correlation{}
+	corr, err := r.createCorrelation(ctx)
+	if err != nil {
+		return nil, err
+	}
 	key := &dbmodels.ApiKey{
 		APIKey: base64.RawURLEncoding.EncodeToString(buf),
 		UserID: *userID,
 	}
 	err = r.db.Transaction(func(tx *gorm.DB) error {
-		err = tx.Create(corr).Error
-		if err != nil {
-			return fmt.Errorf("unable to create correlation for audit log")
-		}
-
 		err = tx.Where("user_id = ?", key.UserID).Delete(&dbmodels.ApiKey{}).Error
 		if err != nil {
 			return err
@@ -86,21 +83,12 @@ func (r *mutationResolver) DeleteAPIKey(ctx context.Context, userID *uuid.UUID) 
 		return false, err
 	}
 
-	corr := &dbmodels.Correlation{}
-	err = r.db.Transaction(func(tx *gorm.DB) error {
-		err = tx.Create(corr).Error
-		if err != nil {
-			return fmt.Errorf("unable to create correlation for audit log")
-		}
+	corr, err := r.createCorrelation(ctx)
+	if err != nil {
+		return false, err
+	}
 
-		err = tx.Where("user_id = ?", userID).Delete(&dbmodels.ApiKey{}).Error
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-
+	err = r.db.Where("user_id = ?", userID).Delete(&dbmodels.ApiKey{}).Error
 	if err != nil {
 		return false, err
 	}

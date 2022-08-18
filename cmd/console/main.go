@@ -146,8 +146,11 @@ func run() error {
 	pendingTeams := make(map[uuid.UUID]reconcilers.Input)
 
 	// Reconcile all teams on startup. All will share the same correlation ID
-	corr := &dbmodels.Correlation{}
-	err = db.WithContext(ctx).Create(corr).Error
+	id, err := uuid.NewUUID()
+	if err != nil {
+		return fmt.Errorf("cannot create ID for correlation entry for initial reconcile loop: %w", err)
+	}
+	corr, err := queries.CreateCorrelation(ctx, id)
 	if err != nil {
 		return fmt.Errorf("cannot create correlation entry for initial reconcile loop: %w", err)
 	}
@@ -163,7 +166,7 @@ func run() error {
 
 	// User synchronizer
 	userSyncTimer := time.NewTimer(1 * time.Second)
-	userSyncer, err := usersync.NewFromConfig(cfg, db, systems[console_reconciler.Name], logger)
+	userSyncer, err := usersync.NewFromConfig(cfg, queries, db, systems[console_reconciler.Name], logger)
 	if err != nil {
 		userSyncTimer.Stop()
 		if err != usersync.ErrNotEnabled {

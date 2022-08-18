@@ -35,18 +35,16 @@ func (r *mutationResolver) CreateServiceAccount(ctx context.Context, input model
 		return nil, fmt.Errorf("'%s' is a reserved prefix", fixtures.NaisServiceAccountPrefix)
 	}
 
-	corr := &dbmodels.Correlation{}
+	corr, err := r.createCorrelation(ctx)
+	if err != nil {
+		return nil, err
+	}
 	serviceAccount := &dbmodels.User{
 		Name:  name,
 		Email: console.ServiceAccountEmail(*input.Name, r.tenantDomain),
 	}
 
 	err = r.db.Transaction(func(tx *gorm.DB) error {
-		err = tx.Create(corr).Error
-		if err != nil {
-			return fmt.Errorf("unable to create correlation for audit log")
-		}
-
 		err = db.CreateTrackedObject(ctx, tx, serviceAccount)
 		if err != nil {
 			return err
@@ -105,13 +103,12 @@ func (r *mutationResolver) UpdateServiceAccount(ctx context.Context, serviceAcco
 	serviceAccount.Name = name
 	serviceAccount.Email = console.ServiceAccountEmail(*input.Name, r.tenantDomain)
 
-	corr := &dbmodels.Correlation{}
-	err = r.db.Transaction(func(tx *gorm.DB) error {
-		err = tx.Create(corr).Error
-		if err != nil {
-			return fmt.Errorf("unable to create correlation for audit log")
-		}
+	corr, err := r.createCorrelation(ctx)
+	if err != nil {
+		return nil, err
+	}
 
+	err = r.db.Transaction(func(tx *gorm.DB) error {
 		err = db.UpdateTrackedObject(ctx, tx, serviceAccount)
 		if err != nil {
 			return err
@@ -150,21 +147,11 @@ func (r *mutationResolver) DeleteServiceAccount(ctx context.Context, serviceAcco
 		return false, fmt.Errorf("unable to delete static service account")
 	}
 
-	corr := &dbmodels.Correlation{}
-	err = r.db.Transaction(func(tx *gorm.DB) error {
-		err = tx.Create(corr).Error
-		if err != nil {
-			return fmt.Errorf("unable to create correlation for audit log")
-		}
-
-		err = tx.Delete(serviceAccount).Error
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-
+	corr, err := r.createCorrelation(ctx)
+	if err != nil {
+		return false, err
+	}
+	err = r.db.Delete(serviceAccount).Error
 	if err != nil {
 		return false, err
 	}

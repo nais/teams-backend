@@ -1,6 +1,8 @@
 package graph
 
 import (
+	"context"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/dbmodels"
@@ -32,6 +34,19 @@ func NewResolver(queries *sqlc.Queries, db *gorm.DB, tenantDomain string, system
 		teamReconciler: teamReconciler,
 		auditLogger:    auditLogger,
 	}
+}
+
+// createCorrelation Create a correlation entry in the database
+func (r *Resolver) createCorrelation(ctx context.Context) (*sqlc.Correlation, error) {
+	id, err := uuid.NewUUID()
+	if err != nil {
+		return nil, fmt.Errorf("unable to generate ID for correlation")
+	}
+	correlation, err := r.queries.CreateCorrelation(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create correlation entry")
+	}
+	return correlation, nil
 }
 
 // Run a query to get data from the database. Populates `collection` and returns pagination metadata.

@@ -36,7 +36,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	corr := dbmodels.Correlation{Model: modelWithId()}
+	corr := sqlc.Correlation{}
 	system := &sqlc.System{Name: console_reconciler.Name}
 	team := dbmodels.Team{
 		Model:   modelWithId(),
@@ -228,7 +228,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 	auditLogger.On("Logf", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	system := &sqlc.System{Name: console_reconciler.Name}
-	corr := dbmodels.Correlation{Model: modelWithId()}
+	corr := sqlc.Correlation{}
 
 	team := dbmodels.Team{
 		Model:   modelWithId(),
