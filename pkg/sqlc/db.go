@@ -24,6 +24,9 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.createCorrelationStmt, err = db.PrepareContext(ctx, createCorrelation); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateCorrelation: %w", err)
+	}
 	if q.createSystemStmt, err = db.PrepareContext(ctx, createSystem); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateSystem: %w", err)
 	}
@@ -56,6 +59,11 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
+	if q.createCorrelationStmt != nil {
+		if cerr := q.createCorrelationStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createCorrelationStmt: %w", cerr)
+		}
+	}
 	if q.createSystemStmt != nil {
 		if cerr := q.createSystemStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createSystemStmt: %w", cerr)
@@ -138,31 +146,33 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                  DBTX
-	tx                  *sql.Tx
-	createSystemStmt    *sql.Stmt
-	getRoleStmt         *sql.Stmt
-	getRolesStmt        *sql.Stmt
-	getSystemStmt       *sql.Stmt
-	getSystemByNameStmt *sql.Stmt
-	getSystemsStmt      *sql.Stmt
-	getUserStmt         *sql.Stmt
-	getUserRoleStmt     *sql.Stmt
-	getUserRolesStmt    *sql.Stmt
+	db                    DBTX
+	tx                    *sql.Tx
+	createCorrelationStmt *sql.Stmt
+	createSystemStmt      *sql.Stmt
+	getRoleStmt           *sql.Stmt
+	getRolesStmt          *sql.Stmt
+	getSystemStmt         *sql.Stmt
+	getSystemByNameStmt   *sql.Stmt
+	getSystemsStmt        *sql.Stmt
+	getUserStmt           *sql.Stmt
+	getUserRoleStmt       *sql.Stmt
+	getUserRolesStmt      *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                  tx,
-		tx:                  tx,
-		createSystemStmt:    q.createSystemStmt,
-		getRoleStmt:         q.getRoleStmt,
-		getRolesStmt:        q.getRolesStmt,
-		getSystemStmt:       q.getSystemStmt,
-		getSystemByNameStmt: q.getSystemByNameStmt,
-		getSystemsStmt:      q.getSystemsStmt,
-		getUserStmt:         q.getUserStmt,
-		getUserRoleStmt:     q.getUserRoleStmt,
-		getUserRolesStmt:    q.getUserRolesStmt,
+		db:                    tx,
+		tx:                    tx,
+		createCorrelationStmt: q.createCorrelationStmt,
+		createSystemStmt:      q.createSystemStmt,
+		getRoleStmt:           q.getRoleStmt,
+		getRolesStmt:          q.getRolesStmt,
+		getSystemStmt:         q.getSystemStmt,
+		getSystemByNameStmt:   q.getSystemByNameStmt,
+		getSystemsStmt:        q.getSystemsStmt,
+		getUserStmt:           q.getUserStmt,
+		getUserRoleStmt:       q.getUserRoleStmt,
+		getUserRolesStmt:      q.getUserRolesStmt,
 	}
 }
