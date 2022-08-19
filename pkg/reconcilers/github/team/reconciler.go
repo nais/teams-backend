@@ -32,8 +32,9 @@ const (
 
 var errGitHubUserNotFound = errors.New("GitHub user does not exist")
 
-func New(db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, org, domain string, teamsService TeamsService, graphClient GraphClient) *githubTeamReconciler {
+func New(queries sqlc.Querier, db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, org, domain string, teamsService TeamsService, graphClient GraphClient) *githubTeamReconciler {
 	return &githubTeamReconciler{
+		queries:      queries,
 		db:           db,
 		system:       system,
 		auditLogger:  auditLogger,
@@ -44,7 +45,7 @@ func New(db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, o
 	}
 }
 
-func NewFromConfig(db *gorm.DB, cfg *config.Config, system sqlc.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(queries sqlc.Querier, db *gorm.DB, cfg *config.Config, system sqlc.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.GitHub.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
@@ -67,12 +68,12 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system sqlc.System, auditLog
 	restClient := github.NewClient(httpClient)
 	graphClient := githubv4.NewClient(httpClient)
 
-	return New(db, system, auditLogger, cfg.GitHub.Organization, cfg.TenantDomain, restClient.Teams, graphClient), nil
+	return New(queries, db, system, auditLogger, cfg.GitHub.Organization, cfg.TenantDomain, restClient.Teams, graphClient), nil
 }
 
 func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	state := &reconcilers.GitHubState{}
-	err := dbmodels.LoadSystemState(r.db, r.system.ID, *input.Team.ID, state)
+	err := dbmodels.LoadSystemState(r.db, r.system.ID, input.Team.ID, state)
 	if err != nil {
 		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
 	}
@@ -82,7 +83,7 @@ func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.
 		return fmt.Errorf("unable to get or create a GitHub team for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
 	}
 
-	err = dbmodels.SetSystemState(r.db, r.system.ID, *input.Team.ID, reconcilers.GitHubState{Slug: githubTeam.Slug})
+	err = dbmodels.SetSystemState(r.db, r.system.ID, input.Team.ID, reconcilers.GitHubState{Slug: githubTeam.Slug})
 	if err != nil {
 		log.Errorf("system state not persisted: %s", err)
 	}

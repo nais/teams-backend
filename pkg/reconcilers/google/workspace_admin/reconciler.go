@@ -22,6 +22,7 @@ import (
 )
 
 type googleWorkspaceAdminReconciler struct {
+	queries     sqlc.Querier
 	auditLogger auditlogger.AuditLogger
 	db          *gorm.DB
 	domain      string
@@ -38,8 +39,9 @@ const (
 	OpAddToGKESecurityGroup = "google:workspace-admin:add-to-gke-security-group"
 )
 
-func New(db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config) *googleWorkspaceAdminReconciler {
+func New(queries sqlc.Querier, db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config) *googleWorkspaceAdminReconciler {
 	return &googleWorkspaceAdminReconciler{
+		queries:     queries,
 		auditLogger: auditLogger,
 		db:          db,
 		domain:      domain,
@@ -48,7 +50,7 @@ func New(db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, d
 	}
 }
 
-func NewFromConfig(db *gorm.DB, cfg *config.Config, system sqlc.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(queries sqlc.Querier, db *gorm.DB, cfg *config.Config, system sqlc.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.Google.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
@@ -59,12 +61,12 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system sqlc.System, auditLog
 		return nil, fmt.Errorf("get google jwt config: %w", err)
 	}
 
-	return New(db, system, auditLogger, cfg.TenantDomain, config), nil
+	return New(queries, db, system, auditLogger, cfg.TenantDomain, config), nil
 }
 
 func (r *googleWorkspaceAdminReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	state := &reconcilers.GoogleWorkspaceState{}
-	err := dbmodels.LoadSystemState(r.db, r.system.ID, *input.Team.ID, state)
+	err := dbmodels.LoadSystemState(r.db, r.system.ID, input.Team.ID, state)
 	if err != nil {
 		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
 	}
@@ -80,7 +82,7 @@ func (r *googleWorkspaceAdminReconciler) Reconcile(ctx context.Context, input re
 		return fmt.Errorf("unable to get or create a Google Workspace group for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
 	}
 
-	err = dbmodels.SetSystemState(r.db, r.system.ID, *input.Team.ID, reconcilers.GoogleWorkspaceState{GroupID: &grp.Id})
+	err = dbmodels.SetSystemState(r.db, r.system.ID, input.Team.ID, reconcilers.GoogleWorkspaceState{GroupID: &grp.Id})
 	if err != nil {
 		log.Errorf("system state not persisted: %s", err)
 	}

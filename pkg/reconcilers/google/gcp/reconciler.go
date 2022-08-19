@@ -22,6 +22,7 @@ import (
 )
 
 type googleGcpReconciler struct {
+	queries          sqlc.Querier
 	db               *gorm.DB
 	config           *jwt.Config
 	domain           string
@@ -36,8 +37,9 @@ const (
 	OpAssignPermissions = "google:gcp:project:assign-permissions"
 )
 
-func New(db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config, projectParentIDs map[string]int64) *googleGcpReconciler {
+func New(queries sqlc.Querier, db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config, projectParentIDs map[string]int64) *googleGcpReconciler {
 	return &googleGcpReconciler{
+		queries:          queries,
 		db:               db,
 		auditLogger:      auditLogger,
 		domain:           domain,
@@ -47,7 +49,7 @@ func New(db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, d
 	}
 }
 
-func NewFromConfig(db *gorm.DB, cfg *config.Config, system sqlc.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(queries sqlc.Querier, db *gorm.DB, cfg *config.Config, system sqlc.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.GCP.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
@@ -65,7 +67,7 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system sqlc.System, auditLog
 		return nil, fmt.Errorf("initialize google credentials: %w", err)
 	}
 
-	return New(db, system, auditLogger, cfg.TenantDomain, cf, cfg.GCP.ProjectParentIDs), nil
+	return New(queries, db, system, auditLogger, cfg.TenantDomain, cf, cfg.GCP.ProjectParentIDs), nil
 }
 
 func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {

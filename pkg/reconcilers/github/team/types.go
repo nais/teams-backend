@@ -23,6 +23,7 @@ type TeamsService interface {
 
 // githubTeamReconciler creates teams on GitHub and connects users to them.
 type githubTeamReconciler struct {
+	queries      sqlc.Querier
 	db           *gorm.DB
 	system       sqlc.System
 	auditLogger  auditlogger.AuditLogger

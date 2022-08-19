@@ -36,7 +36,7 @@ func New(system sqlc.System) *consoleReconciler {
 	}
 }
 
-func NewFromConfig(_ *gorm.DB, _ *config.Config, system sqlc.System, _ auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(_ sqlc.Querier, _ *gorm.DB, _ *config.Config, system sqlc.System, _ auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	return New(system), nil
 }
 
