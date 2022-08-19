@@ -12,7 +12,5 @@ sql:
         emit_result_struct_pointers: true # set to true to be compliant with gqlgen's resolvers
         emit_prepared_queries: true
         overrides:
-          - column: roles.name
-            go_type: github.com/nais/console/pkg/roles.Role
           - column: team.slug
             go_type: github.com/nais/console/pkg/slug.Slug

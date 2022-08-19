@@ -9,71 +9,28 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/roles"
 )
 
-const getRole = `-- name: GetRole :one
-SELECT id, created_at, created_by_id, updated_by_id, updated_at, name FROM roles
-WHERE id = $1 LIMIT 1
+const getRoleAuthorizations = `-- name: GetRoleAuthorizations :many
+SELECT authz_name
+FROM role_authz
+WHERE role_name = $1
+ORDER BY authz_name ASC
 `
 
-func (q *Queries) GetRole(ctx context.Context, id uuid.UUID) (*Role, error) {
-	row := q.db.QueryRow(ctx, getRole, id)
-	var i Role
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.CreatedByID,
-		&i.UpdatedByID,
-		&i.UpdatedAt,
-		&i.Name,
-	)
-	return &i, err
-}
-
-const getRoleByName = `-- name: GetRoleByName :one
-SELECT id, created_at, created_by_id, updated_by_id, updated_at, name FROM roles WHERE name = $1 LIMIT 1
-`
-
-func (q *Queries) GetRoleByName(ctx context.Context, name roles.Role) (*Role, error) {
-	row := q.db.QueryRow(ctx, getRoleByName, name)
-	var i Role
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.CreatedByID,
-		&i.UpdatedByID,
-		&i.UpdatedAt,
-		&i.Name,
-	)
-	return &i, err
-}
-
-const getRoles = `-- name: GetRoles :many
-SELECT id, created_at, created_by_id, updated_by_id, updated_at, name FROM roles
-ORDER BY name ASC
-`
-
-func (q *Queries) GetRoles(ctx context.Context) ([]*Role, error) {
-	rows, err := q.db.Query(ctx, getRoles)
+func (q *Queries) GetRoleAuthorizations(ctx context.Context, roleName RoleName) ([]AuthzName, error) {
+	rows, err := q.db.Query(ctx, getRoleAuthorizations, roleName)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []*Role
+	var items []AuthzName
 	for rows.Next() {
-		var i Role
-		if err := rows.Scan(
-			&i.ID,
-			&i.CreatedAt,
-			&i.CreatedByID,
-			&i.UpdatedByID,
-			&i.UpdatedAt,
-			&i.Name,
-		); err != nil {
+		var authz_name AuthzName
+		if err := rows.Scan(&authz_name); err != nil {
 			return nil, err
 		}
-		items = append(items, &i)
+		items = append(items, authz_name)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -82,7 +39,7 @@ func (q *Queries) GetRoles(ctx context.Context) ([]*Role, error) {
 }
 
 const getUserRole = `-- name: GetUserRole :one
-SELECT id, created_at, created_by_id, updated_by_id, updated_at, role_id, user_id, target_id FROM user_roles
+SELECT id, role_name, user_id, target_id FROM user_roles
 WHERE id = $1 LIMIT 1
 `
 
@@ -91,11 +48,7 @@ func (q *Queries) GetUserRole(ctx context.Context, id uuid.UUID) (*UserRole, err
 	var i UserRole
 	err := row.Scan(
 		&i.ID,
-		&i.CreatedAt,
-		&i.CreatedByID,
-		&i.UpdatedByID,
-		&i.UpdatedAt,
-		&i.RoleID,
+		&i.RoleName,
 		&i.UserID,
 		&i.TargetID,
 	)
@@ -103,7 +56,7 @@ func (q *Queries) GetUserRole(ctx context.Context, id uuid.UUID) (*UserRole, err
 }
 
 const getUserRoles = `-- name: GetUserRoles :many
-SELECT id, created_at, created_by_id, updated_by_id, updated_at, role_id, user_id, target_id FROM user_roles
+SELECT id, role_name, user_id, target_id FROM user_roles
 WHERE user_id = $1
 `
 
@@ -118,11 +71,7 @@ func (q *Queries) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*UserRo
 		var i UserRole
 		if err := rows.Scan(
 			&i.ID,
-			&i.CreatedAt,
-			&i.CreatedByID,
-			&i.UpdatedByID,
-			&i.UpdatedAt,
-			&i.RoleID,
+			&i.RoleName,
 			&i.UserID,
 			&i.TargetID,
 		); err != nil {

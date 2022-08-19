@@ -1,0 +1,31 @@
+package db
+
+import (
+	"context"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v4"
+	"github.com/nais/console/pkg/sqlc"
+)
+
+type database struct {
+	querier Querier
+	conn    *pgx.Conn
+}
+
+type Database interface {
+	AddUser(ctx context.Context, user User) (*User, error)
+	GetUserByID(ctx context.Context, id uuid.UUID) (*User, error)
+	GetUserByEmail(ctx context.Context, team string) (*User, error)
+
+	AddTeam(ctx context.Context, team Team, createdBy uuid.UUID) (*Team, error)
+	GetTeamByID(ctx context.Context, id uuid.UUID) (*Team, error)
+	GetTeamBySlug(ctx context.Context, slug string) (*Team, error)
+
+	AddUserRole(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error
+	CreateAPIKey(ctx context.Context, apiKey string, userID uuid.UUID) error
+}
+
+func NewDatabase(q Querier, conn *pgx.Conn) Database {
+	return &database{querier: q, conn: conn}
+}

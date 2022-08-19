@@ -13,16 +13,15 @@ import (
 )
 
 const createTeam = `-- name: CreateTeam :one
-INSERT INTO teams (id, name, slug, purpose, created_by_id) VALUES ($1, $2, $3, $4, $5)
-RETURNING id, created_at, created_by_id, updated_by_id, updated_at, slug, name, purpose
+INSERT INTO teams (id, name, slug, purpose) VALUES ($1, $2, $3, $4)
+RETURNING id, slug, name, purpose
 `
 
 type CreateTeamParams struct {
-	ID          uuid.UUID
-	Name        string
-	Slug        string
-	Purpose     sql.NullString
-	CreatedByID uuid.NullUUID
+	ID      uuid.UUID
+	Name    string
+	Slug    string
+	Purpose sql.NullString
 }
 
 func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, error) {
@@ -31,15 +30,10 @@ func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, 
 		arg.Name,
 		arg.Slug,
 		arg.Purpose,
-		arg.CreatedByID,
 	)
 	var i Team
 	err := row.Scan(
 		&i.ID,
-		&i.CreatedAt,
-		&i.CreatedByID,
-		&i.UpdatedByID,
-		&i.UpdatedAt,
 		&i.Slug,
 		&i.Name,
 		&i.Purpose,
@@ -47,28 +41,67 @@ func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, 
 	return &i, err
 }
 
-const getTeam = `-- name: GetTeam :one
-SELECT id, created_at, created_by_id, updated_by_id, updated_at, slug, name, purpose FROM teams WHERE id = $1 LIMIT 1
+const getTeamByID = `-- name: GetTeamByID :one
+SELECT id, slug, name, purpose FROM teams WHERE id = $1 LIMIT 1
 `
 
-func (q *Queries) GetTeam(ctx context.Context, id uuid.UUID) (*Team, error) {
-	row := q.db.QueryRow(ctx, getTeam, id)
+func (q *Queries) GetTeamByID(ctx context.Context, id uuid.UUID) (*Team, error) {
+	row := q.db.QueryRow(ctx, getTeamByID, id)
 	var i Team
 	err := row.Scan(
 		&i.ID,
-		&i.CreatedAt,
-		&i.CreatedByID,
-		&i.UpdatedByID,
-		&i.UpdatedAt,
 		&i.Slug,
 		&i.Name,
 		&i.Purpose,
 	)
 	return &i, err
+}
+
+const getTeamBySlug = `-- name: GetTeamBySlug :one
+SELECT id, slug, name, purpose FROM teams WHERE slug = $1 LIMIT 1
+`
+
+func (q *Queries) GetTeamBySlug(ctx context.Context, slug string) (*Team, error) {
+	row := q.db.QueryRow(ctx, getTeamBySlug, slug)
+	var i Team
+	err := row.Scan(
+		&i.ID,
+		&i.Slug,
+		&i.Name,
+		&i.Purpose,
+	)
+	return &i, err
+}
+
+const getTeamMembers = `-- name: GetTeamMembers :many
+SELECT users.id, users.email, users.name FROM user_teams
+JOIN users ON users.id = user_teams.user_id
+WHERE user_teams.team_id = $1
+ORDER BY users.name ASC
+`
+
+func (q *Queries) GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error) {
+	rows, err := q.db.Query(ctx, getTeamMembers, teamID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(&i.ID, &i.Email, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getTeams = `-- name: GetTeams :many
-SELECT id, created_at, created_by_id, updated_by_id, updated_at, slug, name, purpose FROM teams ORDER BY name ASC
+SELECT id, slug, name, purpose FROM teams ORDER BY name ASC
 `
 
 func (q *Queries) GetTeams(ctx context.Context) ([]*Team, error) {
@@ -82,10 +115,6 @@ func (q *Queries) GetTeams(ctx context.Context) ([]*Team, error) {
 		var i Team
 		if err := rows.Scan(
 			&i.ID,
-			&i.CreatedAt,
-			&i.CreatedByID,
-			&i.UpdatedByID,
-			&i.UpdatedAt,
 			&i.Slug,
 			&i.Name,
 			&i.Purpose,

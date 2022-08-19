@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v4"
+	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/sqlc"
 
 	"github.com/google/uuid"
@@ -63,29 +64,22 @@ func run() error {
 		return err
 	}
 
-	gormDB, err := setupDatabase(cfg)
-	if err != nil {
-		return err
-	}
-
 	dbc, err := pgx.Connect(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return err
 	}
-	queries := sqlc.New(dbc)
+	queries := db.Wrap(sqlc.New(dbc), dbc)
+	database := db.NewDatabase(queries, dbc)
 
-	systems, err := fixtures.CreateReconcilerSystems(ctx, queries)
-	if err != nil {
-		return err
-	}
+	registry.RegisterReconcilers()
 
-	err = fixtures.InsertInitialDataset(gormDB, cfg.TenantDomain, cfg.AdminApiKey)
+	err = fixtures.InsertInitialDataset(ctx, database, cfg.TenantDomain, cfg.AdminApiKey)
 	if err != nil {
 		return err
 	}
 
 	if cfg.StaticServiceAccounts != "" {
-		err = fixtures.SetupStaticServiceAccounts(gormDB, cfg.StaticServiceAccounts, cfg.TenantDomain)
+		err = fixtures.SetupStaticServiceAccounts(database, cfg.StaticServiceAccounts, cfg.TenantDomain)
 		if err != nil {
 			return err
 		}
@@ -109,7 +103,7 @@ func run() error {
 		return err
 	}
 
-	handler, err := setupGraphAPI(queries, gormDB, dbc, cfg.TenantDomain, systems[console_reconciler.Name], teamReconciler, logger)
+	handler, err := setupGraphAPI(queries, gormDB, cfg.TenantDomain, systems[console_reconciler.Name], teamReconciler, logger)
 	if err != nil {
 		return err
 	}
@@ -370,8 +364,8 @@ func setupDatabase(cfg *config.Config) (*gorm.DB, error) {
 	return db, nil
 }
 
-func setupGraphAPI(queries sqlc.Querier, gormHandle *gorm.DB, db *pgx.Conn, domain string, console sqlc.System, teamReconciler chan<- reconcilers.Input, logger auditlogger.AuditLogger) (*graphql_handler.Server, error) {
-	resolver := graph.NewResolver(queries, gormHandle, db, domain, console, teamReconciler, logger)
+func setupGraphAPI(queries db.Querier, gormHandle *gorm.DB, domain string, console sqlc.System, teamReconciler chan<- reconcilers.Input, logger auditlogger.AuditLogger) (*graphql_handler.Server, error) {
+	resolver := graph.NewResolver(queries, domain, console, teamReconciler, logger)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
 	gc.Directives.Auth = directives.Auth(gormHandle)

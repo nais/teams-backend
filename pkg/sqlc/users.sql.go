@@ -11,42 +11,104 @@ import (
 	"github.com/google/uuid"
 )
 
-const getUser = `-- name: GetUser :one
-SELECT id, created_at, created_by_id, updated_by_id, updated_at, email, name FROM users
-WHERE id = $1 LIMIT 1
+const addRoleToUser = `-- name: AddRoleToUser :exec
+INSERT INTO user_roles (id, user_id, role_name, target_id) VALUES ($1, $2, $3, $4)
 `
 
-func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (*User, error) {
-	row := q.db.QueryRow(ctx, getUser, id)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.CreatedByID,
-		&i.UpdatedByID,
-		&i.UpdatedAt,
-		&i.Email,
-		&i.Name,
+type AddRoleToUserParams struct {
+	ID       uuid.UUID
+	UserID   uuid.UUID
+	RoleName RoleName
+	TargetID uuid.NullUUID
+}
+
+func (q *Queries) AddRoleToUser(ctx context.Context, arg AddRoleToUserParams) error {
+	_, err := q.db.Exec(ctx, addRoleToUser,
+		arg.ID,
+		arg.UserID,
+		arg.RoleName,
+		arg.TargetID,
 	)
+	return err
+}
+
+const addUserToTeam = `-- name: AddUserToTeam :exec
+INSERT INTO user_teams (id, user_id, team_id) VALUES ($1, $2, $3)
+`
+
+type AddUserToTeamParams struct {
+	ID     uuid.UUID
+	UserID uuid.UUID
+	TeamID uuid.UUID
+}
+
+func (q *Queries) AddUserToTeam(ctx context.Context, arg AddUserToTeamParams) error {
+	_, err := q.db.Exec(ctx, addUserToTeam, arg.ID, arg.UserID, arg.TeamID)
+	return err
+}
+
+const createUser = `-- name: CreateUser :one
+INSERT INTO users (id, name, email) VALUES ($1, $2, $3)
+RETURNING id, email, name
+`
+
+type CreateUserParams struct {
+	ID    uuid.UUID
+	Name  string
+	Email string
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (*User, error) {
+	row := q.db.QueryRow(ctx, createUser, arg.ID, arg.Name, arg.Email)
+	var i User
+	err := row.Scan(&i.ID, &i.Email, &i.Name)
 	return &i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, created_at, created_by_id, updated_by_id, updated_at, email, name FROM users
+SELECT id, email, name FROM users
 WHERE email = $1 LIMIT 1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	row := q.db.QueryRow(ctx, getUserByEmail, email)
 	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.CreatedByID,
-		&i.UpdatedByID,
-		&i.UpdatedAt,
-		&i.Email,
-		&i.Name,
-	)
+	err := row.Scan(&i.ID, &i.Email, &i.Name)
 	return &i, err
+}
+
+const getUserByID = `-- name: GetUserByID :one
+SELECT id, email, name FROM users
+WHERE id = $1 LIMIT 1
+`
+
+func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
+	row := q.db.QueryRow(ctx, getUserByID, id)
+	var i User
+	err := row.Scan(&i.ID, &i.Email, &i.Name)
+	return &i, err
+}
+
+const getUserTeams = `-- name: GetUserTeams :many
+SELECT id, user_id, team_id FROM user_teams WHERE user_id = $1
+`
+
+func (q *Queries) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*UserTeam, error) {
+	rows, err := q.db.Query(ctx, getUserTeams, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*UserTeam
+	for rows.Next() {
+		var i UserTeam
+		if err := rows.Scan(&i.ID, &i.UserID, &i.TeamID); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

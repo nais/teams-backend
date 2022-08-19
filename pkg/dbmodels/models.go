@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgtype"
+	"github.com/nais/console/pkg/slug"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 
@@ -101,7 +102,7 @@ type TeamMetadata struct {
 
 type Team struct {
 	Model
-	Slug      Slug            `gorm:"<-:create; unique; not null"`
+	Slug      slug.Slug       `gorm:"<-:create; unique; not null"`
 	Name      string          `gorm:"unique; not null"`
 	Purpose   *string         `gorm:""`
 	Metadata  []*TeamMetadata `gorm:""`

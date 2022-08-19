@@ -1,11 +1,3 @@
--- name: GetRole :one
-SELECT * FROM roles
-WHERE id = $1 LIMIT 1;
-
--- name: GetRoles :many
-SELECT * FROM roles
-ORDER BY name ASC;
-
 -- name: GetUserRoles :many
 SELECT * FROM user_roles
 WHERE user_id = $1;
@@ -14,5 +6,8 @@ WHERE user_id = $1;
 SELECT * FROM user_roles
 WHERE id = $1 LIMIT 1;
 
--- name: GetRoleByName :one
-SELECT * FROM roles WHERE name = $1 LIMIT 1;
+-- name: GetRoleAuthorizations :many
+SELECT authz_name
+FROM role_authz
+WHERE role_name = $1
+ORDER BY authz_name ASC;

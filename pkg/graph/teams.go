@@ -39,7 +39,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		return nil, err
 	}
 
-	tx, err := r.db.Begin(ctx)
+	tx, err := r.queries.Conn().Begin(ctx)
 	if err != nil {
 		return nil, err
 	}

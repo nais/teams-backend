@@ -3,22 +3,25 @@ package authz
 import (
 	"context"
 	"errors"
+
 	"github.com/google/uuid"
+	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/roles"
+	"github.com/nais/console/pkg/sqlc"
 )
 
 const userContextKey = "user"
 
 // ContextWithUser Return a context with a user module stored.
-func ContextWithUser(ctx context.Context, user *dbmodels.User) context.Context {
+func ContextWithUser(ctx context.Context, user *db.User) context.Context {
 	return context.WithValue(ctx, userContextKey, user)
 }
 
 // UserFromContext Finds any authenticated user from the context. Requires that a middleware has stored a user in the
 // first place.
-func UserFromContext(ctx context.Context) *dbmodels.User {
-	user, _ := ctx.Value(userContextKey).(*dbmodels.User)
+func UserFromContext(ctx context.Context) *db.User {
+	user, _ := ctx.Value(userContextKey).(*db.User)
 	return user
 }
 
@@ -26,7 +29,7 @@ var ErrNotAuthorized = errors.New("not authorized")
 
 // RequireGlobalAuthorization Require an actor to have a specific authorization through a globally assigned role. The
 // role bindings must already be attached to the actor.
-func RequireGlobalAuthorization(actor *dbmodels.User, requiredAuthorization roles.Authorization) error {
+func RequireGlobalAuthorization(actor *sqlc.User, userRoles []*sqlc.UserRole, requiredAuthorization roles.Authorization) error {
 	if actor == nil {
 		return ErrNotAuthorized
 	}
@@ -77,7 +80,7 @@ func RequireAuthorizationOrTargetMatch(actor *dbmodels.User, requiredAuthorizati
 
 // authorized Check if one of the authorizations in the map matches the required authorization.
 func authorized(authorizations map[dbmodels.Authorization]struct{}, requiredAuthorization roles.Authorization) error {
-	for authorization, _ := range authorizations {
+	for authorization := range authorizations {
 		if roles.Authorization(authorization.Name) == requiredAuthorization {
 			return nil
 		}

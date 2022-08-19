@@ -11,22 +11,31 @@ import (
 	"github.com/google/uuid"
 )
 
-const getTeamMetadata = `-- name: GetTeamMetadata :one
-SELECT id, created_at, created_by_id, updated_by_id, updated_at, team_id, key, value FROM team_metadata WHERE team_id = $1 LIMIT 1
+const getTeamMetadata = `-- name: GetTeamMetadata :many
+SELECT id, team_id, key, value FROM team_metadata WHERE team_id = $1
 `
 
-func (q *Queries) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) (*TeamMetadatum, error) {
-	row := q.db.QueryRow(ctx, getTeamMetadata, teamID)
-	var i TeamMetadatum
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.CreatedByID,
-		&i.UpdatedByID,
-		&i.UpdatedAt,
-		&i.TeamID,
-		&i.Key,
-		&i.Value,
-	)
-	return &i, err
+func (q *Queries) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) ([]*TeamMetadatum, error) {
+	rows, err := q.db.Query(ctx, getTeamMetadata, teamID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*TeamMetadatum
+	for rows.Next() {
+		var i TeamMetadatum
+		if err := rows.Scan(
+			&i.ID,
+			&i.TeamID,
+			&i.Key,
+			&i.Value,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

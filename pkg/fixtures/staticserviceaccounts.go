@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/nais/console/pkg/console"
+	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/slug"
 	"gorm.io/gorm"
@@ -20,7 +21,7 @@ type ServiceAccount struct {
 const NaisServiceAccountPrefix = "nais-"
 
 // SetupStaticServiceAccounts Create a set of service accounts with roles and API keys
-func SetupStaticServiceAccounts(db *gorm.DB, serviceAccountsRaw, tenantDomain string) error {
+func SetupStaticServiceAccounts(database db.Database, serviceAccountsRaw, tenantDomain string) error {
 	return db.Transaction(func(tx *gorm.DB) error {
 		serviceAccounts := make([]ServiceAccount, 0)
 		err := json.NewDecoder(strings.NewReader(serviceAccountsRaw)).Decode(&serviceAccounts)
