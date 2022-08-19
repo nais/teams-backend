@@ -3,6 +3,7 @@ package console
 import (
 	"fmt"
 	"github.com/nais/console/pkg/dbmodels"
+	"github.com/nais/console/pkg/sqlc"
 	"strings"
 	"time"
 )
@@ -26,8 +27,8 @@ func StringWithFallback(strp *string, fallback string) string {
 	return *strp
 }
 
-func DomainUsers(users []*dbmodels.User, domain string) []*dbmodels.User {
-	domainUsers := make([]*dbmodels.User, 0)
+func DomainUsers(users []*sqlc.User, domain string) []*sqlc.User {
+	domainUsers := make([]*sqlc.User, 0)
 	suffix := "@" + domain
 
 	for _, user := range users {

@@ -96,7 +96,7 @@ func run() error {
 	teamReconciler := make(chan reconcilers.Input, maxQueueSize)
 	logger := auditlogger.New(gormDB)
 
-	recs, err := initReconcilers(gormDB, cfg, logger, systems)
+	recs, err := initReconcilers(queries, gormDB, cfg, logger, systems)
 	if err != nil {
 		return err
 	}
@@ -326,7 +326,7 @@ func setupLogging(format, level string) error {
 	return nil
 }
 
-func initReconcilers(db *gorm.DB, cfg *config.Config, logger auditlogger.AuditLogger, systems map[string]sqlc.System) ([]reconcilers.Reconciler, error) {
+func initReconcilers(queries sqlc.Querier, db *gorm.DB, cfg *config.Config, logger auditlogger.AuditLogger, systems map[string]sqlc.System) ([]reconcilers.Reconciler, error) {
 	recs := make([]reconcilers.Reconciler, 0)
 	initializers := registry.Reconcilers()
 
@@ -338,7 +338,7 @@ func initReconcilers(db *gorm.DB, cfg *config.Config, logger auditlogger.AuditLo
 			return nil, fmt.Errorf("BUG: missing system for reconciler '%s'", name)
 		}
 
-		rec, err := factory(db, cfg, system, logger)
+		rec, err := factory(queries, db, cfg, system, logger)
 		switch err {
 		case reconcilers.ErrReconcilerNotEnabled:
 			log.Warnf("Reconciler '%s' is disabled through configuration", name)

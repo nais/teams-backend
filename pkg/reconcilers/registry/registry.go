@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type ReconcilerFactory func(*gorm.DB, *config.Config, sqlc.System, auditlogger.AuditLogger) (reconcilers.Reconciler, error)
+type ReconcilerFactory func(sqlc.Querier, *gorm.DB, *config.Config, sqlc.System, auditlogger.AuditLogger) (reconcilers.Reconciler, error)
 
 type ReconcilerInitializer struct {
 	Name    string

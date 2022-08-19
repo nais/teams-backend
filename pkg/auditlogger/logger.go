@@ -15,7 +15,7 @@ type auditLogger struct {
 }
 
 type AuditLogger interface {
-	Logf(action string, corr sqlc.Correlation, targetSystem sqlc.System, actor *dbmodels.User, targetTeam *sqlc.Team, targetUser *dbmodels.User, message string, messageArgs ...interface{}) error
+	Logf(action string, corr sqlc.Correlation, targetSystem sqlc.System, actor *sqlc.User, targetTeam *sqlc.Team, targetUser *sqlc.User, message string, messageArgs ...interface{}) error
 }
 
 func New(db *gorm.DB) AuditLogger {
@@ -24,26 +24,40 @@ func New(db *gorm.DB) AuditLogger {
 	}
 }
 
-func (l *auditLogger) Logf(action string, corr sqlc.Correlation, targetSystem sqlc.System, actor *dbmodels.User, targetTeam *sqlc.Team, targetUser *dbmodels.User, message string, messageArgs ...interface{}) error {
+func (l *auditLogger) Logf(action string, corr sqlc.Correlation, targetSystem sqlc.System, actor *sqlc.User, targetTeam *sqlc.Team, targetUser *sqlc.User, message string, messageArgs ...interface{}) error {
 	var actorId *uuid.UUID
 	var targetTeamId *uuid.UUID
 	var targetUserId *uuid.UUID
 
-	if actor != nil && actor.ID != nil {
-		actorId = actor.ID
+	if actor != nil {
+		actorId = &actor.ID
 	}
 
 	if targetTeam != nil {
 		targetTeamId = &targetTeam.ID
 	}
 
-	if targetUser != nil && targetUser.ID != nil {
-		targetUserId = targetUser.ID
+	if targetUser != nil {
+		targetUserId = &targetUser.ID
+	}
+
+	// tmp fix to use dbmodels.User instead of sqlc.User for the actor
+	actorGorm := &dbmodels.User{}
+	err := l.db.Where("id = ?", actor.ID).First(actorGorm).Error
+	if err != nil {
+		return fmt.Errorf("unable to fetch user from DB: %w", err)
+	}
+
+	// tmp fix to use dbmodels.User instead of sqlc.User for the target user
+	targetUserGorm := &dbmodels.User{}
+	err = l.db.Where("id = ?", targetUser.ID).First(targetUserGorm).Error
+	if err != nil {
+		return fmt.Errorf("unable to fetch user from DB: %w", err)
 	}
 
 	// tmp fix to use dbmodels.System instead of sqlc.System for the audit log
 	system := &dbmodels.System{}
-	err := l.db.Where("id = ?", targetSystem.ID).First(system).Error
+	err = l.db.Where("id = ?", targetSystem.ID).First(system).Error
 	if err != nil {
 		return fmt.Errorf("unable to fetch system entry from DB: %w", err)
 	}
@@ -64,14 +78,14 @@ func (l *auditLogger) Logf(action string, corr sqlc.Correlation, targetSystem sq
 
 	logEntry := &dbmodels.AuditLog{
 		Action:         action,
-		Actor:          actor,
+		Actor:          actorGorm,
 		ActorID:        actorId,
 		Correlation:    *correlation,
 		CorrelationID:  *correlation.ID,
 		TargetSystem:   *system,
 		TargetSystemID: *system.ID,
 		TargetTeam:     team,
-		TargetUser:     targetUser,
+		TargetUser:     targetUserGorm,
 		TargetTeamID:   targetTeamId,
 		TargetUserID:   targetUserId,
 
