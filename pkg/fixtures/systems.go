@@ -29,7 +29,7 @@ func registerReconcilers() {
 }
 
 // CreateReconcilerSystems Ensure system entries exists in the database for all reconcilers
-func CreateReconcilerSystems(ctx context.Context, queries *sqlc.Queries) (map[string]sqlc.System, error) {
+func CreateReconcilerSystems(ctx context.Context, queries sqlc.Querier) (map[string]sqlc.System, error) {
 	registerReconcilers()
 
 	recs := registry.Reconcilers()

@@ -356,7 +356,7 @@ func setupDatabase(cfg *config.Config) (*gorm.DB, error) {
 	return db, nil
 }
 
-func setupGraphAPI(queries *sqlc.Queries, gormHandle *gorm.DB, db *pgx.Conn, domain string, console sqlc.System, teamReconciler chan<- reconcilers.Input, logger auditlogger.AuditLogger) (*graphql_handler.Server, error) {
+func setupGraphAPI(queries sqlc.Querier, gormHandle *gorm.DB, db *pgx.Conn, domain string, console sqlc.System, teamReconciler chan<- reconcilers.Input, logger auditlogger.AuditLogger) (*graphql_handler.Server, error) {
 	resolver := graph.NewResolver(queries, gormHandle, db, domain, console, teamReconciler, logger)
 	gc := generated.Config{}
 	gc.Resolvers = resolver

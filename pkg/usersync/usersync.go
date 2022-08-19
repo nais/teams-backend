@@ -20,7 +20,7 @@ import (
 )
 
 type userSynchronizer struct {
-	queries     *sqlc.Queries
+	queries     sqlc.Querier
 	system      sqlc.System
 	auditLogger auditlogger.AuditLogger
 	domain      string
@@ -47,7 +47,7 @@ var (
 	}
 )
 
-func New(queries *sqlc.Queries, db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, domain string, client *http.Client) *userSynchronizer {
+func New(queries sqlc.Querier, db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, domain string, client *http.Client) *userSynchronizer {
 	return &userSynchronizer{
 		queries:     queries,
 		db:          db,
@@ -58,7 +58,7 @@ func New(queries *sqlc.Queries, db *gorm.DB, system sqlc.System, auditLogger aud
 	}
 }
 
-func NewFromConfig(cfg *config.Config, queries *sqlc.Queries, db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger) (*userSynchronizer, error) {
+func NewFromConfig(cfg *config.Config, queries sqlc.Querier, db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger) (*userSynchronizer, error) {
 	if !cfg.UserSync.Enabled {
 		return nil, ErrNotEnabled
 	}

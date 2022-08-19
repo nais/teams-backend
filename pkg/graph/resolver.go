@@ -19,7 +19,7 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	queries        *sqlc.Queries
+	queries        sqlc.Querier
 	gorm           *gorm.DB
 	db             *pgx.Conn
 	tenantDomain   string
@@ -28,7 +28,7 @@ type Resolver struct {
 	auditLogger    auditlogger.AuditLogger
 }
 
-func NewResolver(queries *sqlc.Queries, gormHandle *gorm.DB, db *pgx.Conn, tenantDomain string, system sqlc.System, teamReconciler chan<- reconcilers.Input, auditLogger auditlogger.AuditLogger) *Resolver {
+func NewResolver(queries sqlc.Querier, gormHandle *gorm.DB, db *pgx.Conn, tenantDomain string, system sqlc.System, teamReconciler chan<- reconcilers.Input, auditLogger auditlogger.AuditLogger) *Resolver {
 	return &Resolver{
 		queries:        queries,
 		gorm:           gormHandle,
