@@ -1,4 +1,4 @@
-package dbmodels
+package slug
 
 import (
 	"fmt"

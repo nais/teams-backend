@@ -39,7 +39,7 @@ func TestNaisNamespaceReconciler(t *testing.T) {
 
 	sysid := uuid.New()
 
-	teamName := dbmodels.Slug("foo")
+	teamName := slug.Slug("foo")
 	err = rec.Reconcile(ctx, reconcilers.Input{
 		System: &dbmodels.System{
 			Model: dbmodels.Model{

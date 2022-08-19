@@ -7,6 +7,7 @@ import (
 
 	"github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/dbmodels"
+	"github.com/nais/console/pkg/slug"
 	"gorm.io/gorm"
 )
 
@@ -52,7 +53,7 @@ func SetupStaticServiceAccounts(db *gorm.DB, serviceAccountsRaw, tenantDomain st
 
 			user := &dbmodels.User{
 				Name:  serviceAccount.Name,
-				Email: console.ServiceAccountEmail(dbmodels.Slug(serviceAccount.Name), tenantDomain),
+				Email: console.ServiceAccountEmail(slug.Slug(serviceAccount.Name), tenantDomain),
 			}
 
 			err = tx.Where("email = ?", user.Email).FirstOrCreate(user).Error

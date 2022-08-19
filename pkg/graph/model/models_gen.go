@@ -67,13 +67,13 @@ type AuditLogsSort struct {
 // Input for creating a new service account.
 type CreateServiceAccountInput struct {
 	// The name of the new service account. An email address will be automatically generated using the provided name.
-	Name *dbmodels.Slug `json:"name"`
+	Name *slug.Slug `json:"name"`
 }
 
 // Input for creating a new team.
 type CreateTeamInput struct {
 	// Team slug. This value immutable.
-	Slug *dbmodels.Slug `json:"slug"`
+	Slug *slug.Slug `json:"slug"`
 	// Team name.
 	Name string `json:"name"`
 	// Team purpose.
@@ -137,7 +137,7 @@ type Teams struct {
 // Input for filtering a collection of teams.
 type TeamsQuery struct {
 	// Filter by slug.
-	Slug *dbmodels.Slug `json:"slug"`
+	Slug *slug.Slug `json:"slug"`
 	// Filter by name.
 	Name *string `json:"name"`
 }
@@ -153,7 +153,7 @@ type TeamsSort struct {
 // Input for updating an existing service account.
 type UpdateServiceAccountInput struct {
 	// The new name of the service account. The email address will be automatically updated.
-	Name *dbmodels.Slug `json:"name"`
+	Name *slug.Slug `json:"name"`
 }
 
 // Input for updating an existing team.

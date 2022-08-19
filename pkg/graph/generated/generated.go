@@ -204,7 +204,7 @@ type RoleBindingResolver interface {
 	TargetID(ctx context.Context, obj *sqlc.UserRole) (*uuid.UUID, error)
 }
 type TeamResolver interface {
-	Slug(ctx context.Context, obj *sqlc.Team) (*dbmodels.Slug, error)
+	Slug(ctx context.Context, obj *sqlc.Team) (*slug.Slug, error)
 
 	Purpose(ctx context.Context, obj *sqlc.Team) (*string, error)
 	Metadata(ctx context.Context, obj *sqlc.Team) (map[string]interface{}, error)
@@ -4794,7 +4794,7 @@ func (ec *executionContext) _Team_slug(ctx context.Context, field graphql.Collec
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*dbmodels.Slug)
+	res := resTmp.(*slug.Slug)
 	fc.Result = res
 	return ec.marshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSlug(ctx, field.Selections, res)
 }
@@ -9852,12 +9852,12 @@ func (ec *executionContext) unmarshalNSetTeamMemberRoleInput2githubᚗcomᚋnais
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSlug(ctx context.Context, v interface{}) (*dbmodels.Slug, error) {
+func (ec *executionContext) unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSlug(ctx context.Context, v interface{}) (*slug.Slug, error) {
 	res, err := dbmodels.UnmarshalSlug(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSlug(ctx context.Context, sel ast.SelectionSet, v *dbmodels.Slug) graphql.Marshaler {
+func (ec *executionContext) marshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSlug(ctx context.Context, sel ast.SelectionSet, v *slug.Slug) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -10596,7 +10596,7 @@ func (ec *executionContext) unmarshalOPagination2ᚖgithubᚗcomᚋnaisᚋconsol
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) unmarshalOSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSlug(ctx context.Context, v interface{}) (*dbmodels.Slug, error) {
+func (ec *executionContext) unmarshalOSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSlug(ctx context.Context, v interface{}) (*slug.Slug, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -10604,7 +10604,7 @@ func (ec *executionContext) unmarshalOSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpk
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalOSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSlug(ctx context.Context, sel ast.SelectionSet, v *dbmodels.Slug) graphql.Marshaler {
+func (ec *executionContext) marshalOSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSlug(ctx context.Context, sel ast.SelectionSet, v *slug.Slug) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}

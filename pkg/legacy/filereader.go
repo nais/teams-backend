@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/nais/console/pkg/dbmodels"
+	"github.com/nais/console/pkg/slug"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
@@ -38,7 +39,7 @@ func (t *Team) Convert() *dbmodels.Team {
 		})
 	}
 
-	slug := dbmodels.Slug(t.Name)
+	slug := slug.Slug(t.Name)
 	return &dbmodels.Team{
 		Slug:     slug,
 		Name:     t.Name,

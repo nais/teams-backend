@@ -17,6 +17,7 @@ import (
 	"github.com/nais/console/pkg/reconcilers"
 	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
 	"github.com/nais/console/pkg/roles"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"gorm.io/gorm"
 )
@@ -543,7 +544,7 @@ func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*sqlc.Team, er
 	return team, nil
 }
 
-func (r *teamResolver) Slug(ctx context.Context, obj *sqlc.Team) (*dbmodels.Slug, error) {
+func (r *teamResolver) Slug(ctx context.Context, obj *sqlc.Team) (*slug.Slug, error) {
 	panic(fmt.Errorf("not implemented"))
 }
 

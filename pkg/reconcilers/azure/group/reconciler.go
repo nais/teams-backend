@@ -3,11 +3,13 @@ package azure_group_reconciler
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/google/uuid"
 	helpers "github.com/nais/console/pkg/console"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
-	"strings"
 
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/azureclient"
@@ -187,6 +189,6 @@ func remoteOnlyMembers(azureGroupMembers []*azureclient.Member, consoleUsers []*
 	return azureGroupMembers
 }
 
-func teamNameWithPrefix(slug dbmodels.Slug) string {
+func teamNameWithPrefix(slug slug.Slug) string {
 	return reconcilers.TeamNamePrefix + string(slug)
 }

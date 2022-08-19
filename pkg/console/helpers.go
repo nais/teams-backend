@@ -2,10 +2,12 @@ package console
 
 import (
 	"fmt"
-	"github.com/nais/console/pkg/dbmodels"
-	"github.com/nais/console/pkg/sqlc"
 	"strings"
 	"time"
+
+	"github.com/nais/console/pkg/dbmodels"
+	"github.com/nais/console/pkg/slug"
+	"github.com/nais/console/pkg/sqlc"
 )
 
 func Strp(s string) *string {
@@ -41,7 +43,7 @@ func DomainUsers(users []*sqlc.User, domain string) []*sqlc.User {
 }
 
 // ServiceAccountEmail Generate a service account email address given the name of the service account
-func ServiceAccountEmail(name dbmodels.Slug, tenantDomain string) string {
+func ServiceAccountEmail(name slug.Slug, tenantDomain string) string {
 	return string(name) + serviceAccountSuffix(tenantDomain)
 }
 

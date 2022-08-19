@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
 
@@ -77,7 +79,7 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	}
 
 	namespaceState := &reconcilers.GoogleGcpNaisNamespaceState{
-		Namespaces: make(map[string]dbmodels.Slug),
+		Namespaces: make(map[string]slug.Slug),
 	}
 	err = dbmodels.LoadSystemState(r.db, r.system.ID, input.Team.ID, namespaceState)
 	if err != nil {
