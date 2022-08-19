@@ -8,6 +8,7 @@ sql:
         package: sqlc
         out: pkg/sqlc
         sql_package: pgx/v4
+        emit_interface: true
         emit_result_struct_pointers: true # set to true to be compliant with gqlgen's resolvers
         emit_prepared_queries: true
         overrides:
