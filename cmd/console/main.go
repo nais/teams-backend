@@ -157,12 +157,26 @@ func run() error {
 		return fmt.Errorf("cannot create correlation entry for initial reconcile loop: %w", err)
 	}
 
-	allTeams := make([]*dbmodels.Team, 0)
-	gormDB.Preload("Users").Preload("Metadata").Find(&allTeams)
+	allTeams, err := queries.GetTeams(ctx)
+	if err != nil {
+		return fmt.Errorf("unable to load team for initial reconcile loop: %w", err)
+	}
 	for _, team := range allTeams {
+		members, err := queries.GetTeamMembers(ctx, team.ID)
+		if err != nil {
+			return fmt.Errorf("unable to load team members for team '%s' for the initial reconcile loop: %w", team.Slug, err)
+		}
+
+		metadata, err := queries.GetTeamMetadata(ctx, team.ID)
+		if err != nil {
+			return fmt.Errorf("unable to load team metadata for team '%s' for the initial reconcile loop: %w", team.Slug, err)
+		}
+
 		teamReconciler <- reconcilers.Input{
-			Corr: *corr,
-			Team: *team,
+			Corr:     *corr,
+			Team:     team,
+			Metadata: metadata,
+			Members:  members,
 		}
 	}
 
@@ -188,9 +202,9 @@ func run() error {
 				nextReconcile = time.Now().Add(immediateReconcile)
 				reconcileTimer.Reset(immediateReconcile)
 			}
-			if _, exists := pendingTeams[*input.Team.ID]; !exists {
+			if _, exists := pendingTeams[input.Team.ID]; !exists {
 				log.Infof("Scheduling team '%s' for reconciliation in %s", input.Team.Slug, nextReconcile.Sub(time.Now()))
-				pendingTeams[*input.Team.ID] = input
+				pendingTeams[input.Team.ID] = input
 			}
 
 		case <-reconcileTimer.C:

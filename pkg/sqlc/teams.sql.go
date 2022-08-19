@@ -66,3 +66,36 @@ func (q *Queries) GetTeam(ctx context.Context, id uuid.UUID) (*Team, error) {
 	)
 	return &i, err
 }
+
+const getTeams = `-- name: GetTeams :many
+SELECT id, created_at, created_by_id, updated_by_id, updated_at, slug, name, purpose FROM teams ORDER BY name ASC
+`
+
+func (q *Queries) GetTeams(ctx context.Context) ([]*Team, error) {
+	rows, err := q.db.Query(ctx, getTeams)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*Team
+	for rows.Next() {
+		var i Team
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.CreatedByID,
+			&i.UpdatedByID,
+			&i.UpdatedAt,
+			&i.Slug,
+			&i.Name,
+			&i.Purpose,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

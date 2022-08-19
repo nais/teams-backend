@@ -4,3 +4,6 @@ RETURNING *;
 
 -- name: GetTeam :one
 SELECT * FROM teams WHERE id = $1 LIMIT 1;
+
+-- name: GetTeams :many
+SELECT * FROM teams ORDER BY name ASC;
