@@ -16,7 +16,8 @@ type database struct {
 type Database interface {
 	AddUser(ctx context.Context, user User) (*User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (*User, error)
-	GetUserByEmail(ctx context.Context, team string) (*User, error)
+	GetUserByEmail(ctx context.Context, email string) (*User, error)
+	GetUserByApiKey(ctx context.Context, apiKey string) (*User, error)
 
 	AddTeam(ctx context.Context, team Team, createdBy uuid.UUID) (*Team, error)
 	GetTeamByID(ctx context.Context, id uuid.UUID) (*Team, error)

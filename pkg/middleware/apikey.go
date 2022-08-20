@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/nais/console/pkg/authz"
-	"github.com/nais/console/pkg/dbmodels"
 )
 
 // ApiKeyAuthentication If the request has an authorization header, we will try to pull the user who owns it from the
@@ -20,14 +19,14 @@ func ApiKeyAuthentication(database db.Database) func(next http.Handler) http.Han
 				return
 			}
 
-			key := &dbmodels.ApiKey{}
-			err := db.Preload("User").Where("api_key = ?", authHeader[7:]).First(key).Error
+			ctx := r.Context()
+			user, err := database.GetUserByApiKey(ctx, authHeader[7:])
 			if err != nil {
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			ctx := authz.ContextWithUser(r.Context(), &key.User)
+			ctx = authz.ContextWithUser(ctx, user)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		}
 		return http.HandlerFunc(fn)

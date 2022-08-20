@@ -46,6 +46,15 @@ func (d *database) GetUserByEmail(ctx context.Context, email string) (*User, err
 	return d.getUser(ctx, &User{User: user})
 }
 
+func (d *database) GetUserByApiKey(ctx context.Context, apiKey string) (*User, error) {
+	user, err := d.querier.GetUserByApiKey(ctx, apiKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return d.getUser(ctx, &User{User: user})
+}
+
 func (d *database) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
 	user, err := d.querier.GetUserByID(ctx, id)
 	if err != nil {
@@ -61,7 +70,6 @@ func (d *database) getUser(ctx context.Context, user *User) (*User, error) {
 		return nil, err
 	}
 
-	// Fill all team feilds
 	user.Roles = userRoles
 
 	return user, nil
@@ -73,7 +81,7 @@ func (d *database) getUserRoles(ctx context.Context, userID uuid.UUID) ([]*Role,
 		return nil, err
 	}
 
-	userRoles := []*Role{}
+	userRoles := make([]*Role, 0)
 	for _, userRole := range ur {
 		authorizations, err := d.querier.GetRoleAuthorizations(ctx, userRole.RoleName)
 		if err != nil {

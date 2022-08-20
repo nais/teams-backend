@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/nais/console/pkg/authz"
-	"github.com/nais/console/pkg/dbmodels"
 )
 
 // Autologin Authenticates ALL HTTP requests as a specific user. It goes without saying, but please do not use
@@ -13,14 +12,14 @@ import (
 func Autologin(database db.Database, email string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
-			user := &dbmodels.User{}
-			err := db.Where("email = ?", email).First(user).Error
+			ctx := r.Context()
+			user, err := database.GetUserByEmail(ctx, email)
 			if err != nil {
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			ctx := authz.ContextWithUser(r.Context(), user)
+			ctx = authz.ContextWithUser(ctx, user)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		}
 		return http.HandlerFunc(fn)

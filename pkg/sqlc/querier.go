@@ -22,6 +22,7 @@ type Querier interface {
 	GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error)
 	GetTeamMetadata(ctx context.Context, teamID uuid.UUID) ([]*TeamMetadatum, error)
 	GetTeams(ctx context.Context) ([]*Team, error)
+	GetUserByApiKey(ctx context.Context, apiKey string) (*User, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (*User, error)
 	GetUserRole(ctx context.Context, id uuid.UUID) (*UserRole, error)

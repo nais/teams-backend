@@ -10,6 +10,11 @@ WHERE id = $1 LIMIT 1;
 SELECT * FROM users
 WHERE email = $1 LIMIT 1;
 
+-- name: GetUserByApiKey :one
+SELECT users.* FROM api_keys
+JOIN users ON users.id = api_keys.user_id
+WHERE api_keys.api_key = $1 LIMIT 1;
+
 -- name: AddRoleToUser :exec
 INSERT INTO user_roles (id, user_id, role_name, target_id) VALUES ($1, $2, $3, $4);
 

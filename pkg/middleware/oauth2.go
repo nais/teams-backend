@@ -7,7 +7,6 @@ import (
 
 	"github.com/nais/console/pkg/authn"
 	"github.com/nais/console/pkg/authz"
-	"github.com/nais/console/pkg/dbmodels"
 )
 
 // Oauth2Authentication If the request has a session cookie, look up the session from the store, and if it exists, try
@@ -32,14 +31,14 @@ func Oauth2Authentication(database db.Database, store authn.SessionStore) func(n
 				return
 			}
 
-			user := &dbmodels.User{}
-			err = db.Where("email = ?", session.Email).First(user).Error
+			ctx := r.Context()
+			user, err := database.GetUserByEmail(ctx, session.Email)
 			if err != nil {
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			ctx := authz.ContextWithUser(r.Context(), user)
+			ctx = authz.ContextWithUser(r.Context(), user)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		}
 		return http.HandlerFunc(fn)

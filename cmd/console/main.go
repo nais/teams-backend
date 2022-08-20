@@ -374,9 +374,6 @@ func setupHTTPServer(cfg *config.Config, database db.Database, graphApi *graphql
 		middlewares = append(middlewares, middleware.Autologin(database, cfg.AutoLoginUser))
 	}
 
-	// Append the role loader middleware after all possible authentication middlewares have been added
-	middlewares = append(middlewares, middleware.LoadUserRoles(database))
-
 	r.Route("/query", func(r chi.Router) {
 		r.Use(middlewares...)
 		r.Post("/", graphApi.ServeHTTP)
