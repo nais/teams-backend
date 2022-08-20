@@ -3,6 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
+	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
+	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
+	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
+	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
+	nais_namespace_reconciler "github.com/nais/console/pkg/reconcilers/nais/namespace"
 	"net/http"
 	"net/url"
 	"os"
@@ -28,7 +34,6 @@ import (
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/middleware"
 	"github.com/nais/console/pkg/reconcilers"
-	"github.com/nais/console/pkg/reconcilers/registry"
 	"github.com/nais/console/pkg/usersync"
 	"github.com/nais/console/pkg/version"
 	log "github.com/sirupsen/logrus"
@@ -59,14 +64,10 @@ func run() error {
 		return err
 	}
 
-	dbc, err := pgx.Connect(ctx, cfg.DatabaseURL)
+	database, err := setupDatabase(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return err
 	}
-	queries := db.Wrap(sqlc.New(dbc), dbc)
-	database := db.NewDatabase(queries, dbc)
-
-	registry.RegisterReconcilers()
 
 	err = fixtures.InsertInitialDataset(ctx, database, cfg.TenantDomain, cfg.AdminApiKey)
 	if err != nil {
@@ -74,7 +75,7 @@ func run() error {
 	}
 
 	if cfg.StaticServiceAccounts != "" {
-		err = fixtures.SetupStaticServiceAccounts(database, cfg.StaticServiceAccounts, cfg.TenantDomain)
+		err = fixtures.SetupStaticServiceAccounts(ctx, database, cfg.StaticServiceAccounts, cfg.TenantDomain)
 		if err != nil {
 			return err
 		}
@@ -298,14 +299,27 @@ func setupLogging(format, level string) error {
 	return nil
 }
 
+func setupDatabase(ctx context.Context, dbUrl string) (db.Database, error) {
+	dbc, err := pgx.Connect(ctx, dbUrl)
+	if err != nil {
+		return nil, err
+	}
+	queries := db.Wrap(sqlc.New(dbc), dbc)
+	return db.NewDatabase(queries, dbc), nil
+}
+
 func initReconcilers(database db.Database, cfg *config.Config, logger auditlogger.AuditLogger) ([]reconcilers.Reconciler, error) {
 	recs := make([]reconcilers.Reconciler, 0)
-	initializers := registry.Reconcilers()
+	factories := map[sqlc.SystemName]reconcilers.ReconcilerFactory{
+		console_reconciler.Name:                console_reconciler.NewFromConfig,
+		azure_group_reconciler.Name:            azure_group_reconciler.NewFromConfig,
+		github_team_reconciler.Name:            github_team_reconciler.NewFromConfig,
+		google_workspace_admin_reconciler.Name: google_workspace_admin_reconciler.NewFromConfig,
+		google_gcp_reconciler.Name:             google_gcp_reconciler.NewFromConfig,
+		nais_namespace_reconciler.Name:         nais_namespace_reconciler.NewFromConfig,
+	}
 
-	for _, initializer := range initializers {
-		name := initializer.Name
-		factory := initializer.Factory
-
+	for name, factory := range factories {
 		rec, err := factory(database, cfg, logger)
 		switch err {
 		case reconcilers.ErrReconcilerNotEnabled:
