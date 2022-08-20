@@ -36,7 +36,7 @@ resolver:
 # gqlgen will search for any type names in the schema in these go packages
 # if they match it will use them, otherwise it will generate them.
 autobind:
-  - "github.com/nais/console/pkg/dbmodels"
+  - "github.com/nais/console/pkg/sqlc"
 
 # This section declares type mapping between the GraphQL and go type systems
 #
@@ -44,34 +44,22 @@ autobind:
 # modelgen, the others will be allowed when binding to fields. Configure them to
 # your liking
 models:
-  System:
-    model:
-      - github.com/nais/console/pkg/sqlc.System # manual mapping that can be removed when autobind is pointed to the sqlc models
-
   RoleBinding:
-    model:
-      - github.com/nais/console/pkg/sqlc.UserRole # manual mapping that can be removed when autobind is pointed to the sqlc models
-
     fields:
       role:
         resolver: true
+
   UUID:
     model:
-      - github.com/nais/console/pkg/dbmodels.UUID
-  ID:
-    model:
-      - github.com/99designs/gqlgen/graphql.ID
-      - github.com/99designs/gqlgen/graphql.Int
-      - github.com/99designs/gqlgen/graphql.Int64
-      - github.com/99designs/gqlgen/graphql.Int32
+      - github.com/nais/console/pkg/db.UUID
+
   Int:
     model:
       - github.com/99designs/gqlgen/graphql.Int
       - github.com/99designs/gqlgen/graphql.Int64
       - github.com/99designs/gqlgen/graphql.Int32
+
   Team:
-    model:
-      - github.com/nais/console/pkg/sqlc.Team # manual mapping that can be removed when autobind is pointed to the sqlc models
     fields:
       users:
         resolver: true
@@ -79,18 +67,19 @@ models:
         resolver: true
       auditLogs:
         resolver: true
+
   User:
     fields:
       roles:
         resolver: true
       teams:
         resolver: true
+
   Role:
-    model:
-      - github.com/nais/console/pkg/sqlc.Role # manual mapping that can be removed when autobind is pointed to the sqlc models
     fields:
       authorizations:
         resolver: true
+
   AuditLog:
     fields:
       actor:
