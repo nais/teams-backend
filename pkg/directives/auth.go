@@ -19,7 +19,7 @@ func Auth(database db.Database) AuthDirective {
 			return nil, fmt.Errorf("this endpoint requires an authenticated user")
 		}
 
-		err := db.Where("id = ?", user.ID).First(user).Error
+		user, err := database.GetUserByID(ctx, user.ID)
 		if err != nil {
 			return nil, fmt.Errorf("user in context does not exist in database: %w", err)
 		}
