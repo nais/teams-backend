@@ -35,12 +35,7 @@ func NewDatabase(q Querier, conn *pgx.Conn) Database {
 }
 
 func nullString(s *string) sql.NullString {
-	if s == nil {
-		return sql.NullString{}
-	}
-
-	return sql.NullString{
-		String: *s,
-		Valid:  true,
-	}
+	ns := sql.NullString{}
+	ns.Scan(s)
+	return ns
 }

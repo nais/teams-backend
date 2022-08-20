@@ -13,9 +13,7 @@ func (d *database) AddAuditLog(ctx context.Context, correlationId uuid.UUID, act
 	}
 
 	nullSystemName := sqlc.NullSystemName{}
-	if systemName != nil {
-		nullSystemName.SystemName = *systemName
-	}
+	nullSystemName.Scan(systemName)
 
 	err = d.querier.CreateAuditLog(ctx, sqlc.CreateAuditLogParams{
 		ID:              id,
