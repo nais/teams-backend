@@ -14,6 +14,7 @@ type Querier interface {
 	AddRoleToUser(ctx context.Context, arg AddRoleToUserParams) error
 	AddUserToTeam(ctx context.Context, arg AddUserToTeamParams) error
 	CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) error
+	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) (*AuditLog, error)
 	CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (*User, error)
 	GetRoleAuthorizations(ctx context.Context, roleName RoleName) ([]AuthzName, error)

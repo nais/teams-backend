@@ -14,12 +14,13 @@ type database struct {
 }
 
 type Database interface {
+	AddAuditLog(ctx context.Context, auditLog AuditLog) (*AuditLog, error)
 	AddUser(ctx context.Context, user User) (*User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (*User, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
 	GetUserByApiKey(ctx context.Context, apiKey string) (*User, error)
 
-	AddTeam(ctx context.Context, team Team, createdBy uuid.UUID) (*Team, error)
+	AddTeam(ctx context.Context, team Team) (*Team, error)
 	GetTeamByID(ctx context.Context, id uuid.UUID) (*Team, error)
 	GetTeamBySlug(ctx context.Context, slug string) (*Team, error)
 	GetTeams(ctx context.Context) ([]*Team, error)

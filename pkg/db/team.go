@@ -13,7 +13,7 @@ type Team struct {
 	Members  []*User
 }
 
-func (d *database) AddTeam(ctx context.Context, team Team, createdBy uuid.UUID) (*Team, error) {
+func (d *database) AddTeam(ctx context.Context, team Team) (*Team, error) {
 	id, err := uuid.NewUUID()
 	if err != nil {
 		return nil, err

@@ -66,6 +66,7 @@ CREATE TABLE api_keys (
 
 CREATE TABLE audit_logs (
     id UUID PRIMARY KEY,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     correlation_id UUID NOT NULL,
     actor_email TEXT,
     system_name system_name,
@@ -73,7 +74,6 @@ CREATE TABLE audit_logs (
     target_team_slug TEXT,
     action audit_action NOT NULL,
     message TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
 
     CONSTRAINT actor_or_system CHECK (actor_email IS NOT NULL OR system_name IS NOT NULL),
     CONSTRAINT actor_and_system CHECK (actor_email IS NULL OR system_name IS NULL),

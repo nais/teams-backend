@@ -224,6 +224,7 @@ type ApiKey struct {
 
 type AuditLog struct {
 	ID              uuid.UUID
+	CreatedAt       time.Time
 	CorrelationID   uuid.UUID
 	ActorEmail      sql.NullString
 	SystemName      NullSystemName
@@ -231,7 +232,6 @@ type AuditLog struct {
 	TargetTeamSlug  sql.NullString
 	Action          AuditAction
 	Message         string
-	CreatedAt       time.Time
 }
 
 type RoleAuthz struct {

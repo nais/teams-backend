@@ -1,13 +1,14 @@
 package auditlogger
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"github.com/nais/console/pkg/db"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/sqlc"
-	"gorm.io/gorm/clause"
 )
 
 type auditLogger struct {
@@ -15,7 +16,7 @@ type auditLogger struct {
 }
 
 type AuditLogger interface {
-	Logf(action string, correlationId uuid.UUID, targetSystemName sqlc.SystemName, actor *db.User, targetTeam *db.Team, targetUser *db.User, message string, messageArgs ...interface{}) error
+	Logf(ctx context.Context, action sqlc.AuditAction, correlationId uuid.UUID, systemName *sqlc.SystemName, actorEmail *string, targetTeamSlug *string, targetUserEmail *string, message string, messageArgs ...interface{}) error
 }
 
 func New(database db.Database) AuditLogger {
@@ -24,78 +25,43 @@ func New(database db.Database) AuditLogger {
 	}
 }
 
-func (l *auditLogger) Logf(action string, correlationId uuid.UUID, targetSystemName sqlc.SystemName, actor *db.User, targetTeam *db.Team, targetUser *db.User, message string, messageArgs ...interface{}) error {
-	var actorId *uuid.UUID
-	var targetTeamId *uuid.UUID
-	var targetUserId *uuid.UUID
-
-	if actor != nil {
-		actorId = &actor.ID
+func (l *auditLogger) Logf(ctx context.Context, action sqlc.AuditAction, correlationId uuid.UUID, systemName *sqlc.SystemName, actorEmail *string, targetTeamSlug *string, targetUserEmail *string, message string, messageArgs ...interface{}) error {
+	nullSystemName := sqlc.NullSystemName{}
+	if systemName != nil {
+		nullSystemName.SystemName = *systemName
 	}
 
-	if targetTeam != nil {
-		targetTeamId = &targetTeam.ID
-	}
-
-	if targetUser != nil {
-		targetUserId = &targetUser.ID
-	}
-
-	// tmp fix to use dbmodels.User instead of sqlc.User for the actor
-	actorGorm := &dbmodels.User{}
-	err := l.db.Where("id = ?", actor.ID).First(actorGorm).Error
+	logEntry := &db.AuditLog{}
+	logEntry.Action = action
+	logEntry.CorrelationID = correlationId
+	logEntry.SystemName = nullSystemName
+	logEntry.ActorEmail = nullString(actorEmail)
+	logEntry.TargetTeamSlug = nullString(targetTeamSlug)
+	logEntry.TargetUserEmail = nullString(targetUserEmail)
+	logEntry.Message = fmt.Sprintf(message, messageArgs...)
+	logEntry, err := l.database.AddAuditLog(ctx, *logEntry)
 	if err != nil {
-		return fmt.Errorf("unable to fetch user from DB: %w", err)
+		return fmt.Errorf("create audit log entry: %w", err)
 	}
 
-	// tmp fix to use dbmodels.User instead of sqlc.User for the target user
-	targetUserGorm := &dbmodels.User{}
-	err = l.db.Where("id = ?", targetUser.ID).First(targetUserGorm).Error
-	if err != nil {
-		return fmt.Errorf("unable to fetch user from DB: %w", err)
+	log.StandardLogger().WithFields(log.Fields{
+		"action":            action,
+		"correlation_id":    correlationId,
+		"system_name":       systemName,
+		"actor_email":       actorEmail,
+		"target_team_slug":  targetTeamSlug,
+		"target_user_email": targetUserEmail,
+	})
+	return nil
+}
+
+func nullString(s *string) sql.NullString {
+	if s == nil {
+		return sql.NullString{}
 	}
 
-	// tmp fix to use dbmodels.System instead of sqlc.System for the audit log
-	system := &dbmodels.System{}
-	err = l.db.Where("id = ?", targetSystem.ID).First(system).Error
-	if err != nil {
-		return fmt.Errorf("unable to fetch system entry from DB: %w", err)
+	return sql.NullString{
+		String: *s,
+		Valid:  true,
 	}
-
-	// tmp fix to use dbmodels.Correlation instead of sqlc.Correlation for the audit log
-	correlation := &dbmodels.Correlation{}
-	err = l.db.Where("id = ?", corr.ID).First(correlation).Error
-	if err != nil {
-		return fmt.Errorf("unable to fetch correlation entry from DB: %w", err)
-	}
-
-	// tmp fix to use dbmodels.Team instead of sqlc.Team for the audit log
-	team := &dbmodels.Team{}
-	err = l.db.Where("id = ?", targetTeam.ID).First(team).Error
-	if err != nil {
-		return fmt.Errorf("unable to fetch team entry from DB: %w", err)
-	}
-
-	logEntry := &dbmodels.AuditLog{
-		Action:         action,
-		Actor:          actorGorm,
-		ActorID:        actorId,
-		Correlation:    *correlation,
-		CorrelationID:  *correlation.ID,
-		TargetSystem:   *system,
-		TargetSystemID: *system.ID,
-		TargetTeam:     team,
-		TargetUser:     targetUserGorm,
-		TargetTeamID:   targetTeamId,
-		TargetUserID:   targetUserId,
-
-		Message: fmt.Sprintf(message, messageArgs...),
-	}
-	err = l.db.Omit(clause.Associations).Create(logEntry).Error
-	if err != nil {
-		return fmt.Errorf("store audit log line in database: %s", err)
-	}
-
-	logEntry.Log().Infof(logEntry.Message)
-	return err
 }
