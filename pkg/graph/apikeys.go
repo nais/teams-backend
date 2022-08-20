@@ -7,26 +7,22 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/authz"
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/graph/model"
-	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
-	"github.com/nais/console/pkg/roles"
-	"gorm.io/gorm"
+	"github.com/nais/console/pkg/sqlc"
 )
 
-func (r *mutationResolver) CreateAPIKey(ctx context.Context, userID *uuid.UUID) (*model.APIKey, error) {
+func (r *mutationResolver) CreateAPIKey(ctx context.Context, userID *uuid.UUID, revokeExistingAPIKeys bool) (*model.APIKey, error) {
 	actor := authz.UserFromContext(ctx)
-	err := authz.RequireAuthorization(actor, roles.AuthorizationServiceAccountsUpdate, *userID)
+	err := authz.RequireAuthorization(actor, sqlc.AuthzNameServiceAccountsUpdate, *userID)
 	if err != nil {
 		return nil, err
 	}
 
-	serviceAccount := &dbmodels.User{}
-	err = r.gorm.Where("id = ?", userID).First(serviceAccount).Error
+	serviceAccount, err := r.database.GetUserByID(ctx, *userID)
 	if err != nil {
 		return nil, err
 	}
@@ -37,63 +33,22 @@ func (r *mutationResolver) CreateAPIKey(ctx context.Context, userID *uuid.UUID) 
 		return nil, err
 	}
 
-	corr, err := r.createCorrelation(ctx)
+	correlationId, err := uuid.NewUUID()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to create correlation ID for audit log: %w", err)
 	}
-	key := &dbmodels.ApiKey{
-		APIKey: base64.RawURLEncoding.EncodeToString(buf),
-		UserID: *userID,
-	}
-	err = r.gorm.Transaction(func(tx *gorm.DB) error {
-		err = tx.Where("user_id = ?", key.UserID).Delete(&dbmodels.ApiKey{}).Error
-		if err != nil {
-			return err
-		}
 
-		err = db.CreateTrackedObject(ctx, tx, key)
-		if err != nil {
-			return err
-		}
+	key := base64.RawURLEncoding.EncodeToString(buf)
 
-		return nil
-	})
-
+	err = r.database.CreateAPIKey(ctx, key, *userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to create API key for user: %w", err)
 	}
 
-	r.auditLogger.Logf(console_reconciler.OpCreateApiKey, *corr, r.system, actor, nil, serviceAccount, "API key created")
+	systemName := sqlc.SystemNameConsole
+	r.auditLogger.Logf(ctx, sqlc.AuditActionConsoleApiKeyCreate, correlationId, &systemName, &actor.Email, nil, &serviceAccount.Email, "API key created")
 
 	return &model.APIKey{
-		APIKey: key.APIKey,
+		APIKey: key,
 	}, nil
-}
-
-func (r *mutationResolver) DeleteAPIKey(ctx context.Context, userID *uuid.UUID) (bool, error) {
-	actor := authz.UserFromContext(ctx)
-	err := authz.RequireAuthorization(actor, roles.AuthorizationServiceAccountsUpdate, *userID)
-	if err != nil {
-		return false, err
-	}
-
-	serviceAccount := &dbmodels.User{}
-	err = r.gorm.Where("id = ?", userID).First(serviceAccount).Error
-	if err != nil {
-		return false, err
-	}
-
-	corr, err := r.createCorrelation(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	err = r.gorm.Where("user_id = ?", userID).Delete(&dbmodels.ApiKey{}).Error
-	if err != nil {
-		return false, err
-	}
-
-	r.auditLogger.Logf(console_reconciler.OpDeleteApiKey, *corr, r.system, actor, nil, serviceAccount, "API key deleted")
-
-	return true, nil
 }
