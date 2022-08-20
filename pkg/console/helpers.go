@@ -2,24 +2,15 @@ package console
 
 import (
 	"fmt"
+	"github.com/nais/console/pkg/db"
 	"strings"
 	"time"
 
-	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/slug"
-	"github.com/nais/console/pkg/sqlc"
 )
 
 func Strp(s string) *string {
 	return &s
-}
-
-func DerefString(s *string) string {
-	if s == nil {
-		return ""
-
-	}
-	return *s
 }
 
 func StringWithFallback(strp *string, fallback string) string {
@@ -29,8 +20,9 @@ func StringWithFallback(strp *string, fallback string) string {
 	return *strp
 }
 
-func DomainUsers(users []*sqlc.User, domain string) []*sqlc.User {
-	domainUsers := make([]*sqlc.User, 0)
+// DomainUsers Return users in a list of of user object that has an email address with the tenant domain as suffix
+func DomainUsers(users []*db.User, domain string) []*db.User {
+	domainUsers := make([]*db.User, 0)
 	suffix := "@" + domain
 
 	for _, user := range users {
@@ -48,7 +40,7 @@ func ServiceAccountEmail(name slug.Slug, tenantDomain string) string {
 }
 
 // IsServiceAccount Check if a user is a service account or not
-func IsServiceAccount(user dbmodels.User, tenantDomain string) bool {
+func IsServiceAccount(user db.User, tenantDomain string) bool {
 	return strings.HasSuffix(user.Email, serviceAccountSuffix(tenantDomain))
 }
 
