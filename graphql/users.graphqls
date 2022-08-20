@@ -68,7 +68,7 @@ type User {
     createdAt: Time!
 
     "Roles attached to the user."
-    roles: [RoleBinding!]!
+    roles: [UserRole!]!
 }
 
 "User collection."
