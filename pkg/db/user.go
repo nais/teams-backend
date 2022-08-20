@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/sqlc"
 )
@@ -19,22 +18,22 @@ type Role struct {
 	Authorizations []sqlc.AuthzName
 }
 
-func (d *database) AddUser(ctx context.Context, user User) (*User, error) {
+func (d *database) AddUser(ctx context.Context, name, email string) (*User, error) {
 	id, err := uuid.NewUUID()
 	if err != nil {
 		return nil, err
 	}
 
-	u, err := d.querier.CreateUser(ctx, sqlc.CreateUserParams{
+	user, err := d.querier.CreateUser(ctx, sqlc.CreateUserParams{
 		ID:    id,
-		Name:  user.Name,
-		Email: user.Email,
+		Name:  name,
+		Email: email,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return &User{User: u}, nil
+	return &User{User: user}, nil
 }
 
 func (d *database) GetUserByEmail(ctx context.Context, email string) (*User, error) {

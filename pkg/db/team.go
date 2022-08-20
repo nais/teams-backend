@@ -13,23 +13,23 @@ type Team struct {
 	Members  []*User
 }
 
-func (d *database) AddTeam(ctx context.Context, team Team) (*Team, error) {
+func (d *database) AddTeam(ctx context.Context, name, slug string, purpose *string) (*Team, error) {
 	id, err := uuid.NewUUID()
 	if err != nil {
 		return nil, err
 	}
 
-	t, err := d.querier.CreateTeam(ctx, sqlc.CreateTeamParams{
+	team, err := d.querier.CreateTeam(ctx, sqlc.CreateTeamParams{
 		ID:      id,
-		Name:    team.Name,
-		Slug:    team.Slug,
-		Purpose: team.Purpose,
+		Name:    name,
+		Slug:    slug,
+		Purpose: nullString(purpose),
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return &Team{Team: t}, nil
+	return &Team{Team: team}, nil
 }
 
 func (d *database) GetTeamBySlug(ctx context.Context, slug string) (*Team, error) {

@@ -12,9 +12,9 @@ import (
 	"github.com/google/uuid"
 )
 
-const createAuditLog = `-- name: CreateAuditLog :one
+const createAuditLog = `-- name: CreateAuditLog :exec
 INSERT INTO audit_logs (id, correlation_id, actor_email, system_name, target_user_email, target_team_slug, action, message)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, created_at, correlation_id, actor_email, system_name, target_user_email, target_team_slug, action, message
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 `
 
 type CreateAuditLogParams struct {
@@ -28,8 +28,8 @@ type CreateAuditLogParams struct {
 	Message         string
 }
 
-func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) (*AuditLog, error) {
-	row := q.db.QueryRow(ctx, createAuditLog,
+func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) error {
+	_, err := q.db.Exec(ctx, createAuditLog,
 		arg.ID,
 		arg.CorrelationID,
 		arg.ActorEmail,
@@ -39,17 +39,5 @@ func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) 
 		arg.Action,
 		arg.Message,
 	)
-	var i AuditLog
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.CorrelationID,
-		&i.ActorEmail,
-		&i.SystemName,
-		&i.TargetUserEmail,
-		&i.TargetTeamSlug,
-		&i.Action,
-		&i.Message,
-	)
-	return &i, err
+	return err
 }
