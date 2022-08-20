@@ -16,7 +16,7 @@ import (
 func TestAuth(t *testing.T) {
 	var obj interface{}
 	var nextHandler func(ctx context.Context) (res interface{}, err error)
-	database := &db.MockDatabase{}
+	database := db.NewMockDatabase(t)
 	auth := directives.Auth(database)
 
 	t.Run("No user in context", func(t *testing.T) {
