@@ -75,6 +75,8 @@ CREATE TABLE audit_logs (
     message TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
 
+    -- either actor_email or actor_system must be set, not both
+
     CHECK (actor_email IS NOT NULL OR actor_system IS NOT NULL),
     CHECK (actor_email IS NOT NULL AND actor_system IS NOT NULL),
     CHECK (target_user_email IS NOT NULL OR target_team_slug IS NOT NULL)
