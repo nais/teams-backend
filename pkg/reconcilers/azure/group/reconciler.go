@@ -3,6 +3,7 @@ package azure_group_reconciler
 import (
 	"context"
 	"fmt"
+	"github.com/nais/console/pkg/db"
 	"strings"
 
 	"github.com/google/uuid"
@@ -18,13 +19,10 @@ import (
 	"github.com/nais/console/pkg/reconcilers"
 	"golang.org/x/oauth2/clientcredentials"
 	"golang.org/x/oauth2/microsoft"
-	"gorm.io/gorm"
 )
 
 type azureGroupReconciler struct {
-	queries     sqlc.Querier
-	db          *gorm.DB
-	system      sqlc.System
+	database    db.Database
 	auditLogger auditlogger.AuditLogger
 	oauth       clientcredentials.Config
 	client      azureclient.Client
@@ -32,18 +30,16 @@ type azureGroupReconciler struct {
 }
 
 const (
-	Name           = "azure:group"
+	Name           = sqlc.SystemNameAzureGroup
 	OpCreate       = "azure:group:create"
 	OpAddMember    = "azure:group:add-member"
 	OpAddMembers   = "azure:group:add-members"
 	OpDeleteMember = "azure:group:delete-member"
 )
 
-func New(queries sqlc.Querier, db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, oauth clientcredentials.Config, client azureclient.Client, domain string) *azureGroupReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, oauth clientcredentials.Config, client azureclient.Client, domain string) *azureGroupReconciler {
 	return &azureGroupReconciler{
-		queries:     queries,
-		db:          db,
-		system:      system,
+		database:    database,
 		auditLogger: auditLogger,
 		oauth:       oauth,
 		client:      client,
@@ -51,7 +47,7 @@ func New(queries sqlc.Querier, db *gorm.DB, system sqlc.System, auditLogger audi
 	}
 }
 
-func NewFromConfig(queries sqlc.Querier, db *gorm.DB, cfg *config.Config, system sqlc.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.Azure.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
@@ -67,7 +63,11 @@ func NewFromConfig(queries sqlc.Querier, db *gorm.DB, cfg *config.Config, system
 		},
 	}
 
-	return New(queries, db, system, auditLogger, conf, azureclient.New(conf.Client(context.Background())), cfg.TenantDomain), nil
+	return New(database, auditLogger, conf, azureclient.New(conf.Client(context.Background())), cfg.TenantDomain), nil
+}
+
+func (r *azureGroupReconciler) Name() sqlc.SystemName {
+	return Name
 }
 
 func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
@@ -99,10 +99,6 @@ func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.
 	}
 
 	return nil
-}
-
-func (r *azureGroupReconciler) System() sqlc.System {
-	return r.system
 }
 
 func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclient.Group, corr sqlc.Correlation, team sqlc.Team, consoleTeamMembers []*sqlc.User) error {

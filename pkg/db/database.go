@@ -21,6 +21,7 @@ type Database interface {
 	AddTeam(ctx context.Context, team Team, createdBy uuid.UUID) (*Team, error)
 	GetTeamByID(ctx context.Context, id uuid.UUID) (*Team, error)
 	GetTeamBySlug(ctx context.Context, slug string) (*Team, error)
+	GetTeams(ctx context.Context) ([]*Team, error)
 
 	AddUserRole(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error
 	CreateAPIKey(ctx context.Context, apiKey string, userID uuid.UUID) error

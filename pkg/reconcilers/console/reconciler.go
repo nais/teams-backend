@@ -2,20 +2,19 @@ package console_reconciler
 
 import (
 	"context"
+	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/sqlc"
 
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/reconcilers"
-	"gorm.io/gorm"
 )
 
 type consoleReconciler struct {
-	system sqlc.System
 }
 
 const (
-	Name                   = "console"
+	Name                   = sqlc.SystemNameConsole
 	OpAddTeamMember        = "console:team:add-member"
 	OpAddTeamOwner         = "console:team:add-owner"
 	OpCreateApiKey         = "console:api-key:create"
@@ -30,20 +29,18 @@ const (
 	OpUpdateTeam           = "console:team:update"
 )
 
-func New(system sqlc.System) *consoleReconciler {
-	return &consoleReconciler{
-		system: system,
-	}
+func New() *consoleReconciler {
+	return &consoleReconciler{}
 }
 
-func NewFromConfig(_ sqlc.Querier, _ *gorm.DB, _ *config.Config, system sqlc.System, _ auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
-	return New(system), nil
+func NewFromConfig(_ db.Database, _ *config.Config, _ auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+	return New(), nil
 }
 
 func (r *consoleReconciler) Reconcile(_ context.Context, _ reconcilers.Input) error {
 	return nil
 }
 
-func (r *consoleReconciler) System() sqlc.System {
-	return r.system
+func (r *consoleReconciler) Name() sqlc.SystemName {
+	return Name
 }

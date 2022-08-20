@@ -4,9 +4,8 @@ import (
 	"context"
 	"github.com/google/go-github/v43/github"
 	"github.com/nais/console/pkg/auditlogger"
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/console/pkg/db"
 	"github.com/shurcooL/githubv4"
-	"gorm.io/gorm"
 )
 
 type GraphClient interface {
@@ -23,9 +22,7 @@ type TeamsService interface {
 
 // githubTeamReconciler creates teams on GitHub and connects users to them.
 type githubTeamReconciler struct {
-	queries      sqlc.Querier
-	db           *gorm.DB
-	system       sqlc.System
+	database     db.Database
 	auditLogger  auditlogger.AuditLogger
 	teamsService TeamsService
 	graphClient  GraphClient

@@ -11,8 +11,8 @@ var ErrReconcilerNotEnabled = errors.New("reconciler not enabled")
 
 // Reconciler Interface for all reconcilers
 type Reconciler interface {
-	System() sqlc.System
 	Reconcile(ctx context.Context, input Input) error
+	Name() sqlc.SystemName
 }
 
 // TeamNamePrefix Prefix that can be used for team-like objects in external systems

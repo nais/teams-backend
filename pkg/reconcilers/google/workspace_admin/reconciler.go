@@ -16,22 +16,19 @@ import (
 	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
-	"gorm.io/gorm"
 	"net/http"
 	"strings"
 )
 
 type googleWorkspaceAdminReconciler struct {
-	queries     sqlc.Querier
+	database    db.Database
 	auditLogger auditlogger.AuditLogger
-	db          *gorm.DB
 	domain      string
 	config      *jwt.Config
-	system      sqlc.System
 }
 
 const (
-	Name                    = "google:workspace-admin"
+	Name                    = sqlc.SystemNameGoogleWorkspaceAdmin
 	OpCreate                = "google:workspace-admin:create"
 	OpAddMember             = "google:workspace-admin:add-member"
 	OpAddMembers            = "google:workspace-admin:add-members"
@@ -39,18 +36,16 @@ const (
 	OpAddToGKESecurityGroup = "google:workspace-admin:add-to-gke-security-group"
 )
 
-func New(queries sqlc.Querier, db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config) *googleWorkspaceAdminReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config) *googleWorkspaceAdminReconciler {
 	return &googleWorkspaceAdminReconciler{
-		queries:     queries,
+		database:    database,
 		auditLogger: auditLogger,
-		db:          db,
 		domain:      domain,
 		config:      config,
-		system:      system,
 	}
 }
 
-func NewFromConfig(queries sqlc.Querier, db *gorm.DB, cfg *config.Config, system sqlc.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.Google.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
@@ -61,7 +56,11 @@ func NewFromConfig(queries sqlc.Querier, db *gorm.DB, cfg *config.Config, system
 		return nil, fmt.Errorf("get google jwt config: %w", err)
 	}
 
-	return New(queries, db, system, auditLogger, cfg.TenantDomain, config), nil
+	return New(database, auditLogger, cfg.TenantDomain, config), nil
+}
+
+func (r *googleWorkspaceAdminReconciler) Name() sqlc.SystemName {
+	return Name
 }
 
 func (r *googleWorkspaceAdminReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {

@@ -2,12 +2,12 @@ package middleware
 
 import (
 	"github.com/nais/console/pkg/authz"
-	"gorm.io/gorm"
+	"github.com/nais/console/pkg/db"
 	"net/http"
 )
 
 // LoadUserRoles Attach roles to the authenticated user in the request context, if one exists.
-func LoadUserRoles(db *gorm.DB) func(next http.Handler) http.Handler {
+func LoadUserRoles(database db.Database) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
 			user := authz.UserFromContext(r.Context())

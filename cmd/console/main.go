@@ -14,17 +14,14 @@ import (
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/sqlc"
 
-	"github.com/google/uuid"
-	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
-
 	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authn"
 	"github.com/nais/console/pkg/config"
-	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/directives"
 	"github.com/nais/console/pkg/fixtures"
 	"github.com/nais/console/pkg/graph"
@@ -35,8 +32,6 @@ import (
 	"github.com/nais/console/pkg/usersync"
 	"github.com/nais/console/pkg/version"
 	log "github.com/sirupsen/logrus"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
 func main() {
@@ -88,9 +83,9 @@ func run() error {
 	// Control channels for goroutine communication
 	const maxQueueSize = 4096
 	teamReconciler := make(chan reconcilers.Input, maxQueueSize)
-	logger := auditlogger.New(gormDB)
+	logger := auditlogger.New(database)
 
-	recs, err := initReconcilers(queries, gormDB, cfg, logger, systems)
+	recs, err := initReconcilers(database, cfg, logger)
 	if err != nil {
 		return err
 	}
@@ -103,12 +98,12 @@ func run() error {
 		return err
 	}
 
-	handler, err := setupGraphAPI(queries, gormDB, cfg.TenantDomain, systems[console_reconciler.Name], teamReconciler, logger)
+	handler, err := setupGraphAPI(database, cfg.TenantDomain, teamReconciler, logger)
 	if err != nil {
 		return err
 	}
 
-	srv, err := setupHTTPServer(cfg, gormDB, handler, authHandler, store)
+	srv, err := setupHTTPServer(cfg, database, handler, authHandler, store)
 	if err != nil {
 		return err
 	}
@@ -142,41 +137,25 @@ func run() error {
 	pendingTeams := make(map[uuid.UUID]reconcilers.Input)
 
 	// Reconcile all teams on startup. All will share the same correlation ID
-	id, err := uuid.NewUUID()
+	correlationId, err := uuid.NewUUID()
 	if err != nil {
 		return fmt.Errorf("cannot create ID for correlation entry for initial reconcile loop: %w", err)
 	}
-	corr, err := queries.CreateCorrelation(ctx, id)
-	if err != nil {
-		return fmt.Errorf("cannot create correlation entry for initial reconcile loop: %w", err)
-	}
 
-	allTeams, err := queries.GetTeams(ctx)
+	allTeams, err := database.GetTeams(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to load team for initial reconcile loop: %w", err)
 	}
 	for _, team := range allTeams {
-		members, err := queries.GetTeamMembers(ctx, team.ID)
-		if err != nil {
-			return fmt.Errorf("unable to load team members for team '%s' for the initial reconcile loop: %w", team.Slug, err)
-		}
-
-		metadata, err := queries.GetTeamMetadata(ctx, team.ID)
-		if err != nil {
-			return fmt.Errorf("unable to load team metadata for team '%s' for the initial reconcile loop: %w", team.Slug, err)
-		}
-
 		teamReconciler <- reconcilers.Input{
-			Corr:     *corr,
-			Team:     team,
-			Metadata: metadata,
-			Members:  members,
+			CorrelationId: correlationId,
+			Team:          team,
 		}
 	}
 
 	// User synchronizer
 	userSyncTimer := time.NewTimer(1 * time.Second)
-	userSyncer, err := usersync.NewFromConfig(cfg, queries, gormDB, systems[console_reconciler.Name], logger)
+	userSyncer, err := usersync.NewFromConfig(cfg, database, logger)
 	if err != nil {
 		userSyncTimer.Stop()
 		if err != usersync.ErrNotEnabled {
@@ -204,7 +183,7 @@ func run() error {
 		case <-reconcileTimer.C:
 			log.Infof("Running reconcile of %d teams...", len(pendingTeams))
 
-			err = reconcileTeams(ctx, gormDB, recs, &pendingTeams)
+			err = reconcileTeams(ctx, database, recs, &pendingTeams)
 
 			if err != nil {
 				log.Error(err)
@@ -238,7 +217,7 @@ func run() error {
 	return nil
 }
 
-func reconcileTeams(ctx context.Context, db *gorm.DB, recs []reconcilers.Reconciler, reconcileInputs *map[uuid.UUID]reconcilers.Input) error {
+func reconcileTeams(ctx context.Context, database db.Database, recs []reconcilers.Reconciler, reconcileInputs *map[uuid.UUID]reconcilers.Input) error {
 	const reconcileTimeout = 15 * time.Minute
 	errors := 0
 
@@ -249,8 +228,7 @@ func reconcileTeams(ctx context.Context, db *gorm.DB, recs []reconcilers.Reconci
 		teamErrors := 0
 
 		for _, reconciler := range recs {
-			name := reconciler.System().Name
-			log.Infof("Starting reconciler '%s' for team: '%s'", name, input.Team.Name)
+			log.Infof("Starting reconciler '%s' for team: '%s'", reconciler.Name(), input.Team.Name)
 			err := reconciler.Reconcile(ctx, input)
 			if err != nil {
 				log.Error(err)
@@ -270,7 +248,7 @@ func reconcileTeams(ctx context.Context, db *gorm.DB, recs []reconcilers.Reconci
 				continue
 			}
 
-			log.Infof("Successfully finished reconciler '%s' for team: '%s'", name, input.Team.Name)
+			log.Infof("Successfully finished reconciler '%s' for team: '%s'", reconciler.Name(), input.Team.Name)
 		}
 
 		if teamErrors == 0 {
@@ -320,19 +298,15 @@ func setupLogging(format, level string) error {
 	return nil
 }
 
-func initReconcilers(queries sqlc.Querier, db *gorm.DB, cfg *config.Config, logger auditlogger.AuditLogger, systems map[string]sqlc.System) ([]reconcilers.Reconciler, error) {
+func initReconcilers(database db.Database, cfg *config.Config, logger auditlogger.AuditLogger) ([]reconcilers.Reconciler, error) {
 	recs := make([]reconcilers.Reconciler, 0)
 	initializers := registry.Reconcilers()
 
 	for _, initializer := range initializers {
 		name := initializer.Name
 		factory := initializer.Factory
-		system, exists := systems[name]
-		if !exists {
-			return nil, fmt.Errorf("BUG: missing system for reconciler '%s'", name)
-		}
 
-		rec, err := factory(queries, db, cfg, system, logger)
+		rec, err := factory(database, cfg, logger)
 		switch err {
 		case reconcilers.ErrReconcilerNotEnabled:
 			log.Warnf("Reconciler '%s' is disabled through configuration", name)
@@ -340,35 +314,18 @@ func initReconcilers(queries sqlc.Querier, db *gorm.DB, cfg *config.Config, logg
 			return nil, fmt.Errorf("reconciler '%s': %w", name, err)
 		case nil:
 			recs = append(recs, rec)
-			log.Infof("Reconciler initialized: '%s' -> %T", system.Name, rec)
+			log.Infof("Reconciler initialized: '%s' -> %T", rec.Name(), rec)
 		}
 	}
 
 	return recs, nil
 }
 
-func setupDatabase(cfg *config.Config) (*gorm.DB, error) {
-	log.Infof("Connecting to database...")
-	db, err := gorm.Open(postgres.Open(cfg.DatabaseURL), &gorm.Config{})
-	if err != nil {
-		return nil, err
-	}
-	log.Infof("Successfully connected to database.")
-	log.Infof("Migrating database schema...")
-	err = dbmodels.Migrate(db)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Infof("Successfully migrated database schema.")
-	return db, nil
-}
-
-func setupGraphAPI(queries db.Querier, gormHandle *gorm.DB, domain string, console sqlc.System, teamReconciler chan<- reconcilers.Input, logger auditlogger.AuditLogger) (*graphql_handler.Server, error) {
-	resolver := graph.NewResolver(queries, domain, console, teamReconciler, logger)
+func setupGraphAPI(database db.Database, domain string, teamReconciler chan<- reconcilers.Input, logger auditlogger.AuditLogger) (*graphql_handler.Server, error) {
+	resolver := graph.NewResolver(database, domain, teamReconciler, logger)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
-	gc.Directives.Auth = directives.Auth(gormHandle)
+	gc.Directives.Auth = directives.Auth(database)
 
 	handler := graphql_handler.NewDefaultServer(
 		generated.NewExecutableSchema(
@@ -396,7 +353,7 @@ func corsConfig() cors.Options {
 	}
 }
 
-func setupHTTPServer(cfg *config.Config, db *gorm.DB, graphApi *graphql_handler.Server, authHandler *authn.Handler, store authn.SessionStore) (*http.Server, error) {
+func setupHTTPServer(cfg *config.Config, database db.Database, graphApi *graphql_handler.Server, authHandler *authn.Handler, store authn.SessionStore) (*http.Server, error) {
 	r := chi.NewRouter()
 
 	r.Get("/healthz", func(_ http.ResponseWriter, _ *http.Request) {})
@@ -405,8 +362,8 @@ func setupHTTPServer(cfg *config.Config, db *gorm.DB, graphApi *graphql_handler.
 
 	middlewares := []func(http.Handler) http.Handler{
 		cors.New(corsConfig()).Handler,
-		middleware.ApiKeyAuthentication(db),
-		middleware.Oauth2Authentication(db, store),
+		middleware.ApiKeyAuthentication(database),
+		middleware.Oauth2Authentication(database, store),
 	}
 
 	// If no other authentication mechanisms produce a authenticated user,
@@ -414,11 +371,11 @@ func setupHTTPServer(cfg *config.Config, db *gorm.DB, graphApi *graphql_handler.
 	if len(cfg.AutoLoginUser) > 0 {
 		log.Warnf("Auto-login user '%s' is ENABLED for ALL REQUESTS.", cfg.AutoLoginUser)
 		log.Warnf("THIS IS A MAJOR SECURITY ISSUE! DO NOT RUN THIS CONFIGURATION IN PRODUCTION!!!")
-		middlewares = append(middlewares, middleware.Autologin(db, cfg.AutoLoginUser))
+		middlewares = append(middlewares, middleware.Autologin(database, cfg.AutoLoginUser))
 	}
 
 	// Append the role loader middleware after all possible authentication middlewares have been added
-	middlewares = append(middlewares, middleware.LoadUserRoles(db))
+	middlewares = append(middlewares, middleware.LoadUserRoles(database))
 
 	r.Route("/query", func(r chi.Router) {
 		r.Use(middlewares...)

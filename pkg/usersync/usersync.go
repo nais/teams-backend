@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
+	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/google_jwt"
 	"github.com/nais/console/pkg/roles"
@@ -20,15 +21,14 @@ import (
 )
 
 type userSynchronizer struct {
-	queries     sqlc.Querier
-	system      sqlc.System
+	database    db.Database
 	auditLogger auditlogger.AuditLogger
 	domain      string
-	db          *gorm.DB
 	client      *http.Client
 }
 
 const (
+	Name         = sqlc.SystemNameConsole
 	OpPrepare    = "usersync:prepare"
 	OpListRemote = "usersync:list:remote"
 	OpListLocal  = "usersync:list:local"
@@ -47,18 +47,16 @@ var (
 	}
 )
 
-func New(queries sqlc.Querier, db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, domain string, client *http.Client) *userSynchronizer {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, client *http.Client) *userSynchronizer {
 	return &userSynchronizer{
-		queries:     queries,
-		db:          db,
-		system:      system,
+		database:    database,
 		auditLogger: auditLogger,
 		domain:      domain,
 		client:      client,
 	}
 }
 
-func NewFromConfig(cfg *config.Config, queries sqlc.Querier, db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger) (*userSynchronizer, error) {
+func NewFromConfig(cfg *config.Config, database db.Database, auditLogger auditlogger.AuditLogger) (*userSynchronizer, error) {
 	if !cfg.UserSync.Enabled {
 		return nil, ErrNotEnabled
 	}
@@ -69,7 +67,7 @@ func NewFromConfig(cfg *config.Config, queries sqlc.Querier, db *gorm.DB, system
 		return nil, fmt.Errorf("get google jwt config: %w", err)
 	}
 
-	return New(queries, db, system, auditLogger, cfg.TenantDomain, cf.Client(context.Background())), nil
+	return New(database, auditLogger, cfg.TenantDomain, cf.Client(context.Background())), nil
 }
 
 type auditLogEntry struct {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
@@ -18,38 +19,33 @@ import (
 	"golang.org/x/oauth2/jwt"
 	"google.golang.org/api/cloudresourcemanager/v3"
 	"google.golang.org/api/option"
-	"gorm.io/gorm"
 )
 
 type googleGcpReconciler struct {
-	queries          sqlc.Querier
-	db               *gorm.DB
+	database         db.Database
 	config           *jwt.Config
 	domain           string
 	auditLogger      auditlogger.AuditLogger
 	projectParentIDs map[string]int64
-	system           sqlc.System
 }
 
 const (
-	Name                = "google:gcp:project"
+	Name                = sqlc.SystemNameGoogleGcpProject
 	OpCreateProject     = "google:gcp:project:create-project"
 	OpAssignPermissions = "google:gcp:project:assign-permissions"
 )
 
-func New(queries sqlc.Querier, db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config, projectParentIDs map[string]int64) *googleGcpReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config, projectParentIDs map[string]int64) *googleGcpReconciler {
 	return &googleGcpReconciler{
-		queries:          queries,
-		db:               db,
+		database:         database,
 		auditLogger:      auditLogger,
 		domain:           domain,
 		config:           config,
 		projectParentIDs: projectParentIDs,
-		system:           system,
 	}
 }
 
-func NewFromConfig(queries sqlc.Querier, db *gorm.DB, cfg *config.Config, system sqlc.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.GCP.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
@@ -67,7 +63,11 @@ func NewFromConfig(queries sqlc.Querier, db *gorm.DB, cfg *config.Config, system
 		return nil, fmt.Errorf("initialize google credentials: %w", err)
 	}
 
-	return New(queries, db, system, auditLogger, cfg.TenantDomain, cf, cfg.GCP.ProjectParentIDs), nil
+	return New(database, auditLogger, cfg.TenantDomain, cf, cfg.GCP.ProjectParentIDs), nil
+}
+
+func (r *googleGcpReconciler) Name() sqlc.SystemName {
+	return Name
 }
 
 func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {

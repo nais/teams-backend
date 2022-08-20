@@ -3,16 +3,16 @@ package directives
 import (
 	"context"
 	"fmt"
+	"github.com/nais/console/pkg/db"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/nais/console/pkg/authz"
-	"gorm.io/gorm"
 )
 
 type AuthDirective func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
 
 // Auth Make sure there is an authenticated user making this request.
-func Auth(db *gorm.DB) AuthDirective {
+func Auth(database db.Database) AuthDirective {
 	return func(ctx context.Context, obj interface{}, next graphql.Resolver) (interface{}, error) {
 		user := authz.UserFromContext(ctx)
 		if user == nil {

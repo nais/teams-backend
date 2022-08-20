@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/nais/console/pkg/db"
 
 	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
 	"github.com/nais/console/pkg/slug"
@@ -17,7 +18,6 @@ import (
 	"github.com/nais/console/pkg/reconcilers"
 	"golang.org/x/oauth2/jwt"
 	"google.golang.org/api/option"
-	"gorm.io/gorm"
 )
 
 const (
@@ -35,41 +35,41 @@ type naisdRequest struct {
 }
 
 type naisNamespaceReconciler struct {
-	queries          sqlc.Querier
-	db               *gorm.DB
+	database         db.Database
 	config           *jwt.Config
 	domain           string
 	auditLogger      auditlogger.AuditLogger
 	projectParentIDs map[string]int64
 	credentialsFile  string
 	projectID        string
-	system           sqlc.System
 }
 
 const (
-	Name              = "nais:namespace"
+	Name              = sqlc.SystemNameNaisNamespace
 	OpCreateNamespace = "nais:namespace:create-namespace"
 )
 
-func New(queries sqlc.Querier, db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, domain, credentialsFile, projectID string, projectParentIDs map[string]int64) *naisNamespaceReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, domain, credentialsFile, projectID string, projectParentIDs map[string]int64) *naisNamespaceReconciler {
 	return &naisNamespaceReconciler{
-		queries:          queries,
-		db:               db,
+		database:         database,
 		auditLogger:      auditLogger,
 		domain:           domain,
 		credentialsFile:  credentialsFile,
 		projectParentIDs: projectParentIDs,
 		projectID:        projectID,
-		system:           system,
 	}
 }
 
-func NewFromConfig(queries sqlc.Querier, db *gorm.DB, cfg *config.Config, system sqlc.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.NaisNamespace.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
 
-	return New(queries, db, system, auditLogger, cfg.TenantDomain, cfg.Google.CredentialsFile, cfg.NaisNamespace.ProjectID, cfg.GCP.ProjectParentIDs), nil
+	return New(database, auditLogger, cfg.TenantDomain, cfg.Google.CredentialsFile, cfg.NaisNamespace.ProjectID, cfg.GCP.ProjectParentIDs), nil
+}
+
+func (r *naisNamespaceReconciler) Name() sqlc.SystemName {
+	return Name
 }
 
 func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {

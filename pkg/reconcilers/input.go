@@ -1,13 +1,12 @@
 package reconcilers
 
 import (
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/google/uuid"
+	"github.com/nais/console/pkg/db"
 )
 
 // Input Input for reconcilers
 type Input struct {
-	Corr     sqlc.Correlation
-	Team     *sqlc.Team
-	Members  []*sqlc.User
-	Metadata *sqlc.TeamMetadatum
+	CorrelationId uuid.UUID
+	Team          *db.Team
 }

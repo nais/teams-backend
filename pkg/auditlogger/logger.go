@@ -2,29 +2,29 @@ package auditlogger
 
 import (
 	"fmt"
+	"github.com/nais/console/pkg/db"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/sqlc"
-	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 type auditLogger struct {
-	db *gorm.DB
+	database db.Database
 }
 
 type AuditLogger interface {
-	Logf(action string, corr sqlc.Correlation, targetSystem sqlc.System, actor *sqlc.User, targetTeam *sqlc.Team, targetUser *sqlc.User, message string, messageArgs ...interface{}) error
+	Logf(action string, correlationId uuid.UUID, targetSystemName sqlc.SystemName, actor *db.User, targetTeam *db.Team, targetUser *db.User, message string, messageArgs ...interface{}) error
 }
 
-func New(db *gorm.DB) AuditLogger {
+func New(database db.Database) AuditLogger {
 	return &auditLogger{
-		db: db,
+		database: database,
 	}
 }
 
-func (l *auditLogger) Logf(action string, corr sqlc.Correlation, targetSystem sqlc.System, actor *sqlc.User, targetTeam *sqlc.Team, targetUser *sqlc.User, message string, messageArgs ...interface{}) error {
+func (l *auditLogger) Logf(action string, correlationId uuid.UUID, targetSystemName sqlc.SystemName, actor *db.User, targetTeam *db.Team, targetUser *db.User, message string, messageArgs ...interface{}) error {
 	var actorId *uuid.UUID
 	var targetTeamId *uuid.UUID
 	var targetUserId *uuid.UUID

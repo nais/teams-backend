@@ -15,14 +15,13 @@ import (
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/shurcooL/githubv4"
 	log "github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 	"io/ioutil"
 	"net/http"
 	"strings"
 )
 
 const (
-	Name           = "github:team"
+	Name           = sqlc.SystemNameGithubTeam
 	OpCreate       = "github:team:create"
 	OpAddMembers   = "github:team:add-members"
 	OpAddMember    = "github:team:add-member"
@@ -32,11 +31,9 @@ const (
 
 var errGitHubUserNotFound = errors.New("GitHub user does not exist")
 
-func New(queries sqlc.Querier, db *gorm.DB, system sqlc.System, auditLogger auditlogger.AuditLogger, org, domain string, teamsService TeamsService, graphClient GraphClient) *githubTeamReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, org, domain string, teamsService TeamsService, graphClient GraphClient) *githubTeamReconciler {
 	return &githubTeamReconciler{
-		queries:      queries,
-		db:           db,
-		system:       system,
+		database:     database,
 		auditLogger:  auditLogger,
 		org:          org,
 		domain:       domain,
@@ -45,7 +42,7 @@ func New(queries sqlc.Querier, db *gorm.DB, system sqlc.System, auditLogger audi
 	}
 }
 
-func NewFromConfig(queries sqlc.Querier, db *gorm.DB, cfg *config.Config, system sqlc.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.GitHub.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
@@ -68,7 +65,11 @@ func NewFromConfig(queries sqlc.Querier, db *gorm.DB, cfg *config.Config, system
 	restClient := github.NewClient(httpClient)
 	graphClient := githubv4.NewClient(httpClient)
 
-	return New(queries, db, system, auditLogger, cfg.GitHub.Organization, cfg.TenantDomain, restClient.Teams, graphClient), nil
+	return New(database, auditLogger, cfg.GitHub.Organization, cfg.TenantDomain, restClient.Teams, graphClient), nil
+}
+
+func (r *githubTeamReconciler) Name() sqlc.SystemName {
+	return Name
 }
 
 func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
