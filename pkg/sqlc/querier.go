@@ -22,6 +22,7 @@ type Querier interface {
 	GetTeamBySlug(ctx context.Context, slug string) (*Team, error)
 	GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error)
 	GetTeamMetadata(ctx context.Context, teamID uuid.UUID) ([]*TeamMetadatum, error)
+	GetTeamSystemState(ctx context.Context, arg GetTeamSystemStateParams) (*SystemState, error)
 	GetTeams(ctx context.Context) ([]*Team, error)
 	GetUserByApiKey(ctx context.Context, apiKey string) (*User, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
@@ -29,6 +30,9 @@ type Querier interface {
 	GetUserRole(ctx context.Context, id uuid.UUID) (*UserRole, error)
 	GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*UserRole, error)
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*UserTeam, error)
+	RemoveApiKeysFromUser(ctx context.Context, userID uuid.UUID) error
+	RemoveUserRoles(ctx context.Context, userID uuid.UUID) error
+	SetTeamSystemState(ctx context.Context, arg SetTeamSystemStateParams) error
 }
 
 var _ Querier = (*Queries)(nil)

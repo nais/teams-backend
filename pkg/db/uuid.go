@@ -1,4 +1,4 @@
-package dbmodels
+package db
 
 import (
 	"fmt"

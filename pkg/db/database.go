@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"database/sql"
-
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4"
 	"github.com/nais/console/pkg/sqlc"
@@ -28,6 +27,12 @@ type Database interface {
 
 	AddUserRole(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error
 	CreateAPIKey(ctx context.Context, apiKey string, userID uuid.UUID) error
+
+	RemoveUserRoles(ctx context.Context, userID uuid.UUID) error
+	RemoveApiKeysFromUser(ctx context.Context, userID uuid.UUID) error
+
+	LoadSystemState(ctx context.Context, systemName sqlc.SystemName, teamId uuid.UUID, state interface{}) error
+	SetSystemState(ctx context.Context, systemName sqlc.SystemName, teamId uuid.UUID, state interface{}) error
 }
 
 func NewDatabase(q Querier, conn *pgx.Conn) Database {

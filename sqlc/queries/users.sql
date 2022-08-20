@@ -23,3 +23,6 @@ INSERT INTO user_teams (id, user_id, team_id) VALUES ($1, $2, $3);
 
 -- name: GetUserTeams :many
 SELECT * FROM user_teams WHERE user_id = $1;
+
+-- name: RemoveUserRoles :exec
+DELETE FROM user_roles WHERE user_id = $1;

@@ -24,3 +24,12 @@ func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) erro
 	_, err := q.db.Exec(ctx, createAPIKey, arg.ApiKey, arg.UserID)
 	return err
 }
+
+const removeApiKeysFromUser = `-- name: RemoveApiKeysFromUser :exec
+DELETE FROM api_keys WHERE user_id = $1
+`
+
+func (q *Queries) RemoveApiKeysFromUser(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, removeApiKeysFromUser, userID)
+	return err
+}

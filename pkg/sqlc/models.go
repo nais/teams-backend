@@ -240,7 +240,6 @@ type RoleAuthz struct {
 }
 
 type SystemState struct {
-	ID         uuid.UUID
 	SystemName SystemName
 	TeamID     uuid.UUID
 	State      pgtype.JSONB

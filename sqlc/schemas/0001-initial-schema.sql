@@ -128,12 +128,11 @@ INSERT INTO role_authz(role_name, authz_name) VALUES
 -- system_states
 
 CREATE TABLE system_states (
-    id UUID PRIMARY KEY,
     system_name system_name NOT NULL,
     team_id UUID NOT NULL REFERENCES teams(id),
     state jsonb DEFAULT '{}'::jsonb NOT NULL,
 
-    UNIQUE (system_name, team_id)
+    PRIMARY KEY (system_name, team_id)
 );
 
 -- team_metadata

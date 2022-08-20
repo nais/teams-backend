@@ -96,3 +96,11 @@ func (d *database) getUserRoles(ctx context.Context, userID uuid.UUID) ([]*Role,
 
 	return userRoles, nil
 }
+
+func (d *database) RemoveUserRoles(ctx context.Context, userID uuid.UUID) error {
+	return d.querier.RemoveUserRoles(ctx, userID)
+}
+
+func (d *database) RemoveApiKeysFromUser(ctx context.Context, userID uuid.UUID) error {
+	return d.querier.RemoveApiKeysFromUser(ctx, userID)
+}

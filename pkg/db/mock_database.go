@@ -242,6 +242,62 @@ func (_m *MockDatabase) GetUserByID(ctx context.Context, id uuid.UUID) (*User, e
 	return r0, r1
 }
 
+// LoadSystemState provides a mock function with given fields: ctx, systemName, teamId, state
+func (_m *MockDatabase) LoadSystemState(ctx context.Context, systemName sqlc.SystemName, teamId uuid.UUID, state interface{}) error {
+	ret := _m.Called(ctx, systemName, teamId, state)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, sqlc.SystemName, uuid.UUID, interface{}) error); ok {
+		r0 = rf(ctx, systemName, teamId, state)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// RemoveApiKeysFromUser provides a mock function with given fields: ctx, userID
+func (_m *MockDatabase) RemoveApiKeysFromUser(ctx context.Context, userID uuid.UUID) error {
+	ret := _m.Called(ctx, userID)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// RemoveUserRoles provides a mock function with given fields: ctx, userID
+func (_m *MockDatabase) RemoveUserRoles(ctx context.Context, userID uuid.UUID) error {
+	ret := _m.Called(ctx, userID)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// SetSystemState provides a mock function with given fields: ctx, systemName, teamId, state
+func (_m *MockDatabase) SetSystemState(ctx context.Context, systemName sqlc.SystemName, teamId uuid.UUID, state interface{}) error {
+	ret := _m.Called(ctx, systemName, teamId, state)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, sqlc.SystemName, uuid.UUID, interface{}) error); ok {
+		r0 = rf(ctx, systemName, teamId, state)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 type mockConstructorTestingTNewMockDatabase interface {
 	mock.TestingT
 	Cleanup(func())

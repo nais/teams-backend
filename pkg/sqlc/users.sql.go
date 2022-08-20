@@ -125,3 +125,12 @@ func (q *Queries) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*UserTe
 	}
 	return items, nil
 }
+
+const removeUserRoles = `-- name: RemoveUserRoles :exec
+DELETE FROM user_roles WHERE user_id = $1
+`
+
+func (q *Queries) RemoveUserRoles(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, removeUserRoles, userID)
+	return err
+}
