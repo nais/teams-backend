@@ -68,18 +68,16 @@ CREATE TABLE audit_logs (
     id UUID PRIMARY KEY,
     correlation_id UUID NOT NULL,
     actor_email TEXT,
-    actor_system system_name,
+    system_name system_name,
     target_user_email TEXT,
     target_team_slug TEXT,
     action audit_action NOT NULL,
     message TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
 
-    -- either actor_email or actor_system must be set, not both
-
-    CHECK (actor_email IS NOT NULL OR actor_system IS NOT NULL),
-    CHECK (actor_email IS NOT NULL AND actor_system IS NOT NULL),
-    CHECK (target_user_email IS NOT NULL OR target_team_slug IS NOT NULL)
+    CONSTRAINT actor_or_system CHECK (actor_email IS NOT NULL OR system_name IS NOT NULL),
+    CONSTRAINT actor_and_system CHECK (actor_email IS NULL OR system_name IS NULL),
+    CONSTRAINT target_user_or_target_team CHECK (target_user_email IS NOT NULL OR target_team_slug IS NOT NULL)
 );
 
 

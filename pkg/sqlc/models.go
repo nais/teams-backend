@@ -226,7 +226,7 @@ type AuditLog struct {
 	ID              uuid.UUID
 	CorrelationID   uuid.UUID
 	ActorEmail      sql.NullString
-	ActorSystem     NullSystemName
+	SystemName      NullSystemName
 	TargetUserEmail sql.NullString
 	TargetTeamSlug  sql.NullString
 	Action          AuditAction
