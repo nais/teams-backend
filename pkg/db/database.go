@@ -31,6 +31,8 @@ type Database interface {
 	RemoveUserRoles(ctx context.Context, userID uuid.UUID) error
 	RemoveApiKeysFromUser(ctx context.Context, userID uuid.UUID) error
 
+	Transaction(ctx context.Context, fn func(ctx context.Context, txdb Database) error) error
+
 	LoadSystemState(ctx context.Context, systemName sqlc.SystemName, teamId uuid.UUID, state interface{}) error
 	SetSystemState(ctx context.Context, systemName sqlc.SystemName, teamId uuid.UUID, state interface{}) error
 }

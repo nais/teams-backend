@@ -298,6 +298,20 @@ func (_m *MockDatabase) SetSystemState(ctx context.Context, systemName sqlc.Syst
 	return r0
 }
 
+// Transaction provides a mock function with given fields: ctx, fn
+func (_m *MockDatabase) Transaction(ctx context.Context, fn func(context.Context, Database) error) error {
+	ret := _m.Called(ctx, fn)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, func(context.Context, Database) error) error); ok {
+		r0 = rf(ctx, fn)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 type mockConstructorTestingTNewMockDatabase interface {
 	mock.TestingT
 	Cleanup(func())
