@@ -25,7 +25,6 @@ require (
 	google.golang.org/api v0.81.0
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/postgres v1.3.4
-	gorm.io/driver/sqlite v1.3.2
 	gorm.io/gorm v1.23.7
 )
 
@@ -63,7 +62,6 @@ require (
 	github.com/matryer/moq v0.2.7 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
-	github.com/mattn/go-sqlite3 v1.14.13 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
