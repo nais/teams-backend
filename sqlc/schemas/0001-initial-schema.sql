@@ -91,39 +91,58 @@ CREATE TABLE role_authz (
 );
 
 INSERT INTO role_authz(role_name, authz_name) VALUES
-    ('Admin','audit_logs.read'),
-    ('Admin','service_accounts.create'),
-    ('Admin','service_accounts.delete'),
-    ('Admin','service_accounts.list'),
-    ('Admin','service_accounts.read'),
-    ('Admin','service_accounts.update'),
-    ('Admin','system_states.delete'),
-    ('Admin','system_states.read'),
-    ('Admin','system_states.update'),
-    ('Admin','teams.create'),
-    ('Admin','teams.delete'),
-    ('Admin','teams.list'),
-    ('Admin','teams.read'),
-    ('Admin','teams.update'),
-    ('Admin','users.list'),
-    ('Admin','users.update'),
-    ('Service account creator','service_accounts.create'),
-    ('Service account owner','service_accounts.delete'),
-    ('Service account owner','service_accounts.read'),
-    ('Service account owner','service_accounts.update'),
-    ('Team creator','teams.create'),
-    ('Team member','teams.read'),
-    ('Team member','audit_logs.read'),
-    ('Team owner','teams.delete'),
-    ('Team owner','teams.read'),
-    ('Team owner','teams.update'),
-    ('Team owner','audit_logs.read'),
-    ('Team viewer','teams.list'),
-    ('Team viewer','teams.read'),
-    ('Team viewer','audit_logs.read'),
-    ('User admin','users.list'),
-    ('User admin','users.update'),
-    ('User viewer','users.list');
+    ('Admin','audit_logs:read'),
+    ('Admin','service_accounts:create'),
+    ('Admin','service_accounts:delete'),
+    ('Admin','service_accounts:list'),
+    ('Admin','service_accounts:read'),
+    ('Admin','service_accounts:update'),
+    ('Admin','system_states:delete'),
+    ('Admin','system_states:read'),
+    ('Admin','system_states:update'),
+    ('Admin','teams:create'),
+    ('Admin','teams:delete'),
+    ('Admin','teams:list'),
+    ('Admin','teams:read'),
+    ('Admin','teams:update'),
+    ('Admin','users:list'),
+    ('Admin','users:update'),
+    ('Service account creator','service_accounts:create'),
+    ('Service account owner','service_accounts:delete'),
+    ('Service account owner','service_accounts:read'),
+    ('Service account owner','service_accounts:update'),
+    ('Team creator','teams:create'),
+    ('Team member','teams:read'),
+    ('Team member','audit_logs:read'),
+    ('Team owner','teams:delete'),
+    ('Team owner','teams:read'),
+    ('Team owner','teams:update'),
+    ('Team owner','audit_logs:read'),
+    ('Team viewer','teams:list'),
+    ('Team viewer','teams:read'),
+    ('Team viewer','audit_logs:read'),
+    ('User admin','users:list'),
+    ('User admin','users:update'),
+    ('User viewer','users:list');
+
+-- users
+
+CREATE TABLE users (
+    id UUID PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL
+);
+
+-- teams
+
+CREATE TABLE teams (
+    id UUID PRIMARY KEY,
+    slug TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL UNIQUE,
+    purpose TEXT,
+
+    CHECK (slug ~* '^[a-z][a-z-]{1,18}[a-z]$')
+);
 
 -- system_states
 
@@ -144,17 +163,6 @@ CREATE TABLE team_metadata (
     value TEXT,
 
     UNIQUE (team_id, key)
-);
-
--- teams
-
-CREATE TABLE teams (
-    id UUID PRIMARY KEY,
-    slug TEXT NOT NULL UNIQUE,
-    name TEXT NOT NULL UNIQUE,
-    purpose TEXT,
-
-    CHECK (slug ~* '^[a-z][a-z-]{1,18}[a-z]$')
 );
 
 -- user_roles
@@ -180,12 +188,4 @@ CREATE TABLE user_teams (
     team_id UUID NOT NULL REFERENCES teams(id),
 
     UNIQUE (user_id, team_id)
-);
-
--- users
-
-CREATE TABLE users (
-    id UUID PRIMARY KEY,
-    email TEXT NOT NULL UNIQUE,
-    name TEXT NOT NULL
 );
