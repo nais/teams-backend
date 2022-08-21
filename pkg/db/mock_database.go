@@ -133,15 +133,15 @@ func (_m *MockDatabase) DeleteUser(ctx context.Context, userID uuid.UUID) error 
 }
 
 // GetRoleNames provides a mock function with given fields:
-func (_m *MockDatabase) GetRoleNames() []*sqlc.RoleName {
+func (_m *MockDatabase) GetRoleNames() []sqlc.RoleName {
 	ret := _m.Called()
 
-	var r0 []*sqlc.RoleName
-	if rf, ok := ret.Get(0).(func() []*sqlc.RoleName); ok {
+	var r0 []sqlc.RoleName
+	if rf, ok := ret.Get(0).(func() []sqlc.RoleName); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*sqlc.RoleName)
+			r0 = ret.Get(0).([]sqlc.RoleName)
 		}
 	}
 
@@ -149,15 +149,15 @@ func (_m *MockDatabase) GetRoleNames() []*sqlc.RoleName {
 }
 
 // GetSystemNames provides a mock function with given fields:
-func (_m *MockDatabase) GetSystemNames() []*sqlc.SystemName {
+func (_m *MockDatabase) GetSystemNames() []sqlc.SystemName {
 	ret := _m.Called()
 
-	var r0 []*sqlc.SystemName
-	if rf, ok := ret.Get(0).(func() []*sqlc.SystemName); ok {
+	var r0 []sqlc.SystemName
+	if rf, ok := ret.Get(0).(func() []sqlc.SystemName); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*sqlc.SystemName)
+			r0 = ret.Get(0).([]sqlc.SystemName)
 		}
 	}
 

@@ -32,13 +32,8 @@ func (d *database) AssignTargetedRoleToUser(ctx context.Context, userID uuid.UUI
 	})
 }
 
-func (d *database) GetRoleNames() []*sqlc.RoleName {
-	values := sqlc.AllRoleNameValues()
-	roleNames := make([]*sqlc.RoleName, 0, len(values))
-	for _, value := range values {
-		roleNames = append(roleNames, &value)
-	}
-	return roleNames
+func (d *database) GetRoleNames() []sqlc.RoleName {
+	return sqlc.AllRoleNameValues()
 }
 
 // IsGlobal Check if the role is globally assigned or not

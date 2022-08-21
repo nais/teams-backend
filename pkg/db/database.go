@@ -38,8 +38,8 @@ type Database interface {
 	RemoveUserRoles(ctx context.Context, userID uuid.UUID) error
 	RemoveApiKeysFromUser(ctx context.Context, userID uuid.UUID) error
 
-	GetRoleNames() []*sqlc.RoleName
-	GetSystemNames() []*sqlc.SystemName
+	GetRoleNames() []sqlc.RoleName
+	GetSystemNames() []sqlc.SystemName
 
 	Transaction(ctx context.Context, fn TransactionFunc) error
 
