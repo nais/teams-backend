@@ -72,6 +72,54 @@ func (ns NullAuditAction) Value() (driver.Value, error) {
 	return ns.AuditAction, nil
 }
 
+func (e AuditAction) Valid() bool {
+	switch e {
+	case AuditActionConsoleApiKeyCreate,
+		AuditActionConsoleApiKeyDelete,
+		AuditActionConsoleServiceAccountCreate,
+		AuditActionConsoleServiceAccountDelete,
+		AuditActionConsoleServiceAccountUpdate,
+		AuditActionConsoleTeamAddMember,
+		AuditActionConsoleTeamAddOwner,
+		AuditActionConsoleTeamCreate,
+		AuditActionConsoleTeamRemoveMember,
+		AuditActionConsoleTeamSetMemberRole,
+		AuditActionConsoleTeamSync,
+		AuditActionConsoleTeamUpdate,
+		AuditActionUsersyncPrepare,
+		AuditActionUsersyncListRemote,
+		AuditActionUsersyncListLocal,
+		AuditActionUsersyncCreate,
+		AuditActionUsersyncUpdate,
+		AuditActionUsersyncDelete:
+		return true
+	}
+	return false
+}
+
+func AllAuditActionValues() []AuditAction {
+	return []AuditAction{
+		AuditActionConsoleApiKeyCreate,
+		AuditActionConsoleApiKeyDelete,
+		AuditActionConsoleServiceAccountCreate,
+		AuditActionConsoleServiceAccountDelete,
+		AuditActionConsoleServiceAccountUpdate,
+		AuditActionConsoleTeamAddMember,
+		AuditActionConsoleTeamAddOwner,
+		AuditActionConsoleTeamCreate,
+		AuditActionConsoleTeamRemoveMember,
+		AuditActionConsoleTeamSetMemberRole,
+		AuditActionConsoleTeamSync,
+		AuditActionConsoleTeamUpdate,
+		AuditActionUsersyncPrepare,
+		AuditActionUsersyncListRemote,
+		AuditActionUsersyncListLocal,
+		AuditActionUsersyncCreate,
+		AuditActionUsersyncUpdate,
+		AuditActionUsersyncDelete,
+	}
+}
+
 type AuthzName string
 
 const (
@@ -128,6 +176,50 @@ func (ns NullAuthzName) Value() (driver.Value, error) {
 	return ns.AuthzName, nil
 }
 
+func (e AuthzName) Valid() bool {
+	switch e {
+	case AuthzNameAuditLogsRead,
+		AuthzNameServiceAccountsCreate,
+		AuthzNameServiceAccountsDelete,
+		AuthzNameServiceAccountsList,
+		AuthzNameServiceAccountsRead,
+		AuthzNameServiceAccountsUpdate,
+		AuthzNameSystemStatesDelete,
+		AuthzNameSystemStatesRead,
+		AuthzNameSystemStatesUpdate,
+		AuthzNameTeamsCreate,
+		AuthzNameTeamsDelete,
+		AuthzNameTeamsList,
+		AuthzNameTeamsRead,
+		AuthzNameTeamsUpdate,
+		AuthzNameUsersList,
+		AuthzNameUsersUpdate:
+		return true
+	}
+	return false
+}
+
+func AllAuthzNameValues() []AuthzName {
+	return []AuthzName{
+		AuthzNameAuditLogsRead,
+		AuthzNameServiceAccountsCreate,
+		AuthzNameServiceAccountsDelete,
+		AuthzNameServiceAccountsList,
+		AuthzNameServiceAccountsRead,
+		AuthzNameServiceAccountsUpdate,
+		AuthzNameSystemStatesDelete,
+		AuthzNameSystemStatesRead,
+		AuthzNameSystemStatesUpdate,
+		AuthzNameTeamsCreate,
+		AuthzNameTeamsDelete,
+		AuthzNameTeamsList,
+		AuthzNameTeamsRead,
+		AuthzNameTeamsUpdate,
+		AuthzNameUsersList,
+		AuthzNameUsersUpdate,
+	}
+}
+
 type RoleName string
 
 const (
@@ -177,6 +269,36 @@ func (ns NullRoleName) Value() (driver.Value, error) {
 	return ns.RoleName, nil
 }
 
+func (e RoleName) Valid() bool {
+	switch e {
+	case RoleNameAdmin,
+		RoleNameServiceaccountcreator,
+		RoleNameServiceaccountowner,
+		RoleNameTeamcreator,
+		RoleNameTeammember,
+		RoleNameTeamowner,
+		RoleNameTeamviewer,
+		RoleNameUseradmin,
+		RoleNameUserviewer:
+		return true
+	}
+	return false
+}
+
+func AllRoleNameValues() []RoleName {
+	return []RoleName{
+		RoleNameAdmin,
+		RoleNameServiceaccountcreator,
+		RoleNameServiceaccountowner,
+		RoleNameTeamcreator,
+		RoleNameTeammember,
+		RoleNameTeamowner,
+		RoleNameTeamviewer,
+		RoleNameUseradmin,
+		RoleNameUserviewer,
+	}
+}
+
 type SystemName string
 
 const (
@@ -221,6 +343,30 @@ func (ns NullSystemName) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return ns.SystemName, nil
+}
+
+func (e SystemName) Valid() bool {
+	switch e {
+	case SystemNameConsole,
+		SystemNameAzureGroup,
+		SystemNameGithubTeam,
+		SystemNameGoogleGcpProject,
+		SystemNameGoogleWorkspaceAdmin,
+		SystemNameNaisNamespace:
+		return true
+	}
+	return false
+}
+
+func AllSystemNameValues() []SystemName {
+	return []SystemName{
+		SystemNameConsole,
+		SystemNameAzureGroup,
+		SystemNameGithubTeam,
+		SystemNameGoogleGcpProject,
+		SystemNameGoogleWorkspaceAdmin,
+		SystemNameNaisNamespace,
+	}
 }
 
 type ApiKey struct {

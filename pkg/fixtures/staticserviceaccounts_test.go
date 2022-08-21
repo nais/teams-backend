@@ -18,10 +18,6 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 	t.Run("empty string", func(t *testing.T) {
 		ctx := context.Background()
 		database := db.NewMockDatabase(t)
-		database.
-			On("GetRoleNames", ctx).
-			Return([]sqlc.RoleName{}, nil).
-			Once()
 		err := fixtures.SetupStaticServiceAccounts(ctx, database, "", tenantDomain)
 		assert.EqualError(t, err, "EOF")
 	})
@@ -29,10 +25,6 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 	t.Run("user with no roles", func(t *testing.T) {
 		ctx := context.Background()
 		database := db.NewMockDatabase(t)
-		database.
-			On("GetRoleNames", ctx).
-			Return([]sqlc.RoleName{}, nil).
-			Once()
 		json := `[
 					{
 						"name": "nais-service-account",
@@ -47,10 +39,6 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 	t.Run("missing API key", func(t *testing.T) {
 		ctx := context.Background()
 		database := db.NewMockDatabase(t)
-		database.
-			On("GetRoleNames", ctx).
-			Return([]sqlc.RoleName{}, nil).
-			Once()
 		json := `[
 				{
 					"name": "nais-service-account",
@@ -64,10 +52,6 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 	t.Run("user with invalid name", func(t *testing.T) {
 		ctx := context.Background()
 		database := db.NewMockDatabase(t)
-		database.
-			On("GetRoleNames", ctx).
-			Return([]sqlc.RoleName{}, nil).
-			Once()
 		json := `[
 				{
 					"name": "service-account",
@@ -82,10 +66,6 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 	t.Run("user with invalid role", func(t *testing.T) {
 		ctx := context.Background()
 		database := db.NewMockDatabase(t)
-		database.
-			On("GetRoleNames", ctx).
-			Return([]sqlc.RoleName{}, nil).
-			Once()
 		json := `[
 				{
 					"name": "nais-service-account",
@@ -94,7 +74,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 				}
 			]`
 		err := fixtures.SetupStaticServiceAccounts(ctx, database, json, tenantDomain)
-		assert.EqualError(t, err, "unknown role name: 'role' for service account 'nais-service-account'")
+		assert.EqualError(t, err, "invalid role name: 'role' for service account 'nais-service-account'")
 	})
 
 	t.Run("create multiple service accounts", func(t *testing.T) {
@@ -105,16 +85,6 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 
 		sa1 := userWithName("nais-service-account-1", tenantDomain)
 		sa2 := userWithName("nais-service-account-2", tenantDomain)
-
-		database.
-			On("GetRoleNames", ctx).
-			Return([]sqlc.RoleName{
-				sqlc.RoleNameTeamcreator,
-				sqlc.RoleNameTeamviewer,
-				sqlc.RoleNameUserviewer,
-				sqlc.RoleNameAdmin,
-			}, nil).
-			Once()
 
 		database.
 			On("Transaction", ctx, mock.AnythingOfType("db.TransactionFunc")).

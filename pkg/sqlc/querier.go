@@ -19,7 +19,6 @@ type Querier interface {
 	CreateUserTeam(ctx context.Context, arg CreateUserTeamParams) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
 	GetRoleAuthorizations(ctx context.Context, roleName RoleName) ([]AuthzName, error)
-	GetRoleNames(ctx context.Context) ([]RoleName, error)
 	GetTeamByID(ctx context.Context, id uuid.UUID) (*Team, error)
 	GetTeamBySlug(ctx context.Context, slug string) (*Team, error)
 	GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error)

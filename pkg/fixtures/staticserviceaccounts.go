@@ -20,7 +20,7 @@ type ServiceAccount struct {
 
 const NaisServiceAccountPrefix = "nais-"
 
-func parseAndValidateServiceAccounts(serviceAccountsJson string, validRoleNames map[sqlc.RoleName]struct{}) ([]ServiceAccount, error) {
+func parseAndValidateServiceAccounts(serviceAccountsJson string) ([]ServiceAccount, error) {
 	serviceAccounts := make([]ServiceAccount, 0)
 	err := json.NewDecoder(strings.NewReader(serviceAccountsJson)).Decode(&serviceAccounts)
 	if err != nil {
@@ -41,8 +41,8 @@ func parseAndValidateServiceAccounts(serviceAccountsJson string, validRoleNames 
 		}
 
 		for _, role := range serviceAccount.Roles {
-			if _, exists := validRoleNames[sqlc.RoleName(role)]; !exists {
-				return nil, fmt.Errorf("unknown role name: '%s' for service account '%s'", role, serviceAccount.Name)
+			if !sqlc.RoleName(role).Valid() {
+				return nil, fmt.Errorf("invalid role name: '%s' for service account '%s'", role, serviceAccount.Name)
 			}
 		}
 	}
@@ -52,15 +52,7 @@ func parseAndValidateServiceAccounts(serviceAccountsJson string, validRoleNames 
 
 // SetupStaticServiceAccounts Create a set of service accounts with roles and API keys
 func SetupStaticServiceAccounts(ctx context.Context, database db.Database, serviceAccountsJson, tenantDomain string) error {
-	validRoleNames, err := database.GetRoleNames(ctx)
-	if err != nil {
-		return err
-	}
-	roleNameMap := make(map[sqlc.RoleName]struct{})
-	for _, roleName := range validRoleNames {
-		roleNameMap[roleName] = struct{}{}
-	}
-	serviceAccounts, err := parseAndValidateServiceAccounts(serviceAccountsJson, roleNameMap)
+	serviceAccounts, err := parseAndValidateServiceAccounts(serviceAccountsJson)
 	if err != nil {
 		return err
 	}
