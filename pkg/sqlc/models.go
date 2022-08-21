@@ -35,6 +35,10 @@ const (
 	AuditActionUsersyncCreate              AuditAction = "usersync:create"
 	AuditActionUsersyncUpdate              AuditAction = "usersync:update"
 	AuditActionUsersyncDelete              AuditAction = "usersync:delete"
+	AuditActionAzureGroupCreate            AuditAction = "azure:group:create"
+	AuditActionAzureGroupAddMember         AuditAction = "azure:group:add-member"
+	AuditActionAzureGroupAddMembers        AuditAction = "azure:group:add-members"
+	AuditActionAzureGroupDeleteMember      AuditAction = "azure:group:delete-member"
 )
 
 func (e *AuditAction) Scan(src interface{}) error {
@@ -91,7 +95,11 @@ func (e AuditAction) Valid() bool {
 		AuditActionUsersyncListLocal,
 		AuditActionUsersyncCreate,
 		AuditActionUsersyncUpdate,
-		AuditActionUsersyncDelete:
+		AuditActionUsersyncDelete,
+		AuditActionAzureGroupCreate,
+		AuditActionAzureGroupAddMember,
+		AuditActionAzureGroupAddMembers,
+		AuditActionAzureGroupDeleteMember:
 		return true
 	}
 	return false
@@ -117,6 +125,10 @@ func AllAuditActionValues() []AuditAction {
 		AuditActionUsersyncCreate,
 		AuditActionUsersyncUpdate,
 		AuditActionUsersyncDelete,
+		AuditActionAzureGroupCreate,
+		AuditActionAzureGroupAddMember,
+		AuditActionAzureGroupAddMembers,
+		AuditActionAzureGroupDeleteMember,
 	}
 }
 

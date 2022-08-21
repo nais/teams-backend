@@ -8,14 +8,12 @@ import (
 
 	"github.com/google/uuid"
 	helpers "github.com/nais/console/pkg/console"
-	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/azureclient"
 	"github.com/nais/console/pkg/config"
-	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers"
 	"golang.org/x/oauth2/clientcredentials"
 	"golang.org/x/oauth2/microsoft"
@@ -29,14 +27,6 @@ type azureGroupReconciler struct {
 	domain      string
 }
 
-const (
-	Name           = sqlc.SystemNameAzureGroup
-	OpCreate       = "azure:group:create"
-	OpAddMember    = "azure:group:add-member"
-	OpAddMembers   = "azure:group:add-members"
-	OpDeleteMember = "azure:group:delete-member"
-)
-
 func New(database db.Database, auditLogger auditlogger.AuditLogger, oauth clientcredentials.Config, client azureclient.Client, domain string) *azureGroupReconciler {
 	return &azureGroupReconciler{
 		database:    database,
@@ -46,6 +36,8 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, oauth client
 		domain:      domain,
 	}
 }
+
+const Name = sqlc.SystemNameAzureGroup
 
 func NewFromConfig(database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.Azure.Enabled {
@@ -70,11 +62,16 @@ func (r *azureGroupReconciler) Name() sqlc.SystemName {
 	return Name
 }
 
+func (r *azureGroupReconciler) NameP() *sqlc.SystemName {
+	name := r.Name()
+	return &name
+}
+
 func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	state := &reconcilers.AzureState{}
-	err := dbmodels.LoadSystemState(r.db, r.system.ID, input.Team.ID, state)
+	err := r.database.LoadSystemState(ctx, r.Name(), input.Team.ID, state)
 	if err != nil {
-		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
+		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.Name(), err)
 	}
 
 	prefixedName := teamNameWithPrefix(input.Team.Slug)
@@ -84,30 +81,31 @@ func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.
 	}
 
 	if created {
-		r.auditLogger.Logf(OpCreate, input.Corr, r.system, nil, input.Team, nil, "created Azure AD group: %s", grp)
+		r.auditLogger.Logf(ctx, sqlc.AuditActionAzureGroupCreate, input.CorrelationID, r.NameP(), nil, &input.Team.Slug, nil, "created Azure AD group: %s", grp)
 
 		id, _ := uuid.Parse(grp.ID)
-		err = dbmodels.SetSystemState(r.db, r.system.ID, input.Team.ID, reconcilers.AzureState{GroupID: &id})
+		err = r.database.SetSystemState(ctx, r.Name(), input.Team.ID, reconcilers.AzureState{GroupID: &id})
 		if err != nil {
 			log.Errorf("system state not persisted: %s", err)
 		}
 	}
 
-	err = r.connectUsers(ctx, grp, input.Corr, *input.Team, input.Members)
+	err = r.connectUsers(ctx, grp, input.CorrelationID, *input.Team)
 	if err != nil {
-		return fmt.Errorf("%s: add members to group: %s", OpAddMembers, err)
+		return fmt.Errorf("%s: add members to group: %s", sqlc.AuditActionAzureGroupAddMembers, err)
 	}
 
 	return nil
 }
 
-func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclient.Group, corr sqlc.Correlation, team sqlc.Team, consoleTeamMembers []*sqlc.User) error {
+func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclient.Group, correlationID uuid.UUID, team db.Team) error {
+	consoleTeamMembers := team.Members
 	members, err := r.client.ListGroupMembers(ctx, grp)
 	if err != nil {
-		return fmt.Errorf("%s: list existing members in Azure group '%s': %s", OpAddMembers, grp.MailNickname, err)
+		return fmt.Errorf("%s: list existing members in Azure group '%s': %s", sqlc.AuditActionAzureGroupAddMembers, grp.MailNickname, err)
 	}
 
-	consoleUserMap := make(map[string]*sqlc.User)
+	consoleUserMap := make(map[string]*db.User)
 	localMembers := helpers.DomainUsers(consoleTeamMembers, r.domain)
 
 	membersToRemove := remoteOnlyMembers(members, localMembers)
@@ -115,37 +113,36 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 		remoteEmail := strings.ToLower(member.Mail)
 		err = r.client.RemoveMemberFromGroup(ctx, grp, member)
 		if err != nil {
-			log.Warnf("%s: unable to remove member '%s' from group '%s' in Azure: %s", OpDeleteMember, remoteEmail, grp.MailNickname, err)
+			log.Warnf("%s: unable to remove member '%s' from group '%s' in Azure: %s", sqlc.AuditActionAzureGroupDeleteMember, remoteEmail, grp.MailNickname, err)
 			continue
 		}
 
 		if _, exists := consoleUserMap[remoteEmail]; !exists {
-			// user := r.queries.GetUserByEmail(ctx, remoteEmail)
-			user, err := r.queries.GetUserByEmail(ctx, remoteEmail)
+			user, err := r.database.GetUserByEmail(ctx, remoteEmail)
 			if err != nil {
-				log.Warnf("%s: unable to lookup local user with email '%s': %s", OpDeleteMember, remoteEmail, err)
+				log.Warnf("%s: unable to lookup local user with email '%s': %s", sqlc.AuditActionAzureGroupDeleteMember, remoteEmail, err)
 				continue
 			}
 			consoleUserMap[remoteEmail] = user
 		}
 
-		r.auditLogger.Logf(OpDeleteMember, corr, r.system, nil, &team, consoleUserMap[remoteEmail], "removed member '%s' from Azure group '%s'", remoteEmail, grp.MailNickname)
+		r.auditLogger.Logf(ctx, sqlc.AuditActionAzureGroupDeleteMember, correlationID, r.NameP(), nil, &team.Slug, &remoteEmail, "removed member '%s' from Azure group '%s'", remoteEmail, grp.MailNickname)
 	}
 
 	membersToAdd := localOnlyMembers(members, localMembers)
 	for _, consoleUser := range membersToAdd {
 		member, err := r.client.GetUser(ctx, consoleUser.Email)
 		if err != nil {
-			log.Warnf("%s: unable to lookup user with email '%s' in Azure: %s", OpAddMember, consoleUser.Email, err)
+			log.Warnf("%s: unable to lookup user with email '%s' in Azure: %s", sqlc.AuditActionAzureGroupAddMember, consoleUser.Email, err)
 			continue
 		}
 		err = r.client.AddMemberToGroup(ctx, grp, member)
 		if err != nil {
-			log.Warnf("%s: unable to add member '%s' to Azure group '%s': %s", OpAddMember, consoleUser.Email, grp.MailNickname, err)
+			log.Warnf("%s: unable to add member '%s' to Azure group '%s': %s", sqlc.AuditActionAzureGroupAddMember, consoleUser.Email, grp.MailNickname, err)
 			continue
 		}
 
-		r.auditLogger.Logf(OpAddMember, corr, r.system, nil, &team, consoleUser, "added member '%s' to Azure group '%s'", member.Mail, grp.MailNickname)
+		r.auditLogger.Logf(ctx, sqlc.AuditActionAzureGroupAddMember, correlationID, r.NameP(), nil, &team.Slug, &consoleUser.Email, "added member '%s' to Azure group '%s'", member.Mail, grp.MailNickname)
 	}
 
 	return nil
@@ -153,15 +150,15 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 
 // localOnlyMembers Given a list of Azure group members and a list of Console users, return Console users not present in
 // the Azure group member list. The email address is used to compare objects.
-func localOnlyMembers(azureGroupMembers []*azureclient.Member, consoleUsers []*sqlc.User) []*sqlc.User {
-	localUserMap := make(map[string]*sqlc.User)
+func localOnlyMembers(azureGroupMembers []*azureclient.Member, consoleUsers []*db.User) []*db.User {
+	localUserMap := make(map[string]*db.User)
 	for _, user := range consoleUsers {
 		localUserMap[user.Email] = user
 	}
 	for _, member := range azureGroupMembers {
 		delete(localUserMap, strings.ToLower(member.Mail))
 	}
-	localUsers := make([]*sqlc.User, 0, len(localUserMap))
+	localUsers := make([]*db.User, 0, len(localUserMap))
 	for _, user := range localUserMap {
 		localUsers = append(localUsers, user)
 	}
@@ -170,7 +167,7 @@ func localOnlyMembers(azureGroupMembers []*azureclient.Member, consoleUsers []*s
 
 // remoteOnlyMembers Given a list of Azure group members and a list of Console users, return Azure group members not
 // present in Console user list. The email address is used to compare objects.
-func remoteOnlyMembers(azureGroupMembers []*azureclient.Member, consoleUsers []*sqlc.User) []*azureclient.Member {
+func remoteOnlyMembers(azureGroupMembers []*azureclient.Member, consoleUsers []*db.User) []*azureclient.Member {
 	azureGroupMemberMap := make(map[string]*azureclient.Member)
 	for _, member := range azureGroupMembers {
 		azureGroupMemberMap[strings.ToLower(member.Mail)] = member
@@ -185,6 +182,6 @@ func remoteOnlyMembers(azureGroupMembers []*azureclient.Member, consoleUsers []*
 	return azureGroupMembers
 }
 
-func teamNameWithPrefix(slug slug.Slug) string {
-	return reconcilers.TeamNamePrefix + string(slug)
+func teamNameWithPrefix(slug string) string {
+	return reconcilers.TeamNamePrefix + slug
 }

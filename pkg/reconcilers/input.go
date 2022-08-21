@@ -7,6 +7,6 @@ import (
 
 // Input Input for reconcilers
 type Input struct {
-	CorrelationId uuid.UUID
+	CorrelationID uuid.UUID
 	Team          *db.Team
 }

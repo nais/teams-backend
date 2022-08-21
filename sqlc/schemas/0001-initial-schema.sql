@@ -50,7 +50,12 @@ CREATE TYPE audit_action AS ENUM (
 	'usersync:list:local',
 	'usersync:create',
 	'usersync:update',
-	'usersync:delete'
+	'usersync:delete',
+
+	'azure:group:create',
+	'azure:group:add-member',
+	'azure:group:add-members',
+	'azure:group:delete-member'
 );
 
 CREATE TYPE system_name AS ENUM (

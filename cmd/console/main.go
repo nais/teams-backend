@@ -138,7 +138,7 @@ func run() error {
 	pendingTeams := make(map[uuid.UUID]reconcilers.Input)
 
 	// Reconcile all teams on startup. All will share the same correlation ID
-	correlationId, err := uuid.NewUUID()
+	correlationID, err := uuid.NewUUID()
 	if err != nil {
 		return fmt.Errorf("cannot create ID for correlation entry for initial reconcile loop: %w", err)
 	}
@@ -149,7 +149,7 @@ func run() error {
 	}
 	for _, team := range allTeams {
 		teamReconciler <- reconcilers.Input{
-			CorrelationId: correlationId,
+			CorrelationID: correlationID,
 			Team:          team,
 		}
 	}
