@@ -132,6 +132,29 @@ func (_m *MockDatabase) DeleteUser(ctx context.Context, userID uuid.UUID) error 
 	return r0
 }
 
+// GetRoleNames provides a mock function with given fields: ctx
+func (_m *MockDatabase) GetRoleNames(ctx context.Context) ([]sqlc.RoleName, error) {
+	ret := _m.Called(ctx)
+
+	var r0 []sqlc.RoleName
+	if rf, ok := ret.Get(0).(func(context.Context) []sqlc.RoleName); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]sqlc.RoleName)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetTeamByID provides a mock function with given fields: ctx, ID
 func (_m *MockDatabase) GetTeamByID(ctx context.Context, ID uuid.UUID) (*Team, error) {
 	ret := _m.Called(ctx, ID)

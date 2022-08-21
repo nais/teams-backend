@@ -38,6 +38,30 @@ func (q *Queries) GetRoleAuthorizations(ctx context.Context, roleName RoleName) 
 	return items, nil
 }
 
+const getRoleNames = `-- name: GetRoleNames :many
+SELECT unnest(enum_range(NULL::role_name))::role_name
+`
+
+func (q *Queries) GetRoleNames(ctx context.Context) ([]RoleName, error) {
+	rows, err := q.db.Query(ctx, getRoleNames)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RoleName
+	for rows.Next() {
+		var column_1 RoleName
+		if err := rows.Scan(&column_1); err != nil {
+			return nil, err
+		}
+		items = append(items, column_1)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUserRole = `-- name: GetUserRole :one
 SELECT id, role_name, user_id, target_id FROM user_roles
 WHERE id = $1 LIMIT 1
