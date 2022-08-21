@@ -2,10 +2,11 @@ package legacy
 
 import (
 	"context"
+	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/sqlc"
 
 	"github.com/nais/console/pkg/azureclient"
 	"github.com/nais/console/pkg/config"
-	"github.com/nais/console/pkg/dbmodels"
 	"golang.org/x/oauth2/clientcredentials"
 	"golang.org/x/oauth2/microsoft"
 	"gorm.io/gorm"
@@ -39,7 +40,7 @@ func NewFromConfig(cfg *config.Config) (*GroupImporter, error) {
 	return New(conf, azureclient.New(conf.Client(context.Background()))), nil
 }
 
-func (gimp *GroupImporter) GroupMembers(groupID string) ([]*dbmodels.User, error) {
+func (gimp *GroupImporter) GroupMembers(groupID string) ([]*db.User, error) {
 	ctx := context.Background()
 	members, err := gimp.client.ListGroupMembers(ctx, &azureclient.Group{
 		ID: groupID,
@@ -47,17 +48,19 @@ func (gimp *GroupImporter) GroupMembers(groupID string) ([]*dbmodels.User, error
 	if err != nil {
 		return nil, err
 	}
-	users := make([]*dbmodels.User, 0, len(members))
+	users := make([]*db.User, 0, len(members))
 	for _, member := range members {
-		users = append(users, &dbmodels.User{
-			Email: member.Mail,
-			Name:  member.Mail,
+		users = append(users, &db.User{
+			User: &sqlc.User{
+				Email: member.Mail,
+				Name:  member.Mail,
+			},
 		})
 	}
 	return users, nil
 }
 
-func (gimp *GroupImporter) GroupOwners(groupID string) ([]*dbmodels.User, error) {
+func (gimp *GroupImporter) GroupOwners(groupID string) ([]*db.User, error) {
 	ctx := context.Background()
 	members, err := gimp.client.ListGroupOwners(ctx, &azureclient.Group{
 		ID: groupID,
@@ -65,11 +68,13 @@ func (gimp *GroupImporter) GroupOwners(groupID string) ([]*dbmodels.User, error)
 	if err != nil {
 		return nil, err
 	}
-	users := make([]*dbmodels.User, 0, len(members))
+	users := make([]*db.User, 0, len(members))
 	for _, member := range members {
-		users = append(users, &dbmodels.User{
-			Email: member.UserPrincipalName,
-			Name:  member.UserPrincipalName,
+		users = append(users, &db.User{
+			User: &sqlc.User{
+				Email: member.UserPrincipalName,
+				Name:  member.UserPrincipalName,
+			},
 		})
 	}
 	return users, nil
