@@ -84,7 +84,7 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 	auditLogEntries := make([]*auditLogEntry, 0)
 
 	err = s.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
-		userIds := make(map[uuid.UUID]struct{})
+		userIDs := make(map[uuid.UUID]struct{})
 
 		for _, remoteUser := range resp.Users {
 			email := strings.ToLower(remoteUser.PrimaryEmail)
@@ -120,7 +120,7 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 				}
 			}
 
-			userIds[localUser.ID] = struct{}{}
+			userIDs[localUser.ID] = struct{}{}
 		}
 
 		localUsers, err := dbtx.GetUsersByEmail(ctx, "%@"+s.tenantDomain)
@@ -129,7 +129,7 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 		}
 
 		for _, localUser := range localUsers {
-			if _, upserted := userIds[localUser.ID]; upserted {
+			if _, upserted := userIDs[localUser.ID]; upserted {
 				continue
 			}
 

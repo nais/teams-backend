@@ -9,10 +9,10 @@ import (
 )
 
 // LoadSystemState Load the team state for a given system into the state parameter
-func (d *database) LoadSystemState(ctx context.Context, systemName sqlc.SystemName, teamId uuid.UUID, state interface{}) error {
+func (d *database) LoadSystemState(ctx context.Context, systemName sqlc.SystemName, teamID uuid.UUID, state interface{}) error {
 	systemState, err := d.querier.GetTeamSystemState(ctx, sqlc.GetTeamSystemStateParams{
 		SystemName: systemName,
-		TeamID:     teamId,
+		TeamID:     teamID,
 	})
 	if err != nil {
 		// assume empty state
@@ -28,7 +28,7 @@ func (d *database) LoadSystemState(ctx context.Context, systemName sqlc.SystemNa
 }
 
 // SetSystemState Update the team state for a given system
-func (d *database) SetSystemState(ctx context.Context, systemName sqlc.SystemName, teamId uuid.UUID, state interface{}) error {
+func (d *database) SetSystemState(ctx context.Context, systemName sqlc.SystemName, teamID uuid.UUID, state interface{}) error {
 	newState := pgtype.JSONB{}
 	err := newState.Set(state)
 	if err != nil {
@@ -37,7 +37,7 @@ func (d *database) SetSystemState(ctx context.Context, systemName sqlc.SystemNam
 
 	return d.querier.SetTeamSystemState(ctx, sqlc.SetTeamSystemStateParams{
 		SystemName: systemName,
-		TeamID:     teamId,
+		TeamID:     teamID,
 		State:      newState,
 	})
 }

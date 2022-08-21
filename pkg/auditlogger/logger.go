@@ -15,7 +15,7 @@ type auditLogger struct {
 }
 
 type AuditLogger interface {
-	Logf(ctx context.Context, action sqlc.AuditAction, correlationId uuid.UUID, systemName *sqlc.SystemName, actorEmail *string, targetTeamSlug *string, targetUserEmail *string, message string, messageArgs ...interface{}) error
+	Logf(ctx context.Context, action sqlc.AuditAction, correlationID uuid.UUID, systemName *sqlc.SystemName, actorEmail *string, targetTeamSlug *string, targetUserEmail *string, message string, messageArgs ...interface{}) error
 }
 
 func New(database db.Database) AuditLogger {
@@ -24,16 +24,16 @@ func New(database db.Database) AuditLogger {
 	}
 }
 
-func (l *auditLogger) Logf(ctx context.Context, action sqlc.AuditAction, correlationId uuid.UUID, systemName *sqlc.SystemName, actorEmail *string, targetTeamSlug *string, targetUserEmail *string, message string, messageArgs ...interface{}) error {
+func (l *auditLogger) Logf(ctx context.Context, action sqlc.AuditAction, correlationID uuid.UUID, systemName *sqlc.SystemName, actorEmail *string, targetTeamSlug *string, targetUserEmail *string, message string, messageArgs ...interface{}) error {
 	message = fmt.Sprintf(message, messageArgs...)
-	err := l.database.AddAuditLog(ctx, correlationId, actorEmail, systemName, targetUserEmail, targetTeamSlug, action, message)
+	err := l.database.AddAuditLog(ctx, correlationID, actorEmail, systemName, targetUserEmail, targetTeamSlug, action, message)
 	if err != nil {
 		return fmt.Errorf("create audit log entry: %w", err)
 	}
 
 	log.StandardLogger().WithFields(log.Fields{
 		"action":            action,
-		"correlation_id":    correlationId,
+		"correlation_id":    correlationID,
 		"system_name":       systemName,
 		"actor_email":       actorEmail,
 		"target_team_slug":  targetTeamSlug,

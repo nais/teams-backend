@@ -42,6 +42,6 @@ func (r Role) IsGlobal() bool {
 }
 
 // Targets Check if the role targets a specific ID
-func (r Role) Targets(targetId uuid.UUID) bool {
-	return r.TargetID.Valid && r.TargetID.UUID == targetId
+func (r Role) Targets(targetID uuid.UUID) bool {
+	return r.TargetID.Valid && r.TargetID.UUID == targetID
 }

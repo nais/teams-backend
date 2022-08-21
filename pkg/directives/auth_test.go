@@ -32,13 +32,13 @@ func TestAuth(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		auth := directives.Auth(database)
 
-		userId, _ := uuid.NewUUID()
+		userID, _ := uuid.NewUUID()
 		user := &db.User{User: &sqlc.User{
-			ID: userId,
+			ID: userID,
 		}}
 
 		database.
-			On("GetUserByID", mock.Anything, userId).
+			On("GetUserByID", mock.Anything, userID).
 			Return(nil, errors.New("record not found")).
 			Once()
 

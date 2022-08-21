@@ -225,7 +225,7 @@ func reconcileTeams(ctx context.Context, database db.Database, recs []reconciler
 	ctx, cancel := context.WithTimeout(ctx, reconcileTimeout)
 	defer cancel()
 
-	for teamId, input := range *reconcileInputs {
+	for teamID, input := range *reconcileInputs {
 		teamErrors := 0
 
 		for _, reconciler := range recs {
@@ -253,7 +253,7 @@ func reconcileTeams(ctx context.Context, database db.Database, recs []reconciler
 		}
 
 		if teamErrors == 0 {
-			delete(*reconcileInputs, teamId)
+			delete(*reconcileInputs, teamID)
 		}
 		errors += teamErrors
 	}
