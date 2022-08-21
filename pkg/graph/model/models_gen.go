@@ -8,7 +8,6 @@ import (
 	"strconv"
 
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/sqlc"
 )
 
@@ -39,7 +38,7 @@ type AuditLogs struct {
 	// Object related to pagination of the collection.
 	PageInfo *PageInfo `json:"pageInfo"`
 	// The list of audit log entries in the collection.
-	Nodes []*dbmodels.AuditLog `json:"nodes"`
+	Nodes []*sqlc.AuditLog `json:"nodes"`
 }
 
 // Input for filtering a collection of audit log entries.
@@ -64,16 +63,22 @@ type AuditLogsSort struct {
 	Direction SortDirection `json:"direction"`
 }
 
+// Correlation type.
+type Correlation struct {
+	// ID of the correlation.
+	ID *uuid.UUID `json:"id"`
+}
+
 // Input for creating a new service account.
 type CreateServiceAccountInput struct {
 	// The name of the new service account. An email address will be automatically generated using the provided name.
-	Name *slug.Slug `json:"name"`
+	Name string `json:"name"`
 }
 
 // Input for creating a new team.
 type CreateTeamInput struct {
 	// Team slug. This value immutable.
-	Slug *slug.Slug `json:"slug"`
+	Slug string `json:"slug"`
 	// Team name.
 	Name string `json:"name"`
 	// Team purpose.
@@ -108,6 +113,12 @@ type RemoveUsersFromTeamInput struct {
 	TeamID *uuid.UUID `json:"teamId"`
 }
 
+// Role type.
+type Role struct {
+	// Name of the role.
+	Name string `json:"name"`
+}
+
 // Input for setting team member role.
 type SetTeamMemberRoleInput struct {
 	// The ID of the team.
@@ -118,10 +129,18 @@ type SetTeamMemberRoleInput struct {
 	Role TeamRole `json:"role"`
 }
 
+// System type.
+type System struct {
+	// Unique ID of the system.
+	ID *uuid.UUID `json:"id"`
+	// Name of the system.
+	Name string `json:"name"`
+}
+
 // Team member.
 type TeamMember struct {
 	// User instance.
-	User *dbmodels.User `json:"user"`
+	User *sqlc.User `json:"user"`
 	// The role that the user has in the team.
 	Role TeamRole `json:"role"`
 }
@@ -137,7 +156,7 @@ type Teams struct {
 // Input for filtering a collection of teams.
 type TeamsQuery struct {
 	// Filter by slug.
-	Slug *slug.Slug `json:"slug"`
+	Slug *string `json:"slug"`
 	// Filter by name.
 	Name *string `json:"name"`
 }
@@ -153,7 +172,7 @@ type TeamsSort struct {
 // Input for updating an existing service account.
 type UpdateServiceAccountInput struct {
 	// The new name of the service account. The email address will be automatically updated.
-	Name *slug.Slug `json:"name"`
+	Name string `json:"name"`
 }
 
 // Input for updating an existing team.
@@ -169,7 +188,7 @@ type Users struct {
 	// Object related to pagination of the collection.
 	PageInfo *PageInfo `json:"pageInfo"`
 	// The list of user objects in the collection.
-	Nodes []*dbmodels.User `json:"nodes"`
+	Nodes []*sqlc.User `json:"nodes"`
 }
 
 // Input for filtering a collection of users.

@@ -15,7 +15,7 @@ import (
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/dbmodels"
+	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/sqlc"
 	gqlparser "github.com/vektah/gqlparser/v2"
@@ -43,10 +43,9 @@ type ResolverRoot interface {
 	AuditLog() AuditLogResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
-	Role() RoleResolver
-	RoleBinding() RoleBindingResolver
 	Team() TeamResolver
 	User() UserResolver
+	UserRole() UserRoleResolver
 }
 
 type DirectiveRoot struct {
@@ -115,12 +114,6 @@ type ComplexityRoot struct {
 		Name func(childComplexity int) int
 	}
 
-	RoleBinding struct {
-		IsGlobal func(childComplexity int) int
-		Role     func(childComplexity int) int
-		TargetID func(childComplexity int) int
-	}
-
 	System struct {
 		ID   func(childComplexity int) int
 		Name func(childComplexity int) int
@@ -158,6 +151,12 @@ type ComplexityRoot struct {
 		Teams            func(childComplexity int) int
 	}
 
+	UserRole struct {
+		IsGlobal func(childComplexity int) int
+		Role     func(childComplexity int) int
+		TargetID func(childComplexity int) int
+	}
+
 	Users struct {
 		Nodes    func(childComplexity int) int
 		PageInfo func(childComplexity int) int
@@ -165,11 +164,12 @@ type ComplexityRoot struct {
 }
 
 type AuditLogResolver interface {
-	TargetSystem(ctx context.Context, obj *dbmodels.AuditLog) (*sqlc.System, error)
-	Correlation(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.Correlation, error)
-	Actor(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.User, error)
-	TargetUser(ctx context.Context, obj *dbmodels.AuditLog) (*dbmodels.User, error)
-	TargetTeam(ctx context.Context, obj *dbmodels.AuditLog) (*sqlc.Team, error)
+	TargetSystem(ctx context.Context, obj *sqlc.AuditLog) (*model.System, error)
+	Correlation(ctx context.Context, obj *sqlc.AuditLog) (*model.Correlation, error)
+	Actor(ctx context.Context, obj *sqlc.AuditLog) (*sqlc.User, error)
+	TargetUser(ctx context.Context, obj *sqlc.AuditLog) (*sqlc.User, error)
+	TargetTeam(ctx context.Context, obj *sqlc.AuditLog) (*sqlc.Team, error)
+	Action(ctx context.Context, obj *sqlc.AuditLog) (string, error)
 }
 type MutationResolver interface {
 	CreateAPIKey(ctx context.Context, userID *uuid.UUID) (*model.APIKey, error)
@@ -181,43 +181,38 @@ type MutationResolver interface {
 	AddTeamMembers(ctx context.Context, input model.AddTeamMembersInput) (*sqlc.Team, error)
 	AddTeamOwners(ctx context.Context, input model.AddTeamOwnersInput) (*sqlc.Team, error)
 	SetTeamMemberRole(ctx context.Context, input model.SetTeamMemberRoleInput) (*sqlc.Team, error)
-	CreateServiceAccount(ctx context.Context, input model.CreateServiceAccountInput) (*dbmodels.User, error)
-	UpdateServiceAccount(ctx context.Context, serviceAccountID *uuid.UUID, input model.UpdateServiceAccountInput) (*dbmodels.User, error)
+	CreateServiceAccount(ctx context.Context, input model.CreateServiceAccountInput) (*sqlc.User, error)
+	UpdateServiceAccount(ctx context.Context, serviceAccountID *uuid.UUID, input model.UpdateServiceAccountInput) (*sqlc.User, error)
 	DeleteServiceAccount(ctx context.Context, serviceAccountID *uuid.UUID) (bool, error)
 }
 type QueryResolver interface {
 	AuditLogs(ctx context.Context, pagination *model.Pagination, query *model.AuditLogsQuery, sort *model.AuditLogsSort) (*model.AuditLogs, error)
-	Roles(ctx context.Context) ([]*sqlc.Role, error)
-	Systems(ctx context.Context) ([]*sqlc.System, error)
+	Roles(ctx context.Context) ([]*model.Role, error)
+	Systems(ctx context.Context) ([]*model.System, error)
 	Teams(ctx context.Context, pagination *model.Pagination, query *model.TeamsQuery, sort *model.TeamsSort) (*model.Teams, error)
 	Team(ctx context.Context, id *uuid.UUID) (*sqlc.Team, error)
 	Users(ctx context.Context, pagination *model.Pagination, query *model.UsersQuery, sort *model.UsersSort) (*model.Users, error)
-	User(ctx context.Context, id *uuid.UUID) (*dbmodels.User, error)
-	Me(ctx context.Context) (*dbmodels.User, error)
-}
-type RoleResolver interface {
-	Name(ctx context.Context, obj *sqlc.Role) (string, error)
-}
-type RoleBindingResolver interface {
-	Role(ctx context.Context, obj *sqlc.UserRole) (*sqlc.Role, error)
-	IsGlobal(ctx context.Context, obj *sqlc.UserRole) (bool, error)
-	TargetID(ctx context.Context, obj *sqlc.UserRole) (*uuid.UUID, error)
+	User(ctx context.Context, id *uuid.UUID) (*sqlc.User, error)
+	Me(ctx context.Context) (*sqlc.User, error)
 }
 type TeamResolver interface {
-	Slug(ctx context.Context, obj *sqlc.Team) (*slug.Slug, error)
-
 	Purpose(ctx context.Context, obj *sqlc.Team) (*string, error)
 	Metadata(ctx context.Context, obj *sqlc.Team) (map[string]interface{}, error)
-	AuditLogs(ctx context.Context, obj *sqlc.Team) ([]*dbmodels.AuditLog, error)
-
+	AuditLogs(ctx context.Context, obj *sqlc.Team) ([]*sqlc.AuditLog, error)
+	CreatedAt(ctx context.Context, obj *sqlc.Team) (*time.Time, error)
 	Members(ctx context.Context, obj *sqlc.Team) ([]*model.TeamMember, error)
 }
 type UserResolver interface {
-	Teams(ctx context.Context, obj *dbmodels.User) ([]*sqlc.Team, error)
-	HasAPIKey(ctx context.Context, obj *dbmodels.User) (bool, error)
-	IsServiceAccount(ctx context.Context, obj *dbmodels.User) (bool, error)
-
-	Roles(ctx context.Context, obj *dbmodels.User) ([]*sqlc.UserRole, error)
+	Teams(ctx context.Context, obj *sqlc.User) ([]*sqlc.Team, error)
+	HasAPIKey(ctx context.Context, obj *sqlc.User) (bool, error)
+	IsServiceAccount(ctx context.Context, obj *sqlc.User) (bool, error)
+	CreatedAt(ctx context.Context, obj *sqlc.User) (*time.Time, error)
+	Roles(ctx context.Context, obj *sqlc.User) ([]*sqlc.UserRole, error)
+}
+type UserRoleResolver interface {
+	Role(ctx context.Context, obj *sqlc.UserRole) (*model.Role, error)
+	IsGlobal(ctx context.Context, obj *sqlc.UserRole) (bool, error)
+	TargetID(ctx context.Context, obj *sqlc.UserRole) (*uuid.UUID, error)
 }
 
 type executableSchema struct {
@@ -579,27 +574,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Role.Name(childComplexity), true
 
-	case "RoleBinding.isGlobal":
-		if e.complexity.RoleBinding.IsGlobal == nil {
-			break
-		}
-
-		return e.complexity.RoleBinding.IsGlobal(childComplexity), true
-
-	case "RoleBinding.role":
-		if e.complexity.RoleBinding.Role == nil {
-			break
-		}
-
-		return e.complexity.RoleBinding.Role(childComplexity), true
-
-	case "RoleBinding.targetId":
-		if e.complexity.RoleBinding.TargetID == nil {
-			break
-		}
-
-		return e.complexity.RoleBinding.TargetID(childComplexity), true
-
 	case "System.id":
 		if e.complexity.System.ID == nil {
 			break
@@ -753,6 +727,27 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.User.Teams(childComplexity), true
+
+	case "UserRole.isGlobal":
+		if e.complexity.UserRole.IsGlobal == nil {
+			break
+		}
+
+		return e.complexity.UserRole.IsGlobal(childComplexity), true
+
+	case "UserRole.role":
+		if e.complexity.UserRole.Role == nil {
+			break
+		}
+
+		return e.complexity.UserRole.Role(childComplexity), true
+
+	case "UserRole.targetId":
+		if e.complexity.UserRole.TargetID == nil {
+			break
+		}
+
+		return e.complexity.UserRole.TargetID(childComplexity), true
 
 	case "Users.nodes":
 		if e.complexity.Users.Nodes == nil {
@@ -975,7 +970,7 @@ directive @auth on FIELD_DEFINITION`, BuiltIn: false},
 }
 
 "Role binding type."
-type RoleBinding {
+type UserRole {
     "The connected role."
     role: Role!
 
@@ -1388,7 +1383,7 @@ type User {
     createdAt: Time!
 
     "Roles attached to the user."
-    roles: [RoleBinding!]!
+    roles: [UserRole!]!
 }
 
 "User collection."
@@ -1872,7 +1867,7 @@ func (ec *executionContext) fieldContext_APIKey_APIKey(ctx context.Context, fiel
 	return fc, nil
 }
 
-func (ec *executionContext) _AuditLog_id(ctx context.Context, field graphql.CollectedField, obj *dbmodels.AuditLog) (ret graphql.Marshaler) {
+func (ec *executionContext) _AuditLog_id(ctx context.Context, field graphql.CollectedField, obj *sqlc.AuditLog) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_AuditLog_id(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1898,9 +1893,9 @@ func (ec *executionContext) _AuditLog_id(ctx context.Context, field graphql.Coll
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*uuid.UUID)
+	res := resTmp.(uuid.UUID)
 	fc.Result = res
-	return ec.marshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
+	return ec.marshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_AuditLog_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1916,7 +1911,7 @@ func (ec *executionContext) fieldContext_AuditLog_id(ctx context.Context, field 
 	return fc, nil
 }
 
-func (ec *executionContext) _AuditLog_targetSystem(ctx context.Context, field graphql.CollectedField, obj *dbmodels.AuditLog) (ret graphql.Marshaler) {
+func (ec *executionContext) _AuditLog_targetSystem(ctx context.Context, field graphql.CollectedField, obj *sqlc.AuditLog) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_AuditLog_targetSystem(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1942,9 +1937,9 @@ func (ec *executionContext) _AuditLog_targetSystem(ctx context.Context, field gr
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*sqlc.System)
+	res := resTmp.(*model.System)
 	fc.Result = res
-	return ec.marshalNSystem2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐSystem(ctx, field.Selections, res)
+	return ec.marshalNSystem2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSystem(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_AuditLog_targetSystem(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1966,7 +1961,7 @@ func (ec *executionContext) fieldContext_AuditLog_targetSystem(ctx context.Conte
 	return fc, nil
 }
 
-func (ec *executionContext) _AuditLog_correlation(ctx context.Context, field graphql.CollectedField, obj *dbmodels.AuditLog) (ret graphql.Marshaler) {
+func (ec *executionContext) _AuditLog_correlation(ctx context.Context, field graphql.CollectedField, obj *sqlc.AuditLog) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_AuditLog_correlation(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1992,9 +1987,9 @@ func (ec *executionContext) _AuditLog_correlation(ctx context.Context, field gra
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*dbmodels.Correlation)
+	res := resTmp.(*model.Correlation)
 	fc.Result = res
-	return ec.marshalNCorrelation2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐCorrelation(ctx, field.Selections, res)
+	return ec.marshalNCorrelation2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐCorrelation(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_AuditLog_correlation(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2014,7 +2009,7 @@ func (ec *executionContext) fieldContext_AuditLog_correlation(ctx context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) _AuditLog_actor(ctx context.Context, field graphql.CollectedField, obj *dbmodels.AuditLog) (ret graphql.Marshaler) {
+func (ec *executionContext) _AuditLog_actor(ctx context.Context, field graphql.CollectedField, obj *sqlc.AuditLog) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_AuditLog_actor(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -2037,9 +2032,9 @@ func (ec *executionContext) _AuditLog_actor(ctx context.Context, field graphql.C
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*dbmodels.User)
+	res := resTmp.(*sqlc.User)
 	fc.Result = res
-	return ec.marshalOUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐUser(ctx, field.Selections, res)
+	return ec.marshalOUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_AuditLog_actor(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2073,7 +2068,7 @@ func (ec *executionContext) fieldContext_AuditLog_actor(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _AuditLog_targetUser(ctx context.Context, field graphql.CollectedField, obj *dbmodels.AuditLog) (ret graphql.Marshaler) {
+func (ec *executionContext) _AuditLog_targetUser(ctx context.Context, field graphql.CollectedField, obj *sqlc.AuditLog) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_AuditLog_targetUser(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -2096,9 +2091,9 @@ func (ec *executionContext) _AuditLog_targetUser(ctx context.Context, field grap
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*dbmodels.User)
+	res := resTmp.(*sqlc.User)
 	fc.Result = res
-	return ec.marshalOUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐUser(ctx, field.Selections, res)
+	return ec.marshalOUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_AuditLog_targetUser(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2132,7 +2127,7 @@ func (ec *executionContext) fieldContext_AuditLog_targetUser(ctx context.Context
 	return fc, nil
 }
 
-func (ec *executionContext) _AuditLog_targetTeam(ctx context.Context, field graphql.CollectedField, obj *dbmodels.AuditLog) (ret graphql.Marshaler) {
+func (ec *executionContext) _AuditLog_targetTeam(ctx context.Context, field graphql.CollectedField, obj *sqlc.AuditLog) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_AuditLog_targetTeam(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -2191,7 +2186,7 @@ func (ec *executionContext) fieldContext_AuditLog_targetTeam(ctx context.Context
 	return fc, nil
 }
 
-func (ec *executionContext) _AuditLog_action(ctx context.Context, field graphql.CollectedField, obj *dbmodels.AuditLog) (ret graphql.Marshaler) {
+func (ec *executionContext) _AuditLog_action(ctx context.Context, field graphql.CollectedField, obj *sqlc.AuditLog) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_AuditLog_action(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -2205,7 +2200,7 @@ func (ec *executionContext) _AuditLog_action(ctx context.Context, field graphql.
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Action, nil
+		return ec.resolvers.AuditLog().Action(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2226,8 +2221,8 @@ func (ec *executionContext) fieldContext_AuditLog_action(ctx context.Context, fi
 	fc = &graphql.FieldContext{
 		Object:     "AuditLog",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
 		},
@@ -2235,7 +2230,7 @@ func (ec *executionContext) fieldContext_AuditLog_action(ctx context.Context, fi
 	return fc, nil
 }
 
-func (ec *executionContext) _AuditLog_message(ctx context.Context, field graphql.CollectedField, obj *dbmodels.AuditLog) (ret graphql.Marshaler) {
+func (ec *executionContext) _AuditLog_message(ctx context.Context, field graphql.CollectedField, obj *sqlc.AuditLog) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_AuditLog_message(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -2279,7 +2274,7 @@ func (ec *executionContext) fieldContext_AuditLog_message(ctx context.Context, f
 	return fc, nil
 }
 
-func (ec *executionContext) _AuditLog_createdAt(ctx context.Context, field graphql.CollectedField, obj *dbmodels.AuditLog) (ret graphql.Marshaler) {
+func (ec *executionContext) _AuditLog_createdAt(ctx context.Context, field graphql.CollectedField, obj *sqlc.AuditLog) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_AuditLog_createdAt(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -2401,9 +2396,9 @@ func (ec *executionContext) _AuditLogs_nodes(ctx context.Context, field graphql.
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*dbmodels.AuditLog)
+	res := resTmp.([]*sqlc.AuditLog)
 	fc.Result = res
-	return ec.marshalNAuditLog2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐAuditLogᚄ(ctx, field.Selections, res)
+	return ec.marshalNAuditLog2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐAuditLogᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_AuditLogs_nodes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2439,7 +2434,7 @@ func (ec *executionContext) fieldContext_AuditLogs_nodes(ctx context.Context, fi
 	return fc, nil
 }
 
-func (ec *executionContext) _Correlation_id(ctx context.Context, field graphql.CollectedField, obj *dbmodels.Correlation) (ret graphql.Marshaler) {
+func (ec *executionContext) _Correlation_id(ctx context.Context, field graphql.CollectedField, obj *model.Correlation) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Correlation_id(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -3319,10 +3314,10 @@ func (ec *executionContext) _Mutation_createServiceAccount(ctx context.Context, 
 		if tmp == nil {
 			return nil, nil
 		}
-		if data, ok := tmp.(*dbmodels.User); ok {
+		if data, ok := tmp.(*sqlc.User); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/dbmodels.User`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/sqlc.User`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3334,9 +3329,9 @@ func (ec *executionContext) _Mutation_createServiceAccount(ctx context.Context, 
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*dbmodels.User)
+	res := resTmp.(*sqlc.User)
 	fc.Result = res
-	return ec.marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐUser(ctx, field.Selections, res)
+	return ec.marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_createServiceAccount(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3412,10 +3407,10 @@ func (ec *executionContext) _Mutation_updateServiceAccount(ctx context.Context, 
 		if tmp == nil {
 			return nil, nil
 		}
-		if data, ok := tmp.(*dbmodels.User); ok {
+		if data, ok := tmp.(*sqlc.User); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/dbmodels.User`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/sqlc.User`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3427,9 +3422,9 @@ func (ec *executionContext) _Mutation_updateServiceAccount(ctx context.Context, 
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*dbmodels.User)
+	res := resTmp.(*sqlc.User)
 	fc.Result = res
-	return ec.marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐUser(ctx, field.Selections, res)
+	return ec.marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_updateServiceAccount(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3793,10 +3788,10 @@ func (ec *executionContext) _Query_roles(ctx context.Context, field graphql.Coll
 		if tmp == nil {
 			return nil, nil
 		}
-		if data, ok := tmp.([]*sqlc.Role); ok {
+		if data, ok := tmp.([]*model.Role); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/nais/console/pkg/sqlc.Role`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/nais/console/pkg/graph/model.Role`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3808,9 +3803,9 @@ func (ec *executionContext) _Query_roles(ctx context.Context, field graphql.Coll
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*sqlc.Role)
+	res := resTmp.([]*model.Role)
 	fc.Result = res
-	return ec.marshalNRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐRoleᚄ(ctx, field.Selections, res)
+	return ec.marshalNRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRoleᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_roles(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3861,10 +3856,10 @@ func (ec *executionContext) _Query_systems(ctx context.Context, field graphql.Co
 		if tmp == nil {
 			return nil, nil
 		}
-		if data, ok := tmp.([]*sqlc.System); ok {
+		if data, ok := tmp.([]*model.System); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/nais/console/pkg/sqlc.System`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/nais/console/pkg/graph/model.System`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3876,9 +3871,9 @@ func (ec *executionContext) _Query_systems(ctx context.Context, field graphql.Co
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*sqlc.System)
+	res := resTmp.([]*model.System)
 	fc.Result = res
-	return ec.marshalNSystem2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐSystemᚄ(ctx, field.Selections, res)
+	return ec.marshalNSystem2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSystemᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_systems(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4186,10 +4181,10 @@ func (ec *executionContext) _Query_user(ctx context.Context, field graphql.Colle
 		if tmp == nil {
 			return nil, nil
 		}
-		if data, ok := tmp.(*dbmodels.User); ok {
+		if data, ok := tmp.(*sqlc.User); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/dbmodels.User`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/sqlc.User`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4201,9 +4196,9 @@ func (ec *executionContext) _Query_user(ctx context.Context, field graphql.Colle
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*dbmodels.User)
+	res := resTmp.(*sqlc.User)
 	fc.Result = res
-	return ec.marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐUser(ctx, field.Selections, res)
+	return ec.marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_user(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4279,10 +4274,10 @@ func (ec *executionContext) _Query_me(ctx context.Context, field graphql.Collect
 		if tmp == nil {
 			return nil, nil
 		}
-		if data, ok := tmp.(*dbmodels.User); ok {
+		if data, ok := tmp.(*sqlc.User); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/dbmodels.User`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/sqlc.User`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4294,9 +4289,9 @@ func (ec *executionContext) _Query_me(ctx context.Context, field graphql.Collect
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*dbmodels.User)
+	res := resTmp.(*sqlc.User)
 	fc.Result = res
-	return ec.marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐUser(ctx, field.Selections, res)
+	return ec.marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_me(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4459,7 +4454,7 @@ func (ec *executionContext) fieldContext_Query___schema(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Role_name(ctx context.Context, field graphql.CollectedField, obj *sqlc.Role) (ret graphql.Marshaler) {
+func (ec *executionContext) _Role_name(ctx context.Context, field graphql.CollectedField, obj *model.Role) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Role_name(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -4473,7 +4468,7 @@ func (ec *executionContext) _Role_name(ctx context.Context, field graphql.Collec
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Role().Name(rctx, obj)
+		return obj.Name, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4494,8 +4489,8 @@ func (ec *executionContext) fieldContext_Role_name(ctx context.Context, field gr
 	fc = &graphql.FieldContext{
 		Object:     "Role",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
 		},
@@ -4503,140 +4498,7 @@ func (ec *executionContext) fieldContext_Role_name(ctx context.Context, field gr
 	return fc, nil
 }
 
-func (ec *executionContext) _RoleBinding_role(ctx context.Context, field graphql.CollectedField, obj *sqlc.UserRole) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_RoleBinding_role(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.RoleBinding().Role(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*sqlc.Role)
-	fc.Result = res
-	return ec.marshalNRole2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐRole(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_RoleBinding_role(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "RoleBinding",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "name":
-				return ec.fieldContext_Role_name(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Role", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _RoleBinding_isGlobal(ctx context.Context, field graphql.CollectedField, obj *sqlc.UserRole) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_RoleBinding_isGlobal(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.RoleBinding().IsGlobal(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(bool)
-	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_RoleBinding_isGlobal(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "RoleBinding",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _RoleBinding_targetId(ctx context.Context, field graphql.CollectedField, obj *sqlc.UserRole) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_RoleBinding_targetId(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.RoleBinding().TargetID(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*uuid.UUID)
-	fc.Result = res
-	return ec.marshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_RoleBinding_targetId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "RoleBinding",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type UUID does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _System_id(ctx context.Context, field graphql.CollectedField, obj *sqlc.System) (ret graphql.Marshaler) {
+func (ec *executionContext) _System_id(ctx context.Context, field graphql.CollectedField, obj *model.System) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_System_id(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -4662,9 +4524,9 @@ func (ec *executionContext) _System_id(ctx context.Context, field graphql.Collec
 		}
 		return graphql.Null
 	}
-	res := resTmp.(uuid.UUID)
+	res := resTmp.(*uuid.UUID)
 	fc.Result = res
-	return ec.marshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
+	return ec.marshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_System_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4680,7 +4542,7 @@ func (ec *executionContext) fieldContext_System_id(ctx context.Context, field gr
 	return fc, nil
 }
 
-func (ec *executionContext) _System_name(ctx context.Context, field graphql.CollectedField, obj *sqlc.System) (ret graphql.Marshaler) {
+func (ec *executionContext) _System_name(ctx context.Context, field graphql.CollectedField, obj *model.System) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_System_name(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -4782,7 +4644,7 @@ func (ec *executionContext) _Team_slug(ctx context.Context, field graphql.Collec
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Team().Slug(rctx, obj)
+		return obj.Slug, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4794,17 +4656,17 @@ func (ec *executionContext) _Team_slug(ctx context.Context, field graphql.Collec
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*slug.Slug)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSlug(ctx, field.Selections, res)
+	return ec.marshalNSlug2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Team_slug(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Team",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Slug does not have child fields")
 		},
@@ -4964,9 +4826,9 @@ func (ec *executionContext) _Team_auditLogs(ctx context.Context, field graphql.C
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*dbmodels.AuditLog)
+	res := resTmp.([]*sqlc.AuditLog)
 	fc.Result = res
-	return ec.marshalNAuditLog2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐAuditLogᚄ(ctx, field.Selections, res)
+	return ec.marshalNAuditLog2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐAuditLogᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Team_auditLogs(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -5016,7 +4878,7 @@ func (ec *executionContext) _Team_createdAt(ctx context.Context, field graphql.C
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.CreatedAt, nil
+		return ec.resolvers.Team().CreatedAt(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5028,17 +4890,17 @@ func (ec *executionContext) _Team_createdAt(ctx context.Context, field graphql.C
 		}
 		return graphql.Null
 	}
-	res := resTmp.(time.Time)
+	res := resTmp.(*time.Time)
 	fc.Result = res
-	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
+	return ec.marshalNTime2ᚖtimeᚐTime(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Team_createdAt(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Team",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Time does not have child fields")
 		},
@@ -5122,9 +4984,9 @@ func (ec *executionContext) _TeamMember_user(ctx context.Context, field graphql.
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*dbmodels.User)
+	res := resTmp.(*sqlc.User)
 	fc.Result = res
-	return ec.marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐUser(ctx, field.Selections, res)
+	return ec.marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_TeamMember_user(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -5316,7 +5178,7 @@ func (ec *executionContext) fieldContext_Teams_nodes(ctx context.Context, field 
 	return fc, nil
 }
 
-func (ec *executionContext) _User_id(ctx context.Context, field graphql.CollectedField, obj *dbmodels.User) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_id(ctx context.Context, field graphql.CollectedField, obj *sqlc.User) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_User_id(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -5342,9 +5204,9 @@ func (ec *executionContext) _User_id(ctx context.Context, field graphql.Collecte
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*uuid.UUID)
+	res := resTmp.(uuid.UUID)
 	fc.Result = res
-	return ec.marshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
+	return ec.marshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_User_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -5360,7 +5222,7 @@ func (ec *executionContext) fieldContext_User_id(ctx context.Context, field grap
 	return fc, nil
 }
 
-func (ec *executionContext) _User_email(ctx context.Context, field graphql.CollectedField, obj *dbmodels.User) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_email(ctx context.Context, field graphql.CollectedField, obj *sqlc.User) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_User_email(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -5404,7 +5266,7 @@ func (ec *executionContext) fieldContext_User_email(ctx context.Context, field g
 	return fc, nil
 }
 
-func (ec *executionContext) _User_name(ctx context.Context, field graphql.CollectedField, obj *dbmodels.User) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_name(ctx context.Context, field graphql.CollectedField, obj *sqlc.User) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_User_name(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -5448,7 +5310,7 @@ func (ec *executionContext) fieldContext_User_name(ctx context.Context, field gr
 	return fc, nil
 }
 
-func (ec *executionContext) _User_teams(ctx context.Context, field graphql.CollectedField, obj *dbmodels.User) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_teams(ctx context.Context, field graphql.CollectedField, obj *sqlc.User) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_User_teams(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -5510,7 +5372,7 @@ func (ec *executionContext) fieldContext_User_teams(ctx context.Context, field g
 	return fc, nil
 }
 
-func (ec *executionContext) _User_hasAPIKey(ctx context.Context, field graphql.CollectedField, obj *dbmodels.User) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_hasAPIKey(ctx context.Context, field graphql.CollectedField, obj *sqlc.User) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_User_hasAPIKey(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -5554,7 +5416,7 @@ func (ec *executionContext) fieldContext_User_hasAPIKey(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _User_isServiceAccount(ctx context.Context, field graphql.CollectedField, obj *dbmodels.User) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_isServiceAccount(ctx context.Context, field graphql.CollectedField, obj *sqlc.User) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_User_isServiceAccount(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -5598,7 +5460,7 @@ func (ec *executionContext) fieldContext_User_isServiceAccount(ctx context.Conte
 	return fc, nil
 }
 
-func (ec *executionContext) _User_createdAt(ctx context.Context, field graphql.CollectedField, obj *dbmodels.User) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_createdAt(ctx context.Context, field graphql.CollectedField, obj *sqlc.User) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_User_createdAt(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -5612,7 +5474,7 @@ func (ec *executionContext) _User_createdAt(ctx context.Context, field graphql.C
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.CreatedAt, nil
+		return ec.resolvers.User().CreatedAt(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5624,17 +5486,17 @@ func (ec *executionContext) _User_createdAt(ctx context.Context, field graphql.C
 		}
 		return graphql.Null
 	}
-	res := resTmp.(time.Time)
+	res := resTmp.(*time.Time)
 	fc.Result = res
-	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
+	return ec.marshalNTime2ᚖtimeᚐTime(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_User_createdAt(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "User",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Time does not have child fields")
 		},
@@ -5642,7 +5504,7 @@ func (ec *executionContext) fieldContext_User_createdAt(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _User_roles(ctx context.Context, field graphql.CollectedField, obj *dbmodels.User) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_roles(ctx context.Context, field graphql.CollectedField, obj *sqlc.User) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_User_roles(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -5670,7 +5532,7 @@ func (ec *executionContext) _User_roles(ctx context.Context, field graphql.Colle
 	}
 	res := resTmp.([]*sqlc.UserRole)
 	fc.Result = res
-	return ec.marshalNRoleBinding2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUserRoleᚄ(ctx, field.Selections, res)
+	return ec.marshalNUserRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUserRoleᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_User_roles(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -5682,13 +5544,146 @@ func (ec *executionContext) fieldContext_User_roles(ctx context.Context, field g
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "role":
-				return ec.fieldContext_RoleBinding_role(ctx, field)
+				return ec.fieldContext_UserRole_role(ctx, field)
 			case "isGlobal":
-				return ec.fieldContext_RoleBinding_isGlobal(ctx, field)
+				return ec.fieldContext_UserRole_isGlobal(ctx, field)
 			case "targetId":
-				return ec.fieldContext_RoleBinding_targetId(ctx, field)
+				return ec.fieldContext_UserRole_targetId(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type RoleBinding", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type UserRole", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserRole_role(ctx context.Context, field graphql.CollectedField, obj *sqlc.UserRole) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserRole_role(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.UserRole().Role(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Role)
+	fc.Result = res
+	return ec.marshalNRole2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRole(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_UserRole_role(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserRole",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "name":
+				return ec.fieldContext_Role_name(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Role", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserRole_isGlobal(ctx context.Context, field graphql.CollectedField, obj *sqlc.UserRole) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserRole_isGlobal(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.UserRole().IsGlobal(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_UserRole_isGlobal(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserRole",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserRole_targetId(ctx context.Context, field graphql.CollectedField, obj *sqlc.UserRole) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserRole_targetId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.UserRole().TargetID(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*uuid.UUID)
+	fc.Result = res
+	return ec.marshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_UserRole_targetId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserRole",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type UUID does not have child fields")
 		},
 	}
 	return fc, nil
@@ -5772,9 +5767,9 @@ func (ec *executionContext) _Users_nodes(ctx context.Context, field graphql.Coll
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*dbmodels.User)
+	res := resTmp.([]*sqlc.User)
 	fc.Result = res
-	return ec.marshalNUser2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐUserᚄ(ctx, field.Selections, res)
+	return ec.marshalNUser2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUserᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Users_nodes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -7742,7 +7737,7 @@ func (ec *executionContext) unmarshalInputCreateServiceAccountInput(ctx context.
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-			it.Name, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSlug(ctx, v)
+			it.Name, err = ec.unmarshalNSlug2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -7765,7 +7760,7 @@ func (ec *executionContext) unmarshalInputCreateTeamInput(ctx context.Context, o
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-			it.Slug, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSlug(ctx, v)
+			it.Slug, err = ec.unmarshalNSlug2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -7912,7 +7907,7 @@ func (ec *executionContext) unmarshalInputTeamsQuery(ctx context.Context, obj in
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-			it.Slug, err = ec.unmarshalOSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSlug(ctx, v)
+			it.Slug, err = ec.unmarshalOSlug2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -7974,7 +7969,7 @@ func (ec *executionContext) unmarshalInputUpdateServiceAccountInput(ctx context.
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-			it.Name, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSlug(ctx, v)
+			it.Name, err = ec.unmarshalNSlug2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -8115,7 +8110,7 @@ func (ec *executionContext) _APIKey(ctx context.Context, sel ast.SelectionSet, o
 
 var auditLogImplementors = []string{"AuditLog"}
 
-func (ec *executionContext) _AuditLog(ctx context.Context, sel ast.SelectionSet, obj *dbmodels.AuditLog) graphql.Marshaler {
+func (ec *executionContext) _AuditLog(ctx context.Context, sel ast.SelectionSet, obj *sqlc.AuditLog) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, auditLogImplementors)
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
@@ -8222,12 +8217,25 @@ func (ec *executionContext) _AuditLog(ctx context.Context, sel ast.SelectionSet,
 
 			})
 		case "action":
+			field := field
 
-			out.Values[i] = ec._AuditLog_action(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuditLog_action(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
 			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
 		case "message":
 
 			out.Values[i] = ec._AuditLog_message(ctx, field, obj)
@@ -8290,7 +8298,7 @@ func (ec *executionContext) _AuditLogs(ctx context.Context, sel ast.SelectionSet
 
 var correlationImplementors = []string{"Correlation"}
 
-func (ec *executionContext) _Correlation(ctx context.Context, sel ast.SelectionSet, obj *dbmodels.Correlation) graphql.Marshaler {
+func (ec *executionContext) _Correlation(ctx context.Context, sel ast.SelectionSet, obj *model.Correlation) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, correlationImplementors)
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
@@ -8724,7 +8732,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 
 var roleImplementors = []string{"Role"}
 
-func (ec *executionContext) _Role(ctx context.Context, sel ast.SelectionSet, obj *sqlc.Role) graphql.Marshaler {
+func (ec *executionContext) _Role(ctx context.Context, sel ast.SelectionSet, obj *model.Role) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, roleImplementors)
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
@@ -8733,103 +8741,12 @@ func (ec *executionContext) _Role(ctx context.Context, sel ast.SelectionSet, obj
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Role")
 		case "name":
-			field := field
 
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Role_name(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
+			out.Values[i] = ec._Role_name(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
 			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var roleBindingImplementors = []string{"RoleBinding"}
-
-func (ec *executionContext) _RoleBinding(ctx context.Context, sel ast.SelectionSet, obj *sqlc.UserRole) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, roleBindingImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("RoleBinding")
-		case "role":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._RoleBinding_role(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
-		case "isGlobal":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._RoleBinding_isGlobal(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
-		case "targetId":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._RoleBinding_targetId(ctx, field, obj)
-				return res
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -8843,7 +8760,7 @@ func (ec *executionContext) _RoleBinding(ctx context.Context, sel ast.SelectionS
 
 var systemImplementors = []string{"System"}
 
-func (ec *executionContext) _System(ctx context.Context, sel ast.SelectionSet, obj *sqlc.System) graphql.Marshaler {
+func (ec *executionContext) _System(ctx context.Context, sel ast.SelectionSet, obj *model.System) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, systemImplementors)
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
@@ -8894,25 +8811,12 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 				atomic.AddUint32(&invalids, 1)
 			}
 		case "slug":
-			field := field
 
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Team_slug(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
+			out.Values[i] = ec._Team_slug(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
 			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
 		case "name":
 
 			out.Values[i] = ec._Team_name(ctx, field, obj)
@@ -8975,12 +8879,25 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 
 			})
 		case "createdAt":
+			field := field
 
-			out.Values[i] = ec._Team_createdAt(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Team_createdAt(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
 			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
 		case "members":
 			field := field
 
@@ -9084,7 +9001,7 @@ func (ec *executionContext) _Teams(ctx context.Context, sel ast.SelectionSet, ob
 
 var userImplementors = []string{"User"}
 
-func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj *dbmodels.User) graphql.Marshaler {
+func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj *sqlc.User) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, userImplementors)
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
@@ -9174,12 +9091,25 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 
 			})
 		case "createdAt":
+			field := field
 
-			out.Values[i] = ec._User_createdAt(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._User_createdAt(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
 			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
 		case "roles":
 			field := field
 
@@ -9193,6 +9123,84 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var userRoleImplementors = []string{"UserRole"}
+
+func (ec *executionContext) _UserRole(ctx context.Context, sel ast.SelectionSet, obj *sqlc.UserRole) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, userRoleImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("UserRole")
+		case "role":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._UserRole_role(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
+		case "isGlobal":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._UserRole_isGlobal(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
+		case "targetId":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._UserRole_targetId(ctx, field, obj)
 				return res
 			}
 
@@ -9588,7 +9596,7 @@ func (ec *executionContext) unmarshalNAddTeamOwnersInput2githubᚗcomᚋnaisᚋc
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNAuditLog2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐAuditLogᚄ(ctx context.Context, sel ast.SelectionSet, v []*dbmodels.AuditLog) graphql.Marshaler {
+func (ec *executionContext) marshalNAuditLog2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐAuditLogᚄ(ctx context.Context, sel ast.SelectionSet, v []*sqlc.AuditLog) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -9612,7 +9620,7 @@ func (ec *executionContext) marshalNAuditLog2ᚕᚖgithubᚗcomᚋnaisᚋconsole
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNAuditLog2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐAuditLog(ctx, sel, v[i])
+			ret[i] = ec.marshalNAuditLog2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐAuditLog(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -9632,7 +9640,7 @@ func (ec *executionContext) marshalNAuditLog2ᚕᚖgithubᚗcomᚋnaisᚋconsole
 	return ret
 }
 
-func (ec *executionContext) marshalNAuditLog2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐAuditLog(ctx context.Context, sel ast.SelectionSet, v *dbmodels.AuditLog) graphql.Marshaler {
+func (ec *executionContext) marshalNAuditLog2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐAuditLog(ctx context.Context, sel ast.SelectionSet, v *sqlc.AuditLog) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -9681,11 +9689,11 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
-func (ec *executionContext) marshalNCorrelation2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐCorrelation(ctx context.Context, sel ast.SelectionSet, v dbmodels.Correlation) graphql.Marshaler {
+func (ec *executionContext) marshalNCorrelation2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐCorrelation(ctx context.Context, sel ast.SelectionSet, v model.Correlation) graphql.Marshaler {
 	return ec._Correlation(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNCorrelation2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐCorrelation(ctx context.Context, sel ast.SelectionSet, v *dbmodels.Correlation) graphql.Marshaler {
+func (ec *executionContext) marshalNCorrelation2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐCorrelation(ctx context.Context, sel ast.SelectionSet, v *model.Correlation) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -9735,11 +9743,11 @@ func (ec *executionContext) unmarshalNRemoveUsersFromTeamInput2githubᚗcomᚋna
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNRole2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐRole(ctx context.Context, sel ast.SelectionSet, v sqlc.Role) graphql.Marshaler {
+func (ec *executionContext) marshalNRole2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRole(ctx context.Context, sel ast.SelectionSet, v model.Role) graphql.Marshaler {
 	return ec._Role(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐRoleᚄ(ctx context.Context, sel ast.SelectionSet, v []*sqlc.Role) graphql.Marshaler {
+func (ec *executionContext) marshalNRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRoleᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Role) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -9763,7 +9771,7 @@ func (ec *executionContext) marshalNRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋp
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNRole2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐRole(ctx, sel, v[i])
+			ret[i] = ec.marshalNRole2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRole(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -9783,7 +9791,7 @@ func (ec *executionContext) marshalNRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋp
 	return ret
 }
 
-func (ec *executionContext) marshalNRole2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐRole(ctx context.Context, sel ast.SelectionSet, v *sqlc.Role) graphql.Marshaler {
+func (ec *executionContext) marshalNRole2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRole(ctx context.Context, sel ast.SelectionSet, v *model.Role) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -9793,78 +9801,18 @@ func (ec *executionContext) marshalNRole2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkg�
 	return ec._Role(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNRoleBinding2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUserRoleᚄ(ctx context.Context, sel ast.SelectionSet, v []*sqlc.UserRole) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNRoleBinding2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUserRole(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) marshalNRoleBinding2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUserRole(ctx context.Context, sel ast.SelectionSet, v *sqlc.UserRole) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._RoleBinding(ctx, sel, v)
-}
-
 func (ec *executionContext) unmarshalNSetTeamMemberRoleInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSetTeamMemberRoleInput(ctx context.Context, v interface{}) (model.SetTeamMemberRoleInput, error) {
 	res, err := ec.unmarshalInputSetTeamMemberRoleInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSlug(ctx context.Context, v interface{}) (*slug.Slug, error) {
-	res, err := dbmodels.UnmarshalSlug(v)
+func (ec *executionContext) unmarshalNSlug2string(ctx context.Context, v interface{}) (string, error) {
+	res, err := graphql.UnmarshalString(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSlug(ctx context.Context, sel ast.SelectionSet, v *slug.Slug) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	res := dbmodels.MarshalSlug(v)
+func (ec *executionContext) marshalNSlug2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
+	res := graphql.MarshalString(v)
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -9898,11 +9846,11 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 	return res
 }
 
-func (ec *executionContext) marshalNSystem2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐSystem(ctx context.Context, sel ast.SelectionSet, v sqlc.System) graphql.Marshaler {
+func (ec *executionContext) marshalNSystem2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSystem(ctx context.Context, sel ast.SelectionSet, v model.System) graphql.Marshaler {
 	return ec._System(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNSystem2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐSystemᚄ(ctx context.Context, sel ast.SelectionSet, v []*sqlc.System) graphql.Marshaler {
+func (ec *executionContext) marshalNSystem2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSystemᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.System) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -9926,7 +9874,7 @@ func (ec *executionContext) marshalNSystem2ᚕᚖgithubᚗcomᚋnaisᚋconsole�
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNSystem2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐSystem(ctx, sel, v[i])
+			ret[i] = ec.marshalNSystem2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSystem(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -9946,7 +9894,7 @@ func (ec *executionContext) marshalNSystem2ᚕᚖgithubᚗcomᚋnaisᚋconsole�
 	return ret
 }
 
-func (ec *executionContext) marshalNSystem2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐSystem(ctx context.Context, sel ast.SelectionSet, v *sqlc.System) graphql.Marshaler {
+func (ec *executionContext) marshalNSystem2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSystem(ctx context.Context, sel ast.SelectionSet, v *model.System) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -10117,13 +10065,34 @@ func (ec *executionContext) marshalNTime2timeᚐTime(ctx context.Context, sel as
 	return res
 }
 
+func (ec *executionContext) unmarshalNTime2ᚖtimeᚐTime(ctx context.Context, v interface{}) (*time.Time, error) {
+	res, err := graphql.UnmarshalTime(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNTime2ᚖtimeᚐTime(ctx context.Context, sel ast.SelectionSet, v *time.Time) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	res := graphql.MarshalTime(*v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
 func (ec *executionContext) unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx context.Context, v interface{}) (uuid.UUID, error) {
-	res, err := dbmodels.UnmarshalUUID(v)
+	res, err := db.UnmarshalUUID(v)
 	return *res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx context.Context, sel ast.SelectionSet, v uuid.UUID) graphql.Marshaler {
-	res := dbmodels.MarshalUUID(&v)
+	res := db.MarshalUUID(&v)
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -10165,7 +10134,7 @@ func (ec *executionContext) marshalNUUID2ᚕᚖgithubᚗcomᚋgoogleᚋuuidᚐUU
 }
 
 func (ec *executionContext) unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx context.Context, v interface{}) (*uuid.UUID, error) {
-	res, err := dbmodels.UnmarshalUUID(v)
+	res, err := db.UnmarshalUUID(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
@@ -10176,7 +10145,7 @@ func (ec *executionContext) marshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(
 		}
 		return graphql.Null
 	}
-	res := dbmodels.MarshalUUID(v)
+	res := db.MarshalUUID(v)
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -10195,11 +10164,11 @@ func (ec *executionContext) unmarshalNUpdateTeamInput2githubᚗcomᚋnaisᚋcons
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNUser2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐUser(ctx context.Context, sel ast.SelectionSet, v dbmodels.User) graphql.Marshaler {
+func (ec *executionContext) marshalNUser2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUser(ctx context.Context, sel ast.SelectionSet, v sqlc.User) graphql.Marshaler {
 	return ec._User(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNUser2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐUserᚄ(ctx context.Context, sel ast.SelectionSet, v []*dbmodels.User) graphql.Marshaler {
+func (ec *executionContext) marshalNUser2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUserᚄ(ctx context.Context, sel ast.SelectionSet, v []*sqlc.User) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -10223,7 +10192,7 @@ func (ec *executionContext) marshalNUser2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋp
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐUser(ctx, sel, v[i])
+			ret[i] = ec.marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUser(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -10243,7 +10212,7 @@ func (ec *executionContext) marshalNUser2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋp
 	return ret
 }
 
-func (ec *executionContext) marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐUser(ctx context.Context, sel ast.SelectionSet, v *dbmodels.User) graphql.Marshaler {
+func (ec *executionContext) marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUser(ctx context.Context, sel ast.SelectionSet, v *sqlc.User) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -10251,6 +10220,60 @@ func (ec *executionContext) marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkg�
 		return graphql.Null
 	}
 	return ec._User(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNUserRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUserRoleᚄ(ctx context.Context, sel ast.SelectionSet, v []*sqlc.UserRole) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNUserRole2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUserRole(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNUserRole2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUserRole(ctx context.Context, sel ast.SelectionSet, v *sqlc.UserRole) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._UserRole(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNUserSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserSortField(ctx context.Context, v interface{}) (model.UserSortField, error) {
@@ -10596,19 +10619,19 @@ func (ec *executionContext) unmarshalOPagination2ᚖgithubᚗcomᚋnaisᚋconsol
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) unmarshalOSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSlug(ctx context.Context, v interface{}) (*slug.Slug, error) {
+func (ec *executionContext) unmarshalOSlug2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
 	if v == nil {
 		return nil, nil
 	}
-	res, err := dbmodels.UnmarshalSlug(v)
-	return res, graphql.ErrorOnPath(ctx, err)
+	res, err := graphql.UnmarshalString(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalOSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐSlug(ctx context.Context, sel ast.SelectionSet, v *slug.Slug) graphql.Marshaler {
+func (ec *executionContext) marshalOSlug2ᚖstring(ctx context.Context, sel ast.SelectionSet, v *string) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
-	res := dbmodels.MarshalSlug(v)
+	res := graphql.MarshalString(*v)
 	return res
 }
 
@@ -10655,7 +10678,7 @@ func (ec *executionContext) unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUI
 	if v == nil {
 		return nil, nil
 	}
-	res, err := dbmodels.UnmarshalUUID(v)
+	res, err := db.UnmarshalUUID(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
@@ -10663,11 +10686,11 @@ func (ec *executionContext) marshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(
 	if v == nil {
 		return graphql.Null
 	}
-	res := dbmodels.MarshalUUID(v)
+	res := db.MarshalUUID(v)
 	return res
 }
 
-func (ec *executionContext) marshalOUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbmodelsᚐUser(ctx context.Context, sel ast.SelectionSet, v *dbmodels.User) graphql.Marshaler {
+func (ec *executionContext) marshalOUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐUser(ctx context.Context, sel ast.SelectionSet, v *sqlc.User) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
