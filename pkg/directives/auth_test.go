@@ -16,10 +16,11 @@ import (
 func TestAuth(t *testing.T) {
 	var obj interface{}
 	var nextHandler func(ctx context.Context) (res interface{}, err error)
-	database := db.NewMockDatabase(t)
-	auth := directives.Auth(database)
 
 	t.Run("No user in context", func(t *testing.T) {
+		database := db.NewMockDatabase(t)
+		auth := directives.Auth(database)
+
 		nextHandler = func(ctx context.Context) (res interface{}, err error) {
 			panic("Should not be executed")
 		}
@@ -28,6 +29,9 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("Unknown user in context", func(t *testing.T) {
+		database := db.NewMockDatabase(t)
+		auth := directives.Auth(database)
+
 		userId, _ := uuid.NewUUID()
 		user := &db.User{User: &sqlc.User{
 			ID: userId,
@@ -43,6 +47,5 @@ func TestAuth(t *testing.T) {
 		}
 		_, err := auth(authz.ContextWithUser(context.Background(), user), obj, nextHandler)
 		assert.EqualError(t, err, "user in context does not exist in database: record not found")
-		database.AssertExpectations(t)
 	})
 }
