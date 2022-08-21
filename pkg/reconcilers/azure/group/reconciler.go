@@ -142,7 +142,7 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 			continue
 		}
 
-		r.auditLogger.Logf(ctx, sqlc.AuditActionAzureGroupAddMember, correlationID, r.NameP(), nil, &team.Slug, &consoleUser.Email, "added member '%s' to Azure group '%s'", member.Mail, grp.MailNickname)
+		r.auditLogger.Logf(ctx, sqlc.AuditActionAzureGroupAddMember, correlationID, r.NameP(), nil, &team.Slug, &consoleUser.Email, "added member '%s' to Azure group '%s'", consoleUser.Email, grp.MailNickname)
 	}
 
 	return nil
