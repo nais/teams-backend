@@ -43,7 +43,14 @@ CREATE TYPE audit_action AS ENUM (
 	'console:team:remove-member',
 	'console:team:set-member-role',
 	'console:team:sync',
-	'console:team:update'
+	'console:team:update',
+
+	'usersync:prepare',
+	'usersync:list:remote',
+	'usersync:list:local',
+	'usersync:create',
+	'usersync:update',
+	'usersync:delete'
 );
 
 CREATE TYPE system_name AS ENUM (

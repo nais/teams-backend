@@ -2,7 +2,7 @@ package db
 
 import "context"
 
-func (d *database) Transaction(ctx context.Context, fn func(ctx context.Context, txdb Database) error) error {
+func (d *database) Transaction(ctx context.Context, fn TransactionFunc) error {
 	tx, err := d.conn.Begin(ctx)
 	if err != nil {
 		return err

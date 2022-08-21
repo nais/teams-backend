@@ -11,12 +11,13 @@ import (
 )
 
 type Querier interface {
-	AddRoleToUser(ctx context.Context, arg AddRoleToUserParams) error
-	AddUserToTeam(ctx context.Context, arg AddUserToTeamParams) error
 	CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) error
 	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) error
 	CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (*User, error)
+	CreateUserRole(ctx context.Context, arg CreateUserRoleParams) error
+	CreateUserTeam(ctx context.Context, arg CreateUserTeamParams) error
+	DeleteUser(ctx context.Context, id uuid.UUID) error
 	GetRoleAuthorizations(ctx context.Context, roleName RoleName) ([]AuthzName, error)
 	GetTeamByID(ctx context.Context, id uuid.UUID) (*Team, error)
 	GetTeamBySlug(ctx context.Context, slug string) (*Team, error)
@@ -30,9 +31,11 @@ type Querier interface {
 	GetUserRole(ctx context.Context, id uuid.UUID) (*UserRole, error)
 	GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*UserRole, error)
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*UserTeam, error)
+	GetUsersByEmail(ctx context.Context, email string) ([]*User, error)
 	RemoveApiKeysFromUser(ctx context.Context, userID uuid.UUID) error
 	RemoveUserRoles(ctx context.Context, userID uuid.UUID) error
 	SetTeamSystemState(ctx context.Context, arg SetTeamSystemStateParams) error
+	SetUserName(ctx context.Context, arg SetUserNameParams) (*User, error)
 }
 
 var _ Querier = (*Queries)(nil)

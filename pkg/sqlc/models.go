@@ -29,6 +29,12 @@ const (
 	AuditActionConsoleTeamSetMemberRole    AuditAction = "console:team:set-member-role"
 	AuditActionConsoleTeamSync             AuditAction = "console:team:sync"
 	AuditActionConsoleTeamUpdate           AuditAction = "console:team:update"
+	AuditActionUsersyncPrepare             AuditAction = "usersync:prepare"
+	AuditActionUsersyncListRemote          AuditAction = "usersync:list:remote"
+	AuditActionUsersyncListLocal           AuditAction = "usersync:list:local"
+	AuditActionUsersyncCreate              AuditAction = "usersync:create"
+	AuditActionUsersyncUpdate              AuditAction = "usersync:update"
+	AuditActionUsersyncDelete              AuditAction = "usersync:delete"
 )
 
 func (e *AuditAction) Scan(src interface{}) error {

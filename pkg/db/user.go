@@ -36,6 +36,10 @@ func (d *database) AddUser(ctx context.Context, name, email string) (*User, erro
 	return &User{User: user}, nil
 }
 
+func (d *database) DeleteUser(ctx context.Context, userID uuid.UUID) error {
+	return d.querier.DeleteUser(ctx, userID)
+}
+
 func (d *database) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	user, err := d.querier.GetUserByEmail(ctx, email)
 	if err != nil {
@@ -61,17 +65,6 @@ func (d *database) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error)
 	}
 
 	return d.getUser(ctx, &User{User: user})
-}
-
-func (d *database) getUser(ctx context.Context, user *User) (*User, error) {
-	userRoles, err := d.getUserRoles(ctx, user.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	user.Roles = userRoles
-
-	return user, nil
 }
 
 func (d *database) getUserRoles(ctx context.Context, userID uuid.UUID) ([]*Role, error) {
@@ -103,4 +96,49 @@ func (d *database) RemoveUserRoles(ctx context.Context, userID uuid.UUID) error 
 
 func (d *database) RemoveApiKeysFromUser(ctx context.Context, userID uuid.UUID) error {
 	return d.querier.RemoveApiKeysFromUser(ctx, userID)
+}
+
+func (d *database) SetUserName(ctx context.Context, userID uuid.UUID, name string) (*User, error) {
+	user, err := d.querier.SetUserName(ctx, sqlc.SetUserNameParams{
+		Name: name,
+		ID:   userID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return d.getUser(ctx, &User{User: user})
+}
+
+func (d *database) GetUsersByEmail(ctx context.Context, email string) ([]*User, error) {
+	users, err := d.querier.GetUsersByEmail(ctx, "%@"+email)
+	if err != nil {
+		return nil, err
+	}
+
+	return d.getUsers(ctx, users)
+}
+
+func (d *database) getUsers(ctx context.Context, users []*sqlc.User) ([]*User, error) {
+	result := make([]*User, 0)
+	for _, user := range users {
+		u, err := d.getUser(ctx, &User{User: user})
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, u)
+	}
+
+	return result, nil
+}
+
+func (d *database) getUser(ctx context.Context, user *User) (*User, error) {
+	userRoles, err := d.getUserRoles(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	user.Roles = userRoles
+
+	return user, nil
 }

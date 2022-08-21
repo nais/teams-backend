@@ -11,42 +11,6 @@ import (
 	"github.com/google/uuid"
 )
 
-const addRoleToUser = `-- name: AddRoleToUser :exec
-INSERT INTO user_roles (id, user_id, role_name, target_id) VALUES ($1, $2, $3, $4)
-`
-
-type AddRoleToUserParams struct {
-	ID       uuid.UUID
-	UserID   uuid.UUID
-	RoleName RoleName
-	TargetID uuid.NullUUID
-}
-
-func (q *Queries) AddRoleToUser(ctx context.Context, arg AddRoleToUserParams) error {
-	_, err := q.db.Exec(ctx, addRoleToUser,
-		arg.ID,
-		arg.UserID,
-		arg.RoleName,
-		arg.TargetID,
-	)
-	return err
-}
-
-const addUserToTeam = `-- name: AddUserToTeam :exec
-INSERT INTO user_teams (id, user_id, team_id) VALUES ($1, $2, $3)
-`
-
-type AddUserToTeamParams struct {
-	ID     uuid.UUID
-	UserID uuid.UUID
-	TeamID uuid.UUID
-}
-
-func (q *Queries) AddUserToTeam(ctx context.Context, arg AddUserToTeamParams) error {
-	_, err := q.db.Exec(ctx, addUserToTeam, arg.ID, arg.UserID, arg.TeamID)
-	return err
-}
-
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (id, name, email) VALUES ($1, $2, $3)
 RETURNING id, email, name
@@ -63,6 +27,51 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (*User, 
 	var i User
 	err := row.Scan(&i.ID, &i.Email, &i.Name)
 	return &i, err
+}
+
+const createUserRole = `-- name: CreateUserRole :exec
+INSERT INTO user_roles (id, user_id, role_name, target_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING
+`
+
+type CreateUserRoleParams struct {
+	ID       uuid.UUID
+	UserID   uuid.UUID
+	RoleName RoleName
+	TargetID uuid.NullUUID
+}
+
+func (q *Queries) CreateUserRole(ctx context.Context, arg CreateUserRoleParams) error {
+	_, err := q.db.Exec(ctx, createUserRole,
+		arg.ID,
+		arg.UserID,
+		arg.RoleName,
+		arg.TargetID,
+	)
+	return err
+}
+
+const createUserTeam = `-- name: CreateUserTeam :exec
+INSERT INTO user_teams (id, user_id, team_id) VALUES ($1, $2, $3)
+`
+
+type CreateUserTeamParams struct {
+	ID     uuid.UUID
+	UserID uuid.UUID
+	TeamID uuid.UUID
+}
+
+func (q *Queries) CreateUserTeam(ctx context.Context, arg CreateUserTeamParams) error {
+	_, err := q.db.Exec(ctx, createUserTeam, arg.ID, arg.UserID, arg.TeamID)
+	return err
+}
+
+const deleteUser = `-- name: DeleteUser :exec
+DELETE FROM users WHERE id = $1
+`
+
+func (q *Queries) DeleteUser(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteUser, id)
+	return err
 }
 
 const getUserByApiKey = `-- name: GetUserByApiKey :one
@@ -126,6 +135,31 @@ func (q *Queries) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*UserTe
 	return items, nil
 }
 
+const getUsersByEmail = `-- name: GetUsersByEmail :many
+SELECT id, email, name FROM users
+WHERE email LIKE $1 LIMIT 1
+`
+
+func (q *Queries) GetUsersByEmail(ctx context.Context, email string) ([]*User, error) {
+	rows, err := q.db.Query(ctx, getUsersByEmail, email)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(&i.ID, &i.Email, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const removeUserRoles = `-- name: RemoveUserRoles :exec
 DELETE FROM user_roles WHERE user_id = $1
 `
@@ -133,4 +167,21 @@ DELETE FROM user_roles WHERE user_id = $1
 func (q *Queries) RemoveUserRoles(ctx context.Context, userID uuid.UUID) error {
 	_, err := q.db.Exec(ctx, removeUserRoles, userID)
 	return err
+}
+
+const setUserName = `-- name: SetUserName :one
+UPDATE users SET name = $1 WHERE id = $2
+RETURNING id, email, name
+`
+
+type SetUserNameParams struct {
+	Name string
+	ID   uuid.UUID
+}
+
+func (q *Queries) SetUserName(ctx context.Context, arg SetUserNameParams) (*User, error) {
+	row := q.db.QueryRow(ctx, setUserName, arg.Name, arg.ID)
+	var i User
+	err := row.Scan(&i.ID, &i.Email, &i.Name)
+	return &i, err
 }
