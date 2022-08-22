@@ -12,22 +12,16 @@ extend type Query {
     ): AuditLogs! @auth
 }
 
-"Correlation type."
-type Correlation {
-    "ID of the correlation."
-    id: UUID!
-}
-
 "Audit log type."
 type AuditLog {
     "ID of the log entry."
     id: UUID!
 
     "The related system."
-    targetSystem: System!
+    systemName: String!
 
     "The related correlation."
-    correlation: Correlation!
+    correlationID: UUID!
 
     "The actor who performed the action in the entry. When this field is empty it means that the console system itself performed the action."
     actor: User

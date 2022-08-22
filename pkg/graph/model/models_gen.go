@@ -39,9 +39,9 @@ type AuditLog struct {
 	// ID of the log entry.
 	ID *uuid.UUID `json:"id"`
 	// The related system.
-	TargetSystem *System `json:"targetSystem"`
+	SystemName string `json:"systemName"`
 	// The related correlation.
-	Correlation *Correlation `json:"correlation"`
+	CorrelationID *uuid.UUID `json:"correlationID"`
 	// The actor who performed the action in the entry. When this field is empty it means that the console system itself performed the action.
 	Actor *db.User `json:"actor"`
 	// The target user.
@@ -84,12 +84,6 @@ type AuditLogsSort struct {
 	Field AuditLogSortField `json:"field"`
 	// Sort direction.
 	Direction SortDirection `json:"direction"`
-}
-
-// Correlation type.
-type Correlation struct {
-	// ID of the correlation.
-	ID *uuid.UUID `json:"id"`
 }
 
 // Input for creating a new service account.
@@ -144,14 +138,6 @@ type SetTeamMemberRoleInput struct {
 	UserID *uuid.UUID `json:"userId"`
 	// The team role to set.
 	Role TeamRole `json:"role"`
-}
-
-// System type.
-type System struct {
-	// Unique ID of the system.
-	ID *uuid.UUID `json:"id"`
-	// Name of the system.
-	Name string `json:"name"`
 }
 
 // Team member.
