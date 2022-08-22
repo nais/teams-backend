@@ -63,7 +63,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		},
 	}
 	correlationID := uuid.New()
-	team := &db.Team{
+	team := db.Team{
 		Team: &sqlc.Team{
 			ID:      uuid.New(),
 			Slug:    teamSlug,
@@ -196,7 +196,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		reconciler := azure_group_reconciler.New(database, auditLogger, creds, mockClient, domain)
 
-		team := &db.Team{
+		team := db.Team{
 			Team: &sqlc.Team{
 				ID:      uuid.New(),
 				Slug:    teamSlug,
