@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/sqlc"
 )
@@ -20,18 +19,47 @@ func (d *database) AddUserToTeam(ctx context.Context, userID uuid.UUID, teamID u
 	})
 }
 
-func (d *database) AddTeam(ctx context.Context, name, slug string, purpose *string) (*Team, error) {
+func (d *database) AddTeam(ctx context.Context, name, slug string, purpose *string, userID uuid.UUID) (*Team, error) {
 	id, err := uuid.NewUUID()
 	if err != nil {
 		return nil, err
 	}
 
-	team, err := d.querier.CreateTeam(ctx, sqlc.CreateTeamParams{
+	tx, err := d.conn.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	querier := d.querier.WithTx(tx)
+	team, err := querier.CreateTeam(ctx, sqlc.CreateTeamParams{
 		ID:      id,
 		Name:    name,
 		Slug:    slug,
 		Purpose: nullString(purpose),
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	err = querier.AddUserToTeam(ctx, sqlc.AddUserToTeamParams{
+		UserID: userID,
+		TeamID: team.ID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	err = querier.CreateUserRole(ctx, sqlc.CreateUserRoleParams{
+		UserID:   userID,
+		RoleName: sqlc.RoleNameTeamowner,
+		TargetID: nullUUID(&team.ID),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	err = tx.Commit(ctx)
 	if err != nil {
 		return nil, err
 	}

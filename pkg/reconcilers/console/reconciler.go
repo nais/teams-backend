@@ -14,19 +14,7 @@ import (
 type consoleReconciler struct{}
 
 const (
-	Name                   = sqlc.SystemNameConsole
-	OpAddTeamMember        = "console:team:add-member"
-	OpAddTeamOwner         = "console:team:add-owner"
-	OpCreateApiKey         = "console:api-key:create"
-	OpCreateServiceAccount = "console:service-account:create"
-	OpCreateTeam           = "console:team:create"
-	OpDeleteApiKey         = "console:api-key:delete"
-	OpDeleteServiceAccount = "console:service-account:delete"
-	OpRemoveTeamMember     = "console:team:add-member"
-	OpSetTeamMemberRole    = "console:team:set-member-role"
-	OpSyncTeam             = "console:team:sync"
-	OpUpdateServiceAccount = "console:service-account:update"
-	OpUpdateTeam           = "console:team:update"
+	Name = sqlc.SystemNameConsole
 )
 
 func New() *consoleReconciler {

@@ -30,13 +30,13 @@ func (_m *MockDatabase) AddAuditLog(ctx context.Context, correlationID uuid.UUID
 	return r0
 }
 
-// AddTeam provides a mock function with given fields: ctx, name, slug, purpose
-func (_m *MockDatabase) AddTeam(ctx context.Context, name string, slug string, purpose *string) (*Team, error) {
-	ret := _m.Called(ctx, name, slug, purpose)
+// AddTeam provides a mock function with given fields: ctx, name, slug, purpose, userID
+func (_m *MockDatabase) AddTeam(ctx context.Context, name string, slug string, purpose *string, userID uuid.UUID) (*Team, error) {
+	ret := _m.Called(ctx, name, slug, purpose, userID)
 
 	var r0 *Team
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, *string) *Team); ok {
-		r0 = rf(ctx, name, slug, purpose)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, *string, uuid.UUID) *Team); ok {
+		r0 = rf(ctx, name, slug, purpose, userID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*Team)
@@ -44,8 +44,8 @@ func (_m *MockDatabase) AddTeam(ctx context.Context, name string, slug string, p
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, string, *string) error); ok {
-		r1 = rf(ctx, name, slug, purpose)
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, *string, uuid.UUID) error); ok {
+		r1 = rf(ctx, name, slug, purpose, userID)
 	} else {
 		r1 = ret.Error(1)
 	}

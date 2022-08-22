@@ -13,7 +13,7 @@ type Input struct {
 	Team          db.Team
 }
 
-// Helper function to create input for reconcilers, with members already set on the team object
+// CreateReconcilerInput Helper function to create input for reconcilers, with members already set on the team object
 func CreateReconcilerInput(ctx context.Context, database db.Database, team db.Team) (Input, error) {
 	correlationID, err := uuid.NewUUID()
 	if err != nil {

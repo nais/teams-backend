@@ -6,16 +6,43 @@ package graph
 import (
 	"context"
 	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
+	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/sqlc"
 )
 
 func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*db.Team, error) {
-	panic(fmt.Errorf("not implemented"))
+	actor := authz.UserFromContext(ctx)
+	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameTeamsCreate)
+	if err != nil {
+		return nil, err
+	}
+
+	correlationID, err := uuid.NewUUID()
+	if err != nil {
+		return nil, fmt.Errorf("unable to create correlation ID for audit log: %w", err)
+	}
+
+	team, err := r.database.AddTeam(ctx, input.Name, input.Slug, input.Purpose, actor.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	r.auditLogger.Logf(ctx, sqlc.AuditActionGraphqlApiTeamCreate, correlationID, &r.systemName, &actor.Email, &team.Slug, nil, "Team created")
+
+	reconcilerInput, err := reconcilers.CreateReconcilerInput(ctx, r.database, *team)
+	if err != nil {
+		return nil, fmt.Errorf("unable to reconcile team: %w", err)
+	}
+
+	r.teamReconciler <- reconcilerInput
+
+	return team, nil
 }
 
 func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, input model.UpdateTeamInput) (*db.Team, error) {
@@ -63,7 +90,7 @@ func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*db.Team, erro
 }
 
 func (r *teamResolver) Purpose(ctx context.Context, obj *db.Team) (*string, error) {
-	panic(fmt.Errorf("not implemented"))
+	return &obj.Purpose.String, nil
 }
 
 func (r *teamResolver) Metadata(ctx context.Context, obj *db.Team) (map[string]interface{}, error) {

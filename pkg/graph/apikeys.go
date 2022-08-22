@@ -44,7 +44,7 @@ func (r *mutationResolver) CreateAPIKey(ctx context.Context, userID *uuid.UUID) 
 		return nil, fmt.Errorf("unable to create API key for user: %w", err)
 	}
 
-	r.auditLogger.Logf(ctx, sqlc.AuditActionConsoleApiKeyCreate, correlationID, &r.systemName, &actor.Email, nil, &serviceAccount.Email, "API key created")
+	r.auditLogger.Logf(ctx, sqlc.AuditActionGraphqlApiApiKeyCreate, correlationID, &r.systemName, &actor.Email, nil, &serviceAccount.Email, "API key created")
 
 	return &model.APIKey{
 		Key: apiKey,

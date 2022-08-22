@@ -30,7 +30,7 @@ type Database interface {
 	GetUsersByEmail(ctx context.Context, email string) ([]*User, error)
 	GetUsers(ctx context.Context) ([]*User, error)
 
-	AddTeam(ctx context.Context, name, slug string, purpose *string) (*Team, error)
+	AddTeam(ctx context.Context, name, slug string, purpose *string, userID uuid.UUID) (*Team, error)
 	GetTeamByID(ctx context.Context, ID uuid.UUID) (*Team, error)
 	GetTeamBySlug(ctx context.Context, slug string) (*Team, error)
 	GetTeams(ctx context.Context) ([]*Team, error)
@@ -64,13 +64,21 @@ func NewDatabase(q Querier, conn *pgx.Conn) Database {
 }
 
 func nullString(s *string) sql.NullString {
-	ns := sql.NullString{}
-	ns.Scan(s)
-	return ns
+	if s == nil {
+		return sql.NullString{}
+	}
+	return sql.NullString{
+		String: *s,
+		Valid:  true,
+	}
 }
 
 func nullUUID(ID *uuid.UUID) uuid.NullUUID {
-	nu := uuid.NullUUID{}
-	nu.Scan(ID)
-	return nu
+	if ID == nil {
+		return uuid.NullUUID{}
+	}
+	return uuid.NullUUID{
+		UUID:  *ID,
+		Valid: true,
+	}
 }

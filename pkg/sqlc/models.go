@@ -17,18 +17,18 @@ import (
 type AuditAction string
 
 const (
-	AuditActionConsoleApiKeyCreate                       AuditAction = "console:api-key:create"
-	AuditActionConsoleApiKeyDelete                       AuditAction = "console:api-key:delete"
-	AuditActionConsoleServiceAccountCreate               AuditAction = "console:service-account:create"
-	AuditActionConsoleServiceAccountDelete               AuditAction = "console:service-account:delete"
-	AuditActionConsoleServiceAccountUpdate               AuditAction = "console:service-account:update"
-	AuditActionConsoleTeamAddMember                      AuditAction = "console:team:add-member"
-	AuditActionConsoleTeamAddOwner                       AuditAction = "console:team:add-owner"
-	AuditActionConsoleTeamCreate                         AuditAction = "console:team:create"
-	AuditActionConsoleTeamRemoveMember                   AuditAction = "console:team:remove-member"
-	AuditActionConsoleTeamSetMemberRole                  AuditAction = "console:team:set-member-role"
-	AuditActionConsoleTeamSync                           AuditAction = "console:team:sync"
-	AuditActionConsoleTeamUpdate                         AuditAction = "console:team:update"
+	AuditActionGraphqlApiApiKeyCreate                    AuditAction = "graphql-api:api-key:create"
+	AuditActionGraphqlApiApiKeyDelete                    AuditAction = "graphql-api:api-key:delete"
+	AuditActionGraphqlApiServiceAccountCreate            AuditAction = "graphql-api:service-account:create"
+	AuditActionGraphqlApiServiceAccountDelete            AuditAction = "graphql-api:service-account:delete"
+	AuditActionGraphqlApiServiceAccountUpdate            AuditAction = "graphql-api:service-account:update"
+	AuditActionGraphqlApiTeamAddMember                   AuditAction = "graphql-api:team:add-member"
+	AuditActionGraphqlApiTeamAddOwner                    AuditAction = "graphql-api:team:add-owner"
+	AuditActionGraphqlApiTeamCreate                      AuditAction = "graphql-api:team:create"
+	AuditActionGraphqlApiTeamRemoveMember                AuditAction = "graphql-api:team:remove-member"
+	AuditActionGraphqlApiTeamSetMemberRole               AuditAction = "graphql-api:team:set-member-role"
+	AuditActionGraphqlApiTeamSync                        AuditAction = "graphql-api:team:sync"
+	AuditActionGraphqlApiTeamUpdate                      AuditAction = "graphql-api:team:update"
 	AuditActionUsersyncPrepare                           AuditAction = "usersync:prepare"
 	AuditActionUsersyncListRemote                        AuditAction = "usersync:list:remote"
 	AuditActionUsersyncListLocal                         AuditAction = "usersync:list:local"
@@ -91,18 +91,18 @@ func (ns NullAuditAction) Value() (driver.Value, error) {
 
 func (e AuditAction) Valid() bool {
 	switch e {
-	case AuditActionConsoleApiKeyCreate,
-		AuditActionConsoleApiKeyDelete,
-		AuditActionConsoleServiceAccountCreate,
-		AuditActionConsoleServiceAccountDelete,
-		AuditActionConsoleServiceAccountUpdate,
-		AuditActionConsoleTeamAddMember,
-		AuditActionConsoleTeamAddOwner,
-		AuditActionConsoleTeamCreate,
-		AuditActionConsoleTeamRemoveMember,
-		AuditActionConsoleTeamSetMemberRole,
-		AuditActionConsoleTeamSync,
-		AuditActionConsoleTeamUpdate,
+	case AuditActionGraphqlApiApiKeyCreate,
+		AuditActionGraphqlApiApiKeyDelete,
+		AuditActionGraphqlApiServiceAccountCreate,
+		AuditActionGraphqlApiServiceAccountDelete,
+		AuditActionGraphqlApiServiceAccountUpdate,
+		AuditActionGraphqlApiTeamAddMember,
+		AuditActionGraphqlApiTeamAddOwner,
+		AuditActionGraphqlApiTeamCreate,
+		AuditActionGraphqlApiTeamRemoveMember,
+		AuditActionGraphqlApiTeamSetMemberRole,
+		AuditActionGraphqlApiTeamSync,
+		AuditActionGraphqlApiTeamUpdate,
 		AuditActionUsersyncPrepare,
 		AuditActionUsersyncListRemote,
 		AuditActionUsersyncListLocal,
@@ -133,18 +133,18 @@ func (e AuditAction) Valid() bool {
 
 func AllAuditActionValues() []AuditAction {
 	return []AuditAction{
-		AuditActionConsoleApiKeyCreate,
-		AuditActionConsoleApiKeyDelete,
-		AuditActionConsoleServiceAccountCreate,
-		AuditActionConsoleServiceAccountDelete,
-		AuditActionConsoleServiceAccountUpdate,
-		AuditActionConsoleTeamAddMember,
-		AuditActionConsoleTeamAddOwner,
-		AuditActionConsoleTeamCreate,
-		AuditActionConsoleTeamRemoveMember,
-		AuditActionConsoleTeamSetMemberRole,
-		AuditActionConsoleTeamSync,
-		AuditActionConsoleTeamUpdate,
+		AuditActionGraphqlApiApiKeyCreate,
+		AuditActionGraphqlApiApiKeyDelete,
+		AuditActionGraphqlApiServiceAccountCreate,
+		AuditActionGraphqlApiServiceAccountDelete,
+		AuditActionGraphqlApiServiceAccountUpdate,
+		AuditActionGraphqlApiTeamAddMember,
+		AuditActionGraphqlApiTeamAddOwner,
+		AuditActionGraphqlApiTeamCreate,
+		AuditActionGraphqlApiTeamRemoveMember,
+		AuditActionGraphqlApiTeamSetMemberRole,
+		AuditActionGraphqlApiTeamSync,
+		AuditActionGraphqlApiTeamUpdate,
 		AuditActionUsersyncPrepare,
 		AuditActionUsersyncListRemote,
 		AuditActionUsersyncListLocal,
