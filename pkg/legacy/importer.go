@@ -9,11 +9,9 @@ import (
 	"github.com/nais/console/pkg/config"
 	"golang.org/x/oauth2/clientcredentials"
 	"golang.org/x/oauth2/microsoft"
-	"gorm.io/gorm"
 )
 
 type GroupImporter struct {
-	db     *gorm.DB
 	oauth  clientcredentials.Config
 	client azureclient.Client
 }

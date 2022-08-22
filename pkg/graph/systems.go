@@ -5,14 +5,11 @@ package graph
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/console/pkg/graph/model"
 )
 
-func (r *queryResolver) Systems(ctx context.Context) ([]*sqlc.System, error) {
-	systems, err := r.queries.GetSystems(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return systems, nil
+func (r *queryResolver) Systems(ctx context.Context) ([]*model.System, error) {
+	panic(fmt.Errorf("not implemented"))
 }

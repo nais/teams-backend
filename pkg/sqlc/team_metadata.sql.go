@@ -12,7 +12,7 @@ import (
 )
 
 const getTeamMetadata = `-- name: GetTeamMetadata :many
-SELECT id, team_id, key, value FROM team_metadata WHERE team_id = $1
+SELECT team_id, key, value FROM team_metadata WHERE team_id = $1
 `
 
 func (q *Queries) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) ([]*TeamMetadatum, error) {
@@ -24,12 +24,7 @@ func (q *Queries) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) ([]*Tea
 	var items []*TeamMetadatum
 	for rows.Next() {
 		var i TeamMetadatum
-		if err := rows.Scan(
-			&i.ID,
-			&i.TeamID,
-			&i.Key,
-			&i.Value,
-		); err != nil {
+		if err := rows.Scan(&i.TeamID, &i.Key, &i.Value); err != nil {
 			return nil, err
 		}
 		items = append(items, &i)

@@ -76,6 +76,20 @@ func (_m *MockDatabase) AddUser(ctx context.Context, name string, email string) 
 	return r0, r1
 }
 
+// AddUserToTeam provides a mock function with given fields: ctx, userID, teamID
+func (_m *MockDatabase) AddUserToTeam(ctx context.Context, userID uuid.UUID, teamID uuid.UUID) error {
+	ret := _m.Called(ctx, userID, teamID)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) error); ok {
+		r0 = rf(ctx, userID, teamID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // AssignGlobalRoleToUser provides a mock function with given fields: ctx, userID, roleName
 func (_m *MockDatabase) AssignGlobalRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error {
 	ret := _m.Called(ctx, userID, roleName)

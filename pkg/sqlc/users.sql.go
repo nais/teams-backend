@@ -11,6 +11,20 @@ import (
 	"github.com/google/uuid"
 )
 
+const addUserToTeam = `-- name: AddUserToTeam :exec
+INSERT INTO user_teams (user_id, team_id) VALUES ($1, $2) ON CONFLICT DO NOTHING
+`
+
+type AddUserToTeamParams struct {
+	UserID uuid.UUID
+	TeamID uuid.UUID
+}
+
+func (q *Queries) AddUserToTeam(ctx context.Context, arg AddUserToTeamParams) error {
+	_, err := q.db.Exec(ctx, addUserToTeam, arg.UserID, arg.TeamID)
+	return err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (id, name, email) VALUES ($1, $2, $3)
 RETURNING id, email, name
@@ -30,38 +44,17 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (*User, 
 }
 
 const createUserRole = `-- name: CreateUserRole :exec
-INSERT INTO user_roles (id, user_id, role_name, target_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING
+INSERT INTO user_roles (user_id, role_name, target_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING
 `
 
 type CreateUserRoleParams struct {
-	ID       uuid.UUID
 	UserID   uuid.UUID
 	RoleName RoleName
 	TargetID uuid.NullUUID
 }
 
 func (q *Queries) CreateUserRole(ctx context.Context, arg CreateUserRoleParams) error {
-	_, err := q.db.Exec(ctx, createUserRole,
-		arg.ID,
-		arg.UserID,
-		arg.RoleName,
-		arg.TargetID,
-	)
-	return err
-}
-
-const createUserTeam = `-- name: CreateUserTeam :exec
-INSERT INTO user_teams (id, user_id, team_id) VALUES ($1, $2, $3)
-`
-
-type CreateUserTeamParams struct {
-	ID     uuid.UUID
-	UserID uuid.UUID
-	TeamID uuid.UUID
-}
-
-func (q *Queries) CreateUserTeam(ctx context.Context, arg CreateUserTeamParams) error {
-	_, err := q.db.Exec(ctx, createUserTeam, arg.ID, arg.UserID, arg.TeamID)
+	_, err := q.db.Exec(ctx, createUserRole, arg.UserID, arg.RoleName, arg.TargetID)
 	return err
 }
 
@@ -112,7 +105,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) 
 }
 
 const getUserTeams = `-- name: GetUserTeams :many
-SELECT id, user_id, team_id FROM user_teams WHERE user_id = $1
+SELECT user_id, team_id FROM user_teams WHERE user_id = $1
 `
 
 func (q *Queries) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*UserTeam, error) {
@@ -124,7 +117,7 @@ func (q *Queries) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*UserTe
 	var items []*UserTeam
 	for rows.Next() {
 		var i UserTeam
-		if err := rows.Scan(&i.ID, &i.UserID, &i.TeamID); err != nil {
+		if err := rows.Scan(&i.UserID, &i.TeamID); err != nil {
 			return nil, err
 		}
 		items = append(items, &i)

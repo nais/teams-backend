@@ -6,16 +6,11 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"time"
 
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/console/pkg/db"
 )
-
-// API key type.
-type APIKey struct {
-	// The API key.
-	APIKey string `json:"APIKey"`
-}
 
 // Input for adding users to a team as members.
 type AddTeamMembersInput struct {
@@ -33,12 +28,34 @@ type AddTeamOwnersInput struct {
 	UserIds []*uuid.UUID `json:"userIds"`
 }
 
+// Audit log type.
+type AuditLog struct {
+	// ID of the log entry.
+	ID *uuid.UUID `json:"id"`
+	// The related system.
+	TargetSystem *System `json:"targetSystem"`
+	// The related correlation.
+	Correlation *Correlation `json:"correlation"`
+	// The actor who performed the action in the entry. When this field is empty it means that the console system itself performed the action.
+	Actor *db.User `json:"actor"`
+	// The target user.
+	TargetUser *db.User `json:"targetUser"`
+	// The target team.
+	TargetTeam *db.Team `json:"targetTeam"`
+	// String representation of the action performed.
+	Action string `json:"action"`
+	// Log entry message.
+	Message string `json:"message"`
+	// Creation time of the log entry.
+	CreatedAt time.Time `json:"createdAt"`
+}
+
 // Audit log collection.
 type AuditLogs struct {
 	// Object related to pagination of the collection.
 	PageInfo *PageInfo `json:"pageInfo"`
 	// The list of audit log entries in the collection.
-	Nodes []*sqlc.AuditLog `json:"nodes"`
+	Nodes []*AuditLog `json:"nodes"`
 }
 
 // Input for filtering a collection of audit log entries.
@@ -113,12 +130,6 @@ type RemoveUsersFromTeamInput struct {
 	TeamID *uuid.UUID `json:"teamId"`
 }
 
-// Role type.
-type Role struct {
-	// Name of the role.
-	Name string `json:"name"`
-}
-
 // Input for setting team member role.
 type SetTeamMemberRoleInput struct {
 	// The ID of the team.
@@ -140,7 +151,7 @@ type System struct {
 // Team member.
 type TeamMember struct {
 	// User instance.
-	User *sqlc.User `json:"user"`
+	User *db.User `json:"user"`
 	// The role that the user has in the team.
 	Role TeamRole `json:"role"`
 }
@@ -150,7 +161,7 @@ type Teams struct {
 	// Object related to pagination of the collection.
 	PageInfo *PageInfo `json:"pageInfo"`
 	// The list of team objects in the collection.
-	Nodes []*sqlc.Team `json:"nodes"`
+	Nodes []*db.Team `json:"nodes"`
 }
 
 // Input for filtering a collection of teams.
@@ -183,12 +194,22 @@ type UpdateTeamInput struct {
 	Purpose *string `json:"purpose"`
 }
 
+// Role binding type.
+type UserRole struct {
+	// The connected role.
+	Role *db.Role `json:"role"`
+	// Whether or not the role is global.
+	IsGlobal bool `json:"isGlobal"`
+	// Optional target of the role binding.
+	TargetID *uuid.UUID `json:"targetId"`
+}
+
 // User collection.
 type Users struct {
 	// Object related to pagination of the collection.
 	PageInfo *PageInfo `json:"pageInfo"`
 	// The list of user objects in the collection.
-	Nodes []*sqlc.User `json:"nodes"`
+	Nodes []*db.User `json:"nodes"`
 }
 
 // Input for filtering a collection of users.

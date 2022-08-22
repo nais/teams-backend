@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4"
@@ -15,6 +16,10 @@ type database struct {
 }
 
 type TransactionFunc func(ctx context.Context, dbtx Database) error
+
+var (
+	ErrRecordNotFound = errors.New("record not found")
+)
 
 type Database interface {
 	AddAuditLog(ctx context.Context, correlationID uuid.UUID, actorEmail *string, systemName *sqlc.SystemName, targetTeamSlug, targetUserEmail *string, action sqlc.AuditAction, message string) error
@@ -34,6 +39,8 @@ type Database interface {
 
 	AssignGlobalRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error
 	AssignTargetedRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName, targetID uuid.UUID) error
+
+	AddUserToTeam(ctx context.Context, userID uuid.UUID, teamID uuid.UUID) error
 
 	CreateAPIKey(ctx context.Context, apiKey string, userID uuid.UUID) error
 

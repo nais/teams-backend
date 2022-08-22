@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/nais/console/pkg/directives"
+	"github.com/nais/console/pkg/graph"
+	"github.com/nais/console/pkg/graph/generated"
 	"net/http"
 	"net/url"
 	"os"
@@ -29,10 +32,7 @@ import (
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authn"
 	"github.com/nais/console/pkg/config"
-	"github.com/nais/console/pkg/directives"
 	"github.com/nais/console/pkg/fixtures"
-	"github.com/nais/console/pkg/graph"
-	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/middleware"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/usersync"
@@ -353,7 +353,7 @@ func setupGraphAPI(database db.Database, domain string, teamReconciler chan<- re
 		),
 	)
 	handler.SetErrorPresenter(graph.GetErrorPresenter())
-	return handler, nil
+	return nil, nil
 }
 
 func corsConfig() cors.Options {

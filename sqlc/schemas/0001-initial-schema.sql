@@ -186,18 +186,17 @@ CREATE TABLE system_states (
 -- team_metadata
 
 CREATE TABLE team_metadata (
-    id UUID PRIMARY KEY,
     team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
     key TEXT NOT NULL,
     value TEXT,
 
-    UNIQUE (team_id, key)
+    PRIMARY KEY (team_id, key)
 );
 
 -- user_roles
 
 CREATE TABLE user_roles (
-    id UUID PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     role_name role_name NOT NULL,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     target_id UUID
@@ -212,9 +211,8 @@ WHERE target_id IS NULL;
 -- user_teams
 
 CREATE TABLE user_teams (
-    id UUID PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
 
-    UNIQUE (user_id, team_id)
+    PRIMARY KEY (user_id, team_id)
 );

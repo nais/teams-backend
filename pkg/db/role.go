@@ -8,24 +8,14 @@ import (
 )
 
 func (d *database) AssignGlobalRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error {
-	ID, err := uuid.NewUUID()
-	if err != nil {
-		return err
-	}
 	return d.querier.CreateUserRole(ctx, sqlc.CreateUserRoleParams{
-		ID:       ID,
 		UserID:   userID,
 		RoleName: roleName,
 	})
 }
 
 func (d *database) AssignTargetedRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName, targetID uuid.UUID) error {
-	ID, err := uuid.NewUUID()
-	if err != nil {
-		return err
-	}
 	return d.querier.CreateUserRole(ctx, sqlc.CreateUserRoleParams{
-		ID:       ID,
 		UserID:   userID,
 		RoleName: roleName,
 		TargetID: nullUUID(&targetID),

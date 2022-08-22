@@ -13,6 +13,13 @@ type Team struct {
 	Members  []*User
 }
 
+func (d *database) AddUserToTeam(ctx context.Context, userID uuid.UUID, teamID uuid.UUID) error {
+	return d.querier.AddUserToTeam(ctx, sqlc.AddUserToTeamParams{
+		UserID: userID,
+		TeamID: teamID,
+	})
+}
+
 func (d *database) AddTeam(ctx context.Context, name, slug string, purpose *string) (*Team, error) {
 	id, err := uuid.NewUUID()
 	if err != nil {

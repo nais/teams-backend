@@ -456,7 +456,6 @@ type Team struct {
 }
 
 type TeamMetadatum struct {
-	ID     uuid.UUID
 	TeamID uuid.UUID
 	Key    string
 	Value  sql.NullString
@@ -469,14 +468,13 @@ type User struct {
 }
 
 type UserRole struct {
-	ID       uuid.UUID
+	ID       int32
 	RoleName RoleName
 	UserID   uuid.UUID
 	TargetID uuid.NullUUID
 }
 
 type UserTeam struct {
-	ID     uuid.UUID
 	UserID uuid.UUID
 	TeamID uuid.UUID
 }

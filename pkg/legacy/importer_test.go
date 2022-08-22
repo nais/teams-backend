@@ -3,30 +3,32 @@
 package legacy_test
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
+	"github.com/jackc/pgx/v4"
+	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/sqlc"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/nais/console/pkg/config"
-	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/legacy"
 	log "github.com/sirupsen/logrus"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
 func TestImportTeamsFromLegacyAzure(t *testing.T) {
 	const ymlpath = "/Users/kimt/src/navikt/teams/teams.yml"
 	const jsonpath = "/Users/kimt/src/navikt/teams/teams.json"
 
+	ctx := context.Background()
+
 	cfg, err := config.New()
 	if err != nil {
 		panic(err)
 	}
 
-	db, err := setupDatabase(cfg)
+	database, err := setupDatabase(ctx, cfg.DatabaseURL)
 	if err != nil {
 		panic(err)
 	}
@@ -41,71 +43,69 @@ func TestImportTeamsFromLegacyAzure(t *testing.T) {
 		panic(err)
 	}
 
-	dbteams := make([]*dbmodels.Team, 0, len(teams))
+	dbteams := make([]db.Team, 0, len(teams))
 
-	err = db.Transaction(func(tx *gorm.DB) error {
+	err = database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
 		for _, yamlteam := range teams {
 			team := yamlteam.Convert()
 
-			log.Debugf("Fetch team info for %s...", *team.Name)
+			log.Debugf("Fetch team info for %s...", team.Name)
 			members, err := gimp.GroupMembers(yamlteam.AzureID)
 			if err != nil {
 				return err
 			}
 
-			validMembers := make([]*dbmodels.User, 0, len(members))
-			for _, member := range members {
-				if !strings.HasSuffix(*member.Email, cfg.Google.Domain) {
-					log.Warnf("Skip member %s", *member.Email)
+			for _, gimpMember := range members {
+				if !strings.HasSuffix(gimpMember.Email, cfg.TenantDomain) {
+					log.Warnf("Skip member %s", gimpMember.Email)
 					continue
 				}
-				err := tx.FirstOrCreate(member, "email = ?", *member.Email).Error
+
+				member, err := dbtx.GetUserByEmail(ctx, gimpMember.Email)
+				if err != nil {
+					member, err = dbtx.AddUser(ctx, gimpMember.Name, gimpMember.Email)
+					if err != nil {
+						return err
+					}
+				}
+				log.Debugf("Created user %s", member.Email)
+
+				err = dbtx.AddUserToTeam(ctx, member.ID, team.ID)
 				if err != nil {
 					return err
 				}
-				log.Debugf("Created user %s", *member.Email)
-				validMembers = append(validMembers, member)
 			}
 
-			team.Users = validMembers
-			err = tx.Save(team).Error
-			if err != nil {
-				return err
-			}
-
-			log.Infof("Fetch team administrators for %s...", *team.Name)
+			log.Infof("Fetch team administrators for %s...", team.Name)
 			owners, err := gimp.GroupOwners(yamlteam.AzureID)
-			for _, owner := range owners {
-				if !strings.HasSuffix(*owner.Email, cfg.Google.Domain) {
-					log.Warnf("Skip owner %s", *owner.Email)
+			for _, gimpOwner := range owners {
+				if !strings.HasSuffix(gimpOwner.Email, cfg.TenantDomain) {
+					log.Warnf("Skip owner %s", gimpOwner.Email)
 					continue
 				}
-				err = tx.FirstOrCreate(owner, "email = ?", *owner.Email).Error
+
+				owner, err := dbtx.GetUserByEmail(ctx, gimpOwner.Email)
+				if err != nil {
+					owner, err = dbtx.AddUser(ctx, gimpOwner.Name, gimpOwner.Email)
+					if err != nil {
+						return err
+					}
+				}
+				log.Debugf("Created user %s", owner.Email)
+
+				err = dbtx.AssignTargetedRoleToUser(ctx, owner.ID, sqlc.RoleNameTeamowner, team.ID)
 				if err != nil {
 					return err
 				}
-				log.Debugf("Created user %s", *owner.Email)
-				rb := &dbmodels.RoleBinding{
-					RoleID: roles.TeamManagerID,
-					TeamID: team.ID,
-					UserID: owner.ID,
-				}
-				err = tx.Save(rb).Error
+				err = dbtx.AddUserToTeam(ctx, owner.ID, team.ID)
 				if err != nil {
 					return err
 				}
-				validMembers = append(validMembers, owner)
 			}
 
-			team.Users = validMembers
-			err = tx.Save(team).Error
-			if err != nil {
-				return err
-			}
+			log.Infof("Created %s with %d owners and %d members", team.Name, len(owners), len(members))
 
-			log.Infof("Created %s with %d owners and %d members", *team.Name, len(owners), len(members))
-
-			dbteams = append(dbteams, team)
+			dbteams = append(dbteams, *team)
 		}
 
 		return nil
@@ -120,34 +120,11 @@ func TestImportTeamsFromLegacyAzure(t *testing.T) {
 	enc.Encode(dbteams)
 }
 
-func setupDatabase(cfg *config.Config) (*gorm.DB, error) {
-	log.Infof("Connecting to database...")
-	db, err := gorm.Open(
-		postgres.New(
-			postgres.Config{
-				DSN:                  cfg.DatabaseURL,
-				PreferSimpleProtocol: true, // disables implicit prepared statement usage
-			},
-		),
-		&gorm.Config{},
-	)
+func setupDatabase(ctx context.Context, dbUrl string) (db.Database, error) {
+	dbc, err := pgx.Connect(ctx, dbUrl)
 	if err != nil {
 		return nil, err
 	}
-	log.Infof("Successfully connected to database.")
-
-	// uuid-ossp is needed for PostgreSQL to generate UUIDs as primary keys
-	err := db.Exec(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`).Error
-	if err != nil {
-		return nil, fmt.Errorf("install postgres uuid extension: %w", err)
-	}
-
-	log.Infof("Migrating database schema...")
-	err = dbmodels.Migrate(db)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Infof("Successfully migrated database schema.")
-	return db, nil
+	queries := db.Wrap(sqlc.New(dbc), dbc)
+	return db.NewDatabase(queries, dbc), nil
 }

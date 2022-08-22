@@ -43,7 +43,7 @@ SELECT id, role_name, user_id, target_id FROM user_roles
 WHERE id = $1 LIMIT 1
 `
 
-func (q *Queries) GetUserRole(ctx context.Context, id uuid.UUID) (*UserRole, error) {
+func (q *Queries) GetUserRole(ctx context.Context, id int32) (*UserRole, error) {
 	row := q.db.QueryRow(ctx, getUserRole, id)
 	var i UserRole
 	err := row.Scan(

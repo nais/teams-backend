@@ -20,10 +20,10 @@ JOIN users ON users.id = api_keys.user_id
 WHERE api_keys.api_key = $1 LIMIT 1;
 
 -- name: CreateUserRole :exec
-INSERT INTO user_roles (id, user_id, role_name, target_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING;
+INSERT INTO user_roles (user_id, role_name, target_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING;
 
--- name: CreateUserTeam :exec
-INSERT INTO user_teams (id, user_id, team_id) VALUES ($1, $2, $3);
+-- name: AddUserToTeam :exec
+INSERT INTO user_teams (user_id, team_id) VALUES ($1, $2) ON CONFLICT DO NOTHING;
 
 -- name: GetUserTeams :many
 SELECT * FROM user_teams WHERE user_id = $1;
