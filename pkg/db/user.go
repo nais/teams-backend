@@ -119,6 +119,15 @@ func (d *database) GetUsersByEmail(ctx context.Context, email string) ([]*User, 
 	return d.getUsers(ctx, users)
 }
 
+func (d *database) GetUsers(ctx context.Context) ([]*User, error) {
+	users, err := d.querier.GetUsers(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return d.getUsers(ctx, users)
+}
+
 func (d *database) getUsers(ctx context.Context, users []*sqlc.User) ([]*User, error) {
 	result := make([]*User, 0)
 	for _, user := range users {
@@ -141,4 +150,8 @@ func (d *database) getUser(ctx context.Context, user *User) (*User, error) {
 	user.Roles = userRoles
 
 	return user, nil
+}
+
+func (d *database) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*Role, error) {
+	return d.getUserRoles(ctx, userID)
 }

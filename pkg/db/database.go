@@ -28,6 +28,7 @@ type Database interface {
 	DeleteUser(ctx context.Context, userID uuid.UUID) error
 
 	GetUsersByEmail(ctx context.Context, email string) ([]*User, error)
+	GetUsers(ctx context.Context) ([]*User, error)
 
 	AddTeam(ctx context.Context, name, slug string, purpose *string) (*Team, error)
 	GetTeamByID(ctx context.Context, ID uuid.UUID) (*Team, error)
@@ -47,6 +48,8 @@ type Database interface {
 
 	GetRoleNames() []sqlc.RoleName
 	GetSystemNames() []sqlc.SystemName
+
+	GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*Role, error)
 
 	Transaction(ctx context.Context, fn TransactionFunc) error
 
