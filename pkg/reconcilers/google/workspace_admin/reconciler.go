@@ -65,11 +65,6 @@ func (r *googleWorkspaceAdminReconciler) Name() sqlc.SystemName {
 	return Name
 }
 
-func (r *googleWorkspaceAdminReconciler) NameP() *sqlc.SystemName {
-	n := Name
-	return &n
-}
-
 func (r *googleWorkspaceAdminReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	state := &reconcilers.GoogleWorkspaceState{}
 	err := r.database.LoadSystemState(ctx, r.Name(), input.Team.ID, state)
@@ -115,7 +110,7 @@ func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(ctx context.Context, s
 		return nil, fmt.Errorf("unable to create Google Directory group: %w", err)
 	}
 
-	r.auditLogger.Logf(ctx, sqlc.AuditActionGoogleWorkspaceAdminCreate, input.CorrelationID, r.NameP(), nil, &input.Team.Slug, nil, "created Google Directory group '%s'", group.Email)
+	r.auditLogger.Logf(ctx, sqlc.AuditActionGoogleWorkspaceAdminCreate, input.CorrelationID, r.Name(), nil, &input.Team.Slug, nil, "created Google Directory group '%s'", group.Email)
 
 	return group, nil
 }
@@ -146,7 +141,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 			consoleUserMap[remoteMemberEmail] = user
 		}
 
-		r.auditLogger.Logf(ctx, sqlc.AuditActionGoogleWorkspaceAdminDeleteMember, input.CorrelationID, r.NameP(), nil, &input.Team.Slug, &remoteMemberEmail, "deleted member '%s' from Google Directory group '%s'", member.Email, grp.Email)
+		r.auditLogger.Logf(ctx, sqlc.AuditActionGoogleWorkspaceAdminDeleteMember, input.CorrelationID, r.Name(), nil, &input.Team.Slug, &remoteMemberEmail, "deleted member '%s' from Google Directory group '%s'", member.Email, grp.Email)
 	}
 
 	membersToAdd := localOnlyMembers(membersAccordingToGoogle.Members, localMembers)
@@ -159,7 +154,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 			log.Warnf("add member '%s' to Google Directory group '%s': %s", member.Email, grp.Email, err)
 			continue
 		}
-		r.auditLogger.Logf(ctx, sqlc.AuditActionGoogleWorkspaceAdminAddMember, input.CorrelationID, r.NameP(), nil, &input.Team.Slug, &user.Email, "added member '%s' to Google Directory group '%s'", member.Email, grp.Email)
+		r.auditLogger.Logf(ctx, sqlc.AuditActionGoogleWorkspaceAdminAddMember, input.CorrelationID, r.Name(), nil, &input.Team.Slug, &user.Email, "added member '%s' to Google Directory group '%s'", member.Email, grp.Email)
 	}
 
 	return nil
@@ -182,7 +177,7 @@ func (r *googleWorkspaceAdminReconciler) addToGKESecurityGroup(ctx context.Conte
 		return fmt.Errorf("add group '%s' to GKE security group '%s': %s", member.Email, groupKey, err)
 	}
 
-	r.auditLogger.Logf(ctx, sqlc.AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup, input.CorrelationID, r.NameP(), nil, &input.Team.Slug, nil, "added group '%s' to GKE security group '%s'", member.Email, groupKey)
+	r.auditLogger.Logf(ctx, sqlc.AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup, input.CorrelationID, r.Name(), nil, &input.Team.Slug, nil, "added group '%s' to GKE security group '%s'", member.Email, groupKey)
 
 	return nil
 }

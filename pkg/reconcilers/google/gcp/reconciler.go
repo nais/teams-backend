@@ -76,11 +76,6 @@ func (r *googleGcpReconciler) Name() sqlc.SystemName {
 	return Name
 }
 
-func (r *googleGcpReconciler) NameP() *sqlc.SystemName {
-	n := Name
-	return &n
-}
-
 func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	state := &reconcilers.GoogleGcpProjectState{
 		Projects: make(map[string]reconcilers.GoogleGcpEnvironmentProject),
@@ -151,7 +146,7 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *rec
 	}
 
 	msg := fmt.Sprintf("created GCP project %q for team %q in environment %q", createdProject.Name, input.Team.Slug, environment)
-	r.auditLogger.Logf(ctx, sqlc.AuditActionGoogleGcpProjectCreateProject, input.CorrelationID, r.NameP(), nil, &input.Team.Slug, nil, msg)
+	r.auditLogger.Logf(ctx, sqlc.AuditActionGoogleGcpProjectCreateProject, input.CorrelationID, r.Name(), nil, &input.Team.Slug, nil, msg)
 
 	return createdProject, nil
 }
@@ -182,7 +177,7 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 
 	// FIXME: No need to log if no changes are made
 	msg := fmt.Sprintf("assigned GCP project IAM permissions for %q", projectName)
-	r.auditLogger.Logf(ctx, sqlc.AuditActionGoogleGcpProjectAssignPermissions, input.CorrelationID, r.NameP(), nil, &input.Team.Slug, nil, msg)
+	r.auditLogger.Logf(ctx, sqlc.AuditActionGoogleGcpProjectAssignPermissions, input.CorrelationID, r.Name(), nil, &input.Team.Slug, nil, msg)
 
 	return nil
 }

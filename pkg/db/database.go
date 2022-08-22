@@ -20,7 +20,7 @@ var (
 )
 
 type Database interface {
-	AddAuditLog(ctx context.Context, correlationID uuid.UUID, actorEmail *string, systemName *sqlc.SystemName, targetTeamSlug, targetUserEmail *string, action sqlc.AuditAction, message string) error
+	AddAuditLog(ctx context.Context, correlationID uuid.UUID, systemName sqlc.SystemName, actorEmail, targetTeamSlug, targetUserEmail *string, action sqlc.AuditAction, message string) error
 	AddUser(ctx context.Context, name, email string) (*User, error)
 	GetUserByID(ctx context.Context, ID uuid.UUID) (*User, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
@@ -31,6 +31,7 @@ type Database interface {
 	GetUsers(ctx context.Context) ([]*User, error)
 
 	AddTeam(ctx context.Context, name, slug string, purpose *string, userID uuid.UUID) (*Team, error)
+	UpdateTeam(ctx context.Context, teamID uuid.UUID, name, purpose *string) (*Team, error)
 	GetTeamByID(ctx context.Context, ID uuid.UUID) (*Team, error)
 	GetTeamBySlug(ctx context.Context, slug string) (*Team, error)
 	GetTeams(ctx context.Context) ([]*Team, error)

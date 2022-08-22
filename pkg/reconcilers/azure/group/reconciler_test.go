@@ -124,15 +124,15 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Once()
 
 		auditLogger.
-			On("Logf", ctx, sqlc.AuditActionAzureGroupCreate, correlationID, &systemName, mock.Anything, &teamSlug, mock.Anything, mock.Anything, mock.Anything).
+			On("Logf", ctx, sqlc.AuditActionAzureGroupCreate, correlationID, systemName, mock.Anything, &teamSlug, mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).
 			Once()
 		auditLogger.
-			On("Logf", ctx, sqlc.AuditActionAzureGroupDeleteMember, correlationID, &systemName, mock.Anything, &teamSlug, &removeMember.Mail, mock.Anything, removeMember.Mail, group.MailNickname).
+			On("Logf", ctx, sqlc.AuditActionAzureGroupDeleteMember, correlationID, systemName, mock.Anything, &teamSlug, &removeMember.Mail, mock.Anything, removeMember.Mail, group.MailNickname).
 			Return(nil).
 			Once()
 		auditLogger.
-			On("Logf", ctx, sqlc.AuditActionAzureGroupAddMember, correlationID, &systemName, mock.Anything, &teamSlug, &addUser.Email, mock.Anything, addUser.Email, group.MailNickname).
+			On("Logf", ctx, sqlc.AuditActionAzureGroupAddMember, correlationID, systemName, mock.Anything, &teamSlug, &addUser.Email, mock.Anything, addUser.Email, group.MailNickname).
 			Return(nil).
 			Once()
 
@@ -271,7 +271,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Once()
 
 		auditLogger.
-			On("Logf", ctx, sqlc.AuditActionAzureGroupDeleteMember, correlationID, &systemName, mock.Anything, &teamSlug, &removeMember.Mail, mock.Anything, removeMember.Mail, group.MailNickname).
+			On("Logf", ctx, sqlc.AuditActionAzureGroupDeleteMember, correlationID, systemName, mock.Anything, &teamSlug, &removeMember.Mail, mock.Anything, removeMember.Mail, group.MailNickname).
 			Return(nil).
 			Once()
 

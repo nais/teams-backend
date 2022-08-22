@@ -89,7 +89,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			Once()
 
 		auditLogger.
-			On("Logf", ctx, sqlc.AuditActionGithubTeamCreate, correlationID, &systemName, mock.Anything, &teamSlug, mock.Anything, mock.Anything, mock.Anything).
+			On("Logf", ctx, sqlc.AuditActionGithubTeamCreate, correlationID, systemName, mock.Anything, &teamSlug, mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).
 			Once()
 
@@ -245,7 +245,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			Once()
 
 		auditLogger.
-			On("Logf", ctx, sqlc.AuditActionGithubTeamCreate, correlationID, &systemName, mock.Anything, &teamSlug, mock.Anything, mock.Anything, mock.Anything).
+			On("Logf", ctx, sqlc.AuditActionGithubTeamCreate, correlationID, systemName, mock.Anything, &teamSlug, mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).
 			Once()
 

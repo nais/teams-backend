@@ -67,11 +67,6 @@ func (r *naisNamespaceReconciler) Name() sqlc.SystemName {
 	return Name
 }
 
-func (r *naisNamespaceReconciler) NameP() *sqlc.SystemName {
-	name := r.Name()
-	return &name
-}
-
 func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	svc, err := pubsub.NewClient(ctx, r.projectID, option.WithCredentialsFile(r.credentialsFile))
 	if err != nil {
@@ -103,7 +98,7 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 		}
 
 		if _, requested := namespaceState.Namespaces[environment]; !requested {
-			r.auditLogger.Logf(ctx, sqlc.AuditActionNaisNamespaceCreateNamespace, input.CorrelationID, r.NameP(), nil, &input.Team.Slug, nil, "request namespace creation for team '%s' in environment '%s'", input.Team.Slug, environment)
+			r.auditLogger.Logf(ctx, sqlc.AuditActionNaisNamespaceCreateNamespace, input.CorrelationID, r.Name(), nil, &input.Team.Slug, nil, "request namespace creation for team '%s' in environment '%s'", input.Team.Slug, environment)
 			namespaceState.Namespaces[environment] = input.Team.Slug
 		}
 	}

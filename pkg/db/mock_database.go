@@ -16,13 +16,13 @@ type MockDatabase struct {
 	mock.Mock
 }
 
-// AddAuditLog provides a mock function with given fields: ctx, correlationID, actorEmail, systemName, targetTeamSlug, targetUserEmail, action, message
-func (_m *MockDatabase) AddAuditLog(ctx context.Context, correlationID uuid.UUID, actorEmail *string, systemName *sqlc.SystemName, targetTeamSlug *string, targetUserEmail *string, action sqlc.AuditAction, message string) error {
-	ret := _m.Called(ctx, correlationID, actorEmail, systemName, targetTeamSlug, targetUserEmail, action, message)
+// AddAuditLog provides a mock function with given fields: ctx, correlationID, systemName, actorEmail, targetTeamSlug, targetUserEmail, action, message
+func (_m *MockDatabase) AddAuditLog(ctx context.Context, correlationID uuid.UUID, systemName sqlc.SystemName, actorEmail *string, targetTeamSlug *string, targetUserEmail *string, action sqlc.AuditAction, message string) error {
+	ret := _m.Called(ctx, correlationID, systemName, actorEmail, targetTeamSlug, targetUserEmail, action, message)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, *string, *sqlc.SystemName, *string, *string, sqlc.AuditAction, string) error); ok {
-		r0 = rf(ctx, correlationID, actorEmail, systemName, targetTeamSlug, targetUserEmail, action, message)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, sqlc.SystemName, *string, *string, *string, sqlc.AuditAction, string) error); ok {
+		r0 = rf(ctx, correlationID, systemName, actorEmail, targetTeamSlug, targetUserEmail, action, message)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -499,6 +499,29 @@ func (_m *MockDatabase) Transaction(ctx context.Context, fn TransactionFunc) err
 	}
 
 	return r0
+}
+
+// UpdateTeam provides a mock function with given fields: ctx, teamID, name, purpose
+func (_m *MockDatabase) UpdateTeam(ctx context.Context, teamID uuid.UUID, name *string, purpose *string) (*Team, error) {
+	ret := _m.Called(ctx, teamID, name, purpose)
+
+	var r0 *Team
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, *string, *string) *Team); ok {
+		r0 = rf(ctx, teamID, name, purpose)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*Team)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, *string, *string) error); ok {
+		r1 = rf(ctx, teamID, name, purpose)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 type mockConstructorTestingTNewMockDatabase interface {

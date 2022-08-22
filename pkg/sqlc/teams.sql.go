@@ -128,3 +128,25 @@ func (q *Queries) GetTeams(ctx context.Context) ([]*Team, error) {
 	}
 	return items, nil
 }
+
+const updateTeam = `-- name: UpdateTeam :one
+UPDATE teams SET name = COALESCE($1, name), purpose = COALESCE($2, purpose) WHERE id = $3 RETURNING id, slug, name, purpose
+`
+
+type UpdateTeamParams struct {
+	Name    sql.NullString
+	Purpose sql.NullString
+	ID      uuid.UUID
+}
+
+func (q *Queries) UpdateTeam(ctx context.Context, arg UpdateTeamParams) (*Team, error) {
+	row := q.db.QueryRow(ctx, updateTeam, arg.Name, arg.Purpose, arg.ID)
+	var i Team
+	err := row.Scan(
+		&i.ID,
+		&i.Slug,
+		&i.Name,
+		&i.Purpose,
+	)
+	return &i, err
+}

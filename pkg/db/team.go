@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/sqlc"
 )
@@ -17,6 +18,23 @@ func (d *database) AddUserToTeam(ctx context.Context, userID uuid.UUID, teamID u
 		UserID: userID,
 		TeamID: teamID,
 	})
+}
+
+func (d *database) UpdateTeam(ctx context.Context, teamID uuid.UUID, name, purpose *string) (*Team, error) {
+	if name != nil && *name == "" {
+		return nil, fmt.Errorf("name can not be empty")
+	}
+
+	team, err := d.querier.UpdateTeam(ctx, sqlc.UpdateTeamParams{
+		ID:      teamID,
+		Name:    nullString(name),
+		Purpose: nullString(purpose),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &Team{Team: team}, nil
 }
 
 func (d *database) AddTeam(ctx context.Context, name, slug string, purpose *string, userID uuid.UUID) (*Team, error) {

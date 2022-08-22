@@ -21,7 +21,7 @@ type CreateAuditLogParams struct {
 	ID              uuid.UUID
 	CorrelationID   uuid.UUID
 	ActorEmail      sql.NullString
-	SystemName      NullSystemName
+	SystemName      SystemName
 	TargetUserEmail sql.NullString
 	TargetTeamSlug  sql.NullString
 	Action          AuditAction

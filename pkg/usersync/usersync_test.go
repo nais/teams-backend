@@ -28,7 +28,7 @@ func TestSync(t *testing.T) {
 
 		usersync := usersync.New(database, auditLogger, domain, httpClient)
 		err := usersync.Sync(context.Background())
-		assert.ErrorContains(t, err, "usersync:list:remote: list remote users")
+		assert.ErrorContains(t, err, "list remote users")
 	})
 
 	t.Run("No remote users", func(t *testing.T) {
@@ -121,23 +121,23 @@ func TestSync(t *testing.T) {
 			Return(nil).
 			Once()
 
-		systemName := sqlc.SystemNameConsole
+		systemName := sqlc.SystemNameUsersync
 		auditLogger.
-			On("Logf", ctx, sqlc.AuditActionUsersyncUpdate, mock.AnythingOfType("uuid.UUID"), &systemName, mock.Anything, mock.Anything, &updatedLocalUser.Email, mock.MatchedBy(func(message string) bool {
+			On("Logf", ctx, sqlc.AuditActionUsersyncUpdate, mock.AnythingOfType("uuid.UUID"), systemName, mock.Anything, mock.Anything, &updatedLocalUser.Email, mock.MatchedBy(func(message string) bool {
 				return message == "Local user updated: user1@example.com"
 			})).
 			Return(nil).
 			Once()
 
 		auditLogger.
-			On("Logf", ctx, sqlc.AuditActionUsersyncCreate, mock.AnythingOfType("uuid.UUID"), &systemName, mock.Anything, mock.Anything, &newLocalUser.Email, mock.MatchedBy(func(message string) bool {
+			On("Logf", ctx, sqlc.AuditActionUsersyncCreate, mock.AnythingOfType("uuid.UUID"), systemName, mock.Anything, mock.Anything, &newLocalUser.Email, mock.MatchedBy(func(message string) bool {
 				return message == "Local user created: user2@example.com"
 			})).
 			Return(nil).
 			Once()
 
 		auditLogger.
-			On("Logf", ctx, sqlc.AuditActionUsersyncDelete, mock.AnythingOfType("uuid.UUID"), &systemName, mock.Anything, mock.Anything, &localUserThatWillBeDeleted.Email, mock.MatchedBy(func(message string) bool {
+			On("Logf", ctx, sqlc.AuditActionUsersyncDelete, mock.AnythingOfType("uuid.UUID"), systemName, mock.Anything, mock.Anything, &localUserThatWillBeDeleted.Email, mock.MatchedBy(func(message string) bool {
 				return message == "Local user deleted: delete-me@example.com"
 			})).
 			Return(nil).

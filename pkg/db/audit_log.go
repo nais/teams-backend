@@ -6,20 +6,17 @@ import (
 	"github.com/nais/console/pkg/sqlc"
 )
 
-func (d *database) AddAuditLog(ctx context.Context, correlationID uuid.UUID, actorEmail *string, systemName *sqlc.SystemName, targetTeamSlug, targetUserEmail *string, action sqlc.AuditAction, message string) error {
+func (d *database) AddAuditLog(ctx context.Context, correlationID uuid.UUID, systemName sqlc.SystemName, actorEmail, targetTeamSlug, targetUserEmail *string, action sqlc.AuditAction, message string) error {
 	id, err := uuid.NewUUID()
 	if err != nil {
 		return err
 	}
 
-	nullSystemName := sqlc.NullSystemName{}
-	nullSystemName.Scan(systemName)
-
 	err = d.querier.CreateAuditLog(ctx, sqlc.CreateAuditLogParams{
 		ID:              id,
 		CorrelationID:   correlationID,
 		ActorEmail:      nullString(actorEmail),
-		SystemName:      nullSystemName,
+		SystemName:      systemName,
 		TargetTeamSlug:  nullString(targetTeamSlug),
 		TargetUserEmail: nullString(targetUserEmail),
 		Action:          action,

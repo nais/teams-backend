@@ -156,9 +156,9 @@ type UpdateServiceAccountInput struct {
 
 // Input for updating an existing team.
 type UpdateTeamInput struct {
-	// Team name.
+	// Team name. Must contain a value when specified.
 	Name *string `json:"name"`
-	// Team purpose.
+	// Team purpose. Set to an empty string to remove the existing team purpose.
 	Purpose *string `json:"purpose"`
 }
 

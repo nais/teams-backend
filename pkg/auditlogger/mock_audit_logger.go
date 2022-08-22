@@ -17,14 +17,14 @@ type MockAuditLogger struct {
 }
 
 // Logf provides a mock function with given fields: ctx, action, correlationID, systemName, actorEmail, targetTeamSlug, targetUserEmail, message, messageArgs
-func (_m *MockAuditLogger) Logf(ctx context.Context, action sqlc.AuditAction, correlationID uuid.UUID, systemName *sqlc.SystemName, actorEmail *string, targetTeamSlug *string, targetUserEmail *string, message string, messageArgs ...interface{}) error {
+func (_m *MockAuditLogger) Logf(ctx context.Context, action sqlc.AuditAction, correlationID uuid.UUID, systemName sqlc.SystemName, actorEmail *string, targetTeamSlug *string, targetUserEmail *string, message string, messageArgs ...interface{}) error {
 	var _ca []interface{}
 	_ca = append(_ca, ctx, action, correlationID, systemName, actorEmail, targetTeamSlug, targetUserEmail, message)
 	_ca = append(_ca, messageArgs...)
 	ret := _m.Called(_ca...)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, sqlc.AuditAction, uuid.UUID, *sqlc.SystemName, *string, *string, *string, string, ...interface{}) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, sqlc.AuditAction, uuid.UUID, sqlc.SystemName, *string, *string, *string, string, ...interface{}) error); ok {
 		r0 = rf(ctx, action, correlationID, systemName, actorEmail, targetTeamSlug, targetUserEmail, message, messageArgs...)
 	} else {
 		r0 = ret.Error(0)

@@ -16,7 +16,7 @@ type auditLogger struct {
 }
 
 type AuditLogger interface {
-	Logf(ctx context.Context, action sqlc.AuditAction, correlationID uuid.UUID, systemName *sqlc.SystemName, actorEmail *string, targetTeamSlug *string, targetUserEmail *string, message string, messageArgs ...interface{}) error
+	Logf(ctx context.Context, action sqlc.AuditAction, correlationID uuid.UUID, systemName sqlc.SystemName, actorEmail *string, targetTeamSlug *string, targetUserEmail *string, message string, messageArgs ...interface{}) error
 }
 
 func New(database db.Database) AuditLogger {
@@ -25,9 +25,9 @@ func New(database db.Database) AuditLogger {
 	}
 }
 
-func (l *auditLogger) Logf(ctx context.Context, action sqlc.AuditAction, correlationID uuid.UUID, systemName *sqlc.SystemName, actorEmail *string, targetTeamSlug *string, targetUserEmail *string, message string, messageArgs ...interface{}) error {
+func (l *auditLogger) Logf(ctx context.Context, action sqlc.AuditAction, correlationID uuid.UUID, systemName sqlc.SystemName, actorEmail *string, targetTeamSlug *string, targetUserEmail *string, message string, messageArgs ...interface{}) error {
 	message = fmt.Sprintf(message, messageArgs...)
-	err := l.database.AddAuditLog(ctx, correlationID, actorEmail, systemName, targetUserEmail, targetTeamSlug, action, message)
+	err := l.database.AddAuditLog(ctx, correlationID, systemName, actorEmail, targetUserEmail, targetTeamSlug, action, message)
 	if err != nil {
 		return fmt.Errorf("create audit log entry: %w", err)
 	}
@@ -36,9 +36,16 @@ func (l *auditLogger) Logf(ctx context.Context, action sqlc.AuditAction, correla
 		"action":            action,
 		"correlation_id":    correlationID,
 		"system_name":       systemName,
-		"actor_email":       actorEmail,
-		"target_team_slug":  targetTeamSlug,
-		"target_user_email": targetUserEmail,
+		"actor_email":       str(actorEmail),
+		"target_team_slug":  str(targetTeamSlug),
+		"target_user_email": str(targetUserEmail),
 	}).Infof(message)
 	return nil
+}
+
+func str(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }

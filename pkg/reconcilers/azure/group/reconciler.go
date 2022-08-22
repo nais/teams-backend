@@ -62,11 +62,6 @@ func (r *azureGroupReconciler) Name() sqlc.SystemName {
 	return Name
 }
 
-func (r *azureGroupReconciler) NameP() *sqlc.SystemName {
-	name := r.Name()
-	return &name
-}
-
 func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	state := &reconcilers.AzureState{}
 	err := r.database.LoadSystemState(ctx, r.Name(), input.Team.ID, state)
@@ -81,7 +76,7 @@ func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.
 	}
 
 	if created {
-		r.auditLogger.Logf(ctx, sqlc.AuditActionAzureGroupCreate, input.CorrelationID, r.NameP(), nil, &input.Team.Slug, nil, "created Azure AD group: %s", grp)
+		r.auditLogger.Logf(ctx, sqlc.AuditActionAzureGroupCreate, input.CorrelationID, r.Name(), nil, &input.Team.Slug, nil, "created Azure AD group: %s", grp)
 
 		id, _ := uuid.Parse(grp.ID)
 		err = r.database.SetSystemState(ctx, r.Name(), input.Team.ID, reconcilers.AzureState{GroupID: &id})
@@ -126,7 +121,7 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 			consoleUserMap[remoteEmail] = user
 		}
 
-		r.auditLogger.Logf(ctx, sqlc.AuditActionAzureGroupDeleteMember, input.CorrelationID, r.NameP(), nil, &input.Team.Slug, &remoteEmail, "removed member '%s' from Azure group '%s'", remoteEmail, grp.MailNickname)
+		r.auditLogger.Logf(ctx, sqlc.AuditActionAzureGroupDeleteMember, input.CorrelationID, r.Name(), nil, &input.Team.Slug, &remoteEmail, "removed member '%s' from Azure group '%s'", remoteEmail, grp.MailNickname)
 	}
 
 	membersToAdd := localOnlyMembers(members, localMembers)
@@ -142,7 +137,7 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 			continue
 		}
 
-		r.auditLogger.Logf(ctx, sqlc.AuditActionAzureGroupAddMember, input.CorrelationID, r.NameP(), nil, &input.Team.Slug, &consoleUser.Email, "added member '%s' to Azure group '%s'", consoleUser.Email, grp.MailNickname)
+		r.auditLogger.Logf(ctx, sqlc.AuditActionAzureGroupAddMember, input.CorrelationID, r.Name(), nil, &input.Team.Slug, &consoleUser.Email, "added member '%s' to Azure group '%s'", consoleUser.Email, grp.MailNickname)
 	}
 
 	return nil

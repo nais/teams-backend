@@ -146,10 +146,10 @@ input CreateTeamInput {
 
 "Input for updating an existing team."
 input UpdateTeamInput {
-    "Team name."
+    "Team name. Must contain a value when specified."
     name: String
 
-    "Team purpose."
+    "Team purpose. Set to an empty string to remove the existing team purpose."
     purpose: String
 }
 

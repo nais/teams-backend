@@ -37,6 +37,7 @@ type Querier interface {
 	RemoveUserRoles(ctx context.Context, userID uuid.UUID) error
 	SetTeamSystemState(ctx context.Context, arg SetTeamSystemStateParams) error
 	SetUserName(ctx context.Context, arg SetUserNameParams) (*User, error)
+	UpdateTeam(ctx context.Context, arg UpdateTeamParams) (*Team, error)
 }
 
 var _ Querier = (*Queries)(nil)

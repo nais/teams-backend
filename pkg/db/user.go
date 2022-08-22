@@ -111,7 +111,7 @@ func (d *database) SetUserName(ctx context.Context, userID uuid.UUID, name strin
 }
 
 func (d *database) GetUsersByEmail(ctx context.Context, email string) ([]*User, error) {
-	users, err := d.querier.GetUsersByEmail(ctx, "%@"+email)
+	users, err := d.querier.GetUsersByEmail(ctx, email)
 	if err != nil {
 		return nil, err
 	}

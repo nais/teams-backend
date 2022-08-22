@@ -33,7 +33,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		return nil, err
 	}
 
-	r.auditLogger.Logf(ctx, sqlc.AuditActionGraphqlApiTeamCreate, correlationID, &r.systemName, &actor.Email, &team.Slug, nil, "Team created")
+	r.auditLogger.Logf(ctx, sqlc.AuditActionGraphqlApiTeamCreate, correlationID, r.systemName, &actor.Email, &team.Slug, nil, "Team created")
 
 	reconcilerInput, err := reconcilers.CreateReconcilerInput(ctx, r.database, *team)
 	if err != nil {
@@ -46,7 +46,32 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 }
 
 func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, input model.UpdateTeamInput) (*db.Team, error) {
-	panic(fmt.Errorf("not implemented"))
+	actor := authz.UserFromContext(ctx)
+	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *teamID)
+	if err != nil {
+		return nil, err
+	}
+
+	correlationID, err := uuid.NewUUID()
+	if err != nil {
+		return nil, fmt.Errorf("unable to create correlation ID for audit log")
+	}
+
+	team, err := r.database.UpdateTeam(ctx, *teamID, input.Name, input.Purpose)
+	if err != nil {
+		return nil, err
+	}
+
+	r.auditLogger.Logf(ctx, sqlc.AuditActionGraphqlApiTeamUpdate, correlationID, r.systemName, &actor.Email, &team.Slug, nil, "Team updated")
+
+	reconcilerInput, err := reconcilers.CreateReconcilerInput(ctx, r.database, *team)
+	if err != nil {
+		return nil, fmt.Errorf("unable to reconcile team: %w", err)
+	}
+
+	r.teamReconciler <- reconcilerInput.WithCorrelationID(correlationID)
+
+	return team, nil
 }
 
 func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.RemoveUsersFromTeamInput) (*db.Team, error) {
@@ -90,7 +115,11 @@ func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*db.Team, erro
 }
 
 func (r *teamResolver) Purpose(ctx context.Context, obj *db.Team) (*string, error) {
-	return &obj.Purpose.String, nil
+	var purpose *string
+	if obj.Purpose.String != "" {
+		purpose = &obj.Purpose.String
+	}
+	return purpose, nil
 }
 
 func (r *teamResolver) Metadata(ctx context.Context, obj *db.Team) (map[string]interface{}, error) {

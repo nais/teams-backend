@@ -82,7 +82,8 @@ CREATE TYPE system_name AS ENUM (
     'google:gcp:project',
     'google:workspace-admin',
     'nais:namespace',
-    'graphql-api'
+    'graphql-api',
+    'usersync'
 );
 
 -- api_keys
@@ -98,15 +99,13 @@ CREATE TABLE audit_logs (
     id UUID PRIMARY KEY,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     correlation_id UUID NOT NULL,
+    system_name system_name NOT NULL,
     actor_email TEXT,
-    system_name system_name,
     target_user_email TEXT,
     target_team_slug TEXT,
     action audit_action NOT NULL,
     message TEXT NOT NULL,
 
-    CONSTRAINT actor_or_system CHECK (actor_email IS NOT NULL OR system_name IS NOT NULL),
-    CONSTRAINT actor_and_system CHECK (actor_email IS NULL OR system_name IS NULL),
     CONSTRAINT target_user_or_target_team CHECK (target_user_email IS NOT NULL OR target_team_slug IS NOT NULL)
 );
 

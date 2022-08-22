@@ -66,11 +66,6 @@ func (r *githubTeamReconciler) Name() sqlc.SystemName {
 	return Name
 }
 
-func (r *githubTeamReconciler) NameP() *sqlc.SystemName {
-	name := r.Name()
-	return &name
-}
-
 func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	state := &reconcilers.GitHubState{}
 	err := r.database.LoadSystemState(ctx, r.Name(), input.Team.ID, state)
@@ -119,7 +114,7 @@ func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconc
 		return nil, fmt.Errorf("unable to create GitHub team: %w", err)
 	}
 
-	r.auditLogger.Logf(ctx, sqlc.AuditActionGithubTeamCreate, correlationID, r.NameP(), nil, &team.Slug, nil, "created GitHub team '%s'", *githubTeam.Slug)
+	r.auditLogger.Logf(ctx, sqlc.AuditActionGithubTeamCreate, correlationID, r.Name(), nil, &team.Slug, nil, "created GitHub team '%s'", *githubTeam.Slug)
 
 	return githubTeam, nil
 }
@@ -159,7 +154,7 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 			}
 		}
 
-		r.auditLogger.Logf(ctx, sqlc.AuditActionGithubTeamDeleteMember, correlationID, r.NameP(), nil, &team.Slug, email, "deleted member '%s' from GitHub team '%s'", username, *githubTeam.Slug)
+		r.auditLogger.Logf(ctx, sqlc.AuditActionGithubTeamDeleteMember, correlationID, r.Name(), nil, &team.Slug, email, "deleted member '%s' from GitHub team '%s'", username, *githubTeam.Slug)
 	}
 
 	membersToAdd := localOnlyMembers(consoleUserWithGitHubUser, membersAccordingToGitHub)
@@ -171,7 +166,7 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 			continue
 		}
 
-		r.auditLogger.Logf(ctx, sqlc.AuditActionGithubTeamAddMember, correlationID, r.NameP(), nil, &team.Slug, &consoleUser.Email, "added member '%s' to GitHub team '%s'", username, *githubTeam.Slug)
+		r.auditLogger.Logf(ctx, sqlc.AuditActionGithubTeamAddMember, correlationID, r.Name(), nil, &team.Slug, &consoleUser.Email, "added member '%s' to GitHub team '%s'", username, *githubTeam.Slug)
 	}
 
 	return nil

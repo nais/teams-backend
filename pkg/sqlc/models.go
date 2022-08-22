@@ -360,6 +360,7 @@ const (
 	SystemNameGoogleWorkspaceAdmin SystemName = "google:workspace-admin"
 	SystemNameNaisNamespace        SystemName = "nais:namespace"
 	SystemNameGraphqlApi           SystemName = "graphql-api"
+	SystemNameUsersync             SystemName = "usersync"
 )
 
 func (e *SystemName) Scan(src interface{}) error {
@@ -405,7 +406,8 @@ func (e SystemName) Valid() bool {
 		SystemNameGoogleGcpProject,
 		SystemNameGoogleWorkspaceAdmin,
 		SystemNameNaisNamespace,
-		SystemNameGraphqlApi:
+		SystemNameGraphqlApi,
+		SystemNameUsersync:
 		return true
 	}
 	return false
@@ -420,6 +422,7 @@ func AllSystemNameValues() []SystemName {
 		SystemNameGoogleWorkspaceAdmin,
 		SystemNameNaisNamespace,
 		SystemNameGraphqlApi,
+		SystemNameUsersync,
 	}
 }
 
@@ -432,8 +435,8 @@ type AuditLog struct {
 	ID              uuid.UUID
 	CreatedAt       time.Time
 	CorrelationID   uuid.UUID
+	SystemName      SystemName
 	ActorEmail      sql.NullString
-	SystemName      NullSystemName
 	TargetUserEmail sql.NullString
 	TargetTeamSlug  sql.NullString
 	Action          AuditAction

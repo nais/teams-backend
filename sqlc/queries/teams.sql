@@ -2,6 +2,9 @@
 INSERT INTO teams (id, name, slug, purpose) VALUES ($1, $2, $3, $4)
 RETURNING *;
 
+-- name: UpdateTeam :one
+UPDATE teams SET name = COALESCE(sqlc.narg('name'), name), purpose = COALESCE(sqlc.arg('purpose'), purpose) WHERE id = sqlc.arg('id') RETURNING *;
+
 -- name: GetTeamByID :one
 SELECT * FROM teams WHERE id = $1 LIMIT 1;
 
