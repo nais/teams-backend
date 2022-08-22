@@ -5,6 +5,7 @@ package graph
 
 import (
 	"context"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/graph/generated"

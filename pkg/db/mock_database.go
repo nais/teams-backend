@@ -339,6 +339,52 @@ func (_m *MockDatabase) GetUserByID(ctx context.Context, ID uuid.UUID) (*User, e
 	return r0, r1
 }
 
+// GetUserRoles provides a mock function with given fields: ctx, userID
+func (_m *MockDatabase) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*Role, error) {
+	ret := _m.Called(ctx, userID)
+
+	var r0 []*Role
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) []*Role); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*Role)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = rf(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetUsers provides a mock function with given fields: ctx
+func (_m *MockDatabase) GetUsers(ctx context.Context) ([]*User, error) {
+	ret := _m.Called(ctx)
+
+	var r0 []*User
+	if rf, ok := ret.Get(0).(func(context.Context) []*User); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*User)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetUsersByEmail provides a mock function with given fields: ctx, email
 func (_m *MockDatabase) GetUsersByEmail(ctx context.Context, email string) ([]*User, error) {
 	ret := _m.Called(ctx, email)
