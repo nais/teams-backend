@@ -39,7 +39,6 @@ type Config struct {
 }
 
 type ResolverRoot interface {
-	APIKey() APIKeyResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
 	Role() RoleResolver
@@ -53,7 +52,7 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	APIKey struct {
-		APIKey func(childComplexity int) int
+		Key func(childComplexity int) int
 	}
 
 	AuditLog struct {
@@ -150,11 +149,8 @@ type ComplexityRoot struct {
 	}
 }
 
-type APIKeyResolver interface {
-	APIKey(ctx context.Context, obj *db.APIKey) (string, error)
-}
 type MutationResolver interface {
-	CreateAPIKey(ctx context.Context, userID *uuid.UUID) (*db.APIKey, error)
+	CreateAPIKey(ctx context.Context, userID *uuid.UUID) (*model.APIKey, error)
 	DeleteAPIKey(ctx context.Context, userID *uuid.UUID) (bool, error)
 	CreateTeam(ctx context.Context, input model.CreateTeamInput) (*db.Team, error)
 	UpdateTeam(ctx context.Context, teamID *uuid.UUID, input model.UpdateTeamInput) (*db.Team, error)
@@ -208,12 +204,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	_ = ec
 	switch typeName + "." + field {
 
-	case "APIKey.APIKey":
-		if e.complexity.APIKey.APIKey == nil {
+	case "APIKey.key":
+		if e.complexity.APIKey.Key == nil {
 			break
 		}
 
-		return e.complexity.APIKey.APIKey(childComplexity), true
+		return e.complexity.APIKey.Key(childComplexity), true
 
 	case "AuditLog.action":
 		if e.complexity.AuditLog.Action == nil {
@@ -798,7 +794,7 @@ var sources = []*ast.Source{
 "API key type."
 type APIKey {
     "The API key."
-    APIKey: String!
+    key: String!
 }`, BuiltIn: false},
 	{Name: "../../../graphql/auditlogs.graphqls", Input: `extend type Query {
     "Get a collection of audit log entries."
@@ -1654,8 +1650,8 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 
 // region    **************************** field.gotpl *****************************
 
-func (ec *executionContext) _APIKey_APIKey(ctx context.Context, field graphql.CollectedField, obj *db.APIKey) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_APIKey_APIKey(ctx, field)
+func (ec *executionContext) _APIKey_key(ctx context.Context, field graphql.CollectedField, obj *model.APIKey) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_APIKey_key(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1668,7 +1664,7 @@ func (ec *executionContext) _APIKey_APIKey(ctx context.Context, field graphql.Co
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.APIKey().APIKey(rctx, obj)
+		return obj.Key, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1685,12 +1681,12 @@ func (ec *executionContext) _APIKey_APIKey(ctx context.Context, field graphql.Co
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_APIKey_APIKey(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_APIKey_key(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "APIKey",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
 		},
@@ -2332,10 +2328,10 @@ func (ec *executionContext) _Mutation_createAPIKey(ctx context.Context, field gr
 		if tmp == nil {
 			return nil, nil
 		}
-		if data, ok := tmp.(*db.APIKey); ok {
+		if data, ok := tmp.(*model.APIKey); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/db.APIKey`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/graph/model.APIKey`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2347,9 +2343,9 @@ func (ec *executionContext) _Mutation_createAPIKey(ctx context.Context, field gr
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*db.APIKey)
+	res := resTmp.(*model.APIKey)
 	fc.Result = res
-	return ec.marshalNAPIKey2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐAPIKey(ctx, field.Selections, res)
+	return ec.marshalNAPIKey2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAPIKey(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_createAPIKey(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2360,8 +2356,8 @@ func (ec *executionContext) fieldContext_Mutation_createAPIKey(ctx context.Conte
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "APIKey":
-				return ec.fieldContext_APIKey_APIKey(ctx, field)
+			case "key":
+				return ec.fieldContext_APIKey_key(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type APIKey", field.Name)
 		},
@@ -7502,7 +7498,7 @@ func (ec *executionContext) unmarshalInputUpdateTeamInput(ctx context.Context, o
 
 var aPIKeyImplementors = []string{"APIKey"}
 
-func (ec *executionContext) _APIKey(ctx context.Context, sel ast.SelectionSet, obj *db.APIKey) graphql.Marshaler {
+func (ec *executionContext) _APIKey(ctx context.Context, sel ast.SelectionSet, obj *model.APIKey) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, aPIKeyImplementors)
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
@@ -7510,26 +7506,13 @@ func (ec *executionContext) _APIKey(ctx context.Context, sel ast.SelectionSet, o
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("APIKey")
-		case "APIKey":
-			field := field
+		case "key":
 
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._APIKey_APIKey(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
+			out.Values[i] = ec._APIKey_key(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
 			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -8775,11 +8758,11 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 
 // region    ***************************** type.gotpl *****************************
 
-func (ec *executionContext) marshalNAPIKey2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐAPIKey(ctx context.Context, sel ast.SelectionSet, v db.APIKey) graphql.Marshaler {
+func (ec *executionContext) marshalNAPIKey2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAPIKey(ctx context.Context, sel ast.SelectionSet, v model.APIKey) graphql.Marshaler {
 	return ec._APIKey(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNAPIKey2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐAPIKey(ctx context.Context, sel ast.SelectionSet, v *db.APIKey) graphql.Marshaler {
+func (ec *executionContext) marshalNAPIKey2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAPIKey(ctx context.Context, sel ast.SelectionSet, v *model.APIKey) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")

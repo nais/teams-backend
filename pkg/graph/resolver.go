@@ -27,7 +27,7 @@ func NewResolver(database db.Database, tenantDomain string, teamReconciler chan<
 	return &Resolver{
 		database:       database,
 		tenantDomain:   tenantDomain,
-		systemName:     sqlc.SystemNameConsole,
+		systemName:     sqlc.SystemNameGraphqlApi,
 		teamReconciler: teamReconciler,
 		auditLogger:    auditLogger,
 	}

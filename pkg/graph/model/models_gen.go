@@ -12,6 +12,12 @@ import (
 	"github.com/nais/console/pkg/db"
 )
 
+// API key type.
+type APIKey struct {
+	// The API key.
+	Key string `json:"key"`
+}
+
 // Input for adding users to a team as members.
 type AddTeamMembersInput struct {
 	// ID of the team that should receive new members.

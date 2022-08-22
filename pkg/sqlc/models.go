@@ -359,6 +359,7 @@ const (
 	SystemNameGoogleGcpProject     SystemName = "google:gcp:project"
 	SystemNameGoogleWorkspaceAdmin SystemName = "google:workspace-admin"
 	SystemNameNaisNamespace        SystemName = "nais:namespace"
+	SystemNameGraphqlApi           SystemName = "graphql-api"
 )
 
 func (e *SystemName) Scan(src interface{}) error {
@@ -403,7 +404,8 @@ func (e SystemName) Valid() bool {
 		SystemNameGithubTeam,
 		SystemNameGoogleGcpProject,
 		SystemNameGoogleWorkspaceAdmin,
-		SystemNameNaisNamespace:
+		SystemNameNaisNamespace,
+		SystemNameGraphqlApi:
 		return true
 	}
 	return false
@@ -417,6 +419,7 @@ func AllSystemNameValues() []SystemName {
 		SystemNameGoogleGcpProject,
 		SystemNameGoogleWorkspaceAdmin,
 		SystemNameNaisNamespace,
+		SystemNameGraphqlApi,
 	}
 }
 

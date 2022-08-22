@@ -81,7 +81,8 @@ CREATE TYPE system_name AS ENUM (
     'github:team',
     'google:gcp:project',
     'google:workspace-admin',
-    'nais:namespace'
+    'nais:namespace',
+    'graphql-api'
 );
 
 -- api_keys
