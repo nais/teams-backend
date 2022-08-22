@@ -39,6 +39,11 @@ const (
 	AuditActionAzureGroupAddMember         AuditAction = "azure:group:add-member"
 	AuditActionAzureGroupAddMembers        AuditAction = "azure:group:add-members"
 	AuditActionAzureGroupDeleteMember      AuditAction = "azure:group:delete-member"
+	AuditActionGithubTeamCreate            AuditAction = "github:team:create"
+	AuditActionGithubTeamAddMembers        AuditAction = "github:team:add-members"
+	AuditActionGithubTeamAddMember         AuditAction = "github:team:add-member"
+	AuditActionGithubTeamDeleteMember      AuditAction = "github:team:delete-member"
+	AuditActionGithubTeamMapSsoUser        AuditAction = "github:team:map-sso-user"
 )
 
 func (e *AuditAction) Scan(src interface{}) error {
@@ -99,7 +104,12 @@ func (e AuditAction) Valid() bool {
 		AuditActionAzureGroupCreate,
 		AuditActionAzureGroupAddMember,
 		AuditActionAzureGroupAddMembers,
-		AuditActionAzureGroupDeleteMember:
+		AuditActionAzureGroupDeleteMember,
+		AuditActionGithubTeamCreate,
+		AuditActionGithubTeamAddMembers,
+		AuditActionGithubTeamAddMember,
+		AuditActionGithubTeamDeleteMember,
+		AuditActionGithubTeamMapSsoUser:
 		return true
 	}
 	return false
@@ -129,6 +139,11 @@ func AllAuditActionValues() []AuditAction {
 		AuditActionAzureGroupAddMember,
 		AuditActionAzureGroupAddMembers,
 		AuditActionAzureGroupDeleteMember,
+		AuditActionGithubTeamCreate,
+		AuditActionGithubTeamAddMembers,
+		AuditActionGithubTeamAddMember,
+		AuditActionGithubTeamDeleteMember,
+		AuditActionGithubTeamMapSsoUser,
 	}
 }
 

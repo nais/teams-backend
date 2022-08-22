@@ -55,7 +55,13 @@ CREATE TYPE audit_action AS ENUM (
 	'azure:group:create',
 	'azure:group:add-member',
 	'azure:group:add-members',
-	'azure:group:delete-member'
+	'azure:group:delete-member',
+
+	'github:team:create',
+	'github:team:add-members',
+	'github:team:add-member',
+	'github:team:delete-member',
+	'github:team:map-sso-user'
 );
 
 CREATE TYPE system_name AS ENUM (
