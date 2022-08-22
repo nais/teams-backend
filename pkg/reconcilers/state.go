@@ -2,7 +2,6 @@ package reconcilers
 
 import (
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/slug"
 )
 
 type AzureState struct {
@@ -27,5 +26,5 @@ type GoogleGcpEnvironmentProject struct {
 }
 
 type GoogleGcpNaisNamespaceState struct {
-	Namespaces map[string]slug.Slug `json:"namespaces"` // Key is the environment for the team namespace
+	Namespaces map[string]string `json:"namespaces"` // Key is the environment for the team namespace
 }

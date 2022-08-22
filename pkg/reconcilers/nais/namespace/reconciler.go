@@ -7,14 +7,12 @@ import (
 	"github.com/nais/console/pkg/db"
 
 	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
-	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
 
 	"cloud.google.com/go/pubsub"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
-	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers"
 	"golang.org/x/oauth2/jwt"
 	"google.golang.org/api/option"
@@ -72,6 +70,11 @@ func (r *naisNamespaceReconciler) Name() sqlc.SystemName {
 	return Name
 }
 
+func (r *naisNamespaceReconciler) NameP() *sqlc.SystemName {
+	name := r.Name()
+	return &name
+}
+
 func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	svc, err := pubsub.NewClient(ctx, r.projectID, option.WithCredentialsFile(r.credentialsFile))
 	if err != nil {
@@ -79,23 +82,17 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	}
 
 	namespaceState := &reconcilers.GoogleGcpNaisNamespaceState{
-		Namespaces: make(map[string]slug.Slug),
+		Namespaces: make(map[string]string),
 	}
-	err = dbmodels.LoadSystemState(r.db, r.system.ID, input.Team.ID, namespaceState)
+	err = r.database.LoadSystemState(ctx, r.Name(), input.Team.ID, namespaceState)
 	if err != nil {
-		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
-	}
-
-	gcpSystem := &dbmodels.System{}
-	err = r.db.Where("name = ?", google_gcp_reconciler.Name).First(gcpSystem).Error
-	if err != nil {
-		return fmt.Errorf("unable to load GCP system: %w", err)
+		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.Name(), err)
 	}
 
 	gcpProjectState := &reconcilers.GoogleGcpProjectState{}
-	err = dbmodels.LoadSystemState(r.db, *gcpSystem.ID, input.Team.ID, gcpProjectState)
+	err = r.database.LoadSystemState(ctx, google_gcp_reconciler.Name, input.Team.ID, gcpProjectState)
 	if err != nil {
-		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
+		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, google_gcp_reconciler.Name, err)
 	}
 
 	if len(gcpProjectState.Projects) == 0 {
@@ -103,18 +100,18 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	}
 
 	for environment, project := range gcpProjectState.Projects {
-		err = r.createNamespace(ctx, svc, *input.Team, environment, project.ProjectID)
+		err = r.createNamespace(ctx, svc, input.Team, environment, project.ProjectID)
 		if err != nil {
 			return fmt.Errorf("unable to create namespace for project '%s' in environment '%s': %w", project.ProjectID, environment, err)
 		}
 
 		if _, requested := namespaceState.Namespaces[environment]; !requested {
-			r.auditLogger.Logf(OpCreateNamespace, input.Corr, r.system, nil, input.Team, nil, "request namespace creation for team '%s' in environment '%s'", input.Team.Slug, environment)
+			r.auditLogger.Logf(ctx, OpCreateNamespace, input.CorrelationID, r.NameP(), nil, &input.Team.Slug, nil, "request namespace creation for team '%s' in environment '%s'", input.Team.Slug, environment)
 			namespaceState.Namespaces[environment] = input.Team.Slug
 		}
 	}
 
-	err = dbmodels.SetSystemState(r.db, r.system.ID, input.Team.ID, namespaceState)
+	err = r.database.SetSystemState(ctx, r.Name(), input.Team.ID, namespaceState)
 	if err != nil {
 		log.Errorf("system state not persisted: %s", err)
 	}
@@ -122,11 +119,7 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	return nil
 }
 
-func (r *naisNamespaceReconciler) System() sqlc.System {
-	return r.system
-}
-
-func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, pubsubService *pubsub.Client, team sqlc.Team, environment, gcpProjectID string) error {
+func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, pubsubService *pubsub.Client, team db.Team, environment, gcpProjectID string) error {
 	const topicPrefix = "naisd-console-"
 	req := &naisdRequest{
 		Type: NaisdCreateNamespace,
