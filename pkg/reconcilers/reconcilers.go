@@ -23,4 +23,4 @@ type Reconciler interface {
 const TeamNamePrefix = "nais-team-"
 
 // ReconcilerFactory The constructor function for all reconcilers
-type ReconcilerFactory func(db.Database, *config.Config, auditlogger.AuditLogger) (Reconciler, error)
+type ReconcilerFactory func(context.Context, db.Database, *config.Config, auditlogger.AuditLogger) (Reconciler, error)

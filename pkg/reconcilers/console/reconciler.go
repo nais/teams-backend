@@ -33,7 +33,7 @@ func New() *consoleReconciler {
 	return &consoleReconciler{}
 }
 
-func NewFromConfig(_ db.Database, _ *config.Config, _ auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(_ context.Context, _ db.Database, _ *config.Config, _ auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	return New(), nil
 }
 

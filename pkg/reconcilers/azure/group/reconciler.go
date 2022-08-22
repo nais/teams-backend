@@ -39,7 +39,7 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, oauth client
 
 const Name = sqlc.SystemNameAzureGroup
 
-func NewFromConfig(database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.Azure.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}

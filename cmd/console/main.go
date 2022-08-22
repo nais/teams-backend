@@ -87,7 +87,7 @@ func run() error {
 	teamReconciler := make(chan reconcilers.Input, maxQueueSize)
 	logger := auditlogger.New(database)
 
-	recs, err := initReconcilers(database, cfg, logger)
+	recs, err := initReconcilers(ctx, database, cfg, logger)
 	if err != nil {
 		return err
 	}
@@ -314,7 +314,7 @@ func setupDatabase(ctx context.Context, dbUrl string) (db.Database, error) {
 	return db.NewDatabase(queries, dbc), nil
 }
 
-func initReconcilers(database db.Database, cfg *config.Config, logger auditlogger.AuditLogger) ([]reconcilers.Reconciler, error) {
+func initReconcilers(ctx context.Context, database db.Database, cfg *config.Config, logger auditlogger.AuditLogger) ([]reconcilers.Reconciler, error) {
 	recs := make([]reconcilers.Reconciler, 0)
 	factories := map[sqlc.SystemName]reconcilers.ReconcilerFactory{
 		console_reconciler.Name:                console_reconciler.NewFromConfig,
@@ -326,7 +326,7 @@ func initReconcilers(database db.Database, cfg *config.Config, logger auditlogge
 	}
 
 	for name, factory := range factories {
-		rec, err := factory(database, cfg, logger)
+		rec, err := factory(ctx, database, cfg, logger)
 		switch err {
 		case reconcilers.ErrReconcilerNotEnabled:
 			log.Warnf("Reconciler '%s' is disabled through configuration", name)

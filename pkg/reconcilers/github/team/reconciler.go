@@ -36,7 +36,7 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, org, domain 
 	}
 }
 
-func NewFromConfig(database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.GitHub.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
