@@ -77,7 +77,19 @@ func (d *database) getTeam(ctx context.Context, team *Team) (*Team, error) {
 		team.Metadata[row.Key] = row.Value.String
 	}
 
-	// TODO: Populate team.Members
-
 	return team, nil
+}
+
+func (d *database) GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error) {
+	mems, err := d.querier.GetTeamMembers(ctx, teamID)
+	if err != nil {
+		return nil, err
+	}
+
+	members := make([]*User, 0)
+	for _, m := range mems {
+		members = append(members, &User{User: m})
+	}
+
+	return members, nil
 }

@@ -3,18 +3,19 @@ package main
 import (
 	"context"
 	"fmt"
-	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
-	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
-	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
-	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
-	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
-	nais_namespace_reconciler "github.com/nais/console/pkg/reconcilers/nais/namespace"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
+	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
+	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
+	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
+	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
+	nais_namespace_reconciler "github.com/nais/console/pkg/reconcilers/nais/namespace"
 
 	"github.com/jackc/pgx/v4"
 	"github.com/nais/console/pkg/db"
@@ -148,10 +149,15 @@ func run() error {
 		return fmt.Errorf("unable to load team for initial reconcile loop: %w", err)
 	}
 	for _, team := range allTeams {
-		teamReconciler <- reconcilers.Input{
-			CorrelationID: correlationID,
-			Team:          team,
+		input, err := reconcilers.CreateReconcilerInput(ctx, database, *team)
+		if err != nil {
+			return fmt.Errorf("unable to create input for initial reconcile loop: %w", err)
 		}
+
+		// override correlation id as we want to group all actions in the initial reconcile loop
+		input = input.WithCorrelationID(correlationID)
+
+		teamReconciler <- input
 	}
 
 	// User synchronizer

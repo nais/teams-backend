@@ -17,33 +17,38 @@ import (
 type AuditAction string
 
 const (
-	AuditActionConsoleApiKeyCreate         AuditAction = "console:api-key:create"
-	AuditActionConsoleApiKeyDelete         AuditAction = "console:api-key:delete"
-	AuditActionConsoleServiceAccountCreate AuditAction = "console:service-account:create"
-	AuditActionConsoleServiceAccountDelete AuditAction = "console:service-account:delete"
-	AuditActionConsoleServiceAccountUpdate AuditAction = "console:service-account:update"
-	AuditActionConsoleTeamAddMember        AuditAction = "console:team:add-member"
-	AuditActionConsoleTeamAddOwner         AuditAction = "console:team:add-owner"
-	AuditActionConsoleTeamCreate           AuditAction = "console:team:create"
-	AuditActionConsoleTeamRemoveMember     AuditAction = "console:team:remove-member"
-	AuditActionConsoleTeamSetMemberRole    AuditAction = "console:team:set-member-role"
-	AuditActionConsoleTeamSync             AuditAction = "console:team:sync"
-	AuditActionConsoleTeamUpdate           AuditAction = "console:team:update"
-	AuditActionUsersyncPrepare             AuditAction = "usersync:prepare"
-	AuditActionUsersyncListRemote          AuditAction = "usersync:list:remote"
-	AuditActionUsersyncListLocal           AuditAction = "usersync:list:local"
-	AuditActionUsersyncCreate              AuditAction = "usersync:create"
-	AuditActionUsersyncUpdate              AuditAction = "usersync:update"
-	AuditActionUsersyncDelete              AuditAction = "usersync:delete"
-	AuditActionAzureGroupCreate            AuditAction = "azure:group:create"
-	AuditActionAzureGroupAddMember         AuditAction = "azure:group:add-member"
-	AuditActionAzureGroupAddMembers        AuditAction = "azure:group:add-members"
-	AuditActionAzureGroupDeleteMember      AuditAction = "azure:group:delete-member"
-	AuditActionGithubTeamCreate            AuditAction = "github:team:create"
-	AuditActionGithubTeamAddMembers        AuditAction = "github:team:add-members"
-	AuditActionGithubTeamAddMember         AuditAction = "github:team:add-member"
-	AuditActionGithubTeamDeleteMember      AuditAction = "github:team:delete-member"
-	AuditActionGithubTeamMapSsoUser        AuditAction = "github:team:map-sso-user"
+	AuditActionConsoleApiKeyCreate                       AuditAction = "console:api-key:create"
+	AuditActionConsoleApiKeyDelete                       AuditAction = "console:api-key:delete"
+	AuditActionConsoleServiceAccountCreate               AuditAction = "console:service-account:create"
+	AuditActionConsoleServiceAccountDelete               AuditAction = "console:service-account:delete"
+	AuditActionConsoleServiceAccountUpdate               AuditAction = "console:service-account:update"
+	AuditActionConsoleTeamAddMember                      AuditAction = "console:team:add-member"
+	AuditActionConsoleTeamAddOwner                       AuditAction = "console:team:add-owner"
+	AuditActionConsoleTeamCreate                         AuditAction = "console:team:create"
+	AuditActionConsoleTeamRemoveMember                   AuditAction = "console:team:remove-member"
+	AuditActionConsoleTeamSetMemberRole                  AuditAction = "console:team:set-member-role"
+	AuditActionConsoleTeamSync                           AuditAction = "console:team:sync"
+	AuditActionConsoleTeamUpdate                         AuditAction = "console:team:update"
+	AuditActionUsersyncPrepare                           AuditAction = "usersync:prepare"
+	AuditActionUsersyncListRemote                        AuditAction = "usersync:list:remote"
+	AuditActionUsersyncListLocal                         AuditAction = "usersync:list:local"
+	AuditActionUsersyncCreate                            AuditAction = "usersync:create"
+	AuditActionUsersyncUpdate                            AuditAction = "usersync:update"
+	AuditActionUsersyncDelete                            AuditAction = "usersync:delete"
+	AuditActionAzureGroupCreate                          AuditAction = "azure:group:create"
+	AuditActionAzureGroupAddMember                       AuditAction = "azure:group:add-member"
+	AuditActionAzureGroupAddMembers                      AuditAction = "azure:group:add-members"
+	AuditActionAzureGroupDeleteMember                    AuditAction = "azure:group:delete-member"
+	AuditActionGithubTeamCreate                          AuditAction = "github:team:create"
+	AuditActionGithubTeamAddMembers                      AuditAction = "github:team:add-members"
+	AuditActionGithubTeamAddMember                       AuditAction = "github:team:add-member"
+	AuditActionGithubTeamDeleteMember                    AuditAction = "github:team:delete-member"
+	AuditActionGithubTeamMapSsoUser                      AuditAction = "github:team:map-sso-user"
+	AuditActionGoogleWorkspaceAdminCreate                AuditAction = "google:workspace-admin:create"
+	AuditActionGoogleWorkspaceAdminAddMember             AuditAction = "google:workspace-admin:add-member"
+	AuditActionGoogleWorkspaceAdminAddMembers            AuditAction = "google:workspace-admin:add-members"
+	AuditActionGoogleWorkspaceAdminDeleteMember          AuditAction = "google:workspace-admin:delete-member"
+	AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup AuditAction = "google:workspace-admin:add-to-gke-security-group"
 )
 
 func (e *AuditAction) Scan(src interface{}) error {
@@ -109,7 +114,12 @@ func (e AuditAction) Valid() bool {
 		AuditActionGithubTeamAddMembers,
 		AuditActionGithubTeamAddMember,
 		AuditActionGithubTeamDeleteMember,
-		AuditActionGithubTeamMapSsoUser:
+		AuditActionGithubTeamMapSsoUser,
+		AuditActionGoogleWorkspaceAdminCreate,
+		AuditActionGoogleWorkspaceAdminAddMember,
+		AuditActionGoogleWorkspaceAdminAddMembers,
+		AuditActionGoogleWorkspaceAdminDeleteMember,
+		AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup:
 		return true
 	}
 	return false
@@ -144,6 +154,11 @@ func AllAuditActionValues() []AuditAction {
 		AuditActionGithubTeamAddMember,
 		AuditActionGithubTeamDeleteMember,
 		AuditActionGithubTeamMapSsoUser,
+		AuditActionGoogleWorkspaceAdminCreate,
+		AuditActionGoogleWorkspaceAdminAddMember,
+		AuditActionGoogleWorkspaceAdminAddMembers,
+		AuditActionGoogleWorkspaceAdminDeleteMember,
+		AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup,
 	}
 }
 

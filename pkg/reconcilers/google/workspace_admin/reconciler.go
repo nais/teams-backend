@@ -3,11 +3,13 @@ package google_workspace_admin_reconciler
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/google_jwt"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/sqlc"
@@ -16,136 +18,135 @@ import (
 	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
-	"net/http"
-	"strings"
 )
 
 type googleWorkspaceAdminReconciler struct {
-	database    db.Database
-	auditLogger auditlogger.AuditLogger
-	domain      string
-	config      *jwt.Config
+	database     db.Database
+	auditLogger  auditlogger.AuditLogger
+	domain       string
+	config       *jwt.Config
+	adminService *admin_directory_v1.Service
 }
 
 const (
-	Name                    = sqlc.SystemNameGoogleWorkspaceAdmin
-	OpCreate                = "google:workspace-admin:create"
-	OpAddMember             = "google:workspace-admin:add-member"
-	OpAddMembers            = "google:workspace-admin:add-members"
-	OpDeleteMember          = "google:workspace-admin:delete-member"
-	OpAddToGKESecurityGroup = "google:workspace-admin:add-to-gke-security-group"
+	Name = sqlc.SystemNameGoogleWorkspaceAdmin
 )
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config) *googleWorkspaceAdminReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config, adminService *admin_directory_v1.Service) *googleWorkspaceAdminReconciler {
 	return &googleWorkspaceAdminReconciler{
-		database:    database,
-		auditLogger: auditLogger,
-		domain:      domain,
-		config:      config,
+		database:     database,
+		auditLogger:  auditLogger,
+		domain:       domain,
+		config:       config,
+		adminService: adminService,
 	}
 }
 
-func NewFromConfig(database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.Google.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
 
 	config, err := google_jwt.GetConfig(cfg.Google.CredentialsFile, cfg.Google.DelegatedUser)
-
 	if err != nil {
 		return nil, fmt.Errorf("get google jwt config: %w", err)
 	}
 
-	return New(database, auditLogger, cfg.TenantDomain, config), nil
+	client := config.Client(ctx)
+	srv, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(client))
+	if err != nil {
+		return nil, fmt.Errorf("retrieve directory client: %w", err)
+	}
+
+	return New(database, auditLogger, cfg.TenantDomain, config, srv), nil
 }
 
 func (r *googleWorkspaceAdminReconciler) Name() sqlc.SystemName {
 	return Name
 }
 
+func (r *googleWorkspaceAdminReconciler) NameP() *sqlc.SystemName {
+	n := Name
+	return &n
+}
+
 func (r *googleWorkspaceAdminReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	state := &reconcilers.GoogleWorkspaceState{}
-	err := dbmodels.LoadSystemState(r.db, r.system.ID, input.Team.ID, state)
+	err := r.database.LoadSystemState(ctx, r.Name(), input.Team.ID, state)
 	if err != nil {
-		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
+		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.Name(), err)
 	}
 
-	client := r.config.Client(ctx)
-	srv, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(client))
+	grp, err := r.getOrCreateGroup(ctx, state, input)
 	if err != nil {
-		return fmt.Errorf("retrieve directory client: %w", err)
+		return fmt.Errorf("unable to get or create a Google Workspace group for team '%s' in system '%s': %w", input.Team.Slug, r.Name(), err)
 	}
 
-	grp, err := r.getOrCreateGroup(srv.Groups, state, input.Corr, input.Team)
-	if err != nil {
-		return fmt.Errorf("unable to get or create a Google Workspace group for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
-	}
-
-	err = dbmodels.SetSystemState(r.db, r.system.ID, input.Team.ID, reconcilers.GoogleWorkspaceState{GroupID: &grp.Id})
+	err = r.database.SetSystemState(ctx, r.Name(), input.Team.ID, reconcilers.GoogleWorkspaceState{GroupID: &grp.Id})
 	if err != nil {
 		log.Errorf("system state not persisted: %s", err)
 	}
 
-	err = r.connectUsers(srv.Members, grp, input.Corr, input.Team)
+	err = r.connectUsers(ctx, grp, input)
 	if err != nil {
-		return fmt.Errorf("%s: add members to group: %w", OpAddMembers, err)
+		return fmt.Errorf("%s: add members to group: %w", sqlc.AuditActionGoogleWorkspaceAdminAddMembers, err)
 	}
 
-	return r.addToGKESecurityGroup(srv.Members, grp, input.Corr, input.Team)
+	return r.addToGKESecurityGroup(ctx, grp, input)
 }
 
-func (r *googleWorkspaceAdminReconciler) System() sqlc.System {
-	return r.system
-}
-
-func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(groupsService *admin_directory_v1.GroupsService, state *reconcilers.GoogleWorkspaceState, corr sqlc.Correlation, team dbmodels.Team) (*admin_directory_v1.Group, error) {
+func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(ctx context.Context, state *reconcilers.GoogleWorkspaceState, input reconcilers.Input) (*admin_directory_v1.Group, error) {
 	if state.GroupID != nil {
-		existingGroup, err := groupsService.Get(*state.GroupID).Do()
+		existingGroup, err := r.adminService.Groups.Get(*state.GroupID).Do()
 		if err == nil {
 			return existingGroup, nil
 		}
 	}
 
-	groupKey := reconcilers.TeamNamePrefix + team.Slug
+	groupKey := reconcilers.TeamNamePrefix + input.Team.Slug
 	email := fmt.Sprintf("%s@%s", groupKey, r.domain)
 	newGroup := &admin_directory_v1.Group{
 		Email:       email,
-		Name:        team.Name,
-		Description: helpers.TeamPurpose(team.Purpose),
+		Name:        input.Team.Name,
+		Description: helpers.TeamPurpose(&input.Team.Purpose.String),
 	}
-	group, err := groupsService.Insert(newGroup).Do()
+	group, err := r.adminService.Groups.Insert(newGroup).Do()
 	if err != nil {
 		return nil, fmt.Errorf("unable to create Google Directory group: %w", err)
 	}
 
-	r.auditLogger.Logf(OpCreate, corr, r.system, nil, &team, nil, "created Google Directory group '%s'", group.Email)
+	r.auditLogger.Logf(ctx, sqlc.AuditActionGoogleWorkspaceAdminCreate, input.CorrelationID, r.NameP(), nil, &input.Team.Slug, nil, "created Google Directory group '%s'", group.Email)
 
 	return group, nil
 }
 
-func (r *googleWorkspaceAdminReconciler) connectUsers(membersService *admin_directory_v1.MembersService, grp *admin_directory_v1.Group, corr sqlc.Correlation, team dbmodels.Team) error {
-	membersAccordingToGoogle, err := membersService.List(grp.Id).Do()
+func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *admin_directory_v1.Group, input reconcilers.Input) error {
+	membersAccordingToGoogle, err := r.adminService.Members.List(grp.Id).Do()
 	if err != nil {
-		return fmt.Errorf("%s: list existing members in Google Directory group: %w", OpAddMembers, err)
+		return fmt.Errorf("list existing members in Google Directory group: %w", err)
 	}
 
-	consoleUserMap := make(map[string]*dbmodels.User)
-	localMembers := helpers.DomainUsers(team.Users, r.domain)
+	consoleUserMap := make(map[string]*db.User)
+	localMembers := helpers.DomainUsers(input.Team.Members, r.domain)
 
 	membersToRemove := remoteOnlyMembers(membersAccordingToGoogle.Members, localMembers)
 	for _, member := range membersToRemove {
 		remoteMemberEmail := strings.ToLower(member.Email)
-		err = membersService.Delete(grp.Id, member.Id).Do()
+		err = r.adminService.Members.Delete(grp.Id, member.Id).Do()
 		if err != nil {
-			log.Warnf("%s: delete member '%s' from Google Directory group '%s': %s", OpDeleteMember, remoteMemberEmail, grp.Email, err)
+			log.Warnf("delete member '%s' from Google Directory group '%s': %s", remoteMemberEmail, grp.Email, err)
 			continue
 		}
 
 		if _, exists := consoleUserMap[remoteMemberEmail]; !exists {
-			consoleUserMap[remoteMemberEmail] = db.GetUserByEmail(r.db, remoteMemberEmail)
+			user, err := r.database.GetUserByEmail(ctx, remoteMemberEmail)
+			if err != nil {
+				return err
+			}
+			consoleUserMap[remoteMemberEmail] = user
 		}
 
-		r.auditLogger.Logf(OpDeleteMember, corr, r.system, nil, &team, consoleUserMap[remoteMemberEmail], "deleted member '%s' from Google Directory group '%s'", member.Email, grp.Email)
+		r.auditLogger.Logf(ctx, sqlc.AuditActionGoogleWorkspaceAdminDeleteMember, input.CorrelationID, r.NameP(), nil, &input.Team.Slug, &remoteMemberEmail, "deleted member '%s' from Google Directory group '%s'", member.Email, grp.Email)
 	}
 
 	membersToAdd := localOnlyMembers(membersAccordingToGoogle.Members, localMembers)
@@ -153,18 +154,18 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(membersService *admin_dire
 		member := &admin_directory_v1.Member{
 			Email: user.Email,
 		}
-		_, err = membersService.Insert(grp.Id, member).Do()
+		_, err = r.adminService.Members.Insert(grp.Id, member).Do()
 		if err != nil {
-			log.Warnf("%s: add member '%s' to Google Directory group '%s': %s", OpAddMember, member.Email, grp.Email, err)
+			log.Warnf("add member '%s' to Google Directory group '%s': %s", member.Email, grp.Email, err)
 			continue
 		}
-		r.auditLogger.Logf(OpAddMember, corr, r.system, nil, &team, user, "added member '%s' to Google Directory group '%s'", member.Email, grp.Email)
+		r.auditLogger.Logf(ctx, sqlc.AuditActionGoogleWorkspaceAdminAddMember, input.CorrelationID, r.NameP(), nil, &input.Team.Slug, &user.Email, "added member '%s' to Google Directory group '%s'", member.Email, grp.Email)
 	}
 
 	return nil
 }
 
-func (r *googleWorkspaceAdminReconciler) addToGKESecurityGroup(membersService *admin_directory_v1.MembersService, grp *admin_directory_v1.Group, corr sqlc.Correlation, team dbmodels.Team) error {
+func (r *googleWorkspaceAdminReconciler) addToGKESecurityGroup(ctx context.Context, grp *admin_directory_v1.Group, input reconcilers.Input) error {
 	const groupPrefix = "gke-security-groups@"
 	groupKey := groupPrefix + r.domain
 
@@ -172,23 +173,23 @@ func (r *googleWorkspaceAdminReconciler) addToGKESecurityGroup(membersService *a
 		Email: grp.Email,
 	}
 
-	_, err := membersService.Insert(groupKey, member).Do()
+	_, err := r.adminService.Members.Insert(groupKey, member).Do()
 	if err != nil {
 		googleError, ok := err.(*googleapi.Error)
 		if ok && googleError.Code == http.StatusConflict {
 			return nil
 		}
-		return fmt.Errorf("%s: add group '%s' to GKE security group '%s': %s", OpAddToGKESecurityGroup, member.Email, groupKey, err)
+		return fmt.Errorf("add group '%s' to GKE security group '%s': %s", member.Email, groupKey, err)
 	}
 
-	r.auditLogger.Logf(OpAddToGKESecurityGroup, corr, r.system, nil, &team, nil, "added group '%s' to GKE security group '%s'", member.Email, groupKey)
+	r.auditLogger.Logf(ctx, sqlc.AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup, input.CorrelationID, r.NameP(), nil, &input.Team.Slug, nil, "added group '%s' to GKE security group '%s'", member.Email, groupKey)
 
 	return nil
 }
 
 // remoteOnlyMembers Given a list of Google group members and a list of Console users, return Google group members not
 // present in Console user list.
-func remoteOnlyMembers(googleGroupMembers []*admin_directory_v1.Member, consoleUsers []*dbmodels.User) []*admin_directory_v1.Member {
+func remoteOnlyMembers(googleGroupMembers []*admin_directory_v1.Member, consoleUsers []*db.User) []*admin_directory_v1.Member {
 	googleGroupMemberMap := make(map[string]*admin_directory_v1.Member)
 	for _, member := range googleGroupMembers {
 		googleGroupMemberMap[strings.ToLower(member.Email)] = member
@@ -205,15 +206,15 @@ func remoteOnlyMembers(googleGroupMembers []*admin_directory_v1.Member, consoleU
 
 // Given a list of Google group members and a list of users,
 // return users not present in members directory.
-func localOnlyMembers(googleGroupMembers []*admin_directory_v1.Member, consoleUsers []*dbmodels.User) []*dbmodels.User {
-	localUserMap := make(map[string]*dbmodels.User)
+func localOnlyMembers(googleGroupMembers []*admin_directory_v1.Member, consoleUsers []*db.User) []*db.User {
+	localUserMap := make(map[string]*db.User)
 	for _, user := range consoleUsers {
 		localUserMap[user.Email] = user
 	}
 	for _, member := range googleGroupMembers {
 		delete(localUserMap, strings.ToLower(member.Email))
 	}
-	consoleUsers = make([]*dbmodels.User, 0, len(localUserMap))
+	consoleUsers = make([]*db.User, 0, len(localUserMap))
 	for _, user := range localUserMap {
 		consoleUsers = append(consoleUsers, user)
 	}

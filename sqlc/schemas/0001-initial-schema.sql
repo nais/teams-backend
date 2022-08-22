@@ -61,7 +61,13 @@ CREATE TYPE audit_action AS ENUM (
 	'github:team:add-members',
 	'github:team:add-member',
 	'github:team:delete-member',
-	'github:team:map-sso-user'
+	'github:team:map-sso-user',
+
+	'google:workspace-admin:create',
+	'google:workspace-admin:add-member',
+	'google:workspace-admin:add-members',
+	'google:workspace-admin:delete-member',
+	'google:workspace-admin:add-to-gke-security-group'
 );
 
 CREATE TYPE system_name AS ENUM (

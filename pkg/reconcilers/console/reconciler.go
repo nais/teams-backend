@@ -2,6 +2,7 @@ package console_reconciler
 
 import (
 	"context"
+
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/sqlc"
 
@@ -10,8 +11,7 @@ import (
 	"github.com/nais/console/pkg/reconcilers"
 )
 
-type consoleReconciler struct {
-}
+type consoleReconciler struct{}
 
 const (
 	Name                   = sqlc.SystemNameConsole

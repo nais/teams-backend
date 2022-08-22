@@ -3,6 +3,7 @@ package auditlogger
 import (
 	"context"
 	"fmt"
+
 	"github.com/nais/console/pkg/db"
 	log "github.com/sirupsen/logrus"
 

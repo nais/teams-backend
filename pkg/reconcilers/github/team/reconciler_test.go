@@ -3,6 +3,11 @@ package github_team_reconciler_test
 import (
 	"context"
 	"database/sql"
+	"io/ioutil"
+	"net/http"
+	"strings"
+	"testing"
+
 	"github.com/google/go-github/v43/github"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
@@ -14,10 +19,6 @@ import (
 	"github.com/shurcooL/githubv4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"io/ioutil"
-	"net/http"
-	"strings"
-	"testing"
 )
 
 func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {

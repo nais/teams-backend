@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4"
 	"github.com/nais/console/pkg/sqlc"
@@ -29,6 +30,7 @@ type Database interface {
 	GetTeamByID(ctx context.Context, ID uuid.UUID) (*Team, error)
 	GetTeamBySlug(ctx context.Context, slug string) (*Team, error)
 	GetTeams(ctx context.Context) ([]*Team, error)
+	GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error)
 
 	AssignGlobalRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error
 	AssignTargetedRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName, targetID uuid.UUID) error
