@@ -110,7 +110,6 @@ type ComplexityRoot struct {
 
 	Team struct {
 		AuditLogs func(childComplexity int) int
-		CreatedAt func(childComplexity int) int
 		ID        func(childComplexity int) int
 		Members   func(childComplexity int) int
 		Metadata  func(childComplexity int) int
@@ -165,7 +164,6 @@ type TeamResolver interface {
 	Purpose(ctx context.Context, obj *db.Team) (*string, error)
 	Metadata(ctx context.Context, obj *db.Team) (map[string]interface{}, error)
 	AuditLogs(ctx context.Context, obj *db.Team) ([]*model.AuditLog, error)
-	CreatedAt(ctx context.Context, obj *db.Team) (*time.Time, error)
 	Members(ctx context.Context, obj *db.Team) ([]*model.TeamMember, error)
 }
 type UserResolver interface {
@@ -521,13 +519,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Team.AuditLogs(childComplexity), true
-
-	case "Team.createdAt":
-		if e.complexity.Team.CreatedAt == nil {
-			break
-		}
-
-		return e.complexity.Team.CreatedAt(childComplexity), true
 
 	case "Team.id":
 		if e.complexity.Team.ID == nil {
@@ -1010,9 +1001,6 @@ type Team {
 
     "Audit logs for this team."
     auditLogs: [AuditLog!]!
-
-    "Creation time of the team."
-    createdAt: Time!
 
     "Team members."
     members: [TeamMember!]!
@@ -1819,8 +1807,6 @@ func (ec *executionContext) fieldContext_AuditLog_targetTeam(ctx context.Context
 				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Team_createdAt(ctx, field)
 			case "members":
 				return ec.fieldContext_Team_members(ctx, field)
 			}
@@ -2303,8 +2289,6 @@ func (ec *executionContext) fieldContext_Mutation_createTeam(ctx context.Context
 				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Team_createdAt(ctx, field)
 			case "members":
 				return ec.fieldContext_Team_members(ctx, field)
 			}
@@ -2396,8 +2380,6 @@ func (ec *executionContext) fieldContext_Mutation_updateTeam(ctx context.Context
 				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Team_createdAt(ctx, field)
 			case "members":
 				return ec.fieldContext_Team_members(ctx, field)
 			}
@@ -2489,8 +2471,6 @@ func (ec *executionContext) fieldContext_Mutation_removeUsersFromTeam(ctx contex
 				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Team_createdAt(ctx, field)
 			case "members":
 				return ec.fieldContext_Team_members(ctx, field)
 			}
@@ -2582,8 +2562,6 @@ func (ec *executionContext) fieldContext_Mutation_synchronizeTeam(ctx context.Co
 				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Team_createdAt(ctx, field)
 			case "members":
 				return ec.fieldContext_Team_members(ctx, field)
 			}
@@ -2675,8 +2653,6 @@ func (ec *executionContext) fieldContext_Mutation_addTeamMembers(ctx context.Con
 				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Team_createdAt(ctx, field)
 			case "members":
 				return ec.fieldContext_Team_members(ctx, field)
 			}
@@ -2768,8 +2744,6 @@ func (ec *executionContext) fieldContext_Mutation_addTeamOwners(ctx context.Cont
 				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Team_createdAt(ctx, field)
 			case "members":
 				return ec.fieldContext_Team_members(ctx, field)
 			}
@@ -2861,8 +2835,6 @@ func (ec *executionContext) fieldContext_Mutation_setTeamMemberRole(ctx context.
 				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Team_createdAt(ctx, field)
 			case "members":
 				return ec.fieldContext_Team_members(ctx, field)
 			}
@@ -3420,8 +3392,6 @@ func (ec *executionContext) fieldContext_Query_teams(ctx context.Context, field 
 				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Team_createdAt(ctx, field)
 			case "members":
 				return ec.fieldContext_Team_members(ctx, field)
 			}
@@ -3502,8 +3472,6 @@ func (ec *executionContext) fieldContext_Query_team(ctx context.Context, field g
 				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Team_createdAt(ctx, field)
 			case "members":
 				return ec.fieldContext_Team_members(ctx, field)
 			}
@@ -4305,50 +4273,6 @@ func (ec *executionContext) fieldContext_Team_auditLogs(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Team_createdAt(ctx context.Context, field graphql.CollectedField, obj *db.Team) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Team_createdAt(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Team().CreatedAt(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*time.Time)
-	fc.Result = res
-	return ec.marshalNTime2ᚖtimeᚐTime(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Team_createdAt(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Team",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Time does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Team_members(ctx context.Context, field graphql.CollectedField, obj *db.Team) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Team_members(ctx, field)
 	if err != nil {
@@ -4684,8 +4608,6 @@ func (ec *executionContext) fieldContext_User_teams(ctx context.Context, field g
 				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Team_createdAt(ctx, field)
 			case "members":
 				return ec.fieldContext_Team_members(ctx, field)
 			}
@@ -7592,26 +7514,6 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 				return innerFunc(ctx)
 
 			})
-		case "createdAt":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Team_createdAt(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
 		case "members":
 			field := field
 
@@ -8470,27 +8372,6 @@ func (ec *executionContext) unmarshalNTime2timeᚐTime(ctx context.Context, v in
 
 func (ec *executionContext) marshalNTime2timeᚐTime(ctx context.Context, sel ast.SelectionSet, v time.Time) graphql.Marshaler {
 	res := graphql.MarshalTime(v)
-	if res == graphql.Null {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-	}
-	return res
-}
-
-func (ec *executionContext) unmarshalNTime2ᚖtimeᚐTime(ctx context.Context, v interface{}) (*time.Time, error) {
-	res, err := graphql.UnmarshalTime(v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNTime2ᚖtimeᚐTime(ctx context.Context, sel ast.SelectionSet, v *time.Time) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	res := graphql.MarshalTime(*v)
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")

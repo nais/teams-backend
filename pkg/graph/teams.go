@@ -6,12 +6,12 @@ package graph
 import (
 	"context"
 	"fmt"
-	"time"
-
 	"github.com/google/uuid"
+	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
+	"github.com/nais/console/pkg/sqlc"
 )
 
 func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*db.Team, error) {
@@ -43,11 +43,23 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 }
 
 func (r *queryResolver) Teams(ctx context.Context) ([]*db.Team, error) {
-	panic(fmt.Errorf("not implemented"))
+	actor := authz.UserFromContext(ctx)
+	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameTeamsList)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.database.GetTeams(ctx)
 }
 
 func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*db.Team, error) {
-	panic(fmt.Errorf("not implemented"))
+	actor := authz.UserFromContext(ctx)
+	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsRead, *id)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.database.GetTeamByID(ctx, *id)
 }
 
 func (r *teamResolver) Purpose(ctx context.Context, obj *db.Team) (*string, error) {
@@ -55,14 +67,21 @@ func (r *teamResolver) Purpose(ctx context.Context, obj *db.Team) (*string, erro
 }
 
 func (r *teamResolver) Metadata(ctx context.Context, obj *db.Team) (map[string]interface{}, error) {
-	panic(fmt.Errorf("not implemented"))
+	actor := authz.UserFromContext(ctx)
+	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsRead, obj.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	metadata := make(map[string]interface{})
+	for k, v := range obj.Metadata {
+		metadata[k] = v
+	}
+
+	return metadata, nil
 }
 
 func (r *teamResolver) AuditLogs(ctx context.Context, obj *db.Team) ([]*model.AuditLog, error) {
-	panic(fmt.Errorf("not implemented"))
-}
-
-func (r *teamResolver) CreatedAt(ctx context.Context, obj *db.Team) (*time.Time, error) {
 	panic(fmt.Errorf("not implemented"))
 }
 

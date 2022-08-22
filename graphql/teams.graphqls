@@ -119,9 +119,6 @@ type Team {
     "Audit logs for this team."
     auditLogs: [AuditLog!]!
 
-    "Creation time of the team."
-    createdAt: Time!
-
     "Team members."
     members: [TeamMember!]!
 }
