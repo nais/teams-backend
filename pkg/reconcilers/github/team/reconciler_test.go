@@ -31,7 +31,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 
 	ctx := context.Background()
 	correlationID := uuid.New()
-	team := &db.Team{
+	team := db.Team{
 		Team: &sqlc.Team{
 			ID:      uuid.New(),
 			Slug:    teamSlug,
@@ -274,7 +274,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 
 	correlationID := uuid.New()
 
-	team := &db.Team{
+	team := db.Team{
 		Team: &sqlc.Team{
 			ID:      uuid.New(),
 			Slug:    teamSlug,

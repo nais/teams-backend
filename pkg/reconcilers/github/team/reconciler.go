@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"strings"
+
 	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-github/v43/github"
 	"github.com/google/uuid"
@@ -15,9 +19,6 @@ import (
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/shurcooL/githubv4"
 	log "github.com/sirupsen/logrus"
-	"io/ioutil"
-	"net/http"
-	"strings"
 )
 
 const Name = sqlc.SystemNameGithubTeam
@@ -77,7 +78,7 @@ func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.
 		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.Name(), err)
 	}
 
-	githubTeam, err := r.getOrCreateTeam(ctx, *state, input.CorrelationID, *input.Team)
+	githubTeam, err := r.getOrCreateTeam(ctx, *state, input.CorrelationID, input.Team)
 	if err != nil {
 		return fmt.Errorf("unable to get or create a GitHub team for team '%s' in system '%s': %w", input.Team.Slug, r.Name(), err)
 	}
@@ -87,7 +88,7 @@ func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.
 		log.Errorf("system state not persisted: %s", err)
 	}
 
-	return r.connectUsers(ctx, githubTeam, input.CorrelationID, *input.Team)
+	return r.connectUsers(ctx, githubTeam, input.CorrelationID, input.Team)
 }
 
 func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconcilers.GitHubState, correlationID uuid.UUID, team db.Team) (*github.Team, error) {
