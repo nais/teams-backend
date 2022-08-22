@@ -3,8 +3,6 @@ package db
 import (
 	"context"
 	"database/sql"
-	"errors"
-
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4"
 	"github.com/nais/console/pkg/sqlc"
@@ -18,7 +16,7 @@ type database struct {
 type TransactionFunc func(ctx context.Context, dbtx Database) error
 
 var (
-	ErrRecordNotFound = errors.New("record not found")
+	ErrNoRows = pgx.ErrNoRows
 )
 
 type Database interface {

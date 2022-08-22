@@ -36,7 +36,7 @@ func GetErrorPresenter() graphql.ErrorPresenterFunc {
 	return func(ctx context.Context, e error) *gqlerror.Error {
 		err := graphql.DefaultErrorPresenter(ctx, e)
 
-		if errors.Is(err, db.ErrRecordNotFound) {
+		if errors.Is(err, db.ErrNoRows) {
 			err.Message = "Not found"
 			err.Extensions = map[string]interface{}{
 				"code": "404",
