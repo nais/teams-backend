@@ -100,11 +100,7 @@ func run() error {
 		return err
 	}
 
-	handler, err := setupGraphAPI(database, cfg.TenantDomain, teamReconciler, logger)
-	if err != nil {
-		return err
-	}
-
+	handler := setupGraphAPI(database, cfg.TenantDomain, teamReconciler, logger)
 	srv, err := setupHTTPServer(cfg, database, handler, authHandler, store)
 	if err != nil {
 		return err
@@ -341,7 +337,7 @@ func initReconcilers(ctx context.Context, database db.Database, cfg *config.Conf
 	return recs, nil
 }
 
-func setupGraphAPI(database db.Database, domain string, teamReconciler chan<- reconcilers.Input, logger auditlogger.AuditLogger) (*graphql_handler.Server, error) {
+func setupGraphAPI(database db.Database, domain string, teamReconciler chan<- reconcilers.Input, logger auditlogger.AuditLogger) *graphql_handler.Server {
 	resolver := graph.NewResolver(database, domain, teamReconciler, logger)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
@@ -353,7 +349,7 @@ func setupGraphAPI(database db.Database, domain string, teamReconciler chan<- re
 		),
 	)
 	handler.SetErrorPresenter(graph.GetErrorPresenter())
-	return nil, nil
+	return handler
 }
 
 func corsConfig() cors.Options {
