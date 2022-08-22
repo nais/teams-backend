@@ -51,6 +51,7 @@ const (
 	AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup AuditAction = "google:workspace-admin:add-to-gke-security-group"
 	AuditActionGoogleGcpProjectCreateProject             AuditAction = "google:gcp:project:create-project"
 	AuditActionGoogleGcpProjectAssignPermissions         AuditAction = "google:gcp:project:assign-permissions"
+	AuditActionNaisNamespaceCreateNamespace              AuditAction = "nais:namespace:create-namespace"
 )
 
 func (e *AuditAction) Scan(src interface{}) error {
@@ -123,7 +124,8 @@ func (e AuditAction) Valid() bool {
 		AuditActionGoogleWorkspaceAdminDeleteMember,
 		AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup,
 		AuditActionGoogleGcpProjectCreateProject,
-		AuditActionGoogleGcpProjectAssignPermissions:
+		AuditActionGoogleGcpProjectAssignPermissions,
+		AuditActionNaisNamespaceCreateNamespace:
 		return true
 	}
 	return false
@@ -165,6 +167,7 @@ func AllAuditActionValues() []AuditAction {
 		AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup,
 		AuditActionGoogleGcpProjectCreateProject,
 		AuditActionGoogleGcpProjectAssignPermissions,
+		AuditActionNaisNamespaceCreateNamespace,
 	}
 }
 

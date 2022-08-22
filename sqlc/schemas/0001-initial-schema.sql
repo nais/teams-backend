@@ -70,7 +70,9 @@ CREATE TYPE audit_action AS ENUM (
 	'google:workspace-admin:add-to-gke-security-group',
 
 	'google:gcp:project:create-project',
-	'google:gcp:project:assign-permissions'
+	'google:gcp:project:assign-permissions',
+
+	'nais:namespace:create-namespace'
 );
 
 CREATE TYPE system_name AS ENUM (

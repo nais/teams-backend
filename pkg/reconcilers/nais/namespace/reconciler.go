@@ -42,10 +42,7 @@ type naisNamespaceReconciler struct {
 	projectID        string
 }
 
-const (
-	Name              = sqlc.SystemNameNaisNamespace
-	OpCreateNamespace = "nais:namespace:create-namespace"
-)
+const Name = sqlc.SystemNameNaisNamespace
 
 func New(database db.Database, auditLogger auditlogger.AuditLogger, domain, credentialsFile, projectID string, projectParentIDs map[string]int64) *naisNamespaceReconciler {
 	return &naisNamespaceReconciler{
@@ -106,7 +103,7 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 		}
 
 		if _, requested := namespaceState.Namespaces[environment]; !requested {
-			r.auditLogger.Logf(ctx, OpCreateNamespace, input.CorrelationID, r.NameP(), nil, &input.Team.Slug, nil, "request namespace creation for team '%s' in environment '%s'", input.Team.Slug, environment)
+			r.auditLogger.Logf(ctx, sqlc.AuditActionNaisNamespaceCreateNamespace, input.CorrelationID, r.NameP(), nil, &input.Team.Slug, nil, "request namespace creation for team '%s' in environment '%s'", input.Team.Slug, environment)
 			namespaceState.Namespaces[environment] = input.Team.Slug
 		}
 	}
