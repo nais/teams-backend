@@ -49,6 +49,8 @@ const (
 	AuditActionGoogleWorkspaceAdminAddMembers            AuditAction = "google:workspace-admin:add-members"
 	AuditActionGoogleWorkspaceAdminDeleteMember          AuditAction = "google:workspace-admin:delete-member"
 	AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup AuditAction = "google:workspace-admin:add-to-gke-security-group"
+	AuditActionGoogleGcpProjectCreateProject             AuditAction = "google:gcp:project:create-project"
+	AuditActionGoogleGcpProjectAssignPermissions         AuditAction = "google:gcp:project:assign-permissions"
 )
 
 func (e *AuditAction) Scan(src interface{}) error {
@@ -119,7 +121,9 @@ func (e AuditAction) Valid() bool {
 		AuditActionGoogleWorkspaceAdminAddMember,
 		AuditActionGoogleWorkspaceAdminAddMembers,
 		AuditActionGoogleWorkspaceAdminDeleteMember,
-		AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup:
+		AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup,
+		AuditActionGoogleGcpProjectCreateProject,
+		AuditActionGoogleGcpProjectAssignPermissions:
 		return true
 	}
 	return false
@@ -159,6 +163,8 @@ func AllAuditActionValues() []AuditAction {
 		AuditActionGoogleWorkspaceAdminAddMembers,
 		AuditActionGoogleWorkspaceAdminDeleteMember,
 		AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup,
+		AuditActionGoogleGcpProjectCreateProject,
+		AuditActionGoogleGcpProjectAssignPermissions,
 	}
 }
 
