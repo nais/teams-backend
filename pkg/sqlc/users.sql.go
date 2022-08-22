@@ -128,6 +128,31 @@ func (q *Queries) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*UserTe
 	return items, nil
 }
 
+const getUsers = `-- name: GetUsers :many
+SELECT id, email, name FROM users
+ORDER BY name ASC
+`
+
+func (q *Queries) GetUsers(ctx context.Context) ([]*User, error) {
+	rows, err := q.db.Query(ctx, getUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(&i.ID, &i.Email, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUsersByEmail = `-- name: GetUsersByEmail :many
 SELECT id, email, name FROM users
 WHERE email LIKE $1 LIMIT 1
