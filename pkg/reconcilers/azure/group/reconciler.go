@@ -87,7 +87,7 @@ func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.
 
 	err = r.connectUsers(ctx, grp, input)
 	if err != nil {
-		return fmt.Errorf("%s: add members to group: %s", sqlc.AuditActionAzureGroupAddMembers, err)
+		return fmt.Errorf("add members to group: %s", err)
 	}
 
 	return nil
@@ -97,7 +97,7 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 	consoleTeamMembers := input.Team.Members
 	members, err := r.client.ListGroupMembers(ctx, grp)
 	if err != nil {
-		return fmt.Errorf("%s: list existing members in Azure group '%s': %s", sqlc.AuditActionAzureGroupAddMembers, grp.MailNickname, err)
+		return fmt.Errorf("list existing members in Azure group '%s': %s", grp.MailNickname, err)
 	}
 
 	consoleUserMap := make(map[string]*db.User)
@@ -108,14 +108,14 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 		remoteEmail := strings.ToLower(member.Mail)
 		err = r.client.RemoveMemberFromGroup(ctx, grp, member)
 		if err != nil {
-			log.Warnf("%s: unable to remove member '%s' from group '%s' in Azure: %s", sqlc.AuditActionAzureGroupDeleteMember, remoteEmail, grp.MailNickname, err)
+			log.Warnf("unable to remove member '%s' from group '%s' in Azure: %s", remoteEmail, grp.MailNickname, err)
 			continue
 		}
 
 		if _, exists := consoleUserMap[remoteEmail]; !exists {
 			user, err := r.database.GetUserByEmail(ctx, remoteEmail)
 			if err != nil {
-				log.Warnf("%s: unable to lookup local user with email '%s': %s", sqlc.AuditActionAzureGroupDeleteMember, remoteEmail, err)
+				log.Warnf("unable to lookup local user with email '%s': %s", remoteEmail, err)
 				continue
 			}
 			consoleUserMap[remoteEmail] = user
@@ -128,12 +128,12 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 	for _, consoleUser := range membersToAdd {
 		member, err := r.client.GetUser(ctx, consoleUser.Email)
 		if err != nil {
-			log.Warnf("%s: unable to lookup user with email '%s' in Azure: %s", sqlc.AuditActionAzureGroupAddMember, consoleUser.Email, err)
+			log.Warnf("unable to lookup user with email '%s' in Azure: %s", consoleUser.Email, err)
 			continue
 		}
 		err = r.client.AddMemberToGroup(ctx, grp, member)
 		if err != nil {
-			log.Warnf("%s: unable to add member '%s' to Azure group '%s': %s", sqlc.AuditActionAzureGroupAddMember, consoleUser.Email, grp.MailNickname, err)
+			log.Warnf("unable to add member '%s' to Azure group '%s': %s", consoleUser.Email, grp.MailNickname, err)
 			continue
 		}
 

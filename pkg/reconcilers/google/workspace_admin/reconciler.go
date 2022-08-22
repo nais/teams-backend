@@ -84,7 +84,7 @@ func (r *googleWorkspaceAdminReconciler) Reconcile(ctx context.Context, input re
 
 	err = r.connectUsers(ctx, grp, input)
 	if err != nil {
-		return fmt.Errorf("%s: add members to group: %w", sqlc.AuditActionGoogleWorkspaceAdminAddMembers, err)
+		return fmt.Errorf("add members to group: %w", err)
 	}
 
 	return r.addToGKESecurityGroup(ctx, grp, input)
