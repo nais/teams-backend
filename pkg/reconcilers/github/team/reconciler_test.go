@@ -2,16 +2,15 @@ package github_team_reconciler_test
 
 import (
 	"context"
+	"database/sql"
 	"github.com/google/go-github/v43/github"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	helpers "github.com/nais/console/pkg/console"
-	"github.com/nais/console/pkg/dbmodels"
+	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/reconcilers"
-	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
 	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
 	"github.com/nais/console/pkg/sqlc"
-	"github.com/nais/console/pkg/test"
 	"github.com/shurcooL/githubv4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -21,43 +20,51 @@ import (
 	"testing"
 )
 
-func modelWithId() dbmodels.Model {
-	id, _ := uuid.NewUUID()
-	return dbmodels.Model{ID: &id}
-}
-
 func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
-	const (
-		domain      = "example.com"
-		org         = "org"
-		teamName    = "Team Name"
-		teamSlug    = "slug"
-		teamPurpose = "purpose"
-	)
+	domain := "example.com"
+	org := "org"
+	teamName := "Team Name"
+	teamSlug := "slug"
+	teamPurpose := sql.NullString{}
+	teamPurpose.Scan("purpose")
 
 	ctx := context.Background()
-	corr := sqlc.Correlation{}
-	system := &sqlc.System{Name: console_reconciler.Name}
-	team := dbmodels.Team{
-		Model:   modelWithId(),
-		Slug:    teamSlug,
-		Name:    teamName,
-		Purpose: helpers.Strp(teamPurpose),
+	correlationID := uuid.New()
+	team := &db.Team{
+		Team: &sqlc.Team{
+			ID:      uuid.New(),
+			Slug:    teamSlug,
+			Name:    teamName,
+			Purpose: teamPurpose,
+		},
 	}
 	input := reconcilers.Input{
-		Corr: corr,
-		Team: team,
+		CorrelationID: correlationID,
+		Team:          team,
 	}
+	systemName := github_team_reconciler.Name
 
 	t.Run("no existing state, github team available", func(t *testing.T) {
-		db, _ := test.GetTestDB()
+		database := db.NewMockDatabase(t)
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		gitHubClient := github_team_reconciler.NewMockGraphClient(t)
+
+		database.
+			On("LoadSystemState", ctx, systemName, team.ID, mock.Anything).
+			Return(nil).
+			Once()
+		database.
+			On("SetSystemState", ctx, systemName, team.ID, mock.Anything).
+			Return(nil).
+			Once()
+
 		teamsService.
 			On(
 				"CreateTeam",
 				ctx,
 				org,
-				github.NewTeam{Name: teamSlug, Description: helpers.Strp(teamPurpose)},
+				github.NewTeam{Name: teamSlug, Description: &teamPurpose.String},
 			).
 			Return(
 				&github.Team{Slug: helpers.Strp(teamSlug)},
@@ -80,21 +87,33 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			).
 			Once()
 
-		reconciler := github_team_reconciler.New(db, *system, auditlogger.New(db), org, domain, teamsService, github_team_reconciler.NewMockGraphClient(t))
+		auditLogger.
+			On("Logf", ctx, sqlc.AuditActionGithubTeamCreate, correlationID, &systemName, mock.Anything, &teamSlug, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).
+			Once()
+
+		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, gitHubClient)
 		err := reconciler.Reconcile(ctx, input)
 		assert.NoError(t, err)
-		teamsService.AssertExpectations(t)
 	})
 
 	t.Run("no existing state, github team not available", func(t *testing.T) {
-		db, _ := test.GetTestDB()
+		database := db.NewMockDatabase(t)
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		gitHubClient := github_team_reconciler.NewMockGraphClient(t)
+
+		database.
+			On("LoadSystemState", ctx, systemName, team.ID, mock.Anything).
+			Return(nil).
+			Once()
+
 		teamsService.
 			On(
 				"CreateTeam",
 				ctx,
 				org,
-				github.NewTeam{Name: teamSlug, Description: helpers.Strp(teamPurpose)},
+				github.NewTeam{Name: teamSlug, Description: &teamPurpose.String},
 			).
 			Return(
 				nil,
@@ -103,17 +122,32 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			).
 			Once()
 
-		reconciler := github_team_reconciler.New(db, *system, auditlogger.New(db), org, domain, teamsService, github_team_reconciler.NewMockGraphClient(t))
+		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, gitHubClient)
 		err := reconciler.Reconcile(ctx, input)
 		assert.Error(t, err)
-		teamsService.AssertExpectations(t)
 	})
 
 	t.Run("existing state, github team exists", func(t *testing.T) {
-		db, _ := test.GetTestDB()
-		dbmodels.SetSystemState(db, system.ID, *team.ID, reconcilers.GitHubState{Slug: helpers.Strp("existing-slug")})
-
+		database := db.NewMockDatabase(t)
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		gitHubClient := github_team_reconciler.NewMockGraphClient(t)
+
+		database.
+			On("LoadSystemState", ctx, systemName, team.ID, mock.Anything).
+			Run(func(args mock.Arguments) {
+				state := args.Get(3).(*reconcilers.GitHubState)
+				state.Slug = helpers.Strp("existing-slug")
+			}).
+			Return(nil).
+			Once()
+		database.
+			On("SetSystemState", ctx, systemName, team.ID, mock.MatchedBy(func(state reconcilers.GitHubState) bool {
+				return *state.Slug == "existing-slug"
+			})).
+			Return(nil).
+			Once()
+
 		teamsService.
 			On(
 				"GetTeamBySlug",
@@ -142,17 +176,32 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			).
 			Once()
 
-		reconciler := github_team_reconciler.New(db, *system, auditlogger.New(db), org, domain, teamsService, github_team_reconciler.NewMockGraphClient(t))
+		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, gitHubClient)
 		err := reconciler.Reconcile(ctx, input)
 		assert.NoError(t, err)
-		teamsService.AssertExpectations(t)
 	})
 
 	t.Run("existing state, github team no longer exists", func(t *testing.T) {
-		db, _ := test.GetTestDB()
-		initialState := &reconcilers.GitHubState{Slug: helpers.Strp("existing-slug")}
-		dbmodels.SetSystemState(db, system.ID, *team.ID, initialState)
+		database := db.NewMockDatabase(t)
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		gitHubClient := github_team_reconciler.NewMockGraphClient(t)
+
+		database.
+			On("LoadSystemState", ctx, systemName, team.ID, mock.Anything).
+			Run(func(args mock.Arguments) {
+				state := args.Get(3).(*reconcilers.GitHubState)
+				state.Slug = helpers.Strp("existing-slug")
+			}).
+			Return(nil).
+			Once()
+		database.
+			On("SetSystemState", ctx, systemName, team.ID, mock.MatchedBy(func(state reconcilers.GitHubState) bool {
+				return *state.Slug == "slug"
+			})).
+			Return(nil).
+			Once()
+
 		teamsService.
 			On(
 				"GetTeamBySlug",
@@ -171,7 +220,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 				"CreateTeam",
 				ctx,
 				org,
-				github.NewTeam{Name: teamSlug, Description: helpers.Strp(teamPurpose)},
+				github.NewTeam{Name: teamSlug, Description: &teamPurpose.String},
 			).
 			Return(
 				&github.Team{Slug: helpers.Strp(teamSlug)},
@@ -194,71 +243,84 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			).
 			Once()
 
-		reconciler := github_team_reconciler.New(db, *system, auditlogger.New(db), org, domain, teamsService, github_team_reconciler.NewMockGraphClient(t))
+		auditLogger.
+			On("Logf", ctx, sqlc.AuditActionGithubTeamCreate, correlationID, &systemName, mock.Anything, &teamSlug, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).
+			Once()
+
+		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, gitHubClient)
 		err := reconciler.Reconcile(ctx, input)
 		assert.NoError(t, err)
-		teamsService.AssertExpectations(t)
-
-		// fetch updated system state
-		updatedState := &reconcilers.GitHubState{}
-		dbmodels.LoadSystemState(db, system.ID, *team.ID, updatedState)
-		assert.Equal(t, "slug", *updatedState.Slug)
 	})
 }
 
 func TestGitHubReconciler_Reconcile(t *testing.T) {
-	const (
-		domain      = "example.com"
-		org         = "my-organization"
-		teamName    = "myteam"
-		teamSlug    = "myteam"
-		teamPurpose = "some purpose"
+	domain := "example.com"
+	org := "my-organization"
+	teamName := "myteam"
+	teamSlug := "myteam"
+	teamPurpose := sql.NullString{}
+	teamPurpose.Scan("some purpose")
 
-		createLogin = "should-create"
-		createEmail = "should-create@example.com"
-		keepLogin   = "should-keep"
-		keepEmail   = "should-keep@example.com"
-		removeLogin = "should-remove"
-		removeEmail = "should-remove@example.com"
-	)
+	createLogin := "should-create"
+	createEmail := "should-create@example.com"
+	keepLogin := "should-keep"
+	keepEmail := "should-keep@example.com"
+	removeLogin := "should-remove"
+	removeEmail := "should-remove@example.com"
 
 	ctx := context.Background()
 
-	auditLogger := &auditlogger.MockAuditLogger{}
-	auditLogger.On("Logf", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	correlationID := uuid.New()
 
-	system := &sqlc.System{Name: console_reconciler.Name}
-	corr := sqlc.Correlation{}
-
-	team := dbmodels.Team{
-		Model:   modelWithId(),
-		Slug:    teamSlug,
-		Name:    teamName,
-		Purpose: helpers.Strp(teamPurpose),
-		Users: []*dbmodels.User{
-			{
-				Email: createEmail,
-			},
-			{
-				Email: keepEmail,
-			},
+	team := &db.Team{
+		Team: &sqlc.Team{
+			ID:      uuid.New(),
+			Slug:    teamSlug,
+			Name:    teamName,
+			Purpose: teamPurpose,
+		},
+		Members: []*db.User{
+			{User: &sqlc.User{Email: createEmail}},
+			{User: &sqlc.User{Email: keepEmail}},
 		},
 	}
 
 	input := reconcilers.Input{
-		Corr: corr,
-		Team: team,
+		CorrelationID: correlationID,
+		Team:          team,
 	}
+
+	systemName := github_team_reconciler.Name
+
+	auditLogger := auditlogger.NewMockAuditLogger(t)
+	auditLogger.
+		On("Logf", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(nil)
 
 	// Give the reconciler enough data to create an entire team from scratch,
 	// remove members that shouldn't be present, and add members that should.
 	t.Run("create everything from scratch", func(t *testing.T) {
-		db, _ := test.GetTestDB()
+		database := db.NewMockDatabase(t)
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
 		graphClient := github_team_reconciler.NewMockGraphClient(t)
-		reconciler := github_team_reconciler.New(db, *system, auditLogger, org, domain, teamsService, graphClient)
 
-		configureCreateTeam(teamsService, org, teamName, teamPurpose)
+		database.
+			On("LoadSystemState", ctx, systemName, team.ID, mock.Anything).
+			Return(nil).
+			Once()
+		database.
+			On("SetSystemState", ctx, systemName, team.ID, mock.MatchedBy(func(state reconcilers.GitHubState) bool {
+				return *state.Slug == teamSlug
+			})).
+			Return(nil).
+			Once()
+		database.
+			On("GetUserByEmail", ctx, removeEmail).
+			Return(&db.User{User: &sqlc.User{Email: removeEmail, Name: removeLogin}}, nil).
+			Once()
+
+		configureCreateTeam(teamsService, org, teamName, teamPurpose.String)
 
 		configureLookupEmail(graphClient, org, removeLogin, removeEmail)
 
@@ -269,21 +331,24 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		configureAddTeamMembershipBySlug(teamsService, org, teamName, createLogin)
 		configureRemoveTeamMembershipBySlug(teamsService, org, teamName, removeLogin)
 
+		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, graphClient)
 		err := reconciler.Reconcile(ctx, input)
-
 		assert.NoError(t, err)
-		teamsService.AssertExpectations(t)
-		graphClient.AssertExpectations(t)
 	})
 
 	t.Run("GetTeamBySlug error", func(t *testing.T) {
-		db, _ := test.GetTestDB()
-
-		dbmodels.SetSystemState(db, system.ID, *team.ID, reconcilers.GitHubState{Slug: helpers.Strp("slug-from-state")})
-
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
 		graphClient := github_team_reconciler.NewMockGraphClient(t)
-		reconciler := github_team_reconciler.New(db, *system, auditLogger, org, domain, teamsService, graphClient)
+		database := db.NewMockDatabase(t)
+
+		database.
+			On("LoadSystemState", ctx, systemName, team.ID, mock.Anything).
+			Run(func(args mock.Arguments) {
+				state := args.Get(3).(*reconcilers.GitHubState)
+				state.Slug = helpers.Strp("slug-from-state")
+			}).
+			Return(nil).
+			Once()
 
 		teamsService.On("GetTeamBySlug", mock.Anything, org, "slug-from-state").
 			Return(nil, &github.Response{
@@ -294,24 +359,16 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 				},
 			}, nil).Once()
 
+		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, graphClient)
 		err := reconciler.Reconcile(ctx, input)
 
 		assert.ErrorContainsf(t, err, "server error from GitHub: 418: I'm a teapot: this is a body", err.Error())
-		teamsService.AssertExpectations(t)
-		graphClient.AssertExpectations(t)
 	})
 }
 
 func configureRegisterLoginEmail(graphClient *github_team_reconciler.MockGraphClient, org string, email string, login string) *mock.Call {
-	return graphClient.On(
-		"Query",
-		mock.Anything,
-		mock.Anything,
-		map[string]interface{}{
-			"org":      githubv4.String(org),
-			"username": githubv4.String(email),
-		},
-	).
+	return graphClient.
+		On("Query", mock.Anything, mock.Anything, map[string]interface{}{"org": githubv4.String(org), "username": githubv4.String(email)}).
 		Run(
 			func(args mock.Arguments) {
 				query := args.Get(1).(*github_team_reconciler.LookupGitHubSamlUserByEmail)
@@ -329,15 +386,8 @@ func configureRegisterLoginEmail(graphClient *github_team_reconciler.MockGraphCl
 }
 
 func configureLookupEmail(graphClient *github_team_reconciler.MockGraphClient, org string, login, email string) *mock.Call {
-	return graphClient.On(
-		"Query",
-		mock.Anything,
-		mock.Anything,
-		map[string]interface{}{
-			"org":   githubv4.String(org),
-			"login": githubv4.String(login),
-		},
-	).
+	return graphClient.
+		On("Query", mock.Anything, mock.Anything, map[string]interface{}{"org": githubv4.String(org), "login": githubv4.String(login)}).
 		Run(
 			func(args mock.Arguments) {
 				query := args.Get(1).(*github_team_reconciler.LookupGitHubSamlUserByGitHubUsername)
@@ -355,7 +405,8 @@ func configureLookupEmail(graphClient *github_team_reconciler.MockGraphClient, o
 }
 
 func configureRemoveTeamMembershipBySlug(teamsService *github_team_reconciler.MockTeamsService, org string, teamName string, removeLogin string) *mock.Call {
-	return teamsService.On("RemoveTeamMembershipBySlug", mock.Anything, org, teamName, removeLogin, mock.Anything).
+	return teamsService.
+		On("RemoveTeamMembershipBySlug", mock.Anything, org, teamName, removeLogin, mock.Anything).
 		Return(
 			&github.Response{
 				Response: &http.Response{
@@ -363,11 +414,13 @@ func configureRemoveTeamMembershipBySlug(teamsService *github_team_reconciler.Mo
 				},
 			},
 			nil,
-		).Once()
+		).
+		Once()
 }
 
 func configureAddTeamMembershipBySlug(teamsService *github_team_reconciler.MockTeamsService, org string, teamName string, createLogin string) *mock.Call {
-	return teamsService.On("AddTeamMembershipBySlug", mock.Anything, org, teamName, createLogin, mock.Anything).
+	return teamsService.
+		On("AddTeamMembershipBySlug", mock.Anything, org, teamName, createLogin, mock.Anything).
 		Return(
 			&github.Membership{
 				User: &github.User{
@@ -380,19 +433,17 @@ func configureAddTeamMembershipBySlug(teamsService *github_team_reconciler.MockT
 				},
 			},
 			nil,
-		).Once()
+		).
+		Once()
 }
 
 func configureListTeamMembersBySlug(teamsService *github_team_reconciler.MockTeamsService, org string, teamName string, keepLogin string, removeLogin string) *mock.Call {
-	return teamsService.On("ListTeamMembersBySlug", mock.Anything, org, teamName, mock.Anything).
+	return teamsService.
+		On("ListTeamMembersBySlug", mock.Anything, org, teamName, mock.Anything).
 		Return(
 			[]*github.User{
-				{
-					Login: helpers.Strp(keepLogin),
-				},
-				{
-					Login: helpers.Strp(removeLogin),
-				},
+				{Login: helpers.Strp(keepLogin)},
+				{Login: helpers.Strp(removeLogin)},
 			},
 			&github.Response{
 				Response: &http.Response{
@@ -400,15 +451,13 @@ func configureListTeamMembersBySlug(teamsService *github_team_reconciler.MockTea
 				},
 			},
 			nil,
-		).Once()
+		).
+		Once()
 }
 
 func configureCreateTeam(teamsService *github_team_reconciler.MockTeamsService, org string, teamName string, description string) *mock.Call {
-	return teamsService.On("CreateTeam", mock.Anything, org,
-		github.NewTeam{
-			Name:        teamName,
-			Description: helpers.Strp(description),
-		}).
+	return teamsService.
+		On("CreateTeam", mock.Anything, org, github.NewTeam{Name: teamName, Description: helpers.Strp(description)}).
 		Return(
 			&github.Team{
 				Slug: helpers.Strp(teamName),
@@ -419,5 +468,6 @@ func configureCreateTeam(teamsService *github_team_reconciler.MockTeamsService, 
 				},
 			},
 			nil,
-		).Once()
+		).
+		Once()
 }
