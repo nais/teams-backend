@@ -1,15 +1,6 @@
 extend type Query {
-    "Get a collection of users."
-    users(
-        "Pagination options."
-        pagination: Pagination
-
-        "Input for filtering the query."
-        query: UsersQuery
-
-        "Input for sorting the collection. If omitted the collection will be sorted by the name of the user in ascending order."
-        sort: UsersSort
-    ): Users! @auth
+    "Get a collection of users, sorted by name."
+    users: [User!]! @auth
 
     "Get a specific user."
     user(
@@ -58,44 +49,11 @@ type User {
     "List of teams the user is a member of."
     teams: [Team!]!
 
-    "Whether or not the user has an API key."
-    hasAPIKey: Boolean!
-
     "Whether or not the user is a service account."
     isServiceAccount: Boolean!
 
-    "Creation time of the user."
-    createdAt: Time!
-
     "Roles attached to the user."
-    roles: [UserRole!]!
-}
-
-"User collection."
-type Users {
-    "Object related to pagination of the collection."
-    pageInfo: PageInfo!
-
-    "The list of user objects in the collection."
-    nodes: [User!]!
-}
-
-"Input for filtering a collection of users."
-input UsersQuery {
-    "Filter by user email."
-    email: String
-
-    "Filter by user name."
-    name: String
-}
-
-"Input for sorting a collection of users."
-input UsersSort {
-    "Field to sort by."
-    field: UserSortField!
-
-    "Sort direction."
-    direction: SortDirection!
+    roles: [Role!]!
 }
 
 "Input for creating a new service account."
@@ -108,16 +66,4 @@ input CreateServiceAccountInput {
 input UpdateServiceAccountInput {
     "The new name of the service account. The email address will be automatically updated."
     name: Slug!
-}
-
-"Fields to sort the collection by."
-enum UserSortField {
-    "Sort by name."
-    NAME
-
-    "Sort by email address."
-    EMAIL
-
-    "Sort by creation time."
-    CREATED_AT
 }

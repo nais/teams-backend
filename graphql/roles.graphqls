@@ -1,22 +1,11 @@
-extend type Query {
-    "Get a collection of roles, sorted by name."
-    roles: [Role!]! @auth
-}
-
 "Role binding type."
-type UserRole {
-    "The connected role."
-    role: Role!
+type Role {
+    "Name of the role."
+    name: String!
 
     "Whether or not the role is global."
     isGlobal: Boolean!
 
     "Optional target of the role binding."
     targetId: UUID
-}
-
-"Role type."
-type Role {
-    "Name of the role."
-    name: String!
 }

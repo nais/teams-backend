@@ -6,12 +6,14 @@ package graph
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
+	"github.com/nais/console/pkg/authz"
+	"github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
+	"github.com/nais/console/pkg/sqlc"
 )
 
 func (r *mutationResolver) CreateServiceAccount(ctx context.Context, input model.CreateServiceAccountInput) (*db.User, error) {
@@ -26,32 +28,48 @@ func (r *mutationResolver) DeleteServiceAccount(ctx context.Context, serviceAcco
 	panic(fmt.Errorf("not implemented"))
 }
 
-func (r *queryResolver) Users(ctx context.Context, pagination *model.Pagination, query *model.UsersQuery, sort *model.UsersSort) (*model.Users, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *queryResolver) Users(ctx context.Context) ([]*db.User, error) {
+	actor := authz.UserFromContext(ctx)
+	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameUsersList)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.database.GetUsers(ctx)
 }
 
 func (r *queryResolver) User(ctx context.Context, id *uuid.UUID) (*db.User, error) {
-	panic(fmt.Errorf("not implemented"))
+	actor := authz.UserFromContext(ctx)
+	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameUsersList)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.database.GetUserByID(ctx, *id)
 }
 
 func (r *queryResolver) Me(ctx context.Context) (*db.User, error) {
-	panic(fmt.Errorf("not implemented"))
-}
-
-func (r *userResolver) HasAPIKey(ctx context.Context, obj *db.User) (bool, error) {
-	panic(fmt.Errorf("not implemented"))
+	return authz.UserFromContext(ctx), nil
 }
 
 func (r *userResolver) IsServiceAccount(ctx context.Context, obj *db.User) (bool, error) {
-	panic(fmt.Errorf("not implemented"))
+	actor := authz.UserFromContext(ctx)
+	err := authz.RequireAuthorization(actor, sqlc.AuthzNameServiceAccountsRead, obj.ID)
+	if err != nil {
+		return false, err
+	}
+
+	return console.IsServiceAccount(*obj, r.tenantDomain), nil
 }
 
-func (r *userResolver) CreatedAt(ctx context.Context, obj *db.User) (*time.Time, error) {
-	panic(fmt.Errorf("not implemented"))
-}
+func (r *userResolver) Roles(ctx context.Context, obj *db.User) ([]*db.Role, error) {
+	actor := authz.UserFromContext(ctx)
+	err := authz.RequireAuthorizationOrTargetMatch(actor, sqlc.AuthzNameUsersUpdate, obj.ID)
+	if err != nil {
+		return nil, err
+	}
 
-func (r *userResolver) Roles(ctx context.Context, obj *db.User) ([]*model.UserRole, error) {
-	panic(fmt.Errorf("not implemented"))
+	return r.database.GetUserRoles(ctx, obj.ID)
 }
 
 // User returns generated.UserResolver implementation.

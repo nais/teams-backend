@@ -101,16 +101,17 @@ type ComplexityRoot struct {
 	Query struct {
 		AuditLogs func(childComplexity int, pagination *model.Pagination, query *model.AuditLogsQuery, sort *model.AuditLogsSort) int
 		Me        func(childComplexity int) int
-		Roles     func(childComplexity int) int
 		Systems   func(childComplexity int) int
 		Team      func(childComplexity int, id *uuid.UUID) int
 		Teams     func(childComplexity int, pagination *model.Pagination, query *model.TeamsQuery, sort *model.TeamsSort) int
 		User      func(childComplexity int, id *uuid.UUID) int
-		Users     func(childComplexity int, pagination *model.Pagination, query *model.UsersQuery, sort *model.UsersSort) int
+		Users     func(childComplexity int) int
 	}
 
 	Role struct {
-		Name func(childComplexity int) int
+		IsGlobal func(childComplexity int) int
+		Name     func(childComplexity int) int
+		TargetID func(childComplexity int) int
 	}
 
 	System struct {
@@ -140,25 +141,12 @@ type ComplexityRoot struct {
 	}
 
 	User struct {
-		CreatedAt        func(childComplexity int) int
 		Email            func(childComplexity int) int
-		HasAPIKey        func(childComplexity int) int
 		ID               func(childComplexity int) int
 		IsServiceAccount func(childComplexity int) int
 		Name             func(childComplexity int) int
 		Roles            func(childComplexity int) int
 		Teams            func(childComplexity int) int
-	}
-
-	UserRole struct {
-		IsGlobal func(childComplexity int) int
-		Role     func(childComplexity int) int
-		TargetID func(childComplexity int) int
-	}
-
-	Users struct {
-		Nodes    func(childComplexity int) int
-		PageInfo func(childComplexity int) int
 	}
 }
 
@@ -181,16 +169,17 @@ type MutationResolver interface {
 }
 type QueryResolver interface {
 	AuditLogs(ctx context.Context, pagination *model.Pagination, query *model.AuditLogsQuery, sort *model.AuditLogsSort) (*model.AuditLogs, error)
-	Roles(ctx context.Context) ([]*db.Role, error)
 	Systems(ctx context.Context) ([]*model.System, error)
 	Teams(ctx context.Context, pagination *model.Pagination, query *model.TeamsQuery, sort *model.TeamsSort) (*model.Teams, error)
 	Team(ctx context.Context, id *uuid.UUID) (*db.Team, error)
-	Users(ctx context.Context, pagination *model.Pagination, query *model.UsersQuery, sort *model.UsersSort) (*model.Users, error)
+	Users(ctx context.Context) ([]*db.User, error)
 	User(ctx context.Context, id *uuid.UUID) (*db.User, error)
 	Me(ctx context.Context) (*db.User, error)
 }
 type RoleResolver interface {
 	Name(ctx context.Context, obj *db.Role) (string, error)
+
+	TargetID(ctx context.Context, obj *db.Role) (*uuid.UUID, error)
 }
 type TeamResolver interface {
 	Purpose(ctx context.Context, obj *db.Team) (*string, error)
@@ -200,10 +189,8 @@ type TeamResolver interface {
 	Members(ctx context.Context, obj *db.Team) ([]*model.TeamMember, error)
 }
 type UserResolver interface {
-	HasAPIKey(ctx context.Context, obj *db.User) (bool, error)
 	IsServiceAccount(ctx context.Context, obj *db.User) (bool, error)
-	CreatedAt(ctx context.Context, obj *db.User) (*time.Time, error)
-	Roles(ctx context.Context, obj *db.User) ([]*model.UserRole, error)
+	Roles(ctx context.Context, obj *db.User) ([]*db.Role, error)
 }
 
 type executableSchema struct {
@@ -496,13 +483,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Me(childComplexity), true
 
-	case "Query.roles":
-		if e.complexity.Query.Roles == nil {
-			break
-		}
-
-		return e.complexity.Query.Roles(childComplexity), true
-
 	case "Query.systems":
 		if e.complexity.Query.Systems == nil {
 			break
@@ -551,12 +531,14 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		args, err := ec.field_Query_users_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
+		return e.complexity.Query.Users(childComplexity), true
+
+	case "Role.isGlobal":
+		if e.complexity.Role.IsGlobal == nil {
+			break
 		}
 
-		return e.complexity.Query.Users(childComplexity, args["pagination"].(*model.Pagination), args["query"].(*model.UsersQuery), args["sort"].(*model.UsersSort)), true
+		return e.complexity.Role.IsGlobal(childComplexity), true
 
 	case "Role.name":
 		if e.complexity.Role.Name == nil {
@@ -564,6 +546,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Role.Name(childComplexity), true
+
+	case "Role.targetId":
+		if e.complexity.Role.TargetID == nil {
+			break
+		}
+
+		return e.complexity.Role.TargetID(childComplexity), true
 
 	case "System.id":
 		if e.complexity.System.ID == nil {
@@ -663,26 +652,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Teams.PageInfo(childComplexity), true
 
-	case "User.createdAt":
-		if e.complexity.User.CreatedAt == nil {
-			break
-		}
-
-		return e.complexity.User.CreatedAt(childComplexity), true
-
 	case "User.email":
 		if e.complexity.User.Email == nil {
 			break
 		}
 
 		return e.complexity.User.Email(childComplexity), true
-
-	case "User.hasAPIKey":
-		if e.complexity.User.HasAPIKey == nil {
-			break
-		}
-
-		return e.complexity.User.HasAPIKey(childComplexity), true
 
 	case "User.id":
 		if e.complexity.User.ID == nil {
@@ -719,41 +694,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.User.Teams(childComplexity), true
 
-	case "UserRole.isGlobal":
-		if e.complexity.UserRole.IsGlobal == nil {
-			break
-		}
-
-		return e.complexity.UserRole.IsGlobal(childComplexity), true
-
-	case "UserRole.role":
-		if e.complexity.UserRole.Role == nil {
-			break
-		}
-
-		return e.complexity.UserRole.Role(childComplexity), true
-
-	case "UserRole.targetId":
-		if e.complexity.UserRole.TargetID == nil {
-			break
-		}
-
-		return e.complexity.UserRole.TargetID(childComplexity), true
-
-	case "Users.nodes":
-		if e.complexity.Users.Nodes == nil {
-			break
-		}
-
-		return e.complexity.Users.Nodes(childComplexity), true
-
-	case "Users.pageInfo":
-		if e.complexity.Users.PageInfo == nil {
-			break
-		}
-
-		return e.complexity.Users.PageInfo(childComplexity), true
-
 	}
 	return 0, false
 }
@@ -775,8 +715,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputTeamsSort,
 		ec.unmarshalInputUpdateServiceAccountInput,
 		ec.unmarshalInputUpdateTeamInput,
-		ec.unmarshalInputUsersQuery,
-		ec.unmarshalInputUsersSort,
 	)
 	first := true
 
@@ -955,27 +893,16 @@ enum AuditLogSortField {
 }`, BuiltIn: false},
 	{Name: "../../../graphql/directives.graphqls", Input: `"Require authentication for all requests with this directive."
 directive @auth on FIELD_DEFINITION`, BuiltIn: false},
-	{Name: "../../../graphql/roles.graphqls", Input: `extend type Query {
-    "Get a collection of roles, sorted by name."
-    roles: [Role!]! @auth
-}
-
-"Role binding type."
-type UserRole {
-    "The connected role."
-    role: Role!
+	{Name: "../../../graphql/roles.graphqls", Input: `"Role binding type."
+type Role {
+    "Name of the role."
+    name: String!
 
     "Whether or not the role is global."
     isGlobal: Boolean!
 
     "Optional target of the role binding."
     targetId: UUID
-}
-
-"Role type."
-type Role {
-    "Name of the role."
-    name: String!
 }`, BuiltIn: false},
 	{Name: "../../../graphql/scalars.graphqls", Input: `"Scalar value representing a UUID based on RFC 4122."
 scalar UUID
@@ -1305,17 +1232,8 @@ enum TeamRole {
     OWNER
 }`, BuiltIn: false},
 	{Name: "../../../graphql/users.graphqls", Input: `extend type Query {
-    "Get a collection of users."
-    users(
-        "Pagination options."
-        pagination: Pagination
-
-        "Input for filtering the query."
-        query: UsersQuery
-
-        "Input for sorting the collection. If omitted the collection will be sorted by the name of the user in ascending order."
-        sort: UsersSort
-    ): Users! @auth
+    "Get a collection of users, sorted by name."
+    users: [User!]! @auth
 
     "Get a specific user."
     user(
@@ -1364,44 +1282,11 @@ type User {
     "List of teams the user is a member of."
     teams: [Team!]!
 
-    "Whether or not the user has an API key."
-    hasAPIKey: Boolean!
-
     "Whether or not the user is a service account."
     isServiceAccount: Boolean!
 
-    "Creation time of the user."
-    createdAt: Time!
-
     "Roles attached to the user."
-    roles: [UserRole!]!
-}
-
-"User collection."
-type Users {
-    "Object related to pagination of the collection."
-    pageInfo: PageInfo!
-
-    "The list of user objects in the collection."
-    nodes: [User!]!
-}
-
-"Input for filtering a collection of users."
-input UsersQuery {
-    "Filter by user email."
-    email: String
-
-    "Filter by user name."
-    name: String
-}
-
-"Input for sorting a collection of users."
-input UsersSort {
-    "Field to sort by."
-    field: UserSortField!
-
-    "Sort direction."
-    direction: SortDirection!
+    roles: [Role!]!
 }
 
 "Input for creating a new service account."
@@ -1414,18 +1299,6 @@ input CreateServiceAccountInput {
 input UpdateServiceAccountInput {
     "The new name of the service account. The email address will be automatically updated."
     name: Slug!
-}
-
-"Fields to sort the collection by."
-enum UserSortField {
-    "Sort by name."
-    NAME
-
-    "Sort by email address."
-    EMAIL
-
-    "Sort by creation time."
-    CREATED_AT
 }`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
@@ -1743,39 +1616,6 @@ func (ec *executionContext) field_Query_user_args(ctx context.Context, rawArgs m
 	return args, nil
 }
 
-func (ec *executionContext) field_Query_users_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 *model.Pagination
-	if tmp, ok := rawArgs["pagination"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pagination"))
-		arg0, err = ec.unmarshalOPagination2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPagination(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["pagination"] = arg0
-	var arg1 *model.UsersQuery
-	if tmp, ok := rawArgs["query"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("query"))
-		arg1, err = ec.unmarshalOUsersQuery2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUsersQuery(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["query"] = arg1
-	var arg2 *model.UsersSort
-	if tmp, ok := rawArgs["sort"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sort"))
-		arg2, err = ec.unmarshalOUsersSort2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUsersSort(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["sort"] = arg2
-	return args, nil
-}
-
 func (ec *executionContext) field___Type_enumValues_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -2044,12 +1884,8 @@ func (ec *executionContext) fieldContext_AuditLog_actor(ctx context.Context, fie
 				return ec.fieldContext_User_name(ctx, field)
 			case "teams":
 				return ec.fieldContext_User_teams(ctx, field)
-			case "hasAPIKey":
-				return ec.fieldContext_User_hasAPIKey(ctx, field)
 			case "isServiceAccount":
 				return ec.fieldContext_User_isServiceAccount(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_User_createdAt(ctx, field)
 			case "roles":
 				return ec.fieldContext_User_roles(ctx, field)
 			}
@@ -2103,12 +1939,8 @@ func (ec *executionContext) fieldContext_AuditLog_targetUser(ctx context.Context
 				return ec.fieldContext_User_name(ctx, field)
 			case "teams":
 				return ec.fieldContext_User_teams(ctx, field)
-			case "hasAPIKey":
-				return ec.fieldContext_User_hasAPIKey(ctx, field)
 			case "isServiceAccount":
 				return ec.fieldContext_User_isServiceAccount(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_User_createdAt(ctx, field)
 			case "roles":
 				return ec.fieldContext_User_roles(ctx, field)
 			}
@@ -3341,12 +3173,8 @@ func (ec *executionContext) fieldContext_Mutation_createServiceAccount(ctx conte
 				return ec.fieldContext_User_name(ctx, field)
 			case "teams":
 				return ec.fieldContext_User_teams(ctx, field)
-			case "hasAPIKey":
-				return ec.fieldContext_User_hasAPIKey(ctx, field)
 			case "isServiceAccount":
 				return ec.fieldContext_User_isServiceAccount(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_User_createdAt(ctx, field)
 			case "roles":
 				return ec.fieldContext_User_roles(ctx, field)
 			}
@@ -3434,12 +3262,8 @@ func (ec *executionContext) fieldContext_Mutation_updateServiceAccount(ctx conte
 				return ec.fieldContext_User_name(ctx, field)
 			case "teams":
 				return ec.fieldContext_User_teams(ctx, field)
-			case "hasAPIKey":
-				return ec.fieldContext_User_hasAPIKey(ctx, field)
 			case "isServiceAccount":
 				return ec.fieldContext_User_isServiceAccount(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_User_createdAt(ctx, field)
 			case "roles":
 				return ec.fieldContext_User_roles(ctx, field)
 			}
@@ -3748,74 +3572,6 @@ func (ec *executionContext) fieldContext_Query_auditLogs(ctx context.Context, fi
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_roles(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_roles(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		directive0 := func(rctx context.Context) (interface{}, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Roles(rctx)
-		}
-		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Auth == nil {
-				return nil, errors.New("directive auth is not implemented")
-			}
-			return ec.directives.Auth(ctx, nil, directive0)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.([]*db.Role); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/nais/console/pkg/db.Role`, tmp)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*db.Role)
-	fc.Result = res
-	return ec.marshalNRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐRoleᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_roles(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "name":
-				return ec.fieldContext_Role_name(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Role", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Query_systems(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query_systems(ctx, field)
 	if err != nil {
@@ -4075,7 +3831,7 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Users(rctx, fc.Args["pagination"].(*model.Pagination), fc.Args["query"].(*model.UsersQuery), fc.Args["sort"].(*model.UsersSort))
+			return ec.resolvers.Query().Users(rctx)
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -4091,10 +3847,10 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 		if tmp == nil {
 			return nil, nil
 		}
-		if data, ok := tmp.(*model.Users); ok {
+		if data, ok := tmp.([]*db.User); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/graph/model.Users`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/nais/console/pkg/db.User`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4106,9 +3862,9 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Users)
+	res := resTmp.([]*db.User)
 	fc.Result = res
-	return ec.marshalNUsers2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUsers(ctx, field.Selections, res)
+	return ec.marshalNUser2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐUserᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_users(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4119,24 +3875,21 @@ func (ec *executionContext) fieldContext_Query_users(ctx context.Context, field 
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "pageInfo":
-				return ec.fieldContext_Users_pageInfo(ctx, field)
-			case "nodes":
-				return ec.fieldContext_Users_nodes(ctx, field)
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "name":
+				return ec.fieldContext_User_name(ctx, field)
+			case "teams":
+				return ec.fieldContext_User_teams(ctx, field)
+			case "isServiceAccount":
+				return ec.fieldContext_User_isServiceAccount(ctx, field)
+			case "roles":
+				return ec.fieldContext_User_roles(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Users", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_users_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
 	}
 	return fc, nil
 }
@@ -4208,12 +3961,8 @@ func (ec *executionContext) fieldContext_Query_user(ctx context.Context, field g
 				return ec.fieldContext_User_name(ctx, field)
 			case "teams":
 				return ec.fieldContext_User_teams(ctx, field)
-			case "hasAPIKey":
-				return ec.fieldContext_User_hasAPIKey(ctx, field)
 			case "isServiceAccount":
 				return ec.fieldContext_User_isServiceAccount(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_User_createdAt(ctx, field)
 			case "roles":
 				return ec.fieldContext_User_roles(ctx, field)
 			}
@@ -4301,12 +4050,8 @@ func (ec *executionContext) fieldContext_Query_me(ctx context.Context, field gra
 				return ec.fieldContext_User_name(ctx, field)
 			case "teams":
 				return ec.fieldContext_User_teams(ctx, field)
-			case "hasAPIKey":
-				return ec.fieldContext_User_hasAPIKey(ctx, field)
 			case "isServiceAccount":
 				return ec.fieldContext_User_isServiceAccount(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_User_createdAt(ctx, field)
 			case "roles":
 				return ec.fieldContext_User_roles(ctx, field)
 			}
@@ -4484,6 +4229,91 @@ func (ec *executionContext) fieldContext_Role_name(ctx context.Context, field gr
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Role_isGlobal(ctx context.Context, field graphql.CollectedField, obj *db.Role) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Role_isGlobal(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IsGlobal(), nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Role_isGlobal(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Role",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Role_targetId(ctx context.Context, field graphql.CollectedField, obj *db.Role) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Role_targetId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Role().TargetID(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*uuid.UUID)
+	fc.Result = res
+	return ec.marshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Role_targetId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Role",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type UUID does not have child fields")
 		},
 	}
 	return fc, nil
@@ -4996,12 +4826,8 @@ func (ec *executionContext) fieldContext_TeamMember_user(ctx context.Context, fi
 				return ec.fieldContext_User_name(ctx, field)
 			case "teams":
 				return ec.fieldContext_User_teams(ctx, field)
-			case "hasAPIKey":
-				return ec.fieldContext_User_hasAPIKey(ctx, field)
 			case "isServiceAccount":
 				return ec.fieldContext_User_isServiceAccount(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_User_createdAt(ctx, field)
 			case "roles":
 				return ec.fieldContext_User_roles(ctx, field)
 			}
@@ -5363,50 +5189,6 @@ func (ec *executionContext) fieldContext_User_teams(ctx context.Context, field g
 	return fc, nil
 }
 
-func (ec *executionContext) _User_hasAPIKey(ctx context.Context, field graphql.CollectedField, obj *db.User) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_User_hasAPIKey(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.User().HasAPIKey(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(bool)
-	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_User_hasAPIKey(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "User",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _User_isServiceAccount(ctx context.Context, field graphql.CollectedField, obj *db.User) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_User_isServiceAccount(ctx, field)
 	if err != nil {
@@ -5451,50 +5233,6 @@ func (ec *executionContext) fieldContext_User_isServiceAccount(ctx context.Conte
 	return fc, nil
 }
 
-func (ec *executionContext) _User_createdAt(ctx context.Context, field graphql.CollectedField, obj *db.User) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_User_createdAt(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.User().CreatedAt(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*time.Time)
-	fc.Result = res
-	return ec.marshalNTime2ᚖtimeᚐTime(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_User_createdAt(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "User",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Time does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _User_roles(ctx context.Context, field graphql.CollectedField, obj *db.User) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_User_roles(ctx, field)
 	if err != nil {
@@ -5521,9 +5259,9 @@ func (ec *executionContext) _User_roles(ctx context.Context, field graphql.Colle
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*model.UserRole)
+	res := resTmp.([]*db.Role)
 	fc.Result = res
-	return ec.marshalNUserRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserRoleᚄ(ctx, field.Selections, res)
+	return ec.marshalNRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐRoleᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_User_roles(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -5534,261 +5272,14 @@ func (ec *executionContext) fieldContext_User_roles(ctx context.Context, field g
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "role":
-				return ec.fieldContext_UserRole_role(ctx, field)
-			case "isGlobal":
-				return ec.fieldContext_UserRole_isGlobal(ctx, field)
-			case "targetId":
-				return ec.fieldContext_UserRole_targetId(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type UserRole", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _UserRole_role(ctx context.Context, field graphql.CollectedField, obj *model.UserRole) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_UserRole_role(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Role, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*db.Role)
-	fc.Result = res
-	return ec.marshalNRole2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐRole(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_UserRole_role(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "UserRole",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
 			case "name":
 				return ec.fieldContext_Role_name(ctx, field)
+			case "isGlobal":
+				return ec.fieldContext_Role_isGlobal(ctx, field)
+			case "targetId":
+				return ec.fieldContext_Role_targetId(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Role", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _UserRole_isGlobal(ctx context.Context, field graphql.CollectedField, obj *model.UserRole) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_UserRole_isGlobal(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.IsGlobal, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(bool)
-	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_UserRole_isGlobal(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "UserRole",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _UserRole_targetId(ctx context.Context, field graphql.CollectedField, obj *model.UserRole) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_UserRole_targetId(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.TargetID, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*uuid.UUID)
-	fc.Result = res
-	return ec.marshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_UserRole_targetId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "UserRole",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type UUID does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Users_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.Users) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Users_pageInfo(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.PageInfo, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.PageInfo)
-	fc.Result = res
-	return ec.marshalNPageInfo2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPageInfo(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Users_pageInfo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Users",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "results":
-				return ec.fieldContext_PageInfo_results(ctx, field)
-			case "offset":
-				return ec.fieldContext_PageInfo_offset(ctx, field)
-			case "limit":
-				return ec.fieldContext_PageInfo_limit(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Users_nodes(ctx context.Context, field graphql.CollectedField, obj *model.Users) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Users_nodes(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Nodes, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*db.User)
-	fc.Result = res
-	return ec.marshalNUser2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐUserᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Users_nodes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Users",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_User_id(ctx, field)
-			case "email":
-				return ec.fieldContext_User_email(ctx, field)
-			case "name":
-				return ec.fieldContext_User_name(ctx, field)
-			case "teams":
-				return ec.fieldContext_User_teams(ctx, field)
-			case "hasAPIKey":
-				return ec.fieldContext_User_hasAPIKey(ctx, field)
-			case "isServiceAccount":
-				return ec.fieldContext_User_isServiceAccount(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_User_createdAt(ctx, field)
-			case "roles":
-				return ec.fieldContext_User_roles(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
 	}
 	return fc, nil
@@ -8001,68 +7492,6 @@ func (ec *executionContext) unmarshalInputUpdateTeamInput(ctx context.Context, o
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputUsersQuery(ctx context.Context, obj interface{}) (model.UsersQuery, error) {
-	var it model.UsersQuery
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "email":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("email"))
-			it.Email, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-			it.Name, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputUsersSort(ctx context.Context, obj interface{}) (model.UsersSort, error) {
-	var it model.UsersSort
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "field":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
-			it.Field, err = ec.unmarshalNUserSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserSortField(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "direction":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
-			it.Direction, err = ec.unmarshalNSortDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSortDirection(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -8472,29 +7901,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			out.Concurrently(i, func() graphql.Marshaler {
 				return rrm(innerCtx)
 			})
-		case "roles":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_roles(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return rrm(innerCtx)
-			})
 		case "systems":
 			field := field
 
@@ -8679,6 +8085,30 @@ func (ec *executionContext) _Role(ctx context.Context, sel ast.SelectionSet, obj
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
+		case "isGlobal":
+
+			out.Values[i] = ec._Role_isGlobal(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "targetId":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Role_targetId(ctx, field, obj)
 				return res
 			}
 
@@ -8976,26 +8406,6 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
-		case "hasAPIKey":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._User_hasAPIKey(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
 		case "isServiceAccount":
 			field := field
 
@@ -9006,26 +8416,6 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 					}
 				}()
 				res = ec._User_isServiceAccount(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
-		case "createdAt":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._User_createdAt(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -9056,80 +8446,6 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 				return innerFunc(ctx)
 
 			})
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var userRoleImplementors = []string{"UserRole"}
-
-func (ec *executionContext) _UserRole(ctx context.Context, sel ast.SelectionSet, obj *model.UserRole) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, userRoleImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("UserRole")
-		case "role":
-
-			out.Values[i] = ec._UserRole_role(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "isGlobal":
-
-			out.Values[i] = ec._UserRole_isGlobal(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "targetId":
-
-			out.Values[i] = ec._UserRole_targetId(ctx, field, obj)
-
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var usersImplementors = []string{"Users"}
-
-func (ec *executionContext) _Users(ctx context.Context, sel ast.SelectionSet, obj *model.Users) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, usersImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("Users")
-		case "pageInfo":
-
-			out.Values[i] = ec._Users_pageInfo(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "nodes":
-
-			out.Values[i] = ec._Users_nodes(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -10097,84 +9413,6 @@ func (ec *executionContext) marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkg�
 	return ec._User(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNUserRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserRoleᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.UserRole) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNUserRole2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserRole(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) marshalNUserRole2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserRole(ctx context.Context, sel ast.SelectionSet, v *model.UserRole) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._UserRole(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalNUserSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserSortField(ctx context.Context, v interface{}) (model.UserSortField, error) {
-	var res model.UserSortField
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNUserSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserSortField(ctx context.Context, sel ast.SelectionSet, v model.UserSortField) graphql.Marshaler {
-	return v
-}
-
-func (ec *executionContext) marshalNUsers2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUsers(ctx context.Context, sel ast.SelectionSet, v model.Users) graphql.Marshaler {
-	return ec._Users(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNUsers2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUsers(ctx context.Context, sel ast.SelectionSet, v *model.Users) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._Users(ctx, sel, v)
-}
-
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {
 	return ec.___Directive(ctx, sel, &v)
 }
@@ -10570,22 +9808,6 @@ func (ec *executionContext) marshalOUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkg�
 		return graphql.Null
 	}
 	return ec._User(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalOUsersQuery2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUsersQuery(ctx context.Context, v interface{}) (*model.UsersQuery, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputUsersQuery(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalOUsersSort2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUsersSort(ctx context.Context, v interface{}) (*model.UsersSort, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputUsersSort(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {

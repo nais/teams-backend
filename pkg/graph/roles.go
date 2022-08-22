@@ -5,18 +5,20 @@ package graph
 
 import (
 	"context"
-	"fmt"
-
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/graph/generated"
 )
 
-func (r *queryResolver) Roles(ctx context.Context) ([]*db.Role, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *roleResolver) Name(ctx context.Context, obj *db.Role) (string, error) {
+	return string(obj.RoleName), nil
 }
 
-func (r *roleResolver) Name(ctx context.Context, obj *db.Role) (string, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *roleResolver) TargetID(ctx context.Context, obj *db.Role) (*uuid.UUID, error) {
+	if obj.TargetID.Valid {
+		return &obj.TargetID.UUID, nil
+	}
+	return nil, nil
 }
 
 // Role returns generated.RoleResolver implementation.

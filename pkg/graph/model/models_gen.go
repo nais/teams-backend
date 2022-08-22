@@ -194,40 +194,6 @@ type UpdateTeamInput struct {
 	Purpose *string `json:"purpose"`
 }
 
-// Role binding type.
-type UserRole struct {
-	// The connected role.
-	Role *db.Role `json:"role"`
-	// Whether or not the role is global.
-	IsGlobal bool `json:"isGlobal"`
-	// Optional target of the role binding.
-	TargetID *uuid.UUID `json:"targetId"`
-}
-
-// User collection.
-type Users struct {
-	// Object related to pagination of the collection.
-	PageInfo *PageInfo `json:"pageInfo"`
-	// The list of user objects in the collection.
-	Nodes []*db.User `json:"nodes"`
-}
-
-// Input for filtering a collection of users.
-type UsersQuery struct {
-	// Filter by user email.
-	Email *string `json:"email"`
-	// Filter by user name.
-	Name *string `json:"name"`
-}
-
-// Input for sorting a collection of users.
-type UsersSort struct {
-	// Field to sort by.
-	Field UserSortField `json:"field"`
-	// Sort direction.
-	Direction SortDirection `json:"direction"`
-}
-
 // Fields to sort the collection by.
 type AuditLogSortField string
 
@@ -401,52 +367,5 @@ func (e *TeamSortField) UnmarshalGQL(v interface{}) error {
 }
 
 func (e TeamSortField) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
-}
-
-// Fields to sort the collection by.
-type UserSortField string
-
-const (
-	// Sort by name.
-	UserSortFieldName UserSortField = "NAME"
-	// Sort by email address.
-	UserSortFieldEmail UserSortField = "EMAIL"
-	// Sort by creation time.
-	UserSortFieldCreatedAt UserSortField = "CREATED_AT"
-)
-
-var AllUserSortField = []UserSortField{
-	UserSortFieldName,
-	UserSortFieldEmail,
-	UserSortFieldCreatedAt,
-}
-
-func (e UserSortField) IsValid() bool {
-	switch e {
-	case UserSortFieldName, UserSortFieldEmail, UserSortFieldCreatedAt:
-		return true
-	}
-	return false
-}
-
-func (e UserSortField) String() string {
-	return string(e)
-}
-
-func (e *UserSortField) UnmarshalGQL(v interface{}) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = UserSortField(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid UserSortField", str)
-	}
-	return nil
-}
-
-func (e UserSortField) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
