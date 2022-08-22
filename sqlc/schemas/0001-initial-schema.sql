@@ -166,7 +166,7 @@ CREATE TABLE teams (
 
 CREATE TABLE system_states (
     system_name system_name NOT NULL,
-    team_id UUID NOT NULL REFERENCES teams(id),
+    team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
     state jsonb DEFAULT '{}'::jsonb NOT NULL,
 
     PRIMARY KEY (system_name, team_id)
@@ -176,7 +176,7 @@ CREATE TABLE system_states (
 
 CREATE TABLE team_metadata (
     id UUID PRIMARY KEY,
-    team_id UUID NOT NULL REFERENCES teams(id),
+    team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
     key TEXT NOT NULL,
     value TEXT,
 
@@ -188,7 +188,7 @@ CREATE TABLE team_metadata (
 CREATE TABLE user_roles (
     id UUID PRIMARY KEY,
     role_name role_name NOT NULL,
-    user_id UUID NOT NULL REFERENCES users(id),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     target_id UUID
 );
 
@@ -202,8 +202,8 @@ WHERE target_id IS NULL;
 
 CREATE TABLE user_teams (
     id UUID PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES users(id),
-    team_id UUID NOT NULL REFERENCES teams(id),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
 
     UNIQUE (user_id, team_id)
 );
