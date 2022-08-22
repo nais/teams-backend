@@ -1,15 +1,6 @@
 extend type Query {
     "Get a collection of teams."
-    teams(
-        "Pagination options."
-        pagination: Pagination
-
-        "Input for filtering the query."
-        query: TeamsQuery
-
-        "Input for sorting the collection. If omitted the collection will be sorted by the name of the team in ascending order."
-        sort: TeamsSort
-    ): Teams! @auth
+    teams: [Team!]! @auth
 
     "Get a specific team."
     team(
@@ -144,33 +135,6 @@ type TeamMember {
     role: TeamRole!
 }
 
-"Team collection."
-type Teams {
-    "Object related to pagination of the collection."
-    pageInfo: PageInfo!
-
-    "The list of team objects in the collection."
-    nodes: [Team!]!
-}
-
-"Input for filtering a collection of teams."
-input TeamsQuery {
-    "Filter by slug."
-    slug: Slug
-
-    "Filter by name."
-    name: String
-}
-
-"Input for sorting a collection of teams."
-input TeamsSort {
-    "Field to sort by."
-    field: TeamSortField!
-
-    "Sort direction."
-    direction: SortDirection!
-}
-
 "Input for creating a new team."
 input CreateTeamInput {
     "Team slug. This value immutable."
@@ -229,18 +193,6 @@ input SetTeamMemberRoleInput {
 
     "The team role to set."
     role: TeamRole!
-}
-
-"Fields to sort the collection by."
-enum TeamSortField {
-    "Sort by name."
-    NAME
-
-    "Sort by slug."
-    SLUG
-
-    "Sort by creation time."
-    CREATED_AT
 }
 
 "Available team roles."

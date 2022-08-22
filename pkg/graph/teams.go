@@ -42,7 +42,7 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 	panic(fmt.Errorf("not implemented"))
 }
 
-func (r *queryResolver) Teams(ctx context.Context, pagination *model.Pagination, query *model.TeamsQuery, sort *model.TeamsSort) (*model.Teams, error) {
+func (r *queryResolver) Teams(ctx context.Context) ([]*db.Team, error) {
 	panic(fmt.Errorf("not implemented"))
 }
 

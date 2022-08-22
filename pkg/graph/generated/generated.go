@@ -97,7 +97,7 @@ type ComplexityRoot struct {
 		AuditLogs func(childComplexity int, pagination *model.Pagination, query *model.AuditLogsQuery, sort *model.AuditLogsSort) int
 		Me        func(childComplexity int) int
 		Team      func(childComplexity int, id *uuid.UUID) int
-		Teams     func(childComplexity int, pagination *model.Pagination, query *model.TeamsQuery, sort *model.TeamsSort) int
+		Teams     func(childComplexity int) int
 		User      func(childComplexity int, id *uuid.UUID) int
 		Users     func(childComplexity int) int
 	}
@@ -122,11 +122,6 @@ type ComplexityRoot struct {
 	TeamMember struct {
 		Role func(childComplexity int) int
 		User func(childComplexity int) int
-	}
-
-	Teams struct {
-		Nodes    func(childComplexity int) int
-		PageInfo func(childComplexity int) int
 	}
 
 	User struct {
@@ -155,7 +150,7 @@ type MutationResolver interface {
 }
 type QueryResolver interface {
 	AuditLogs(ctx context.Context, pagination *model.Pagination, query *model.AuditLogsQuery, sort *model.AuditLogsSort) (*model.AuditLogs, error)
-	Teams(ctx context.Context, pagination *model.Pagination, query *model.TeamsQuery, sort *model.TeamsSort) (*model.Teams, error)
+	Teams(ctx context.Context) ([]*db.Team, error)
 	Team(ctx context.Context, id *uuid.UUID) (*db.Team, error)
 	Users(ctx context.Context) ([]*db.User, error)
 	User(ctx context.Context, id *uuid.UUID) (*db.User, error)
@@ -478,12 +473,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		args, err := ec.field_Query_teams_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Query.Teams(childComplexity, args["pagination"].(*model.Pagination), args["query"].(*model.TeamsQuery), args["sort"].(*model.TeamsSort)), true
+		return e.complexity.Query.Teams(childComplexity), true
 
 	case "Query.user":
 		if e.complexity.Query.User == nil {
@@ -595,20 +585,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.TeamMember.User(childComplexity), true
 
-	case "Teams.nodes":
-		if e.complexity.Teams.Nodes == nil {
-			break
-		}
-
-		return e.complexity.Teams.Nodes(childComplexity), true
-
-	case "Teams.pageInfo":
-		if e.complexity.Teams.PageInfo == nil {
-			break
-		}
-
-		return e.complexity.Teams.PageInfo(childComplexity), true
-
 	case "User.email":
 		if e.complexity.User.Email == nil {
 			break
@@ -668,8 +644,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputPagination,
 		ec.unmarshalInputRemoveUsersFromTeamInput,
 		ec.unmarshalInputSetTeamMemberRoleInput,
-		ec.unmarshalInputTeamsQuery,
-		ec.unmarshalInputTeamsSort,
 		ec.unmarshalInputUpdateServiceAccountInput,
 		ec.unmarshalInputUpdateTeamInput,
 	)
@@ -918,16 +892,7 @@ enum SortDirection {
 }`, BuiltIn: false},
 	{Name: "../../../graphql/teams.graphqls", Input: `extend type Query {
     "Get a collection of teams."
-    teams(
-        "Pagination options."
-        pagination: Pagination
-
-        "Input for filtering the query."
-        query: TeamsQuery
-
-        "Input for sorting the collection. If omitted the collection will be sorted by the name of the team in ascending order."
-        sort: TeamsSort
-    ): Teams! @auth
+    teams: [Team!]! @auth
 
     "Get a specific team."
     team(
@@ -1062,33 +1027,6 @@ type TeamMember {
     role: TeamRole!
 }
 
-"Team collection."
-type Teams {
-    "Object related to pagination of the collection."
-    pageInfo: PageInfo!
-
-    "The list of team objects in the collection."
-    nodes: [Team!]!
-}
-
-"Input for filtering a collection of teams."
-input TeamsQuery {
-    "Filter by slug."
-    slug: Slug
-
-    "Filter by name."
-    name: String
-}
-
-"Input for sorting a collection of teams."
-input TeamsSort {
-    "Field to sort by."
-    field: TeamSortField!
-
-    "Sort direction."
-    direction: SortDirection!
-}
-
 "Input for creating a new team."
 input CreateTeamInput {
     "Team slug. This value immutable."
@@ -1147,18 +1085,6 @@ input SetTeamMemberRoleInput {
 
     "The team role to set."
     role: TeamRole!
-}
-
-"Fields to sort the collection by."
-enum TeamSortField {
-    "Sort by name."
-    NAME
-
-    "Sort by slug."
-    SLUG
-
-    "Sort by creation time."
-    CREATED_AT
 }
 
 "Available team roles."
@@ -1503,39 +1429,6 @@ func (ec *executionContext) field_Query_team_args(ctx context.Context, rawArgs m
 		}
 	}
 	args["id"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Query_teams_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 *model.Pagination
-	if tmp, ok := rawArgs["pagination"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pagination"))
-		arg0, err = ec.unmarshalOPagination2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPagination(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["pagination"] = arg0
-	var arg1 *model.TeamsQuery
-	if tmp, ok := rawArgs["query"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("query"))
-		arg1, err = ec.unmarshalOTeamsQuery2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamsQuery(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["query"] = arg1
-	var arg2 *model.TeamsSort
-	if tmp, ok := rawArgs["sort"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sort"))
-		arg2, err = ec.unmarshalOTeamsSort2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamsSort(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["sort"] = arg2
 	return args, nil
 }
 
@@ -3471,7 +3364,7 @@ func (ec *executionContext) _Query_teams(ctx context.Context, field graphql.Coll
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Teams(rctx, fc.Args["pagination"].(*model.Pagination), fc.Args["query"].(*model.TeamsQuery), fc.Args["sort"].(*model.TeamsSort))
+			return ec.resolvers.Query().Teams(rctx)
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -3487,10 +3380,10 @@ func (ec *executionContext) _Query_teams(ctx context.Context, field graphql.Coll
 		if tmp == nil {
 			return nil, nil
 		}
-		if data, ok := tmp.(*model.Teams); ok {
+		if data, ok := tmp.([]*db.Team); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/graph/model.Teams`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/nais/console/pkg/db.Team`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3502,9 +3395,9 @@ func (ec *executionContext) _Query_teams(ctx context.Context, field graphql.Coll
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Teams)
+	res := resTmp.([]*db.Team)
 	fc.Result = res
-	return ec.marshalNTeams2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeams(ctx, field.Selections, res)
+	return ec.marshalNTeam2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐTeamᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_teams(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3515,24 +3408,25 @@ func (ec *executionContext) fieldContext_Query_teams(ctx context.Context, field 
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "pageInfo":
-				return ec.fieldContext_Teams_pageInfo(ctx, field)
-			case "nodes":
-				return ec.fieldContext_Teams_nodes(ctx, field)
+			case "id":
+				return ec.fieldContext_Team_id(ctx, field)
+			case "slug":
+				return ec.fieldContext_Team_slug(ctx, field)
+			case "name":
+				return ec.fieldContext_Team_name(ctx, field)
+			case "purpose":
+				return ec.fieldContext_Team_purpose(ctx, field)
+			case "metadata":
+				return ec.fieldContext_Team_metadata(ctx, field)
+			case "auditLogs":
+				return ec.fieldContext_Team_auditLogs(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Team_createdAt(ctx, field)
+			case "members":
+				return ec.fieldContext_Team_members(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Teams", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_teams_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
 	}
 	return fc, nil
 }
@@ -4602,120 +4496,6 @@ func (ec *executionContext) fieldContext_TeamMember_role(ctx context.Context, fi
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type TeamRole does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Teams_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.Teams) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Teams_pageInfo(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.PageInfo, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.PageInfo)
-	fc.Result = res
-	return ec.marshalNPageInfo2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPageInfo(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Teams_pageInfo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Teams",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "results":
-				return ec.fieldContext_PageInfo_results(ctx, field)
-			case "offset":
-				return ec.fieldContext_PageInfo_offset(ctx, field)
-			case "limit":
-				return ec.fieldContext_PageInfo_limit(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Teams_nodes(ctx context.Context, field graphql.CollectedField, obj *model.Teams) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Teams_nodes(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Nodes, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*db.Team)
-	fc.Result = res
-	return ec.marshalNTeam2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐTeamᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Teams_nodes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Teams",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Team_id(ctx, field)
-			case "slug":
-				return ec.fieldContext_Team_slug(ctx, field)
-			case "name":
-				return ec.fieldContext_Team_name(ctx, field)
-			case "purpose":
-				return ec.fieldContext_Team_purpose(ctx, field)
-			case "metadata":
-				return ec.fieldContext_Team_metadata(ctx, field)
-			case "auditLogs":
-				return ec.fieldContext_Team_auditLogs(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Team_createdAt(ctx, field)
-			case "members":
-				return ec.fieldContext_Team_members(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
 	}
 	return fc, nil
@@ -7102,68 +6882,6 @@ func (ec *executionContext) unmarshalInputSetTeamMemberRoleInput(ctx context.Con
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputTeamsQuery(ctx context.Context, obj interface{}) (model.TeamsQuery, error) {
-	var it model.TeamsQuery
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "slug":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-			it.Slug, err = ec.unmarshalOSlug2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-			it.Name, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputTeamsSort(ctx context.Context, obj interface{}) (model.TeamsSort, error) {
-	var it model.TeamsSort
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "field":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
-			it.Field, err = ec.unmarshalNTeamSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamSortField(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "direction":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
-			it.Direction, err = ec.unmarshalNSortDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSortDirection(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
 func (ec *executionContext) unmarshalInputUpdateServiceAccountInput(ctx context.Context, obj interface{}) (model.UpdateServiceAccountInput, error) {
 	var it model.UpdateServiceAccountInput
 	asMap := map[string]interface{}{}
@@ -7945,41 +7663,6 @@ func (ec *executionContext) _TeamMember(ctx context.Context, sel ast.SelectionSe
 		case "role":
 
 			out.Values[i] = ec._TeamMember_role(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var teamsImplementors = []string{"Teams"}
-
-func (ec *executionContext) _Teams(ctx context.Context, sel ast.SelectionSet, obj *model.Teams) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, teamsImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("Teams")
-		case "pageInfo":
-
-			out.Values[i] = ec._Teams_pageInfo(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "nodes":
-
-			out.Values[i] = ec._Teams_nodes(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -8780,30 +8463,6 @@ func (ec *executionContext) marshalNTeamRole2githubᚗcomᚋnaisᚋconsoleᚋpkg
 	return v
 }
 
-func (ec *executionContext) unmarshalNTeamSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamSortField(ctx context.Context, v interface{}) (model.TeamSortField, error) {
-	var res model.TeamSortField
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNTeamSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamSortField(ctx context.Context, sel ast.SelectionSet, v model.TeamSortField) graphql.Marshaler {
-	return v
-}
-
-func (ec *executionContext) marshalNTeams2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeams(ctx context.Context, sel ast.SelectionSet, v model.Teams) graphql.Marshaler {
-	return ec._Teams(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNTeams2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeams(ctx context.Context, sel ast.SelectionSet, v *model.Teams) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._Teams(ctx, sel, v)
-}
-
 func (ec *executionContext) unmarshalNTime2timeᚐTime(ctx context.Context, v interface{}) (time.Time, error) {
 	res, err := graphql.UnmarshalTime(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -9295,22 +8954,6 @@ func (ec *executionContext) unmarshalOPagination2ᚖgithubᚗcomᚋnaisᚋconsol
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) unmarshalOSlug2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := graphql.UnmarshalString(v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOSlug2ᚖstring(ctx context.Context, sel ast.SelectionSet, v *string) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	res := graphql.MarshalString(*v)
-	return res
-}
-
 func (ec *executionContext) unmarshalOString2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
 	if v == nil {
 		return nil, nil
@@ -9332,22 +8975,6 @@ func (ec *executionContext) marshalOTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkg�
 		return graphql.Null
 	}
 	return ec._Team(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalOTeamsQuery2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamsQuery(ctx context.Context, v interface{}) (*model.TeamsQuery, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputTeamsQuery(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalOTeamsSort2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamsSort(ctx context.Context, v interface{}) (*model.TeamsSort, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputTeamsSort(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx context.Context, v interface{}) (*uuid.UUID, error) {

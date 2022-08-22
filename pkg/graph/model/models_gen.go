@@ -148,30 +148,6 @@ type TeamMember struct {
 	Role TeamRole `json:"role"`
 }
 
-// Team collection.
-type Teams struct {
-	// Object related to pagination of the collection.
-	PageInfo *PageInfo `json:"pageInfo"`
-	// The list of team objects in the collection.
-	Nodes []*db.Team `json:"nodes"`
-}
-
-// Input for filtering a collection of teams.
-type TeamsQuery struct {
-	// Filter by slug.
-	Slug *string `json:"slug"`
-	// Filter by name.
-	Name *string `json:"name"`
-}
-
-// Input for sorting a collection of teams.
-type TeamsSort struct {
-	// Field to sort by.
-	Field TeamSortField `json:"field"`
-	// Sort direction.
-	Direction SortDirection `json:"direction"`
-}
-
 // Input for updating an existing service account.
 type UpdateServiceAccountInput struct {
 	// The new name of the service account. The email address will be automatically updated.
@@ -312,52 +288,5 @@ func (e *TeamRole) UnmarshalGQL(v interface{}) error {
 }
 
 func (e TeamRole) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
-}
-
-// Fields to sort the collection by.
-type TeamSortField string
-
-const (
-	// Sort by name.
-	TeamSortFieldName TeamSortField = "NAME"
-	// Sort by slug.
-	TeamSortFieldSlug TeamSortField = "SLUG"
-	// Sort by creation time.
-	TeamSortFieldCreatedAt TeamSortField = "CREATED_AT"
-)
-
-var AllTeamSortField = []TeamSortField{
-	TeamSortFieldName,
-	TeamSortFieldSlug,
-	TeamSortFieldCreatedAt,
-}
-
-func (e TeamSortField) IsValid() bool {
-	switch e {
-	case TeamSortFieldName, TeamSortFieldSlug, TeamSortFieldCreatedAt:
-		return true
-	}
-	return false
-}
-
-func (e TeamSortField) String() string {
-	return string(e)
-}
-
-func (e *TeamSortField) UnmarshalGQL(v interface{}) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = TeamSortField(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid TeamSortField", str)
-	}
-	return nil
-}
-
-func (e TeamSortField) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
