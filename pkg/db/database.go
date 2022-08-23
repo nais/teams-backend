@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-
 	"github.com/golang-migrate/migrate/v4"
 
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -29,6 +28,7 @@ var ErrNoRows = pgx.ErrNoRows
 type Database interface {
 	AddAuditLog(ctx context.Context, correlationID uuid.UUID, systemName sqlc.SystemName, actorEmail *string, targetTeamSlug *slug.Slug, targetUserEmail *string, action sqlc.AuditAction, message string) error
 	AddUser(ctx context.Context, name, email string) (*User, error)
+	AddServiceAccount(ctx context.Context, name slug.Slug, email string, userID uuid.UUID) (*User, error)
 	GetUserByID(ctx context.Context, ID uuid.UUID) (*User, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
 	GetUserByApiKey(ctx context.Context, APIKey string) (*User, error)

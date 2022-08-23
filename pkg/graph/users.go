@@ -6,18 +6,43 @@ package graph
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/authz"
-	"github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/fixtures"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
+	"github.com/nais/console/pkg/serviceaccount"
 	"github.com/nais/console/pkg/sqlc"
 )
 
 func (r *mutationResolver) CreateServiceAccount(ctx context.Context, input model.CreateServiceAccountInput) (*db.User, error) {
-	panic(fmt.Errorf("not implemented"))
+	actor := authz.UserFromContext(ctx)
+	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameServiceAccountsCreate)
+	if err != nil {
+		return nil, err
+	}
+
+	name := string(*input.Name)
+	if strings.HasPrefix(name, fixtures.NaisServiceAccountPrefix) {
+		return nil, fmt.Errorf("'%s' is a reserved prefix", fixtures.NaisServiceAccountPrefix)
+	}
+
+	correlationID, err := uuid.NewUUID()
+	if err != nil {
+		return nil, fmt.Errorf("unable to create correlation ID for audit log: %w", err)
+	}
+
+	serviceAccount, err := r.database.AddServiceAccount(ctx, *input.Name, serviceaccount.Email(*input.Name, r.tenantDomain), actor.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	r.auditLogger.Logf(ctx, sqlc.AuditActionGraphqlApiServiceAccountCreate, correlationID, r.systemName, &actor.Email, nil, &serviceAccount.Email, "Service account created")
+
+	return serviceAccount, nil
 }
 
 func (r *mutationResolver) UpdateServiceAccount(ctx context.Context, serviceAccountID *uuid.UUID, input model.UpdateServiceAccountInput) (*db.User, error) {
@@ -92,7 +117,7 @@ func (r *userResolver) IsServiceAccount(ctx context.Context, obj *db.User) (bool
 		return false, err
 	}
 
-	return console.IsServiceAccount(*obj, r.tenantDomain), nil
+	return serviceaccount.IsServiceAccount(*obj, r.tenantDomain), nil
 }
 
 func (r *userResolver) Roles(ctx context.Context, obj *db.User) ([]*db.Role, error) {

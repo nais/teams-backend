@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/nais/console/pkg/serviceaccount"
 	"strings"
 
 	"github.com/nais/console/pkg/sqlc"
 
-	"github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/slug"
 )
@@ -60,7 +60,7 @@ func SetupStaticServiceAccounts(ctx context.Context, database db.Database, servi
 
 	return database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
 		for _, serviceAccountFromInput := range serviceAccounts {
-			email := console.ServiceAccountEmail(slug.Slug(serviceAccountFromInput.Name), tenantDomain)
+			email := serviceaccount.Email(slug.Slug(serviceAccountFromInput.Name), tenantDomain)
 
 			serviceAccount, err := dbtx.GetUserByEmail(ctx, email)
 			if err != nil {

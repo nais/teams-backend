@@ -24,28 +24,6 @@ func TestStrp(t *testing.T) {
 	assert.Equal(t, &s, helpers.Strp(s))
 }
 
-func TestServiceAccountEmail(t *testing.T) {
-	assert.Equal(t, "foo@domain.serviceaccounts.nais.io", helpers.ServiceAccountEmail("foo", "domain"))
-}
-
-func TestIsServiceAccount(t *testing.T) {
-	domainUser := db.User{
-		User: &sqlc.User{
-			Email: "user@domain.serviceaccounts.nais.io",
-		},
-	}
-	exampleComUser := db.User{
-		User: &sqlc.User{
-			Email: "user@example.com.serviceaccounts.nais.io",
-		},
-	}
-
-	assert.True(t, helpers.IsServiceAccount(domainUser, "domain"))
-	assert.False(t, helpers.IsServiceAccount(exampleComUser, "domain"))
-	assert.False(t, helpers.IsServiceAccount(domainUser, "example.com"))
-	assert.True(t, helpers.IsServiceAccount(exampleComUser, "example.com"))
-}
-
 func TestDomainUsers(t *testing.T) {
 	t.Run("No users", func(t *testing.T) {
 		users := make([]*db.User, 0)
