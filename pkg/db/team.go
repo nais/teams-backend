@@ -117,6 +117,20 @@ func (d *database) GetTeams(ctx context.Context) ([]*Team, error) {
 	return collection, nil
 }
 
+func (d *database) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error) {
+	rows, err := d.querier.GetUserTeams(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	teams := make([]*Team, 0)
+	for _, team := range rows {
+		teams = append(teams, &Team{Team: team})
+	}
+
+	return teams, nil
+}
+
 func (d *database) getTeam(ctx context.Context, team *Team) (*Team, error) {
 	metadata, err := d.querier.GetTeamMetadata(ctx, team.ID)
 	if err != nil {

@@ -52,8 +52,37 @@ func (r *queryResolver) Me(ctx context.Context) (*db.User, error) {
 	return authz.UserFromContext(ctx), nil
 }
 
-func (r *userResolver) Teams(ctx context.Context, obj *db.User) ([]*db.Team, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *userResolver) Teams(ctx context.Context, obj *db.User) ([]*model.UserTeam, error) {
+	actor := authz.UserFromContext(ctx)
+	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameTeamsList)
+	if err != nil {
+		return nil, err
+	}
+
+	teams, err := r.database.GetUserTeams(ctx, obj.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	userTeams := make([]*model.UserTeam, 0, len(teams))
+	for _, team := range teams {
+		isOwner, err := r.database.UserIsTeamOwner(ctx, obj.ID, team.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		role := model.TeamRoleMember
+		if isOwner {
+			role = model.TeamRoleOwner
+		}
+
+		userTeams = append(userTeams, &model.UserTeam{
+			Team: team,
+			Role: role,
+		})
+	}
+
+	return userTeams, nil
 }
 
 func (r *userResolver) IsServiceAccount(ctx context.Context, obj *db.User) (bool, error) {

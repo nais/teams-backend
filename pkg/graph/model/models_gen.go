@@ -89,6 +89,14 @@ type UpdateTeamInput struct {
 	Purpose *string `json:"purpose"`
 }
 
+// User team.
+type UserTeam struct {
+	// Team instance.
+	Team *db.Team `json:"team"`
+	// The role that the user has in the team.
+	Role TeamRole `json:"role"`
+}
+
 // Available team roles.
 type TeamRole string
 

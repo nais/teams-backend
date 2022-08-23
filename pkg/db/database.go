@@ -30,6 +30,7 @@ type Database interface {
 
 	GetUsersByEmail(ctx context.Context, email string) ([]*User, error)
 	GetUsers(ctx context.Context) ([]*User, error)
+	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error)
 
 	AddTeam(ctx context.Context, name, slug string, purpose *string, userID uuid.UUID) (*Team, error)
 	UpdateTeam(ctx context.Context, teamID uuid.UUID, name, purpose *string) (*Team, error)

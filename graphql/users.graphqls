@@ -47,13 +47,22 @@ type User {
     name: String!
 
     "List of teams the user is a member of."
-    teams: [Team!]!
+    teams: [UserTeam!]!
 
     "Whether or not the user is a service account."
     isServiceAccount: Boolean!
 
     "Roles attached to the user."
     roles: [Role!]!
+}
+
+"User team."
+type UserTeam {
+    "Team instance."
+    team: Team!
+
+    "The role that the user has in the team."
+    role: TeamRole!
 }
 
 "Input for creating a new service account."

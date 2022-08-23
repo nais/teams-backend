@@ -105,19 +105,24 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) 
 }
 
 const getUserTeams = `-- name: GetUserTeams :many
-SELECT user_id, team_id FROM user_teams WHERE user_id = $1
+SELECT teams.id, teams.slug, teams.name, teams.purpose FROM user_teams JOIN teams ON teams.id = user_teams.team_id WHERE user_id = $1 ORDER BY teams.name ASC
 `
 
-func (q *Queries) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*UserTeam, error) {
+func (q *Queries) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error) {
 	rows, err := q.db.Query(ctx, getUserTeams, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []*UserTeam
+	var items []*Team
 	for rows.Next() {
-		var i UserTeam
-		if err := rows.Scan(&i.UserID, &i.TeamID); err != nil {
+		var i Team
+		if err := rows.Scan(
+			&i.ID,
+			&i.Slug,
+			&i.Name,
+			&i.Purpose,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, &i)

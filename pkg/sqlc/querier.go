@@ -32,7 +32,7 @@ type Querier interface {
 	GetUserByID(ctx context.Context, id uuid.UUID) (*User, error)
 	GetUserRole(ctx context.Context, id int32) (*UserRole, error)
 	GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*UserRole, error)
-	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*UserTeam, error)
+	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error)
 	GetUsers(ctx context.Context) ([]*User, error)
 	GetUsersByEmail(ctx context.Context, email string) ([]*User, error)
 	RemoveApiKeysFromUser(ctx context.Context, userID uuid.UUID) error
