@@ -50,7 +50,38 @@ func (r *mutationResolver) UpdateServiceAccount(ctx context.Context, serviceAcco
 }
 
 func (r *mutationResolver) DeleteServiceAccount(ctx context.Context, serviceAccountID *uuid.UUID) (bool, error) {
-	panic(fmt.Errorf("not implemented"))
+	actor := authz.UserFromContext(ctx)
+	err := authz.RequireAuthorization(actor, sqlc.AuthzNameServiceAccountsDelete, *serviceAccountID)
+	if err != nil {
+		return false, err
+	}
+
+	serviceAccount, err := r.database.GetUserByID(ctx, *serviceAccountID)
+	if err != nil {
+		return false, err
+	}
+
+	if serviceAccount.Name == fixtures.AdminUserName {
+		return false, fmt.Errorf("unable to delete admin account")
+	}
+
+	if strings.HasPrefix(serviceAccount.Name, fixtures.NaisServiceAccountPrefix) {
+		return false, fmt.Errorf("unable to delete static service account")
+	}
+
+	correlationID, err := uuid.NewUUID()
+	if err != nil {
+		return false, err
+	}
+
+	err = r.database.DeleteUser(ctx, serviceAccount.ID)
+	if err != nil {
+		return false, err
+	}
+
+	r.auditLogger.Logf(ctx, sqlc.AuditActionGraphqlApiServiceAccountDelete, correlationID, r.systemName, &actor.Email, nil, &serviceAccount.Email, "Service account deleted")
+
+	return true, nil
 }
 
 func (r *queryResolver) Users(ctx context.Context) ([]*db.User, error) {
