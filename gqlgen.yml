@@ -44,6 +44,14 @@ autobind:
 # modelgen, the others will be allowed when binding to fields. Configure them to
 # your liking
 models:
+  AuditAction:
+    model:
+      - github.com/nais/console/pkg/sqlc.AuditAction
+      -
+  SystemName:
+    model:
+      - github.com/nais/console/pkg/sqlc.SystemName
+
   UUID:
     model:
       - github.com/nais/console/pkg/db.UUID
