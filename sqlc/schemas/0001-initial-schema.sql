@@ -86,6 +86,14 @@ CREATE TYPE system_name AS ENUM (
     'usersync'
 );
 
+-- users
+
+CREATE TABLE users (
+    id UUID PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL
+);
+
 -- api_keys
 
 CREATE TABLE api_keys (
@@ -153,14 +161,6 @@ INSERT INTO role_authz(role_name, authz_name) VALUES
     ('User admin','users:list'),
     ('User admin','users:update'),
     ('User viewer','users:list');
-
--- users
-
-CREATE TABLE users (
-    id UUID PRIMARY KEY,
-    email TEXT NOT NULL UNIQUE,
-    name TEXT NOT NULL
-);
 
 -- teams
 
