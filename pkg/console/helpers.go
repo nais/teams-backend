@@ -2,9 +2,10 @@ package console
 
 import (
 	"fmt"
-	"github.com/nais/console/pkg/db"
 	"strings"
 	"time"
+
+	"github.com/nais/console/pkg/db"
 
 	"github.com/nais/console/pkg/slug"
 )

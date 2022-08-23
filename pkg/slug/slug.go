@@ -11,9 +11,7 @@ import (
 
 type Slug string
 
-var (
-	re = regexp.MustCompile("^[a-z][a-z-]{1,18}[a-z]$")
-)
+var re = regexp.MustCompile("^[a-z][a-z-]{1,18}[a-z]$")
 
 func MarshalSlug(slug *Slug) graphql.Marshaler {
 	return graphql.WriterFunc(func(w io.Writer) {
@@ -30,7 +28,6 @@ func UnmarshalSlug(v interface{}) (*Slug, error) {
 
 	slug := Slug(input)
 	err := slug.Validate()
-
 	if err != nil {
 		return nil, err
 	}

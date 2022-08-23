@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/nais/console/pkg/sqlc"
 	"strings"
+
+	"github.com/nais/console/pkg/sqlc"
 
 	"github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/db"

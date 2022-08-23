@@ -1,10 +1,11 @@
 package authn_test
 
 import (
-	"github.com/nais/console/pkg/authn"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/nais/console/pkg/authn"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSessionStore(t *testing.T) {

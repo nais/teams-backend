@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"

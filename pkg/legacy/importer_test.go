@@ -5,12 +5,13 @@ package legacy_test
 import (
 	"context"
 	"encoding/json"
-	"github.com/jackc/pgx/v4"
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/sqlc"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/jackc/pgx/v4"
+	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/sqlc"
 
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/legacy"

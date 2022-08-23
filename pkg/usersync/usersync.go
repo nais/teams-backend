@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
@@ -12,8 +15,6 @@ import (
 	"github.com/nais/console/pkg/sqlc"
 	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/option"
-	"net/http"
-	"strings"
 )
 
 type userSynchronizer struct {
@@ -48,7 +49,6 @@ func NewFromConfig(cfg *config.Config, database db.Database, auditLogger auditlo
 	}
 
 	cf, err := google_jwt.GetConfig(cfg.Google.CredentialsFile, cfg.Google.DelegatedUser)
-
 	if err != nil {
 		return nil, fmt.Errorf("get google jwt config: %w", err)
 	}

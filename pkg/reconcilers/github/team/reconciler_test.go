@@ -3,11 +3,12 @@ package github_team_reconciler_test
 import (
 	"context"
 	"database/sql"
-	"github.com/nais/console/pkg/slug"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/nais/console/pkg/slug"
 
 	"github.com/google/go-github/v43/github"
 	"github.com/google/uuid"

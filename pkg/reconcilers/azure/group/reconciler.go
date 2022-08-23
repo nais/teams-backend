@@ -3,9 +3,10 @@ package azure_group_reconciler
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/slug"
-	"strings"
 
 	"github.com/google/uuid"
 	helpers "github.com/nais/console/pkg/console"

@@ -3,11 +3,12 @@ package legacy
 import (
 	"database/sql"
 	"encoding/json"
+	"os"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
-	"os"
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"

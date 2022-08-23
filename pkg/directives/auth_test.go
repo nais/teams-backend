@@ -3,6 +3,8 @@ package directives_test
 import (
 	"context"
 	"errors"
+	"testing"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/db"
@@ -10,7 +12,6 @@ import (
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"testing"
 )
 
 func TestAuth(t *testing.T) {

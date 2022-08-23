@@ -3,6 +3,7 @@ package graph
 import (
 	"context"
 	"errors"
+
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/db"
@@ -32,6 +33,7 @@ func NewResolver(database db.Database, tenantDomain string, teamReconciler chan<
 		auditLogger:    auditLogger,
 	}
 }
+
 func GetErrorPresenter() graphql.ErrorPresenterFunc {
 	return func(ctx context.Context, e error) *gqlerror.Error {
 		err := graphql.DefaultErrorPresenter(ctx, e)

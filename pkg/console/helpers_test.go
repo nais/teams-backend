@@ -1,11 +1,12 @@
 package console_test
 
 import (
+	"testing"
+
 	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestStringWithFallback(t *testing.T) {

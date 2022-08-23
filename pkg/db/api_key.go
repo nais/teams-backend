@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/sqlc"
 )

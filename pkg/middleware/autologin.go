@@ -1,8 +1,9 @@
 package middleware
 
 import (
-	"github.com/nais/console/pkg/db"
 	"net/http"
+
+	"github.com/nais/console/pkg/db"
 
 	"github.com/nais/console/pkg/authz"
 )

@@ -3,6 +3,7 @@ package directives
 import (
 	"context"
 	"fmt"
+
 	"github.com/nais/console/pkg/db"
 
 	"github.com/99designs/gqlgen/graphql"

@@ -2,10 +2,11 @@ package google_jwt
 
 import (
 	"fmt"
+	"io/ioutil"
+
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
-	"io/ioutil"
 )
 
 func GetConfig(credentialsFile, delegatedUser string) (*jwt.Config, error) {

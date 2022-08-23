@@ -3,6 +3,7 @@ package authz
 import (
 	"context"
 	"errors"
+
 	"github.com/nais/console/pkg/sqlc"
 
 	"github.com/google/uuid"

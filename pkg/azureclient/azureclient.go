@@ -5,11 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+
 	"github.com/google/uuid"
 	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/reconcilers"
-	"io"
-	"net/http"
 )
 
 type client struct {

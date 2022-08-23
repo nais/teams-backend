@@ -2,6 +2,7 @@ package legacy
 
 import (
 	"context"
+
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/sqlc"
 

@@ -3,15 +3,16 @@ package azureclient_test
 import (
 	"context"
 	"fmt"
+	"io"
+	"net/http"
+	"testing"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/azureclient"
 	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/test"
 	"github.com/stretchr/testify/assert"
-	"io"
-	"net/http"
-	"testing"
 )
 
 func Test_GetUser(t *testing.T) {

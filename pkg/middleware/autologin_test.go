@@ -2,6 +2,10 @@ package middleware_test
 
 import (
 	"errors"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/db"
@@ -9,9 +13,6 @@ import (
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"net/http"
-	"net/http/httptest"
-	"testing"
 )
 
 func TestAutologin(t *testing.T) {
@@ -54,5 +55,4 @@ func TestAutologin(t *testing.T) {
 		middleware := middleware.Autologin(database, "user@example.com")
 		middleware(next).ServeHTTP(responseWriter, req)
 	})
-
 }

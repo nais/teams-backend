@@ -3,8 +3,9 @@ package google_gcp_reconciler
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"github.com/nais/console/pkg/slug"
 	"strings"
+
+	"github.com/nais/console/pkg/slug"
 )
 
 // GenerateProjectID Generate a unique project ID for the team in a given environment in a deterministic fashion

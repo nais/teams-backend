@@ -2,6 +2,7 @@ package fixtures
 
 import (
 	"context"
+
 	"github.com/nais/console/pkg/sqlc"
 
 	"github.com/nais/console/pkg/db"

@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"testing"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/azureclient"
 	"github.com/nais/console/pkg/db"
@@ -13,7 +15,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/mock"
-	"testing"
 
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/reconcilers/azure/group"

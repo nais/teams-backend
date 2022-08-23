@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/nais/console/pkg/slug"
 	"io/ioutil"
 	"net/http"
 	"strings"
+
+	"github.com/nais/console/pkg/slug"
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-github/v43/github"

@@ -3,6 +3,9 @@ package usersync_test
 import (
 	"context"
 	"errors"
+	"net/http"
+	"testing"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/db"
@@ -11,8 +14,6 @@ import (
 	"github.com/nais/console/pkg/usersync"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"net/http"
-	"testing"
 )
 
 func TestSync(t *testing.T) {
