@@ -90,7 +90,7 @@ CREATE TYPE system_name AS ENUM (
 
 CREATE TABLE api_keys (
     api_key TEXT PRIMARY KEY,
-    user_id UUID NOT NULL
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- audit_logs
