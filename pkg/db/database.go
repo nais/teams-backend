@@ -3,10 +3,16 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
+
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/console/sqlc/schemas"
 )
 
 type database struct {
@@ -16,9 +22,7 @@ type database struct {
 
 type TransactionFunc func(ctx context.Context, dbtx Database) error
 
-var (
-	ErrNoRows = pgx.ErrNoRows
-)
+var ErrNoRows = pgx.ErrNoRows
 
 type Database interface {
 	AddAuditLog(ctx context.Context, correlationID uuid.UUID, systemName sqlc.SystemName, actorEmail, targetTeamSlug, targetUserEmail *string, action sqlc.AuditAction, message string) error
@@ -75,6 +79,26 @@ func NullStringToStringP(ns sql.NullString) *string {
 		strP = &ns.String
 	}
 	return strP
+}
+
+func Migrate(connString string) error {
+	d, err := iofs.New(schemas.FS, ".")
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+
+	m, err := migrate.NewWithSourceInstance("iofs", d, connString)
+	if err != nil {
+		return err
+	}
+
+	err = m.Up()
+	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return err
+	}
+
+	return nil
 }
 
 func nullString(s *string) sql.NullString {

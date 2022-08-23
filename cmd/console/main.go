@@ -3,16 +3,18 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/nais/console/pkg/directives"
-	"github.com/nais/console/pkg/graph"
-	"github.com/nais/console/pkg/graph/generated"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/directives"
+	"github.com/nais/console/pkg/graph"
+	"github.com/nais/console/pkg/graph/generated"
+	"github.com/nais/console/pkg/sqlc"
 
 	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
 	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
@@ -21,14 +23,12 @@ import (
 	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
 	nais_namespace_reconciler "github.com/nais/console/pkg/reconcilers/nais/namespace"
 
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/sqlc"
-
 	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authn"
 	"github.com/nais/console/pkg/config"
@@ -306,6 +306,12 @@ func setupDatabase(ctx context.Context, dbUrl string) (db.Database, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	err = db.Migrate(dbc.Config().ConnString())
+	if err != nil {
+		return nil, err
+	}
+
 	queries := db.Wrap(sqlc.New(dbc), dbc)
 	return db.NewDatabase(queries, dbc), nil
 }
