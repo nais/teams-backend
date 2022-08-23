@@ -17,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/graph/model"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
@@ -131,7 +132,6 @@ type ComplexityRoot struct {
 type AuditLogResolver interface {
 	ActorEmail(ctx context.Context, obj *db.AuditLog) (*string, error)
 	TargetUserEmail(ctx context.Context, obj *db.AuditLog) (*string, error)
-	TargetTeamSlug(ctx context.Context, obj *db.AuditLog) (*string, error)
 }
 type MutationResolver interface {
 	CreateAPIKey(ctx context.Context, userID *uuid.UUID) (*model.APIKey, error)
@@ -1645,7 +1645,7 @@ func (ec *executionContext) _AuditLog_targetTeamSlug(ctx context.Context, field 
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.AuditLog().TargetTeamSlug(rctx, obj)
+		return obj.TargetTeamSlug, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1654,17 +1654,17 @@ func (ec *executionContext) _AuditLog_targetTeamSlug(ctx context.Context, field 
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(*slug.Slug)
 	fc.Result = res
-	return ec.marshalOSlug2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_AuditLog_targetTeamSlug(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "AuditLog",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Slug does not have child fields")
 		},
@@ -3548,9 +3548,9 @@ func (ec *executionContext) _Team_slug(ctx context.Context, field graphql.Collec
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(slug.Slug)
 	fc.Result = res
-	return ec.marshalNSlug2string(ctx, field.Selections, res)
+	return ec.marshalNSlug2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Team_slug(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -6138,7 +6138,7 @@ func (ec *executionContext) unmarshalInputCreateServiceAccountInput(ctx context.
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-			it.Name, err = ec.unmarshalNSlug2string(ctx, v)
+			it.Name, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -6161,7 +6161,7 @@ func (ec *executionContext) unmarshalInputCreateTeamInput(ctx context.Context, o
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-			it.Slug, err = ec.unmarshalNSlug2string(ctx, v)
+			it.Slug, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -6270,7 +6270,7 @@ func (ec *executionContext) unmarshalInputUpdateServiceAccountInput(ctx context.
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-			it.Name, err = ec.unmarshalNSlug2string(ctx, v)
+			it.Name, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -6420,22 +6420,9 @@ func (ec *executionContext) _AuditLog(ctx context.Context, sel ast.SelectionSet,
 
 			})
 		case "targetTeamSlug":
-			field := field
 
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._AuditLog_targetTeamSlug(ctx, field, obj)
-				return res
-			}
+			out.Values[i] = ec._AuditLog_targetTeamSlug(ctx, field, obj)
 
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
 		case "message":
 
 			out.Values[i] = ec._AuditLog_message(ctx, field, obj)
@@ -7610,13 +7597,34 @@ func (ec *executionContext) unmarshalNSetTeamMemberRoleInput2githubᚗcomᚋnais
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) unmarshalNSlug2string(ctx context.Context, v interface{}) (string, error) {
-	res, err := graphql.UnmarshalString(v)
+func (ec *executionContext) unmarshalNSlug2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx context.Context, v interface{}) (slug.Slug, error) {
+	res, err := slug.UnmarshalSlug(v)
+	return *res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNSlug2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx context.Context, sel ast.SelectionSet, v slug.Slug) graphql.Marshaler {
+	res := slug.MarshalSlug(&v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx context.Context, v interface{}) (*slug.Slug, error) {
+	res, err := slug.UnmarshalSlug(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNSlug2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	res := graphql.MarshalString(v)
+func (ec *executionContext) marshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx context.Context, sel ast.SelectionSet, v *slug.Slug) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	res := slug.MarshalSlug(v)
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -8278,19 +8286,19 @@ func (ec *executionContext) marshalOMap2map(ctx context.Context, sel ast.Selecti
 	return res
 }
 
-func (ec *executionContext) unmarshalOSlug2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
+func (ec *executionContext) unmarshalOSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx context.Context, v interface{}) (*slug.Slug, error) {
 	if v == nil {
 		return nil, nil
 	}
-	res, err := graphql.UnmarshalString(v)
-	return &res, graphql.ErrorOnPath(ctx, err)
+	res, err := slug.UnmarshalSlug(v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalOSlug2ᚖstring(ctx context.Context, sel ast.SelectionSet, v *string) graphql.Marshaler {
+func (ec *executionContext) marshalOSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx context.Context, sel ast.SelectionSet, v *slug.Slug) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
-	res := graphql.MarshalString(*v)
+	res := slug.MarshalSlug(v)
 	return res
 }
 

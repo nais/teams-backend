@@ -10,6 +10,7 @@ import (
 	"database/sql"
 
 	"github.com/google/uuid"
+	"github.com/nais/console/pkg/slug"
 )
 
 const createTeam = `-- name: CreateTeam :one
@@ -20,7 +21,7 @@ RETURNING id, slug, name, purpose
 type CreateTeamParams struct {
 	ID      uuid.UUID
 	Name    string
-	Slug    string
+	Slug    slug.Slug
 	Purpose sql.NullString
 }
 
@@ -61,7 +62,7 @@ const getTeamBySlug = `-- name: GetTeamBySlug :one
 SELECT id, slug, name, purpose FROM teams WHERE slug = $1 LIMIT 1
 `
 
-func (q *Queries) GetTeamBySlug(ctx context.Context, slug string) (*Team, error) {
+func (q *Queries) GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error) {
 	row := q.db.QueryRow(ctx, getTeamBySlug, slug)
 	var i Team
 	err := row.Scan(

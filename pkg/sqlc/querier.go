@@ -6,9 +6,9 @@ package sqlc
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/google/uuid"
+	"github.com/nais/console/pkg/slug"
 )
 
 type Querier interface {
@@ -19,10 +19,10 @@ type Querier interface {
 	CreateUser(ctx context.Context, arg CreateUserParams) (*User, error)
 	CreateUserRole(ctx context.Context, arg CreateUserRoleParams) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
-	GetAuditLogsForTeam(ctx context.Context, targetTeamSlug sql.NullString) ([]*AuditLog, error)
+	GetAuditLogsForTeam(ctx context.Context, targetTeamSlug *slug.Slug) ([]*AuditLog, error)
 	GetRoleAuthorizations(ctx context.Context, roleName RoleName) ([]AuthzName, error)
 	GetTeamByID(ctx context.Context, id uuid.UUID) (*Team, error)
-	GetTeamBySlug(ctx context.Context, slug string) (*Team, error)
+	GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)
 	GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error)
 	GetTeamMetadata(ctx context.Context, teamID uuid.UUID) ([]*TeamMetadatum, error)
 	GetTeamSystemState(ctx context.Context, arg GetTeamSystemStateParams) (*SystemState, error)

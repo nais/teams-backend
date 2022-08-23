@@ -18,10 +18,6 @@ func (r *auditLogResolver) TargetUserEmail(ctx context.Context, obj *db.AuditLog
 	return db.NullStringToStringP(obj.TargetUserEmail), nil
 }
 
-func (r *auditLogResolver) TargetTeamSlug(ctx context.Context, obj *db.AuditLog) (*string, error) {
-	return db.NullStringToStringP(obj.TargetTeamSlug), nil
-}
-
 // AuditLog returns generated.AuditLogResolver implementation.
 func (r *Resolver) AuditLog() generated.AuditLogResolver { return &auditLogResolver{r} }
 

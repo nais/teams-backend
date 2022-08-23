@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 )
 
@@ -37,7 +38,7 @@ func (d *database) UpdateTeam(ctx context.Context, teamID uuid.UUID, name, purpo
 	return &Team{Team: team}, nil
 }
 
-func (d *database) AddTeam(ctx context.Context, name, slug string, purpose *string, userID uuid.UUID) (*Team, error) {
+func (d *database) AddTeam(ctx context.Context, name string, slug slug.Slug, purpose *string, userID uuid.UUID) (*Team, error) {
 	id, err := uuid.NewUUID()
 	if err != nil {
 		return nil, err
@@ -85,7 +86,7 @@ func (d *database) AddTeam(ctx context.Context, name, slug string, purpose *stri
 	return &Team{Team: team}, nil
 }
 
-func (d *database) GetTeamBySlug(ctx context.Context, slug string) (*Team, error) {
+func (d *database) GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error) {
 	team, err := d.querier.GetTeamBySlug(ctx, slug)
 	if err != nil {
 		return nil, err

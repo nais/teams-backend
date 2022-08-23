@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgtype"
+	"github.com/nais/console/pkg/slug"
 )
 
 type AuditAction string
@@ -438,7 +439,7 @@ type AuditLog struct {
 	SystemName      SystemName
 	ActorEmail      sql.NullString
 	TargetUserEmail sql.NullString
-	TargetTeamSlug  sql.NullString
+	TargetTeamSlug  *slug.Slug
 	Action          AuditAction
 	Message         string
 }
@@ -456,7 +457,7 @@ type SystemState struct {
 
 type Team struct {
 	ID      uuid.UUID
-	Slug    string
+	Slug    slug.Slug
 	Name    string
 	Purpose sql.NullString
 }

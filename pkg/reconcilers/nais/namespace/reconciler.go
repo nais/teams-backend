@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/slug"
 
 	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
 	"github.com/nais/console/pkg/sqlc"
@@ -74,7 +75,7 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	}
 
 	namespaceState := &reconcilers.GoogleGcpNaisNamespaceState{
-		Namespaces: make(map[string]string),
+		Namespaces: make(map[string]slug.Slug),
 	}
 	err = r.database.LoadSystemState(ctx, r.Name(), input.Team.ID, namespaceState)
 	if err != nil {
@@ -116,7 +117,7 @@ func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, pubsubSer
 	req := &naisdRequest{
 		Type: NaisdCreateNamespace,
 		Data: naisdData{
-			Name:       team.Slug,
+			Name:       string(team.Slug),
 			GcpProject: gcpProjectID,
 		},
 	}

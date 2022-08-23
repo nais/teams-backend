@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/nais/console/pkg/slug"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -78,7 +79,8 @@ func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.
 		return fmt.Errorf("unable to get or create a GitHub team for team '%s' in system '%s': %w", input.Team.Slug, r.Name(), err)
 	}
 
-	err = r.database.SetSystemState(ctx, r.Name(), input.Team.ID, reconcilers.GitHubState{Slug: githubTeam.Slug})
+	slug := slug.Slug(*githubTeam.Slug)
+	err = r.database.SetSystemState(ctx, r.Name(), input.Team.ID, reconcilers.GitHubState{Slug: &slug})
 	if err != nil {
 		log.Errorf("system state not persisted: %s", err)
 	}
@@ -88,7 +90,7 @@ func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.
 
 func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconcilers.GitHubState, correlationID uuid.UUID, team db.Team) (*github.Team, error) {
 	if state.Slug != nil {
-		existingTeam, resp, err := r.teamsService.GetTeamBySlug(ctx, r.org, *state.Slug)
+		existingTeam, resp, err := r.teamsService.GetTeamBySlug(ctx, r.org, string(*state.Slug))
 		if resp == nil && err != nil {
 			return nil, fmt.Errorf("unable to fetch GitHub team '%s': %w", *state.Slug, err)
 		}
@@ -106,7 +108,7 @@ func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconc
 
 	description := helpers.TeamPurpose(&team.Purpose.String)
 	githubTeam, resp, err := r.teamsService.CreateTeam(ctx, r.org, github.NewTeam{
-		Name:        team.Slug,
+		Name:        string(team.Slug),
 		Description: &description,
 	})
 	err = httpError(http.StatusCreated, *resp, err)

@@ -3,6 +3,7 @@ package github_team_reconciler_test
 import (
 	"context"
 	"database/sql"
+	"github.com/nais/console/pkg/slug"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -34,7 +35,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 	team := db.Team{
 		Team: &sqlc.Team{
 			ID:      uuid.New(),
-			Slug:    teamSlug,
+			Slug:    slug.Slug(teamSlug),
 			Name:    teamName,
 			Purpose: teamPurpose,
 		},
@@ -88,8 +89,9 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			).
 			Once()
 
+		slug := slug.Slug(teamSlug)
 		auditLogger.
-			On("Logf", ctx, sqlc.AuditActionGithubTeamCreate, correlationID, systemName, mock.Anything, &teamSlug, mock.Anything, mock.Anything, mock.Anything).
+			On("Logf", ctx, sqlc.AuditActionGithubTeamCreate, correlationID, systemName, mock.Anything, &slug, mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).
 			Once()
 
@@ -137,8 +139,9 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		database.
 			On("LoadSystemState", ctx, systemName, team.ID, mock.Anything).
 			Run(func(args mock.Arguments) {
+				slug := slug.Slug("existing-slug")
 				state := args.Get(3).(*reconcilers.GitHubState)
-				state.Slug = helpers.Strp("existing-slug")
+				state.Slug = &slug
 			}).
 			Return(nil).
 			Once()
@@ -191,8 +194,9 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		database.
 			On("LoadSystemState", ctx, systemName, team.ID, mock.Anything).
 			Run(func(args mock.Arguments) {
+				slug := slug.Slug("existing-slug")
 				state := args.Get(3).(*reconcilers.GitHubState)
-				state.Slug = helpers.Strp("existing-slug")
+				state.Slug = &slug
 			}).
 			Return(nil).
 			Once()
@@ -244,8 +248,9 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			).
 			Once()
 
+		slug := slug.Slug(teamSlug)
 		auditLogger.
-			On("Logf", ctx, sqlc.AuditActionGithubTeamCreate, correlationID, systemName, mock.Anything, &teamSlug, mock.Anything, mock.Anything, mock.Anything).
+			On("Logf", ctx, sqlc.AuditActionGithubTeamCreate, correlationID, systemName, mock.Anything, &slug, mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).
 			Once()
 
@@ -259,7 +264,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 	domain := "example.com"
 	org := "my-organization"
 	teamName := "myteam"
-	teamSlug := "myteam"
+	teamSlug := slug.Slug("myteam")
 	teamPurpose := sql.NullString{}
 	teamPurpose.Scan("some purpose")
 
@@ -345,8 +350,9 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		database.
 			On("LoadSystemState", ctx, systemName, team.ID, mock.Anything).
 			Run(func(args mock.Arguments) {
+				slug := slug.Slug("slug-from-state")
 				state := args.Get(3).(*reconcilers.GitHubState)
-				state.Slug = helpers.Strp("slug-from-state")
+				state.Slug = &slug
 			}).
 			Return(nil).
 			Once()

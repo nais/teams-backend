@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"github.com/google/uuid"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 )
 
@@ -10,9 +11,8 @@ type AuditLog struct {
 	*sqlc.AuditLog
 }
 
-func (d *database) GetAuditLogsForTeam(ctx context.Context, slug string) ([]*AuditLog, error) {
-	targetTeamSlug := nullString(&slug)
-	rows, err := d.querier.GetAuditLogsForTeam(ctx, targetTeamSlug)
+func (d *database) GetAuditLogsForTeam(ctx context.Context, slug slug.Slug) ([]*AuditLog, error) {
+	rows, err := d.querier.GetAuditLogsForTeam(ctx, &slug)
 	if err != nil {
 		return nil, err
 	}
@@ -24,7 +24,7 @@ func (d *database) GetAuditLogsForTeam(ctx context.Context, slug string) ([]*Aud
 	return entries, nil
 }
 
-func (d *database) AddAuditLog(ctx context.Context, correlationID uuid.UUID, systemName sqlc.SystemName, actorEmail, targetTeamSlug, targetUserEmail *string, action sqlc.AuditAction, message string) error {
+func (d *database) AddAuditLog(ctx context.Context, correlationID uuid.UUID, systemName sqlc.SystemName, actorEmail *string, targetTeamSlug *slug.Slug, targetUserEmail *string, action sqlc.AuditAction, message string) error {
 	id, err := uuid.NewUUID()
 	if err != nil {
 		return err
@@ -35,7 +35,7 @@ func (d *database) AddAuditLog(ctx context.Context, correlationID uuid.UUID, sys
 		CorrelationID:   correlationID,
 		ActorEmail:      nullString(actorEmail),
 		SystemName:      systemName,
-		TargetTeamSlug:  nullString(targetTeamSlug),
+		TargetTeamSlug:  targetTeamSlug,
 		TargetUserEmail: nullString(targetUserEmail),
 		Action:          action,
 		Message:         message,

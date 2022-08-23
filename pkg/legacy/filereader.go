@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"os"
 
@@ -38,7 +39,7 @@ func (t *Team) Convert() *db.Team {
 	return &db.Team{
 		Team: &sqlc.Team{
 			ID:      uuid.New(),
-			Slug:    t.Name,
+			Slug:    slug.Slug(t.Name),
 			Name:    t.Name,
 			Purpose: sql.NullString{},
 		},

@@ -28,7 +28,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		return nil, fmt.Errorf("unable to create correlation ID for audit log: %w", err)
 	}
 
-	team, err := r.database.AddTeam(ctx, input.Name, input.Slug, input.Purpose, actor.ID)
+	team, err := r.database.AddTeam(ctx, input.Name, *input.Slug, input.Purpose, actor.ID)
 	if err != nil {
 		return nil, err
 	}

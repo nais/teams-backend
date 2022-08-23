@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/slug"
 	"strings"
 
 	"github.com/google/uuid"
@@ -177,6 +178,6 @@ func remoteOnlyMembers(azureGroupMembers []*azureclient.Member, consoleUsers []*
 	return azureGroupMembers
 }
 
-func teamNameWithPrefix(slug string) string {
-	return reconcilers.TeamNamePrefix + slug
+func teamNameWithPrefix(slug slug.Slug) string {
+	return reconcilers.TeamNamePrefix + string(slug)
 }

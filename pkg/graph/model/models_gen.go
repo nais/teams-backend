@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/slug"
 )
 
 // API key type.
@@ -36,13 +37,13 @@ type AddTeamOwnersInput struct {
 // Input for creating a new service account.
 type CreateServiceAccountInput struct {
 	// The name of the new service account. An email address will be automatically generated using the provided name.
-	Name string `json:"name"`
+	Name *slug.Slug `json:"name"`
 }
 
 // Input for creating a new team.
 type CreateTeamInput struct {
 	// Team slug. This value immutable.
-	Slug string `json:"slug"`
+	Slug *slug.Slug `json:"slug"`
 	// Team name.
 	Name string `json:"name"`
 	// Team purpose.
@@ -78,7 +79,7 @@ type TeamMember struct {
 // Input for updating an existing service account.
 type UpdateServiceAccountInput struct {
 	// The new name of the service account. The email address will be automatically updated.
-	Name string `json:"name"`
+	Name *slug.Slug `json:"name"`
 }
 
 // Input for updating an existing team.

@@ -9,7 +9,6 @@ require (
 	github.com/coreos/go-oidc/v3 v3.1.0
 	github.com/go-chi/chi v1.5.4
 	github.com/go-chi/cors v1.2.0
-	github.com/golang-migrate/migrate v3.5.4+incompatible
 	github.com/golang-migrate/migrate/v4 v4.15.2
 	github.com/google/go-github/v43 v43.0.0
 	github.com/google/uuid v1.3.0

@@ -3,6 +3,7 @@ package auditlogger
 import (
 	"context"
 	"fmt"
+	"github.com/nais/console/pkg/slug"
 
 	"github.com/nais/console/pkg/db"
 	log "github.com/sirupsen/logrus"
@@ -16,7 +17,7 @@ type auditLogger struct {
 }
 
 type AuditLogger interface {
-	Logf(ctx context.Context, action sqlc.AuditAction, correlationID uuid.UUID, systemName sqlc.SystemName, actorEmail *string, targetTeamSlug *string, targetUserEmail *string, message string, messageArgs ...interface{}) error
+	Logf(ctx context.Context, action sqlc.AuditAction, correlationID uuid.UUID, systemName sqlc.SystemName, actorEmail *string, targetTeamSlug *slug.Slug, targetUserEmail *string, message string, messageArgs ...interface{}) error
 }
 
 func New(database db.Database) AuditLogger {
@@ -25,7 +26,7 @@ func New(database db.Database) AuditLogger {
 	}
 }
 
-func (l *auditLogger) Logf(ctx context.Context, action sqlc.AuditAction, correlationID uuid.UUID, systemName sqlc.SystemName, actorEmail *string, targetTeamSlug *string, targetUserEmail *string, message string, messageArgs ...interface{}) error {
+func (l *auditLogger) Logf(ctx context.Context, action sqlc.AuditAction, correlationID uuid.UUID, systemName sqlc.SystemName, actorEmail *string, targetTeamSlug *slug.Slug, targetUserEmail *string, message string, messageArgs ...interface{}) error {
 	message = fmt.Sprintf(message, messageArgs...)
 	err := l.database.AddAuditLog(ctx, correlationID, systemName, actorEmail, targetTeamSlug, targetUserEmail, action, message)
 	if err != nil {
@@ -37,7 +38,7 @@ func (l *auditLogger) Logf(ctx context.Context, action sqlc.AuditAction, correla
 		"correlation_id":    correlationID,
 		"system_name":       systemName,
 		"actor_email":       str(actorEmail),
-		"target_team_slug":  str(targetTeamSlug),
+		"target_team_slug":  str(targetTeamSlug.StringP()),
 		"target_user_email": str(targetUserEmail),
 	}).Infof(message)
 	return nil

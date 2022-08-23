@@ -8,6 +8,7 @@ import (
 	"github.com/nais/console/pkg/azureclient"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
@@ -23,7 +24,7 @@ import (
 func TestAzureReconciler_Reconcile(t *testing.T) {
 	domain := "example.com"
 	teamName := "myteam"
-	teamSlug := "slug"
+	teamSlug := slug.Slug("slug")
 	teamPurpose := sql.NullString{}
 	teamPurpose.Scan("My purpose")
 

@@ -10,6 +10,7 @@ import (
 	"database/sql"
 
 	"github.com/google/uuid"
+	"github.com/nais/console/pkg/slug"
 )
 
 const createAuditLog = `-- name: CreateAuditLog :exec
@@ -23,7 +24,7 @@ type CreateAuditLogParams struct {
 	ActorEmail      sql.NullString
 	SystemName      SystemName
 	TargetUserEmail sql.NullString
-	TargetTeamSlug  sql.NullString
+	TargetTeamSlug  *slug.Slug
 	Action          AuditAction
 	Message         string
 }
@@ -46,7 +47,7 @@ const getAuditLogsForTeam = `-- name: GetAuditLogsForTeam :many
 SELECT id, created_at, correlation_id, system_name, actor_email, target_user_email, target_team_slug, action, message FROM audit_logs WHERE target_team_slug = $1 ORDER BY created_at DESC
 `
 
-func (q *Queries) GetAuditLogsForTeam(ctx context.Context, targetTeamSlug sql.NullString) ([]*AuditLog, error) {
+func (q *Queries) GetAuditLogsForTeam(ctx context.Context, targetTeamSlug *slug.Slug) ([]*AuditLog, error) {
 	rows, err := q.db.Query(ctx, getAuditLogsForTeam, targetTeamSlug)
 	if err != nil {
 		return nil, err

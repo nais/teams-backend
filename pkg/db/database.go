@@ -4,13 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-
 	"github.com/golang-migrate/migrate/v4"
+
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/sqlc/schemas"
 )
@@ -25,7 +26,7 @@ type TransactionFunc func(ctx context.Context, dbtx Database) error
 var ErrNoRows = pgx.ErrNoRows
 
 type Database interface {
-	AddAuditLog(ctx context.Context, correlationID uuid.UUID, systemName sqlc.SystemName, actorEmail, targetTeamSlug, targetUserEmail *string, action sqlc.AuditAction, message string) error
+	AddAuditLog(ctx context.Context, correlationID uuid.UUID, systemName sqlc.SystemName, actorEmail *string, targetTeamSlug *slug.Slug, targetUserEmail *string, action sqlc.AuditAction, message string) error
 	AddUser(ctx context.Context, name, email string) (*User, error)
 	GetUserByID(ctx context.Context, ID uuid.UUID) (*User, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
@@ -36,15 +37,15 @@ type Database interface {
 	GetUsers(ctx context.Context) ([]*User, error)
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error)
 
-	AddTeam(ctx context.Context, name, slug string, purpose *string, userID uuid.UUID) (*Team, error)
+	AddTeam(ctx context.Context, name string, slug slug.Slug, purpose *string, userID uuid.UUID) (*Team, error)
 	UpdateTeam(ctx context.Context, teamID uuid.UUID, name, purpose *string) (*Team, error)
 	GetTeamByID(ctx context.Context, ID uuid.UUID) (*Team, error)
-	GetTeamBySlug(ctx context.Context, slug string) (*Team, error)
+	GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)
 	GetTeams(ctx context.Context) ([]*Team, error)
 	GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error)
 	UserIsTeamOwner(ctx context.Context, userID, teamID uuid.UUID) (bool, error)
 
-	GetAuditLogsForTeam(ctx context.Context, slug string) ([]*AuditLog, error)
+	GetAuditLogsForTeam(ctx context.Context, slug slug.Slug) ([]*AuditLog, error)
 
 	AssignGlobalRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error
 	AssignTargetedRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName, targetID uuid.UUID) error
