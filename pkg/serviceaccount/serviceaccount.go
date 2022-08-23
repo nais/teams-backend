@@ -1,9 +1,10 @@
 package serviceaccount
 
 import (
+	"strings"
+
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/slug"
-	"strings"
 )
 
 // Email Generate a service account email address given the name of the service account

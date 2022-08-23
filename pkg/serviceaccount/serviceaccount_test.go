@@ -1,11 +1,12 @@
 package serviceaccount_test
 
 import (
+	"testing"
+
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/serviceaccount"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestServiceAccountEmail(t *testing.T) {
