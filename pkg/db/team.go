@@ -15,11 +15,56 @@ type Team struct {
 	Members  []*User
 }
 
-func (d *database) AddUserToTeam(ctx context.Context, userID uuid.UUID, teamID uuid.UUID) error {
-	return d.querier.AddUserToTeam(ctx, sqlc.AddUserToTeamParams{
-		UserID: userID,
-		TeamID: teamID,
-	})
+func (d *database) AddUsersToTeam(ctx context.Context, userIDs []uuid.UUID, teamID uuid.UUID) error {
+	tx, err := d.connPool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	querier := d.querier.WithTx(tx)
+	for _, userID := range userIDs {
+		err := querier.AddUserToTeam(ctx, sqlc.AddUserToTeamParams{
+			UserID: userID,
+			TeamID: teamID,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *database) RemoveUsersFromTeam(ctx context.Context, userIDs []uuid.UUID, teamID uuid.UUID) error {
+	tx, err := d.connPool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	querier := d.querier.WithTx(tx)
+	for _, userID := range userIDs {
+		err := querier.RemoveUserFromTeam(ctx, sqlc.RemoveUserFromTeamParams{
+			UserID: userID,
+			TeamID: teamID,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (d *database) UpdateTeam(ctx context.Context, teamID uuid.UUID, name, purpose *string) (*Team, error) {
@@ -70,7 +115,7 @@ func (d *database) AddTeam(ctx context.Context, name string, slug slug.Slug, pur
 		return nil, err
 	}
 
-	err = querier.CreateUserRole(ctx, sqlc.CreateUserRoleParams{
+	err = querier.AddTargetedUserRole(ctx, sqlc.AddTargetedUserRoleParams{
 		UserID:   userID,
 		RoleName: sqlc.RoleNameTeamowner,
 		TargetID: nullUUID(&team.ID),

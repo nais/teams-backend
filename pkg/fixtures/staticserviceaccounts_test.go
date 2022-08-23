@@ -106,7 +106,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 			Return(sa1, nil).
 			Once()
 		dbtx.
-			On("RemoveUserRoles", txCtx, sa1.ID).
+			On("RemoveAllUserRoles", txCtx, sa1.ID).
 			Return(nil).
 			Once()
 		dbtx.
@@ -132,7 +132,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 			Return(sa2, nil).
 			Once()
 		dbtx.
-			On("RemoveUserRoles", txCtx, sa2.ID).
+			On("RemoveAllUserRoles", txCtx, sa2.ID).
 			Return(nil).
 			Once()
 		dbtx.

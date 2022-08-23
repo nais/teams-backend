@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/nais/console/pkg/serviceaccount"
 	"strings"
+
+	"github.com/nais/console/pkg/serviceaccount"
 
 	"github.com/nais/console/pkg/sqlc"
 
@@ -70,7 +71,7 @@ func SetupStaticServiceAccounts(ctx context.Context, database db.Database, servi
 				}
 			}
 
-			err = dbtx.RemoveUserRoles(ctx, serviceAccount.ID)
+			err = dbtx.RemoveAllUserRoles(ctx, serviceAccount.ID)
 			if err != nil {
 				return err
 			}

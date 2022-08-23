@@ -101,13 +101,13 @@ func (_m *MockDatabase) AddUser(ctx context.Context, name string, email string) 
 	return r0, r1
 }
 
-// AddUserToTeam provides a mock function with given fields: ctx, userID, teamID
-func (_m *MockDatabase) AddUserToTeam(ctx context.Context, userID uuid.UUID, teamID uuid.UUID) error {
-	ret := _m.Called(ctx, userID, teamID)
+// AddUsersToTeam provides a mock function with given fields: ctx, userIDs, teamID
+func (_m *MockDatabase) AddUsersToTeam(ctx context.Context, userIDs []uuid.UUID, teamID uuid.UUID) error {
+	ret := _m.Called(ctx, userIDs, teamID)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) error); ok {
-		r0 = rf(ctx, userID, teamID)
+	if rf, ok := ret.Get(0).(func(context.Context, []uuid.UUID, uuid.UUID) error); ok {
+		r0 = rf(ctx, userIDs, teamID)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -129,13 +129,13 @@ func (_m *MockDatabase) AssignGlobalRoleToUser(ctx context.Context, userID uuid.
 	return r0
 }
 
-// AssignTargetedRoleToUser provides a mock function with given fields: ctx, userID, roleName, targetID
-func (_m *MockDatabase) AssignTargetedRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName, targetID uuid.UUID) error {
-	ret := _m.Called(ctx, userID, roleName, targetID)
+// AssignTargetedRoleToUsers provides a mock function with given fields: ctx, userIDs, roleName, targetID
+func (_m *MockDatabase) AssignTargetedRoleToUsers(ctx context.Context, userIDs []uuid.UUID, roleName sqlc.RoleName, targetID uuid.UUID) error {
+	ret := _m.Called(ctx, userIDs, roleName, targetID)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, sqlc.RoleName, uuid.UUID) error); ok {
-		r0 = rf(ctx, userID, roleName, targetID)
+	if rf, ok := ret.Get(0).(func(context.Context, []uuid.UUID, sqlc.RoleName, uuid.UUID) error); ok {
+		r0 = rf(ctx, userIDs, roleName, targetID)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -493,6 +493,20 @@ func (_m *MockDatabase) LoadSystemState(ctx context.Context, systemName sqlc.Sys
 	return r0
 }
 
+// RemoveAllUserRoles provides a mock function with given fields: ctx, userID
+func (_m *MockDatabase) RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) error {
+	ret := _m.Called(ctx, userID)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // RemoveApiKeysFromUser provides a mock function with given fields: ctx, userID
 func (_m *MockDatabase) RemoveApiKeysFromUser(ctx context.Context, userID uuid.UUID) error {
 	ret := _m.Called(ctx, userID)
@@ -507,13 +521,13 @@ func (_m *MockDatabase) RemoveApiKeysFromUser(ctx context.Context, userID uuid.U
 	return r0
 }
 
-// RemoveUserRoles provides a mock function with given fields: ctx, userID
-func (_m *MockDatabase) RemoveUserRoles(ctx context.Context, userID uuid.UUID) error {
-	ret := _m.Called(ctx, userID)
+// RemoveUsersFromTeam provides a mock function with given fields: ctx, userIDs, teamID
+func (_m *MockDatabase) RemoveUsersFromTeam(ctx context.Context, userIDs []uuid.UUID, teamID uuid.UUID) error {
+	ret := _m.Called(ctx, userIDs, teamID)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
-		r0 = rf(ctx, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, []uuid.UUID, uuid.UUID) error); ok {
+		r0 = rf(ctx, userIDs, teamID)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -528,6 +542,20 @@ func (_m *MockDatabase) SetSystemState(ctx context.Context, systemName sqlc.Syst
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, sqlc.SystemName, uuid.UUID, interface{}) error); ok {
 		r0 = rf(ctx, systemName, teamID, state)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// SetTeamMembersRole provides a mock function with given fields: ctx, userIDs, teamID, role
+func (_m *MockDatabase) SetTeamMembersRole(ctx context.Context, userIDs []uuid.UUID, teamID uuid.UUID, role sqlc.RoleName) error {
+	ret := _m.Called(ctx, userIDs, teamID, role)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, []uuid.UUID, uuid.UUID, sqlc.RoleName) error); ok {
+		r0 = rf(ctx, userIDs, teamID, role)
 	} else {
 		r0 = ret.Error(0)
 	}

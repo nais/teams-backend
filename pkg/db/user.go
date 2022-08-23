@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+
 	"github.com/nais/console/pkg/slug"
 
 	"github.com/google/uuid"
@@ -59,7 +60,7 @@ func (d *database) AddServiceAccount(ctx context.Context, name slug.Slug, email 
 		return nil, err
 	}
 
-	err = querier.CreateUserRole(ctx, sqlc.CreateUserRoleParams{
+	err = querier.AddTargetedUserRole(ctx, sqlc.AddTargetedUserRoleParams{
 		UserID:   userID,
 		RoleName: sqlc.RoleNameServiceaccountowner,
 		TargetID: nullUUID(&serviceAccount.ID),
@@ -130,8 +131,8 @@ func (d *database) getUserRoles(ctx context.Context, userID uuid.UUID) ([]*Role,
 	return userRoles, nil
 }
 
-func (d *database) RemoveUserRoles(ctx context.Context, userID uuid.UUID) error {
-	return d.querier.RemoveUserRoles(ctx, userID)
+func (d *database) RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) error {
+	return d.querier.RemoveAllUserRoles(ctx, userID)
 }
 
 func (d *database) RemoveApiKeysFromUser(ctx context.Context, userID uuid.UUID) error {
@@ -166,21 +167,6 @@ func (d *database) GetUsers(ctx context.Context) ([]*User, error) {
 	}
 
 	return d.getUsers(ctx, users)
-}
-
-func (d *database) UserIsTeamOwner(ctx context.Context, userID, teamID uuid.UUID) (bool, error) {
-	roles, err := d.querier.GetUserRoles(ctx, userID)
-	if err != nil {
-		return false, err
-	}
-
-	for _, role := range roles {
-		if role.RoleName == sqlc.RoleNameTeamowner && role.TargetID.UUID == teamID {
-			return true, nil
-		}
-	}
-
-	return false, nil
 }
 
 func (d *database) getUsers(ctx context.Context, users []*sqlc.User) ([]*User, error) {

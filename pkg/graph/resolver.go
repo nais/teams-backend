@@ -3,10 +3,12 @@ package graph
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/vektah/gqlparser/v2/gqlerror"
@@ -47,4 +49,24 @@ func GetErrorPresenter() graphql.ErrorPresenterFunc {
 
 		return err
 	}
+}
+
+func dereference[T any, TPointer *T](in []TPointer) []T {
+	out := make([]T, len(in))
+	for i := range in {
+		out[i] = *in[i]
+	}
+
+	return out
+}
+
+func sqlcRoleFromTeamRole(teamRole model.TeamRole) (sqlc.RoleName, error) {
+	switch teamRole {
+	case model.TeamRoleMember:
+		return sqlc.RoleNameTeammember, nil
+	case model.TeamRoleOwner:
+		return sqlc.RoleNameTeamowner, nil
+	}
+
+	return "", fmt.Errorf("invalid team role: %v", teamRole)
 }

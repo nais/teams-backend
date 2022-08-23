@@ -66,7 +66,7 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, in
 
 	reconcilerInput, err := reconcilers.CreateReconcilerInput(ctx, r.database, *team)
 	if err != nil {
-		return nil, fmt.Errorf("unable to reconcile team: %w", err)
+		return nil, err
 	}
 
 	r.teamReconciler <- reconcilerInput.WithCorrelationID(correlationID)
@@ -75,23 +75,89 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, in
 }
 
 func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.RemoveUsersFromTeamInput) (*db.Team, error) {
-	panic(fmt.Errorf("not implemented"))
+	actor := authz.UserFromContext(ctx)
+	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *input.TeamID)
+	if err != nil {
+		return nil, err
+	}
+
+	err = r.database.RemoveUsersFromTeam(ctx, dereference(input.UserIds), *input.TeamID)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.database.GetTeamByID(ctx, *input.TeamID)
 }
 
 func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUID) (*db.Team, error) {
-	panic(fmt.Errorf("not implemented"))
+	actor := authz.UserFromContext(ctx)
+	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *teamID)
+	if err != nil {
+		return nil, err
+	}
+
+	team, err := r.database.GetTeamByID(ctx, *teamID)
+	if err != nil {
+		return nil, err
+	}
+
+	reconcilerInput, err := reconcilers.CreateReconcilerInput(ctx, r.database, *team)
+	if err != nil {
+		return nil, err
+	}
+
+	r.teamReconciler <- reconcilerInput
+	return team, nil
 }
 
 func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTeamMembersInput) (*db.Team, error) {
-	panic(fmt.Errorf("not implemented"))
+	actor := authz.UserFromContext(ctx)
+	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *input.TeamID)
+	if err != nil {
+		return nil, err
+	}
+
+	err = r.database.AddUsersToTeam(ctx, dereference(input.UserIds), *input.TeamID)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.database.GetTeamByID(ctx, *input.TeamID)
 }
 
 func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTeamOwnersInput) (*db.Team, error) {
-	panic(fmt.Errorf("not implemented"))
+	actor := authz.UserFromContext(ctx)
+	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *input.TeamID)
+	if err != nil {
+		return nil, err
+	}
+
+	err = r.database.SetTeamMembersRole(ctx, dereference(input.UserIds), *input.TeamID, sqlc.RoleNameTeamowner)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.database.GetTeamByID(ctx, *input.TeamID)
 }
 
 func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.SetTeamMemberRoleInput) (*db.Team, error) {
-	panic(fmt.Errorf("not implemented"))
+	actor := authz.UserFromContext(ctx)
+	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *input.TeamID)
+	if err != nil {
+		return nil, err
+	}
+
+	desieredRole, err := sqlcRoleFromTeamRole(input.Role)
+	if err != nil {
+		return nil, err
+	}
+
+	err = r.database.SetTeamMembersRole(ctx, []uuid.UUID{*input.UserID}, *input.TeamID, desieredRole)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.database.GetTeamByID(ctx, *input.TeamID)
 }
 
 func (r *queryResolver) Teams(ctx context.Context) ([]*db.Team, error) {

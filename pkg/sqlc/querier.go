@@ -12,12 +12,13 @@ import (
 )
 
 type Querier interface {
+	AddGlobaldUserRole(ctx context.Context, arg AddGlobaldUserRoleParams) error
+	AddTargetedUserRole(ctx context.Context, arg AddTargetedUserRoleParams) error
 	AddUserToTeam(ctx context.Context, arg AddUserToTeamParams) error
 	CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) error
 	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) error
 	CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (*User, error)
-	CreateUserRole(ctx context.Context, arg CreateUserRoleParams) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
 	GetAuditLogsForTeam(ctx context.Context, targetTeamSlug *slug.Slug) ([]*AuditLog, error)
 	GetRoleAuthorizations(ctx context.Context, roleName RoleName) ([]AuthzName, error)
@@ -35,8 +36,11 @@ type Querier interface {
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error)
 	GetUsers(ctx context.Context) ([]*User, error)
 	GetUsersByEmail(ctx context.Context, email string) ([]*User, error)
+	RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) error
 	RemoveApiKeysFromUser(ctx context.Context, userID uuid.UUID) error
-	RemoveUserRoles(ctx context.Context, userID uuid.UUID) error
+	RemoveGlobalUserRole(ctx context.Context, arg RemoveGlobalUserRoleParams) error
+	RemoveTargetedUserRole(ctx context.Context, arg RemoveTargetedUserRoleParams) error
+	RemoveUserFromTeam(ctx context.Context, arg RemoveUserFromTeamParams) error
 	SetTeamSystemState(ctx context.Context, arg SetTeamSystemStateParams) error
 	SetUserName(ctx context.Context, arg SetUserNameParams) (*User, error)
 	UpdateTeam(ctx context.Context, arg UpdateTeamParams) (*Team, error)

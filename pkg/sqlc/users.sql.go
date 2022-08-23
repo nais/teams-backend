@@ -11,6 +11,35 @@ import (
 	"github.com/google/uuid"
 )
 
+const addGlobaldUserRole = `-- name: AddGlobaldUserRole :exec
+INSERT INTO user_roles (user_id, role_name) VALUES ($1, $2) ON CONFLICT DO NOTHING
+`
+
+type AddGlobaldUserRoleParams struct {
+	UserID   uuid.UUID
+	RoleName RoleName
+}
+
+func (q *Queries) AddGlobaldUserRole(ctx context.Context, arg AddGlobaldUserRoleParams) error {
+	_, err := q.db.Exec(ctx, addGlobaldUserRole, arg.UserID, arg.RoleName)
+	return err
+}
+
+const addTargetedUserRole = `-- name: AddTargetedUserRole :exec
+INSERT INTO user_roles (user_id, role_name, target_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING
+`
+
+type AddTargetedUserRoleParams struct {
+	UserID   uuid.UUID
+	RoleName RoleName
+	TargetID uuid.NullUUID
+}
+
+func (q *Queries) AddTargetedUserRole(ctx context.Context, arg AddTargetedUserRoleParams) error {
+	_, err := q.db.Exec(ctx, addTargetedUserRole, arg.UserID, arg.RoleName, arg.TargetID)
+	return err
+}
+
 const addUserToTeam = `-- name: AddUserToTeam :exec
 INSERT INTO user_teams (user_id, team_id) VALUES ($1, $2) ON CONFLICT DO NOTHING
 `
@@ -41,21 +70,6 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (*User, 
 	var i User
 	err := row.Scan(&i.ID, &i.Email, &i.Name)
 	return &i, err
-}
-
-const createUserRole = `-- name: CreateUserRole :exec
-INSERT INTO user_roles (user_id, role_name, target_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING
-`
-
-type CreateUserRoleParams struct {
-	UserID   uuid.UUID
-	RoleName RoleName
-	TargetID uuid.NullUUID
-}
-
-func (q *Queries) CreateUserRole(ctx context.Context, arg CreateUserRoleParams) error {
-	_, err := q.db.Exec(ctx, createUserRole, arg.UserID, arg.RoleName, arg.TargetID)
-	return err
 }
 
 const deleteUser = `-- name: DeleteUser :exec
@@ -183,12 +197,55 @@ func (q *Queries) GetUsersByEmail(ctx context.Context, email string) ([]*User, e
 	return items, nil
 }
 
-const removeUserRoles = `-- name: RemoveUserRoles :exec
+const removeAllUserRoles = `-- name: RemoveAllUserRoles :exec
 DELETE FROM user_roles WHERE user_id = $1
 `
 
-func (q *Queries) RemoveUserRoles(ctx context.Context, userID uuid.UUID) error {
-	_, err := q.db.Exec(ctx, removeUserRoles, userID)
+func (q *Queries) RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, removeAllUserRoles, userID)
+	return err
+}
+
+const removeGlobalUserRole = `-- name: RemoveGlobalUserRole :exec
+DELETE FROM user_roles WHERE user_id = $1 AND target_id IS NULL AND role_name = $2
+`
+
+type RemoveGlobalUserRoleParams struct {
+	UserID   uuid.UUID
+	RoleName RoleName
+}
+
+func (q *Queries) RemoveGlobalUserRole(ctx context.Context, arg RemoveGlobalUserRoleParams) error {
+	_, err := q.db.Exec(ctx, removeGlobalUserRole, arg.UserID, arg.RoleName)
+	return err
+}
+
+const removeTargetedUserRole = `-- name: RemoveTargetedUserRole :exec
+DELETE FROM user_roles WHERE user_id = $1 AND target_id = $2 AND role_name = $3
+`
+
+type RemoveTargetedUserRoleParams struct {
+	UserID   uuid.UUID
+	TargetID uuid.NullUUID
+	RoleName RoleName
+}
+
+func (q *Queries) RemoveTargetedUserRole(ctx context.Context, arg RemoveTargetedUserRoleParams) error {
+	_, err := q.db.Exec(ctx, removeTargetedUserRole, arg.UserID, arg.TargetID, arg.RoleName)
+	return err
+}
+
+const removeUserFromTeam = `-- name: RemoveUserFromTeam :exec
+DELETE FROM user_teams WHERE user_id = $1 AND team_id = $2
+`
+
+type RemoveUserFromTeamParams struct {
+	UserID uuid.UUID
+	TeamID uuid.UUID
+}
+
+func (q *Queries) RemoveUserFromTeam(ctx context.Context, arg RemoveUserFromTeamParams) error {
+	_, err := q.db.Exec(ctx, removeUserFromTeam, arg.UserID, arg.TeamID)
 	return err
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+
 	"github.com/golang-migrate/migrate/v4"
 
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -45,17 +46,19 @@ type Database interface {
 	GetTeams(ctx context.Context) ([]*Team, error)
 	GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error)
 	UserIsTeamOwner(ctx context.Context, userID, teamID uuid.UUID) (bool, error)
+	SetTeamMembersRole(ctx context.Context, userIDs []uuid.UUID, teamID uuid.UUID, role sqlc.RoleName) error
 
 	GetAuditLogsForTeam(ctx context.Context, slug slug.Slug) ([]*AuditLog, error)
 
 	AssignGlobalRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error
-	AssignTargetedRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName, targetID uuid.UUID) error
+	AssignTargetedRoleToUsers(ctx context.Context, userIDs []uuid.UUID, roleName sqlc.RoleName, targetID uuid.UUID) error
 
-	AddUserToTeam(ctx context.Context, userID uuid.UUID, teamID uuid.UUID) error
+	AddUsersToTeam(ctx context.Context, userIDs []uuid.UUID, teamID uuid.UUID) error
+	RemoveUsersFromTeam(ctx context.Context, userIDs []uuid.UUID, teamID uuid.UUID) error
 
 	CreateAPIKey(ctx context.Context, apiKey string, userID uuid.UUID) error
 
-	RemoveUserRoles(ctx context.Context, userID uuid.UUID) error
+	RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) error
 	RemoveApiKeysFromUser(ctx context.Context, userID uuid.UUID) error
 
 	GetRoleNames() []sqlc.RoleName
