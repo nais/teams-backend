@@ -36,6 +36,7 @@ type Database interface {
 	GetTeamBySlug(ctx context.Context, slug string) (*Team, error)
 	GetTeams(ctx context.Context) ([]*Team, error)
 	GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error)
+	UserIsTeamOwner(ctx context.Context, userID, teamID uuid.UUID) (bool, error)
 
 	AssignGlobalRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error
 	AssignTargetedRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName, targetID uuid.UUID) error

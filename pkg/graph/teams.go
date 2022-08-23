@@ -142,7 +142,35 @@ func (r *teamResolver) AuditLogs(ctx context.Context, obj *db.Team) ([]*model.Au
 }
 
 func (r *teamResolver) Members(ctx context.Context, obj *db.Team) ([]*model.TeamMember, error) {
-	panic(fmt.Errorf("not implemented"))
+	actor := authz.UserFromContext(ctx)
+	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameUsersList)
+	if err != nil {
+		return nil, err
+	}
+
+	users, err := r.database.GetTeamMembers(ctx, obj.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	members := make([]*model.TeamMember, len(users))
+	for idx, user := range users {
+		isOwner, err := r.database.UserIsTeamOwner(ctx, user.ID, obj.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		role := model.TeamRoleMember
+		if isOwner {
+			role = model.TeamRoleOwner
+		}
+
+		members[idx] = &model.TeamMember{
+			User: user,
+			Role: role,
+		}
+	}
+	return members, nil
 }
 
 // Team returns generated.TeamResolver implementation.

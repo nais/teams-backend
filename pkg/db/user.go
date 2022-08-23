@@ -128,6 +128,21 @@ func (d *database) GetUsers(ctx context.Context) ([]*User, error) {
 	return d.getUsers(ctx, users)
 }
 
+func (d *database) UserIsTeamOwner(ctx context.Context, userID, teamID uuid.UUID) (bool, error) {
+	roles, err := d.querier.GetUserRoles(ctx, userID)
+	if err != nil {
+		return false, err
+	}
+
+	for _, role := range roles {
+		if role.RoleName == sqlc.RoleNameTeamowner && role.TargetID.UUID == teamID {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 func (d *database) getUsers(ctx context.Context, users []*sqlc.User) ([]*User, error) {
 	result := make([]*User, 0)
 	for _, user := range users {

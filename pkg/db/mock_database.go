@@ -524,6 +524,27 @@ func (_m *MockDatabase) UpdateTeam(ctx context.Context, teamID uuid.UUID, name *
 	return r0, r1
 }
 
+// UserIsTeamOwner provides a mock function with given fields: ctx, userID, teamID
+func (_m *MockDatabase) UserIsTeamOwner(ctx context.Context, userID uuid.UUID, teamID uuid.UUID) (bool, error) {
+	ret := _m.Called(ctx, userID, teamID)
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) bool); ok {
+		r0 = rf(ctx, userID, teamID)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, uuid.UUID) error); ok {
+		r1 = rf(ctx, userID, teamID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 type mockConstructorTestingTNewMockDatabase interface {
 	mock.TestingT
 	Cleanup(func())
