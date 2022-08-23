@@ -68,6 +68,14 @@ func NewDatabase(q Querier, conn *pgxpool.Pool) Database {
 	return &database{querier: q, connPool: conn}
 }
 
+func NullStringToStringP(ns sql.NullString) *string {
+	var strP *string
+	if ns.String != "" {
+		strP = &ns.String
+	}
+	return strP
+}
+
 func nullString(s *string) sql.NullString {
 	if s == nil {
 		return sql.NullString{}

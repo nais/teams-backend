@@ -43,7 +43,7 @@ func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) 
 }
 
 const getAuditLogsForTeam = `-- name: GetAuditLogsForTeam :many
-SELECT id, created_at, correlation_id, system_name, actor_email, target_user_email, target_team_slug, action, message FROM audit_logs WHERE target_team_slug = $1 ORDER BY created_at ASC
+SELECT id, created_at, correlation_id, system_name, actor_email, target_user_email, target_team_slug, action, message FROM audit_logs WHERE target_team_slug = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) GetAuditLogsForTeam(ctx context.Context, targetTeamSlug sql.NullString) ([]*AuditLog, error) {

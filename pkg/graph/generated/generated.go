@@ -69,11 +69,6 @@ type ComplexityRoot struct {
 		TargetUserEmail func(childComplexity int) int
 	}
 
-	AuditLogs struct {
-		Nodes    func(childComplexity int) int
-		PageInfo func(childComplexity int) int
-	}
-
 	Mutation struct {
 		AddTeamMembers       func(childComplexity int, input model.AddTeamMembersInput) int
 		AddTeamOwners        func(childComplexity int, input model.AddTeamOwnersInput) int
@@ -96,12 +91,11 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		AuditLogs func(childComplexity int, pagination *model.Pagination, query *model.AuditLogsQuery, sort *model.AuditLogsSort) int
-		Me        func(childComplexity int) int
-		Team      func(childComplexity int, id *uuid.UUID) int
-		Teams     func(childComplexity int) int
-		User      func(childComplexity int, id *uuid.UUID) int
-		Users     func(childComplexity int) int
+		Me    func(childComplexity int) int
+		Team  func(childComplexity int, id *uuid.UUID) int
+		Teams func(childComplexity int) int
+		User  func(childComplexity int, id *uuid.UUID) int
+		Users func(childComplexity int) int
 	}
 
 	Role struct {
@@ -155,7 +149,6 @@ type MutationResolver interface {
 	DeleteServiceAccount(ctx context.Context, serviceAccountID *uuid.UUID) (bool, error)
 }
 type QueryResolver interface {
-	AuditLogs(ctx context.Context, pagination *model.Pagination, query *model.AuditLogsQuery, sort *model.AuditLogsSort) (*model.AuditLogs, error)
 	Teams(ctx context.Context) ([]*db.Team, error)
 	Team(ctx context.Context, id *uuid.UUID) (*db.Team, error)
 	Users(ctx context.Context) ([]*db.User, error)
@@ -262,20 +255,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.AuditLog.TargetUserEmail(childComplexity), true
-
-	case "AuditLogs.nodes":
-		if e.complexity.AuditLogs.Nodes == nil {
-			break
-		}
-
-		return e.complexity.AuditLogs.Nodes(childComplexity), true
-
-	case "AuditLogs.pageInfo":
-		if e.complexity.AuditLogs.PageInfo == nil {
-			break
-		}
-
-		return e.complexity.AuditLogs.PageInfo(childComplexity), true
 
 	case "Mutation.addTeamMembers":
 		if e.complexity.Mutation.AddTeamMembers == nil {
@@ -441,18 +420,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.PageInfo.Results(childComplexity), true
-
-	case "Query.auditLogs":
-		if e.complexity.Query.AuditLogs == nil {
-			break
-		}
-
-		args, err := ec.field_Query_auditLogs_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Query.AuditLogs(childComplexity, args["pagination"].(*model.Pagination), args["query"].(*model.AuditLogsQuery), args["sort"].(*model.AuditLogsSort)), true
 
 	case "Query.me":
 		if e.complexity.Query.Me == nil {
@@ -635,8 +602,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputAddTeamMembersInput,
 		ec.unmarshalInputAddTeamOwnersInput,
-		ec.unmarshalInputAuditLogsQuery,
-		ec.unmarshalInputAuditLogsSort,
 		ec.unmarshalInputCreateServiceAccountInput,
 		ec.unmarshalInputCreateTeamInput,
 		ec.unmarshalInputPagination,
@@ -729,21 +694,7 @@ type APIKey {
     "The API key."
     key: String!
 }`, BuiltIn: false},
-	{Name: "../../../graphql/auditlogs.graphqls", Input: `extend type Query {
-    "Get a collection of audit log entries."
-    auditLogs(
-        "Pagination options."
-        pagination: Pagination
-
-        "Input for filtering the query."
-        query: AuditLogsQuery
-
-        "Input for sorting the collection. If omitted the collection will be sorted by the creation time in descending order."
-        sort: AuditLogsSort
-    ): AuditLogs! @auth
-}
-
-"Audit log type."
+	{Name: "../../../graphql/auditlogs.graphqls", Input: `"Audit log type."
 type AuditLog {
     "ID of the log entry."
     id: UUID!
@@ -757,7 +708,7 @@ type AuditLog {
     "The related correlation."
     correlationID: UUID!
 
-    "The email address of the actor who performed the action in the entry. When this field is empty it means that some backend process performed the action."
+    "The email address of the actor who performed the action. When this field is empty it means that some backend process performed the action."
     actorEmail: String
 
     "The email address of the target user, if any."
@@ -771,48 +722,6 @@ type AuditLog {
 
     "Creation time of the log entry."
     createdAt: Time!
-}
-
-"Audit log collection."
-type AuditLogs {
-    "Object related to pagination of the collection."
-    pageInfo: PageInfo!
-
-    "The list of audit log entries in the collection."
-    nodes: [AuditLog!]!
-}
-
-"Input for filtering a collection of audit log entries."
-input AuditLogsQuery {
-    "Filter by actor ID."
-    actorId: UUID
-
-    "Filter by correlation ID."
-    correlationId: UUID
-
-    "Filter by target system ID."
-    targetSystemId: UUID
-
-    "Filter by target team ID."
-    targetTeamId: UUID
-
-    "Filter by target user ID."
-    targetUserId: UUID
-}
-
-"Input for sorting a collection of audit log entries."
-input AuditLogsSort {
-    "Field to sort by."
-    field: AuditLogSortField!
-
-    "Sort direction."
-    direction: SortDirection!
-}
-
-"Fields to sort the collection by."
-enum AuditLogSortField {
-    "Sort by creation time."
-    CREATED_AT
 }`, BuiltIn: false},
 	{Name: "../../../graphql/directives.graphqls", Input: `"Require authentication for all requests with this directive."
 directive @auth on FIELD_DEFINITION`, BuiltIn: false},
@@ -1385,39 +1294,6 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 	return args, nil
 }
 
-func (ec *executionContext) field_Query_auditLogs_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 *model.Pagination
-	if tmp, ok := rawArgs["pagination"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pagination"))
-		arg0, err = ec.unmarshalOPagination2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPagination(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["pagination"] = arg0
-	var arg1 *model.AuditLogsQuery
-	if tmp, ok := rawArgs["query"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("query"))
-		arg1, err = ec.unmarshalOAuditLogsQuery2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAuditLogsQuery(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["query"] = arg1
-	var arg2 *model.AuditLogsSort
-	if tmp, ok := rawArgs["sort"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sort"))
-		arg2, err = ec.unmarshalOAuditLogsSort2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAuditLogsSort(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["sort"] = arg2
-	return args, nil
-}
-
 func (ec *executionContext) field_Query_team_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -1912,122 +1788,6 @@ func (ec *executionContext) fieldContext_AuditLog_createdAt(ctx context.Context,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Time does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _AuditLogs_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.AuditLogs) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_AuditLogs_pageInfo(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.PageInfo, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.PageInfo)
-	fc.Result = res
-	return ec.marshalNPageInfo2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPageInfo(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_AuditLogs_pageInfo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "AuditLogs",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "results":
-				return ec.fieldContext_PageInfo_results(ctx, field)
-			case "offset":
-				return ec.fieldContext_PageInfo_offset(ctx, field)
-			case "limit":
-				return ec.fieldContext_PageInfo_limit(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _AuditLogs_nodes(ctx context.Context, field graphql.CollectedField, obj *model.AuditLogs) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_AuditLogs_nodes(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Nodes, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*db.AuditLog)
-	fc.Result = res
-	return ec.marshalNAuditLog2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐAuditLogᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_AuditLogs_nodes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "AuditLogs",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_AuditLog_id(ctx, field)
-			case "action":
-				return ec.fieldContext_AuditLog_action(ctx, field)
-			case "systemName":
-				return ec.fieldContext_AuditLog_systemName(ctx, field)
-			case "correlationID":
-				return ec.fieldContext_AuditLog_correlationID(ctx, field)
-			case "actorEmail":
-				return ec.fieldContext_AuditLog_actorEmail(ctx, field)
-			case "targetUserEmail":
-				return ec.fieldContext_AuditLog_targetUserEmail(ctx, field)
-			case "targetTeamSlug":
-				return ec.fieldContext_AuditLog_targetTeamSlug(ctx, field)
-			case "message":
-				return ec.fieldContext_AuditLog_message(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_AuditLog_createdAt(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type AuditLog", field.Name)
 		},
 	}
 	return fc, nil
@@ -3205,87 +2965,6 @@ func (ec *executionContext) fieldContext_PageInfo_limit(ctx context.Context, fie
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int does not have child fields")
 		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_auditLogs(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_auditLogs(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		directive0 := func(rctx context.Context) (interface{}, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().AuditLogs(rctx, fc.Args["pagination"].(*model.Pagination), fc.Args["query"].(*model.AuditLogsQuery), fc.Args["sort"].(*model.AuditLogsSort))
-		}
-		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Auth == nil {
-				return nil, errors.New("directive auth is not implemented")
-			}
-			return ec.directives.Auth(ctx, nil, directive0)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*model.AuditLogs); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/graph/model.AuditLogs`, tmp)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.AuditLogs)
-	fc.Result = res
-	return ec.marshalNAuditLogs2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAuditLogs(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_auditLogs(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "pageInfo":
-				return ec.fieldContext_AuditLogs_pageInfo(ctx, field)
-			case "nodes":
-				return ec.fieldContext_AuditLogs_nodes(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type AuditLogs", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_auditLogs_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
 	}
 	return fc, nil
 }
@@ -6517,92 +6196,6 @@ func (ec *executionContext) unmarshalInputAddTeamOwnersInput(ctx context.Context
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputAuditLogsQuery(ctx context.Context, obj interface{}) (model.AuditLogsQuery, error) {
-	var it model.AuditLogsQuery
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "actorId":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("actorId"))
-			it.ActorID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "correlationId":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("correlationId"))
-			it.CorrelationID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "targetSystemId":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetSystemId"))
-			it.TargetSystemID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "targetTeamId":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetTeamId"))
-			it.TargetTeamID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "targetUserId":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetUserId"))
-			it.TargetUserID, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputAuditLogsSort(ctx context.Context, obj interface{}) (model.AuditLogsSort, error) {
-	var it model.AuditLogsSort
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "field":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
-			it.Field, err = ec.unmarshalNAuditLogSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAuditLogSortField(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "direction":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
-			it.Direction, err = ec.unmarshalNSortDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSortDirection(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
 func (ec *executionContext) unmarshalInputCreateServiceAccountInput(ctx context.Context, obj interface{}) (model.CreateServiceAccountInput, error) {
 	var it model.CreateServiceAccountInput
 	asMap := map[string]interface{}{}
@@ -6977,41 +6570,6 @@ func (ec *executionContext) _AuditLog(ctx context.Context, sel ast.SelectionSet,
 	return out
 }
 
-var auditLogsImplementors = []string{"AuditLogs"}
-
-func (ec *executionContext) _AuditLogs(ctx context.Context, sel ast.SelectionSet, obj *model.AuditLogs) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, auditLogsImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("AuditLogs")
-		case "pageInfo":
-
-			out.Values[i] = ec._AuditLogs_pageInfo(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "nodes":
-
-			out.Values[i] = ec._AuditLogs_nodes(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
 var mutationImplementors = []string{"Mutation"}
 
 func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -7211,29 +6769,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Query")
-		case "auditLogs":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_auditLogs(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return rrm(innerCtx)
-			})
 		case "teams":
 			field := field
 
@@ -8089,30 +7624,6 @@ func (ec *executionContext) marshalNAuditLog2ᚖgithubᚗcomᚋnaisᚋconsoleᚋ
 	return ec._AuditLog(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNAuditLogSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAuditLogSortField(ctx context.Context, v interface{}) (model.AuditLogSortField, error) {
-	var res model.AuditLogSortField
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNAuditLogSortField2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAuditLogSortField(ctx context.Context, sel ast.SelectionSet, v model.AuditLogSortField) graphql.Marshaler {
-	return v
-}
-
-func (ec *executionContext) marshalNAuditLogs2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAuditLogs(ctx context.Context, sel ast.SelectionSet, v model.AuditLogs) graphql.Marshaler {
-	return ec._AuditLogs(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNAuditLogs2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAuditLogs(ctx context.Context, sel ast.SelectionSet, v *model.AuditLogs) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._AuditLogs(ctx, sel, v)
-}
-
 func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
 	res, err := graphql.UnmarshalBoolean(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -8151,16 +7662,6 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 		}
 	}
 	return res
-}
-
-func (ec *executionContext) marshalNPageInfo2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPageInfo(ctx context.Context, sel ast.SelectionSet, v *model.PageInfo) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._PageInfo(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNRemoveUsersFromTeamInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRemoveUsersFromTeamInput(ctx context.Context, v interface{}) (model.RemoveUsersFromTeamInput, error) {
@@ -8240,16 +7741,6 @@ func (ec *executionContext) marshalNSlug2string(ctx context.Context, sel ast.Sel
 		}
 	}
 	return res
-}
-
-func (ec *executionContext) unmarshalNSortDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSortDirection(ctx context.Context, v interface{}) (model.SortDirection, error) {
-	var res model.SortDirection
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNSortDirection2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSortDirection(ctx context.Context, sel ast.SelectionSet, v model.SortDirection) graphql.Marshaler {
-	return v
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
@@ -8809,22 +8300,6 @@ func (ec *executionContext) marshalN__TypeKind2string(ctx context.Context, sel a
 	return res
 }
 
-func (ec *executionContext) unmarshalOAuditLogsQuery2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAuditLogsQuery(ctx context.Context, v interface{}) (*model.AuditLogsQuery, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputAuditLogsQuery(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalOAuditLogsSort2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAuditLogsSort(ctx context.Context, v interface{}) (*model.AuditLogsSort, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputAuditLogsSort(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
 func (ec *executionContext) unmarshalOBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
 	res, err := graphql.UnmarshalBoolean(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -8865,14 +8340,6 @@ func (ec *executionContext) marshalOMap2map(ctx context.Context, sel ast.Selecti
 	}
 	res := graphql.MarshalMap(v)
 	return res
-}
-
-func (ec *executionContext) unmarshalOPagination2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐPagination(ctx context.Context, v interface{}) (*model.Pagination, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputPagination(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalOSlug2ᚖstring(ctx context.Context, v interface{}) (*string, error) {

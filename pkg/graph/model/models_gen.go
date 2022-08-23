@@ -33,36 +33,6 @@ type AddTeamOwnersInput struct {
 	UserIds []*uuid.UUID `json:"userIds"`
 }
 
-// Audit log collection.
-type AuditLogs struct {
-	// Object related to pagination of the collection.
-	PageInfo *PageInfo `json:"pageInfo"`
-	// The list of audit log entries in the collection.
-	Nodes []*db.AuditLog `json:"nodes"`
-}
-
-// Input for filtering a collection of audit log entries.
-type AuditLogsQuery struct {
-	// Filter by actor ID.
-	ActorID *uuid.UUID `json:"actorId"`
-	// Filter by correlation ID.
-	CorrelationID *uuid.UUID `json:"correlationId"`
-	// Filter by target system ID.
-	TargetSystemID *uuid.UUID `json:"targetSystemId"`
-	// Filter by target team ID.
-	TargetTeamID *uuid.UUID `json:"targetTeamId"`
-	// Filter by target user ID.
-	TargetUserID *uuid.UUID `json:"targetUserId"`
-}
-
-// Input for sorting a collection of audit log entries.
-type AuditLogsSort struct {
-	// Field to sort by.
-	Field AuditLogSortField `json:"field"`
-	// Sort direction.
-	Direction SortDirection `json:"direction"`
-}
-
 // Input for creating a new service account.
 type CreateServiceAccountInput struct {
 	// The name of the new service account. An email address will be automatically generated using the provided name.
@@ -137,47 +107,6 @@ type UpdateTeamInput struct {
 	Name *string `json:"name"`
 	// Team purpose. Set to an empty string to remove the existing team purpose.
 	Purpose *string `json:"purpose"`
-}
-
-// Fields to sort the collection by.
-type AuditLogSortField string
-
-const (
-	// Sort by creation time.
-	AuditLogSortFieldCreatedAt AuditLogSortField = "CREATED_AT"
-)
-
-var AllAuditLogSortField = []AuditLogSortField{
-	AuditLogSortFieldCreatedAt,
-}
-
-func (e AuditLogSortField) IsValid() bool {
-	switch e {
-	case AuditLogSortFieldCreatedAt:
-		return true
-	}
-	return false
-}
-
-func (e AuditLogSortField) String() string {
-	return string(e)
-}
-
-func (e *AuditLogSortField) UnmarshalGQL(v interface{}) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = AuditLogSortField(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid AuditLogSortField", str)
-	}
-	return nil
-}
-
-func (e AuditLogSortField) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
 // Direction of the sort.
