@@ -36,3 +36,6 @@ alpine:
 
 docker:
 	docker build -t ghcr.io/nais/console:latest .
+
+rollback:
+	echo "TODO: command that git checkouts code that works, leave migrations at HEAD, specify migration version i pkg/db/database.Migrate()"

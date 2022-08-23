@@ -1,3 +1,5 @@
+BEGIN;
+
 -- enums
 
 CREATE TYPE role_name AS ENUM (
@@ -216,3 +218,5 @@ CREATE TABLE user_teams (
 
     PRIMARY KEY (user_id, team_id)
 );
+
+COMMIT;
