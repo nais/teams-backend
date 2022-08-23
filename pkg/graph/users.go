@@ -52,6 +52,10 @@ func (r *queryResolver) Me(ctx context.Context) (*db.User, error) {
 	return authz.UserFromContext(ctx), nil
 }
 
+func (r *userResolver) Teams(ctx context.Context, obj *db.User) ([]*db.Team, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
 func (r *userResolver) IsServiceAccount(ctx context.Context, obj *db.User) (bool, error) {
 	actor := authz.UserFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameServiceAccountsRead, obj.ID)

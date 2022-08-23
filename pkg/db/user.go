@@ -9,7 +9,6 @@ import (
 type User struct {
 	*sqlc.User
 	Roles []*Role
-	Teams []*Team
 }
 
 type Role struct {
