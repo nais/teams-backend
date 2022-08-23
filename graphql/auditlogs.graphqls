@@ -17,23 +17,23 @@ type AuditLog {
     "ID of the log entry."
     id: UUID!
 
+    "String representation of the action performed."
+    action: AuditAction!
+
     "The related system."
-    systemName: String!
+    systemName: SystemName!
 
     "The related correlation."
     correlationID: UUID!
 
-    "The actor who performed the action in the entry. When this field is empty it means that the console system itself performed the action."
-    actor: User
+    "The email address of the actor who performed the action. When this field is empty it means that some backend process performed the action."
+    actorEmail: String
 
-    "The target user."
-    targetUser: User
+    "The email address of the target user, if any."
+    targetUserEmail: String
 
-    "The target team."
-    targetTeam: Team
-
-    "String representation of the action performed."
-    action: String!
+    "The target team slug, if any."
+    targetTeamSlug: Slug
 
     "Log entry message."
     message: String!

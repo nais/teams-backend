@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/nais/console/pkg/directives"
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/graph/generated"
@@ -20,7 +21,6 @@ import (
 	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
 	nais_namespace_reconciler "github.com/nais/console/pkg/reconcilers/nais/namespace"
 
-	"github.com/jackc/pgx/v4"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/sqlc"
 
@@ -302,7 +302,7 @@ func setupLogging(format, level string) error {
 }
 
 func setupDatabase(ctx context.Context, dbUrl string) (db.Database, error) {
-	dbc, err := pgx.Connect(ctx, dbUrl)
+	dbc, err := pgxpool.Connect(ctx, dbUrl)
 	if err != nil {
 		return nil, err
 	}

@@ -43,7 +43,7 @@ func (d *database) AddTeam(ctx context.Context, name, slug string, purpose *stri
 		return nil, err
 	}
 
-	tx, err := d.conn.Begin(ctx)
+	tx, err := d.connPool.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}

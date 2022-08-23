@@ -2,24 +2,25 @@ package db
 
 import (
 	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/nais/console/pkg/sqlc"
 )
 
 type Querier interface {
 	sqlc.Querier
 	WithTx(tx pgx.Tx) Querier
-	Conn() *pgx.Conn
+	Conn() *pgxpool.Pool
 }
 
 type Queries struct {
 	*sqlc.Queries
-	conn *pgx.Conn
+	connPool *pgxpool.Pool
 }
 
-func Wrap(q *sqlc.Queries, conn *pgx.Conn) Querier {
+func Wrap(q *sqlc.Queries, connPool *pgxpool.Pool) Querier {
 	return &Queries{
-		Queries: q,
-		conn:    conn,
+		Queries:  q,
+		connPool: connPool,
 	}
 }
 
@@ -29,6 +30,6 @@ func (q *Queries) WithTx(tx pgx.Tx) Querier {
 	}
 }
 
-func (q *Queries) Conn() *pgx.Conn {
-	return q.conn
+func (q *Queries) Conn() *pgxpool.Pool {
+	return q.connPool
 }

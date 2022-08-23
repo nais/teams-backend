@@ -41,3 +41,37 @@ func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) 
 	)
 	return err
 }
+
+const getAuditLogsForTeam = `-- name: GetAuditLogsForTeam :many
+SELECT id, created_at, correlation_id, system_name, actor_email, target_user_email, target_team_slug, action, message FROM audit_logs WHERE target_team_slug = $1 ORDER BY created_at ASC
+`
+
+func (q *Queries) GetAuditLogsForTeam(ctx context.Context, targetTeamSlug sql.NullString) ([]*AuditLog, error) {
+	rows, err := q.db.Query(ctx, getAuditLogsForTeam, targetTeamSlug)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*AuditLog
+	for rows.Next() {
+		var i AuditLog
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.CorrelationID,
+			&i.SystemName,
+			&i.ActorEmail,
+			&i.TargetUserEmail,
+			&i.TargetTeamSlug,
+			&i.Action,
+			&i.Message,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

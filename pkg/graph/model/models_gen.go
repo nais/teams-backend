@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"strconv"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/db"
@@ -34,34 +33,12 @@ type AddTeamOwnersInput struct {
 	UserIds []*uuid.UUID `json:"userIds"`
 }
 
-// Audit log type.
-type AuditLog struct {
-	// ID of the log entry.
-	ID *uuid.UUID `json:"id"`
-	// The related system.
-	SystemName string `json:"systemName"`
-	// The related correlation.
-	CorrelationID *uuid.UUID `json:"correlationID"`
-	// The actor who performed the action in the entry. When this field is empty it means that the console system itself performed the action.
-	Actor *db.User `json:"actor"`
-	// The target user.
-	TargetUser *db.User `json:"targetUser"`
-	// The target team.
-	TargetTeam *db.Team `json:"targetTeam"`
-	// String representation of the action performed.
-	Action string `json:"action"`
-	// Log entry message.
-	Message string `json:"message"`
-	// Creation time of the log entry.
-	CreatedAt time.Time `json:"createdAt"`
-}
-
 // Audit log collection.
 type AuditLogs struct {
 	// Object related to pagination of the collection.
 	PageInfo *PageInfo `json:"pageInfo"`
 	// The list of audit log entries in the collection.
-	Nodes []*AuditLog `json:"nodes"`
+	Nodes []*db.AuditLog `json:"nodes"`
 }
 
 // Input for filtering a collection of audit log entries.

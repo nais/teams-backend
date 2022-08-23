@@ -137,8 +137,14 @@ func (r *teamResolver) Metadata(ctx context.Context, obj *db.Team) (map[string]i
 	return metadata, nil
 }
 
-func (r *teamResolver) AuditLogs(ctx context.Context, obj *db.Team) ([]*model.AuditLog, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *teamResolver) AuditLogs(ctx context.Context, obj *db.Team) ([]*db.AuditLog, error) {
+	actor := authz.UserFromContext(ctx)
+	err := authz.RequireAuthorization(actor, sqlc.AuthzNameAuditLogsRead, obj.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.database.GetAuditLogsForTeam(ctx, obj.Slug)
 }
 
 func (r *teamResolver) Members(ctx context.Context, obj *db.Team) ([]*model.TeamMember, error) {

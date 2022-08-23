@@ -27,7 +27,7 @@ func New(database db.Database) AuditLogger {
 
 func (l *auditLogger) Logf(ctx context.Context, action sqlc.AuditAction, correlationID uuid.UUID, systemName sqlc.SystemName, actorEmail *string, targetTeamSlug *string, targetUserEmail *string, message string, messageArgs ...interface{}) error {
 	message = fmt.Sprintf(message, messageArgs...)
-	err := l.database.AddAuditLog(ctx, correlationID, systemName, actorEmail, targetUserEmail, targetTeamSlug, action, message)
+	err := l.database.AddAuditLog(ctx, correlationID, systemName, actorEmail, targetTeamSlug, targetUserEmail, action, message)
 	if err != nil {
 		return fmt.Errorf("create audit log entry: %w", err)
 	}

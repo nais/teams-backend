@@ -146,6 +146,29 @@ func (_m *MockDatabase) DeleteUser(ctx context.Context, userID uuid.UUID) error 
 	return r0
 }
 
+// GetAuditLogsForTeam provides a mock function with given fields: ctx, slug
+func (_m *MockDatabase) GetAuditLogsForTeam(ctx context.Context, slug string) ([]*AuditLog, error) {
+	ret := _m.Called(ctx, slug)
+
+	var r0 []*AuditLog
+	if rf, ok := ret.Get(0).(func(context.Context, string) []*AuditLog); ok {
+		r0 = rf(ctx, slug)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*AuditLog)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, slug)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetRoleNames provides a mock function with given fields:
 func (_m *MockDatabase) GetRoleNames() []sqlc.RoleName {
 	ret := _m.Called()

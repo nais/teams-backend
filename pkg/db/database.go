@@ -5,12 +5,13 @@ import (
 	"database/sql"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/nais/console/pkg/sqlc"
 )
 
 type database struct {
-	querier Querier
-	conn    *pgx.Conn
+	querier  Querier
+	connPool *pgxpool.Pool
 }
 
 type TransactionFunc func(ctx context.Context, dbtx Database) error
@@ -38,6 +39,8 @@ type Database interface {
 	GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error)
 	UserIsTeamOwner(ctx context.Context, userID, teamID uuid.UUID) (bool, error)
 
+	GetAuditLogsForTeam(ctx context.Context, slug string) ([]*AuditLog, error)
+
 	AssignGlobalRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error
 	AssignTargetedRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName, targetID uuid.UUID) error
 
@@ -61,8 +64,8 @@ type Database interface {
 	SetUserName(ctx context.Context, userID uuid.UUID, name string) (*User, error)
 }
 
-func NewDatabase(q Querier, conn *pgx.Conn) Database {
-	return &database{querier: q, conn: conn}
+func NewDatabase(q Querier, conn *pgxpool.Pool) Database {
+	return &database{querier: q, connPool: conn}
 }
 
 func nullString(s *string) sql.NullString {
