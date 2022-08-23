@@ -36,7 +36,7 @@ func userWithGlobalRoleAndAuthorizations(roleName sqlc.RoleName, authorizations 
 	}
 }
 
-func userWithTargettedRoleAndAuthorizations(roleName sqlc.RoleName, authorizations []sqlc.AuthzName, targetID uuid.UUID) *db.User {
+func userWithTargetedRoleAndAuthorizations(roleName sqlc.RoleName, authorizations []sqlc.AuthzName, targetID uuid.UUID) *db.User {
 	user := userWithGlobalRoleAndAuthorizations(roleName, authorizations)
 	user.Roles[0].TargetID = uuid.NullUUID{
 		UUID:  targetID,
@@ -100,14 +100,14 @@ func TestRequireAuthorizationForTarget(t *testing.T) {
 		assert.ErrorIs(t, authz.RequireAuthorization(user, sqlc.AuthzNameTeamsUpdate, targetID), authz.ErrNotAuthorized)
 	})
 
-	t.Run("User with targetted role", func(t *testing.T) {
-		user := userWithTargettedRoleAndAuthorizations(sqlc.RoleNameTeamowner, []sqlc.AuthzName{sqlc.AuthzNameTeamsUpdate}, targetID)
+	t.Run("User with targeted role", func(t *testing.T) {
+		user := userWithTargetedRoleAndAuthorizations(sqlc.RoleNameTeamowner, []sqlc.AuthzName{sqlc.AuthzNameTeamsUpdate}, targetID)
 		assert.NoError(t, authz.RequireAuthorization(user, sqlc.AuthzNameTeamsUpdate, targetID))
 	})
 
-	t.Run("User with targetted role for wrong target", func(t *testing.T) {
+	t.Run("User with targeted role for wrong target", func(t *testing.T) {
 		wrongID, _ := uuid.NewUUID()
-		user := userWithTargettedRoleAndAuthorizations(sqlc.RoleNameTeamowner, []sqlc.AuthzName{sqlc.AuthzNameTeamsUpdate}, wrongID)
+		user := userWithTargetedRoleAndAuthorizations(sqlc.RoleNameTeamowner, []sqlc.AuthzName{sqlc.AuthzNameTeamsUpdate}, wrongID)
 		assert.ErrorIs(t, authz.RequireAuthorization(user, sqlc.AuthzNameTeamsUpdate, targetID), authz.ErrNotAuthorized)
 	})
 

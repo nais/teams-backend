@@ -47,7 +47,7 @@ func RequireGlobalAuthorization(actor *db.User, requiredAuthzName sqlc.AuthzName
 }
 
 // RequireAuthorization Require an actor to have a specific authorization through a globally assigned or a correctly
-// targetted role. The roles must already be attached to the actor.
+// targeted role. The roles must already be attached to the actor.
 func RequireAuthorization(actor *db.User, requiredAuthzName sqlc.AuthzName, target uuid.UUID) error {
 	if actor == nil {
 		return ErrNotAuthorized
@@ -67,7 +67,7 @@ func RequireAuthorization(actor *db.User, requiredAuthzName sqlc.AuthzName, targ
 }
 
 // RequireAuthorizationOrTargetMatch Require an actor to have a specific authorization through a globally assigned or a
-// correctly targetted role. The roles must already be attached to the actor. If the actor matches the target,
+// correctly targeted role. The roles must already be attached to the actor. If the actor matches the target,
 // the action will be allowed.
 func RequireAuthorizationOrTargetMatch(actor *db.User, requiredAuthzName sqlc.AuthzName, target uuid.UUID) error {
 	if actor != nil && actor.ID == target {
