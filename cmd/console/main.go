@@ -179,7 +179,7 @@ func run() error {
 				reconcileTimer.Reset(immediateReconcile)
 			}
 			if _, exists := pendingTeams[input.Team.ID]; !exists {
-				log.Infof("Scheduling team '%s' for reconciliation in %s", input.Team.Slug, nextReconcile.Sub(time.Now()))
+				log.Infof("Scheduling team '%s' for reconciliation in %s", input.Team.Slug, time.Until(nextReconcile))
 				pendingTeams[input.Team.ID] = input
 			}
 
