@@ -49,26 +49,6 @@ type CreateTeamInput struct {
 	Purpose *string `json:"purpose"`
 }
 
-// Pagination metadata attached to queries resulting in a collection of data.
-type PageInfo struct {
-	// Total number of results that matches the query.
-	Results int `json:"results"`
-	// Which record number the returned collection starts at.
-	Offset int `json:"offset"`
-	// Maximum number of records included in the collection.
-	Limit int `json:"limit"`
-}
-
-// When querying collections this input is used to control the offset and the page size of the returned slice.
-//
-// Please note that collections are not stateful, so data added or created in between your paginated requests might not be reflected in the returned result set.
-type Pagination struct {
-	// The offset to start fetching entries.
-	Offset int `json:"offset"`
-	// Number of entries per page.
-	Limit int `json:"limit"`
-}
-
 // Input for removing users from a team.
 type RemoveUsersFromTeamInput struct {
 	// List of user IDs that should be removed from the team.
@@ -107,50 +87,6 @@ type UpdateTeamInput struct {
 	Name *string `json:"name"`
 	// Team purpose. Set to an empty string to remove the existing team purpose.
 	Purpose *string `json:"purpose"`
-}
-
-// Direction of the sort.
-type SortDirection string
-
-const (
-	// Sort ascending.
-	SortDirectionAsc SortDirection = "ASC"
-	// Sort descending.
-	SortDirectionDesc SortDirection = "DESC"
-)
-
-var AllSortDirection = []SortDirection{
-	SortDirectionAsc,
-	SortDirectionDesc,
-}
-
-func (e SortDirection) IsValid() bool {
-	switch e {
-	case SortDirectionAsc, SortDirectionDesc:
-		return true
-	}
-	return false
-}
-
-func (e SortDirection) String() string {
-	return string(e)
-}
-
-func (e *SortDirection) UnmarshalGQL(v interface{}) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = SortDirection(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid SortDirection", str)
-	}
-	return nil
-}
-
-func (e SortDirection) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
 // Available team roles.

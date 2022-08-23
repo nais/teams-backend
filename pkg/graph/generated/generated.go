@@ -84,12 +84,6 @@ type ComplexityRoot struct {
 		UpdateTeam           func(childComplexity int, teamID *uuid.UUID, input model.UpdateTeamInput) int
 	}
 
-	PageInfo struct {
-		Limit   func(childComplexity int) int
-		Offset  func(childComplexity int) int
-		Results func(childComplexity int) int
-	}
-
 	Query struct {
 		Me    func(childComplexity int) int
 		Team  func(childComplexity int, id *uuid.UUID) int
@@ -400,27 +394,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.UpdateTeam(childComplexity, args["teamId"].(*uuid.UUID), args["input"].(model.UpdateTeamInput)), true
 
-	case "PageInfo.limit":
-		if e.complexity.PageInfo.Limit == nil {
-			break
-		}
-
-		return e.complexity.PageInfo.Limit(childComplexity), true
-
-	case "PageInfo.offset":
-		if e.complexity.PageInfo.Offset == nil {
-			break
-		}
-
-		return e.complexity.PageInfo.Offset(childComplexity), true
-
-	case "PageInfo.results":
-		if e.complexity.PageInfo.Results == nil {
-			break
-		}
-
-		return e.complexity.PageInfo.Results(childComplexity), true
-
 	case "Query.me":
 		if e.complexity.Query.Me == nil {
 			break
@@ -604,7 +577,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputAddTeamOwnersInput,
 		ec.unmarshalInputCreateServiceAccountInput,
 		ec.unmarshalInputCreateTeamInput,
-		ec.unmarshalInputPagination,
 		ec.unmarshalInputRemoveUsersFromTeamInput,
 		ec.unmarshalInputSetTeamMemberRoleInput,
 		ec.unmarshalInputUpdateServiceAccountInput,
@@ -768,41 +740,7 @@ scalar Map`, BuiltIn: false},
 type Query
 
 "The root query for implementing GraphQL mutations."
-type Mutation
-
-"Pagination metadata attached to queries resulting in a collection of data."
-type PageInfo {
-    "Total number of results that matches the query."
-    results: Int!
-
-    "Which record number the returned collection starts at."
-    offset: Int!
-
-    "Maximum number of records included in the collection."
-    limit: Int!
-}
-
-"""
-When querying collections this input is used to control the offset and the page size of the returned slice.
-
-Please note that collections are not stateful, so data added or created in between your paginated requests might not be reflected in the returned result set.
-"""
-input Pagination {
-    "The offset to start fetching entries."
-    offset: Int! = 0
-
-    "Number of entries per page."
-    limit: Int! = 50
-}
-
-"Direction of the sort."
-enum SortDirection {
-    "Sort ascending."
-    ASC
-
-    "Sort descending."
-    DESC
-}`, BuiltIn: false},
+type Mutation`, BuiltIn: false},
 	{Name: "../../../graphql/teams.graphqls", Input: `extend type Query {
     "Get a collection of teams."
     teams: [Team!]! @auth
@@ -2833,138 +2771,6 @@ func (ec *executionContext) fieldContext_Mutation_deleteServiceAccount(ctx conte
 	if fc.Args, err = ec.field_Mutation_deleteServiceAccount_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _PageInfo_results(ctx context.Context, field graphql.CollectedField, obj *model.PageInfo) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_PageInfo_results(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Results, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(int)
-	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_PageInfo_results(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "PageInfo",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _PageInfo_offset(ctx context.Context, field graphql.CollectedField, obj *model.PageInfo) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_PageInfo_offset(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Offset, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(int)
-	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_PageInfo_offset(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "PageInfo",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _PageInfo_limit(ctx context.Context, field graphql.CollectedField, obj *model.PageInfo) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_PageInfo_limit(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Limit, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(int)
-	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_PageInfo_limit(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "PageInfo",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
 	}
 	return fc, nil
 }
@@ -6258,44 +6064,6 @@ func (ec *executionContext) unmarshalInputCreateTeamInput(ctx context.Context, o
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputPagination(ctx context.Context, obj interface{}) (model.Pagination, error) {
-	var it model.Pagination
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	if _, present := asMap["offset"]; !present {
-		asMap["offset"] = 0
-	}
-	if _, present := asMap["limit"]; !present {
-		asMap["limit"] = 50
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "offset":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("offset"))
-			it.Offset, err = ec.unmarshalNInt2int(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "limit":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
-			it.Limit, err = ec.unmarshalNInt2int(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
 func (ec *executionContext) unmarshalInputRemoveUsersFromTeamInput(ctx context.Context, obj interface{}) (model.RemoveUsersFromTeamInput, error) {
 	var it model.RemoveUsersFromTeamInput
 	asMap := map[string]interface{}{}
@@ -6693,48 +6461,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_deleteServiceAccount(ctx, field)
 			})
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var pageInfoImplementors = []string{"PageInfo"}
-
-func (ec *executionContext) _PageInfo(ctx context.Context, sel ast.SelectionSet, obj *model.PageInfo) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, pageInfoImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("PageInfo")
-		case "results":
-
-			out.Values[i] = ec._PageInfo_results(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "offset":
-
-			out.Values[i] = ec._PageInfo_offset(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "limit":
-
-			out.Values[i] = ec._PageInfo_limit(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -7647,21 +7373,6 @@ func (ec *executionContext) unmarshalNCreateServiceAccountInput2githubᚗcomᚋn
 func (ec *executionContext) unmarshalNCreateTeamInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐCreateTeamInput(ctx context.Context, v interface{}) (model.CreateTeamInput, error) {
 	res, err := ec.unmarshalInputCreateTeamInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v interface{}) (int, error) {
-	res, err := graphql.UnmarshalInt(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.SelectionSet, v int) graphql.Marshaler {
-	res := graphql.MarshalInt(v)
-	if res == graphql.Null {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-	}
-	return res
 }
 
 func (ec *executionContext) unmarshalNRemoveUsersFromTeamInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRemoveUsersFromTeamInput(ctx context.Context, v interface{}) (model.RemoveUsersFromTeamInput, error) {
