@@ -20,6 +20,7 @@ generate: generate-sqlc generate-gql generate-mocks
 
 generate-gql:
 	go run github.com/99designs/gqlgen generate --verbose
+	go run mvdan.cc/gofumpt -w ./pkg/graph/
 
 generate-sqlc:
 	go run github.com/kyleconroy/sqlc/cmd/sqlc generate
