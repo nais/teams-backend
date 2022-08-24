@@ -12,6 +12,12 @@ import (
 	"github.com/nais/console/pkg/slug"
 )
 
+// API key type.
+type APIKey struct {
+	// The API key.
+	Key string `json:"key"`
+}
+
 // Input for adding users to a team as members.
 type AddTeamMembersInput struct {
 	// ID of the team that should receive new members.
@@ -26,6 +32,12 @@ type AddTeamOwnersInput struct {
 	TeamID *uuid.UUID `json:"teamId"`
 	// List of user IDs that should be added to the team as owners.
 	UserIds []*uuid.UUID `json:"userIds"`
+}
+
+// Input for creating a new service account.
+type CreateServiceAccountInput struct {
+	// The name of the new service account. An email address will be automatically generated using the provided name.
+	Name *slug.Slug `json:"name"`
 }
 
 // Input for creating a new team.
@@ -62,6 +74,12 @@ type TeamMember struct {
 	User *db.User `json:"user"`
 	// The role that the user has in the team.
 	Role TeamRole `json:"role"`
+}
+
+// Input for updating an existing service account.
+type UpdateServiceAccountInput struct {
+	// The new name of the service account. The email address will be automatically updated.
+	Name *slug.Slug `json:"name"`
 }
 
 // Input for updating an existing team.

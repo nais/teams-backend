@@ -1,0 +1,25 @@
+extend type Mutation {
+    """
+    Create an API key for a user or a service account, then return the created API key.
+
+    Any existing API keys for this user will be invalidated.
+
+    The API key value can only be retrieved through this call, so be sure to save the return value.
+    """
+    createAPIKey(
+        "ID of a user or a service account."
+        userId: UUID!
+    ): APIKey! @auth
+
+    "Delete any API keys associated with a user or a service account."
+    deleteAPIKey(
+        "ID of a user or a service account."
+        userId: UUID!
+    ): Boolean! @auth
+}
+
+"API key type."
+type APIKey {
+    "The API key."
+    key: String!
+}

@@ -12,6 +12,29 @@ extend type Query {
     me: User! @auth
 }
 
+extend type Mutation {
+    "Create and return a new service account."
+    createServiceAccount(
+        "Input for creation of the new service account."
+        input: CreateServiceAccountInput!
+    ): User! @auth
+
+    "Update an existing service account."
+    updateServiceAccount(
+        "ID of the service account to update."
+        serviceAccountId: UUID!
+
+        "Input for updating an existing service account."
+        input: UpdateServiceAccountInput!
+    ): User! @auth
+
+    "Delete an existing service account."
+    deleteServiceAccount(
+        "ID of the service account to delete."
+        serviceAccountId: UUID!
+    ): Boolean! @auth
+}
+
 "User type."
 type User {
     "Unique ID of the user."
@@ -26,6 +49,9 @@ type User {
     "List of teams the user is a member of."
     teams: [UserTeam!]!
 
+    "Whether or not the user is a service account."
+    isServiceAccount: Boolean!
+
     "Roles attached to the user."
     roles: [Role!]!
 }
@@ -37,4 +63,16 @@ type UserTeam {
 
     "The role that the user has in the team."
     role: TeamRole!
+}
+
+"Input for creating a new service account."
+input CreateServiceAccountInput {
+    "The name of the new service account. An email address will be automatically generated using the provided name."
+    name: Slug!
+}
+
+"Input for updating an existing service account."
+input UpdateServiceAccountInput {
+    "The new name of the service account. The email address will be automatically updated."
+    name: Slug!
 }
