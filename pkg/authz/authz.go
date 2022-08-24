@@ -11,17 +11,19 @@ import (
 	"github.com/nais/console/pkg/db"
 )
 
-const userContextKey = "user"
+type ContextKey string
+
+const contextKeyUser ContextKey = "user"
 
 // ContextWithUser Return a context with a user module stored.
 func ContextWithUser(ctx context.Context, user *db.User) context.Context {
-	return context.WithValue(ctx, userContextKey, user)
+	return context.WithValue(ctx, contextKeyUser, user)
 }
 
 // UserFromContext Finds any authenticated user from the context. Requires that a middleware has stored a user in the
 // first place.
 func UserFromContext(ctx context.Context) *db.User {
-	user, _ := ctx.Value(userContextKey).(*db.User)
+	user, _ := ctx.Value(contextKeyUser).(*db.User)
 	return user
 }
 
