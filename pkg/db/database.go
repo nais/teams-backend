@@ -46,15 +46,14 @@ type Database interface {
 	GetTeams(ctx context.Context) ([]*Team, error)
 	GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error)
 	UserIsTeamOwner(ctx context.Context, userID, teamID uuid.UUID) (bool, error)
-	SetTeamMembersRole(ctx context.Context, userIDs []uuid.UUID, teamID uuid.UUID, role sqlc.RoleName) error
+	SetTeamMemberRole(ctx context.Context, userID uuid.UUID, teamID uuid.UUID, role sqlc.RoleName) error
 
 	GetAuditLogsForTeam(ctx context.Context, slug slug.Slug) ([]*AuditLog, error)
 
 	AssignGlobalRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error
-	AssignTargetedRoleToUsers(ctx context.Context, userIDs []uuid.UUID, roleName sqlc.RoleName, targetID uuid.UUID) error
+	AssignTargetedRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName, targetID uuid.UUID) error
 
-	AddUsersToTeam(ctx context.Context, userIDs []uuid.UUID, teamID uuid.UUID) error
-	RemoveUsersFromTeam(ctx context.Context, userIDs []uuid.UUID, teamID uuid.UUID) error
+	RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, teamID uuid.UUID) error
 
 	CreateAPIKey(ctx context.Context, apiKey string, userID uuid.UUID) error
 

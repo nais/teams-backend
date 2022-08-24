@@ -21,11 +21,5 @@ JOIN users ON users.id = user_roles.user_id
 WHERE user_roles.target_id = sqlc.arg(team_id)::UUID
 ORDER BY users.name ASC;
 
--- name: AddTeamMember :exec
-INSERT INTO user_roles (user_id, role_name, target_id) VALUES ($1, 'Team member', sqlc.arg(team_id)::UUID) ON CONFLICT DO NOTHING;
-
--- name: AddTeamOwner :exec
-INSERT INTO user_roles (user_id, role_name, target_id) VALUES ($1, 'Team owner', sqlc.arg(team_id)::UUID) ON CONFLICT DO NOTHING;
-
 -- name: RemoveUserFromTeam :exec
 DELETE FROM user_roles WHERE user_id = $1 AND target_id = sqlc.arg(team_id)::UUID;

@@ -13,34 +13,6 @@ import (
 	"github.com/nais/console/pkg/slug"
 )
 
-const addTeamMember = `-- name: AddTeamMember :exec
-INSERT INTO user_roles (user_id, role_name, target_id) VALUES ($1, 'Team member', $2::UUID) ON CONFLICT DO NOTHING
-`
-
-type AddTeamMemberParams struct {
-	UserID uuid.UUID
-	TeamID uuid.UUID
-}
-
-func (q *Queries) AddTeamMember(ctx context.Context, arg AddTeamMemberParams) error {
-	_, err := q.db.Exec(ctx, addTeamMember, arg.UserID, arg.TeamID)
-	return err
-}
-
-const addTeamOwner = `-- name: AddTeamOwner :exec
-INSERT INTO user_roles (user_id, role_name, target_id) VALUES ($1, 'Team owner', $2::UUID) ON CONFLICT DO NOTHING
-`
-
-type AddTeamOwnerParams struct {
-	UserID uuid.UUID
-	TeamID uuid.UUID
-}
-
-func (q *Queries) AddTeamOwner(ctx context.Context, arg AddTeamOwnerParams) error {
-	_, err := q.db.Exec(ctx, addTeamOwner, arg.UserID, arg.TeamID)
-	return err
-}
-
 const createTeam = `-- name: CreateTeam :one
 INSERT INTO teams (id, name, slug, purpose) VALUES ($1, $2, $3, $4)
 RETURNING id, slug, name, purpose

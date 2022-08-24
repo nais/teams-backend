@@ -14,8 +14,6 @@ import (
 type Querier interface {
 	AddGlobalUserRole(ctx context.Context, arg AddGlobalUserRoleParams) error
 	AddTargetedUserRole(ctx context.Context, arg AddTargetedUserRoleParams) error
-	AddTeamMember(ctx context.Context, arg AddTeamMemberParams) error
-	AddTeamOwner(ctx context.Context, arg AddTeamOwnerParams) error
 	CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) error
 	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) error
 	CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, error)
