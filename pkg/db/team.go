@@ -16,9 +16,19 @@ type Team struct {
 }
 
 func (d *database) RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, teamID uuid.UUID) error {
-	return d.querier.RemoveUserFromTeam(ctx, sqlc.RemoveUserFromTeamParams{
-		UserID: userID,
-		TeamID: teamID,
+	err := d.querier.RemoveTargetedUserRole(ctx, sqlc.RemoveTargetedUserRoleParams{
+		UserID:   userID,
+		TargetID: nullUUID(&teamID),
+		RoleName: sqlc.RoleNameTeammember,
+	})
+	if err != nil {
+		return err
+	}
+
+	return d.querier.RemoveTargetedUserRole(ctx, sqlc.RemoveTargetedUserRoleParams{
+		UserID:   userID,
+		TargetID: nullUUID(&teamID),
+		RoleName: sqlc.RoleNameTeamowner,
 	})
 }
 

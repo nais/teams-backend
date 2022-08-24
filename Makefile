@@ -16,7 +16,7 @@ test:
 fmt:
 	go run mvdan.cc/gofumpt -w ./
 
-generate: generate-gql generate-sqlc generate-mocks
+generate: generate-sqlc generate-gql generate-mocks
 
 generate-gql:
 	go run github.com/99designs/gqlgen generate --verbose

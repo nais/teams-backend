@@ -2,17 +2,14 @@
 INSERT INTO teams (id, name, slug, purpose) VALUES ($1, $2, $3, $4)
 RETURNING *;
 
--- name: UpdateTeam :one
-UPDATE teams SET name = COALESCE(sqlc.narg('name'), name), purpose = COALESCE(sqlc.arg('purpose'), purpose) WHERE id = sqlc.arg('id') RETURNING *;
+-- name: GetTeams :many
+SELECT * FROM teams ORDER BY name ASC;
 
 -- name: GetTeamByID :one
 SELECT * FROM teams WHERE id = $1 LIMIT 1;
 
 -- name: GetTeamBySlug :one
 SELECT * FROM teams WHERE slug = $1 LIMIT 1;
-
--- name: GetTeams :many
-SELECT * FROM teams ORDER BY name ASC;
 
 -- name: GetTeamMembers :many
 SELECT users.* FROM user_roles
@@ -21,5 +18,8 @@ JOIN users ON users.id = user_roles.user_id
 WHERE user_roles.target_id = sqlc.arg(team_id)::UUID
 ORDER BY users.name ASC;
 
--- name: RemoveUserFromTeam :exec
-DELETE FROM user_roles WHERE user_id = $1 AND target_id = sqlc.arg(team_id)::UUID;
+-- name: GetTeamMetadata :many
+SELECT * FROM team_metadata WHERE team_id = $1;
+
+-- name: UpdateTeam :one
+UPDATE teams SET name = COALESCE(sqlc.narg('name'), name), purpose = COALESCE(sqlc.arg('purpose'), purpose) WHERE id = sqlc.arg('id') RETURNING *;

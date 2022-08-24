@@ -104,6 +104,36 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) 
 	return &i, err
 }
 
+const getUserRoles = `-- name: GetUserRoles :many
+SELECT id, role_name, user_id, target_id FROM user_roles
+WHERE user_id = $1
+`
+
+func (q *Queries) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*UserRole, error) {
+	rows, err := q.db.Query(ctx, getUserRoles, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*UserRole
+	for rows.Next() {
+		var i UserRole
+		if err := rows.Scan(
+			&i.ID,
+			&i.RoleName,
+			&i.UserID,
+			&i.TargetID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUserTeams = `-- name: GetUserTeams :many
 SELECT teams.id, teams.slug, teams.name, teams.purpose FROM user_roles JOIN teams ON teams.id = user_roles.target_id WHERE user_roles.user_id = $1 ORDER BY teams.name ASC
 `

@@ -7,8 +7,6 @@ package sqlc
 
 import (
 	"context"
-
-	"github.com/google/uuid"
 )
 
 const getRoleAuthorizations = `-- name: GetRoleAuthorizations :many
@@ -31,53 +29,6 @@ func (q *Queries) GetRoleAuthorizations(ctx context.Context, roleName RoleName) 
 			return nil, err
 		}
 		items = append(items, authz_name)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getUserRole = `-- name: GetUserRole :one
-SELECT id, role_name, user_id, target_id FROM user_roles
-WHERE id = $1 LIMIT 1
-`
-
-func (q *Queries) GetUserRole(ctx context.Context, id int32) (*UserRole, error) {
-	row := q.db.QueryRow(ctx, getUserRole, id)
-	var i UserRole
-	err := row.Scan(
-		&i.ID,
-		&i.RoleName,
-		&i.UserID,
-		&i.TargetID,
-	)
-	return &i, err
-}
-
-const getUserRoles = `-- name: GetUserRoles :many
-SELECT id, role_name, user_id, target_id FROM user_roles
-WHERE user_id = $1
-`
-
-func (q *Queries) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*UserRole, error) {
-	rows, err := q.db.Query(ctx, getUserRoles, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []*UserRole
-	for rows.Next() {
-		var i UserRole
-		if err := rows.Scan(
-			&i.ID,
-			&i.RoleName,
-			&i.UserID,
-			&i.TargetID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, &i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

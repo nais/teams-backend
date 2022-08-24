@@ -26,7 +26,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 
 	correlationID, err := uuid.NewUUID()
 	if err != nil {
-		return nil, fmt.Errorf("unable to create correlation ID for audit log: %w", err)
+		return nil, fmt.Errorf("unable to create log correlation ID: %w", err)
 	}
 
 	team, err := r.database.AddTeam(ctx, input.Name, *input.Slug, input.Purpose, actor.ID)
@@ -61,7 +61,7 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, in
 
 	correlationID, err := uuid.NewUUID()
 	if err != nil {
-		return nil, fmt.Errorf("unable to create correlation ID for audit log")
+		return nil, fmt.Errorf("unable to create log correlation ID: %w", err)
 	}
 
 	team, err := r.database.UpdateTeam(ctx, *teamID, input.Name, input.Purpose)
@@ -94,11 +94,16 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 		return nil, err
 	}
 
+	correlationID, err := uuid.NewUUID()
+	if err != nil {
+		return nil, fmt.Errorf("unable to create log correlation ID: %w", err)
+	}
+
 	var team *db.Team
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
 		team, err = dbtx.GetTeamByID(ctx, *input.TeamID)
 		if err != nil {
-			return fmt.Errorf("unable to create correlation ID for audit log")
+			return fmt.Errorf("unable to get team: %w", err)
 		}
 
 		members, err := dbtx.GetTeamMembers(ctx, team.ID)
@@ -120,11 +125,6 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 			err = dbtx.RemoveUserFromTeam(ctx, *userID, *input.TeamID)
 			if err != nil {
 				return err
-			}
-
-			correlationID, err := uuid.NewUUID()
-			if err != nil {
-				return fmt.Errorf("unable to create correlation ID for audit log")
 			}
 
 			fields := auditlogger.Fields{
@@ -166,7 +166,7 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 
 	correlationID, err := uuid.NewUUID()
 	if err != nil {
-		return nil, fmt.Errorf("unable to create correlation ID for audit log")
+		return nil, fmt.Errorf("unable to create log correlation ID: %w", err)
 	}
 
 	fields := auditlogger.Fields{
@@ -186,6 +186,11 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 		return nil, err
 	}
 
+	correlationID, err := uuid.NewUUID()
+	if err != nil {
+		return nil, fmt.Errorf("unable to create log correlation ID: %w", err)
+	}
+
 	var team *db.Team
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
 		team, err = dbtx.GetTeamByID(ctx, *input.TeamID)
@@ -202,11 +207,6 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 			err = dbtx.SetTeamMemberRole(ctx, *userID, *input.TeamID, sqlc.RoleNameTeammember)
 			if err != nil {
 				return err
-			}
-
-			correlationID, err := uuid.NewUUID()
-			if err != nil {
-				return fmt.Errorf("unable to create correlation ID for audit log")
 			}
 
 			fields := auditlogger.Fields{
@@ -234,6 +234,11 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 		return nil, err
 	}
 
+	correlationID, err := uuid.NewUUID()
+	if err != nil {
+		return nil, fmt.Errorf("unable to create log correlation ID: %w", err)
+	}
+
 	var team *db.Team
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
 		team, err = dbtx.GetTeamByID(ctx, *input.TeamID)
@@ -250,11 +255,6 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 			err = dbtx.SetTeamMemberRole(ctx, *userID, *input.TeamID, sqlc.RoleNameTeamowner)
 			if err != nil {
 				return err
-			}
-
-			correlationID, err := uuid.NewUUID()
-			if err != nil {
-				return fmt.Errorf("unable to create correlation ID for audit log")
 			}
 
 			fields := auditlogger.Fields{
@@ -311,7 +311,7 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 
 	correlationID, err := uuid.NewUUID()
 	if err != nil {
-		return nil, fmt.Errorf("unable to create correlation ID for audit log")
+		return nil, fmt.Errorf("unable to create log correlation ID: %w", err)
 	}
 
 	fields := auditlogger.Fields{

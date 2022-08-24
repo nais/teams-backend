@@ -102,6 +102,30 @@ func (q *Queries) GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User
 	return items, nil
 }
 
+const getTeamMetadata = `-- name: GetTeamMetadata :many
+SELECT team_id, key, value FROM team_metadata WHERE team_id = $1
+`
+
+func (q *Queries) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) ([]*TeamMetadatum, error) {
+	rows, err := q.db.Query(ctx, getTeamMetadata, teamID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*TeamMetadatum
+	for rows.Next() {
+		var i TeamMetadatum
+		if err := rows.Scan(&i.TeamID, &i.Key, &i.Value); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTeams = `-- name: GetTeams :many
 SELECT id, slug, name, purpose FROM teams ORDER BY name ASC
 `
@@ -129,20 +153,6 @@ func (q *Queries) GetTeams(ctx context.Context) ([]*Team, error) {
 		return nil, err
 	}
 	return items, nil
-}
-
-const removeUserFromTeam = `-- name: RemoveUserFromTeam :exec
-DELETE FROM user_roles WHERE user_id = $1 AND target_id = $2::UUID
-`
-
-type RemoveUserFromTeamParams struct {
-	UserID uuid.UUID
-	TeamID uuid.UUID
-}
-
-func (q *Queries) RemoveUserFromTeam(ctx context.Context, arg RemoveUserFromTeamParams) error {
-	_, err := q.db.Exec(ctx, removeUserFromTeam, arg.UserID, arg.TeamID)
-	return err
 }
 
 const updateTeam = `-- name: UpdateTeam :one

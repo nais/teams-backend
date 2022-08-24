@@ -3,6 +3,7 @@ package authz
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/nais/console/pkg/sqlc"
 
@@ -85,5 +86,5 @@ func authorized(authorizations map[sqlc.AuthzName]struct{}, requiredAuthzName sq
 		}
 	}
 
-	return ErrNotAuthorized
+	return fmt.Errorf("missing authorization: %q, %w", requiredAuthzName, ErrNotAuthorized)
 }
