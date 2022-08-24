@@ -16,7 +16,6 @@ import (
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/reconcilers"
-	"golang.org/x/oauth2/jwt"
 	"google.golang.org/api/option"
 )
 
@@ -36,7 +35,6 @@ type naisdRequest struct {
 
 type naisNamespaceReconciler struct {
 	database         db.Database
-	config           *jwt.Config
 	domain           string
 	auditLogger      auditlogger.AuditLogger
 	projectParentIDs map[string]int64
