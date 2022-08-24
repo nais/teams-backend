@@ -332,11 +332,11 @@ func initReconcilers(ctx context.Context, database db.Database, cfg *config.Conf
 		switch err {
 		case reconcilers.ErrReconcilerNotEnabled:
 			log.Warnf("Reconciler '%s' is disabled through configuration", name)
-		default:
-			return nil, fmt.Errorf("reconciler '%s': %w", name, err)
 		case nil:
 			recs = append(recs, rec)
 			log.Infof("Reconciler initialized: '%s' -> %T", rec.Name(), rec)
+		default:
+			return nil, fmt.Errorf("reconciler '%s': %w", name, err)
 		}
 	}
 
