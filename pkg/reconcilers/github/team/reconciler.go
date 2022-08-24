@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 
@@ -102,7 +102,7 @@ func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconc
 		case http.StatusOK:
 			return existingTeam, nil
 		default:
-			body, _ := ioutil.ReadAll(resp.Body)
+			body, _ := io.ReadAll(resp.Body)
 			return nil, fmt.Errorf("server error from GitHub: %s: %s", resp.Status, string(body))
 		}
 	}
@@ -322,7 +322,7 @@ func httpError(expected int, resp github.Response, err error) error {
 		if resp.Body == nil {
 			return errors.New("unknown error")
 		}
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("unexpected response error %s: %s", resp.Status, string(body))
 	}
 

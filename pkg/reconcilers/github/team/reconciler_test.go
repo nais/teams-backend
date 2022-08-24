@@ -3,7 +3,7 @@ package github_team_reconciler_test
 import (
 	"context"
 	"database/sql"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -371,7 +371,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 				Response: &http.Response{
 					StatusCode: http.StatusTeapot,
 					Status:     "418: I'm a teapot",
-					Body:       ioutil.NopCloser(strings.NewReader("this is a body")),
+					Body:       io.NopCloser(strings.NewReader("this is a body")),
 				},
 			}, nil).Once()
 
