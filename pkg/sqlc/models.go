@@ -480,8 +480,3 @@ type UserRole struct {
 	UserID   uuid.UUID
 	TargetID uuid.NullUUID
 }
-
-type UserTeam struct {
-	UserID uuid.UUID
-	TeamID uuid.UUID
-}

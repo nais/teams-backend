@@ -9,7 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
+
+	"github.com/google/uuid"
+
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/sqlc"
 
@@ -71,7 +74,7 @@ func TestImportTeamsFromLegacyAzure(t *testing.T) {
 				}
 				log.Debugf("Created user %s", member.Email)
 
-				err = dbtx.AddUserToTeam(ctx, member.ID, team.ID)
+				err = dbtx.AddUsersToTeam(ctx, []uuid.UUID{member.ID}, team.ID)
 				if err != nil {
 					return err
 				}
@@ -94,14 +97,16 @@ func TestImportTeamsFromLegacyAzure(t *testing.T) {
 				}
 				log.Debugf("Created user %s", owner.Email)
 
-				err = dbtx.AssignTargetedRoleToUser(ctx, owner.ID, sqlc.RoleNameTeamowner, team.ID)
+				err = dbtx.AddUsersToTeam(ctx, []uuid.UUID{owner.ID}, team.ID)
 				if err != nil {
 					return err
 				}
-				err = dbtx.AddUserToTeam(ctx, owner.ID, team.ID)
+
+				err = dbtx.SetTeamMembersRole(ctx, []uuid.UUID{owner.ID}, team.ID, sqlc.RoleNameTeamowner)
 				if err != nil {
 					return err
 				}
+
 			}
 
 			log.Infof("Created %s with %d owners and %d members", team.Name, len(owners), len(members))
@@ -122,10 +127,11 @@ func TestImportTeamsFromLegacyAzure(t *testing.T) {
 }
 
 func setupDatabase(ctx context.Context, dbUrl string) (db.Database, error) {
-	dbc, err := pgx.Connect(ctx, dbUrl)
+	dbc, err := pgxpool.Connect(ctx, dbUrl)
 	if err != nil {
 		return nil, err
 	}
+
 	queries := db.Wrap(sqlc.New(dbc), dbc)
 	return db.NewDatabase(queries, dbc), nil
 }

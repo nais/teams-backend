@@ -13,6 +13,34 @@ import (
 	"github.com/nais/console/pkg/slug"
 )
 
+const addTeamMember = `-- name: AddTeamMember :exec
+INSERT INTO user_roles (user_id, role_name, target_id) VALUES ($1, 'Team member', $2::UUID) ON CONFLICT DO NOTHING
+`
+
+type AddTeamMemberParams struct {
+	UserID uuid.UUID
+	TeamID uuid.UUID
+}
+
+func (q *Queries) AddTeamMember(ctx context.Context, arg AddTeamMemberParams) error {
+	_, err := q.db.Exec(ctx, addTeamMember, arg.UserID, arg.TeamID)
+	return err
+}
+
+const addTeamOwner = `-- name: AddTeamOwner :exec
+INSERT INTO user_roles (user_id, role_name, target_id) VALUES ($1, 'Team owner', $2::UUID) ON CONFLICT DO NOTHING
+`
+
+type AddTeamOwnerParams struct {
+	UserID uuid.UUID
+	TeamID uuid.UUID
+}
+
+func (q *Queries) AddTeamOwner(ctx context.Context, arg AddTeamOwnerParams) error {
+	_, err := q.db.Exec(ctx, addTeamOwner, arg.UserID, arg.TeamID)
+	return err
+}
+
 const createTeam = `-- name: CreateTeam :one
 INSERT INTO teams (id, name, slug, purpose) VALUES ($1, $2, $3, $4)
 RETURNING id, slug, name, purpose
@@ -75,9 +103,10 @@ func (q *Queries) GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, err
 }
 
 const getTeamMembers = `-- name: GetTeamMembers :many
-SELECT users.id, users.email, users.name FROM user_teams
-JOIN users ON users.id = user_teams.user_id
-WHERE user_teams.team_id = $1
+SELECT users.id, users.email, users.name FROM user_roles
+JOIN teams ON teams.id = user_roles.target_id
+JOIN users ON users.id = user_roles.user_id
+WHERE user_roles.target_id = $1::UUID
 ORDER BY users.name ASC
 `
 
@@ -128,6 +157,20 @@ func (q *Queries) GetTeams(ctx context.Context) ([]*Team, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const removeUserFromTeam = `-- name: RemoveUserFromTeam :exec
+DELETE FROM user_roles WHERE user_id = $1 AND target_id = $2::UUID
+`
+
+type RemoveUserFromTeamParams struct {
+	UserID uuid.UUID
+	TeamID uuid.UUID
+}
+
+func (q *Queries) RemoveUserFromTeam(ctx context.Context, arg RemoveUserFromTeamParams) error {
+	_, err := q.db.Exec(ctx, removeUserFromTeam, arg.UserID, arg.TeamID)
+	return err
 }
 
 const updateTeam = `-- name: UpdateTeam :one

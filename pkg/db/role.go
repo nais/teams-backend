@@ -8,7 +8,7 @@ import (
 )
 
 func (d *database) AssignGlobalRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error {
-	return d.querier.AddGlobaldUserRole(ctx, sqlc.AddGlobaldUserRoleParams{
+	return d.querier.AddGlobalUserRole(ctx, sqlc.AddGlobalUserRoleParams{
 		UserID:   userID,
 		RoleName: roleName,
 	})

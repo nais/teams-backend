@@ -11,17 +11,17 @@ import (
 	"github.com/google/uuid"
 )
 
-const addGlobaldUserRole = `-- name: AddGlobaldUserRole :exec
+const addGlobalUserRole = `-- name: AddGlobalUserRole :exec
 INSERT INTO user_roles (user_id, role_name) VALUES ($1, $2) ON CONFLICT DO NOTHING
 `
 
-type AddGlobaldUserRoleParams struct {
+type AddGlobalUserRoleParams struct {
 	UserID   uuid.UUID
 	RoleName RoleName
 }
 
-func (q *Queries) AddGlobaldUserRole(ctx context.Context, arg AddGlobaldUserRoleParams) error {
-	_, err := q.db.Exec(ctx, addGlobaldUserRole, arg.UserID, arg.RoleName)
+func (q *Queries) AddGlobalUserRole(ctx context.Context, arg AddGlobalUserRoleParams) error {
+	_, err := q.db.Exec(ctx, addGlobalUserRole, arg.UserID, arg.RoleName)
 	return err
 }
 
@@ -37,20 +37,6 @@ type AddTargetedUserRoleParams struct {
 
 func (q *Queries) AddTargetedUserRole(ctx context.Context, arg AddTargetedUserRoleParams) error {
 	_, err := q.db.Exec(ctx, addTargetedUserRole, arg.UserID, arg.RoleName, arg.TargetID)
-	return err
-}
-
-const addUserToTeam = `-- name: AddUserToTeam :exec
-INSERT INTO user_teams (user_id, team_id) VALUES ($1, $2) ON CONFLICT DO NOTHING
-`
-
-type AddUserToTeamParams struct {
-	UserID uuid.UUID
-	TeamID uuid.UUID
-}
-
-func (q *Queries) AddUserToTeam(ctx context.Context, arg AddUserToTeamParams) error {
-	_, err := q.db.Exec(ctx, addUserToTeam, arg.UserID, arg.TeamID)
 	return err
 }
 
@@ -119,7 +105,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) 
 }
 
 const getUserTeams = `-- name: GetUserTeams :many
-SELECT teams.id, teams.slug, teams.name, teams.purpose FROM user_teams JOIN teams ON teams.id = user_teams.team_id WHERE user_id = $1 ORDER BY teams.name ASC
+SELECT teams.id, teams.slug, teams.name, teams.purpose FROM user_roles JOIN teams ON teams.id = user_roles.target_id WHERE user_roles.user_id = $1 ORDER BY teams.name ASC
 `
 
 func (q *Queries) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error) {
@@ -232,20 +218,6 @@ type RemoveTargetedUserRoleParams struct {
 
 func (q *Queries) RemoveTargetedUserRole(ctx context.Context, arg RemoveTargetedUserRoleParams) error {
 	_, err := q.db.Exec(ctx, removeTargetedUserRole, arg.UserID, arg.TargetID, arg.RoleName)
-	return err
-}
-
-const removeUserFromTeam = `-- name: RemoveUserFromTeam :exec
-DELETE FROM user_teams WHERE user_id = $1 AND team_id = $2
-`
-
-type RemoveUserFromTeamParams struct {
-	UserID uuid.UUID
-	TeamID uuid.UUID
-}
-
-func (q *Queries) RemoveUserFromTeam(ctx context.Context, arg RemoveUserFromTeamParams) error {
-	_, err := q.db.Exec(ctx, removeUserFromTeam, arg.UserID, arg.TeamID)
 	return err
 }
 

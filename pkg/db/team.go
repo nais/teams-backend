@@ -24,7 +24,7 @@ func (d *database) AddUsersToTeam(ctx context.Context, userIDs []uuid.UUID, team
 
 	querier := d.querier.WithTx(tx)
 	for _, userID := range userIDs {
-		err := querier.AddUserToTeam(ctx, sqlc.AddUserToTeamParams{
+		err := querier.AddTeamMember(ctx, sqlc.AddTeamMemberParams{
 			UserID: userID,
 			TeamID: teamID,
 		})
@@ -107,18 +107,9 @@ func (d *database) AddTeam(ctx context.Context, name string, slug slug.Slug, pur
 		return nil, err
 	}
 
-	err = querier.AddUserToTeam(ctx, sqlc.AddUserToTeamParams{
+	err = querier.AddTeamOwner(ctx, sqlc.AddTeamOwnerParams{
 		UserID: userID,
 		TeamID: team.ID,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	err = querier.AddTargetedUserRole(ctx, sqlc.AddTargetedUserRoleParams{
-		UserID:   userID,
-		RoleName: sqlc.RoleNameTeamowner,
-		TargetID: nullUUID(&team.ID),
 	})
 	if err != nil {
 		return nil, err
