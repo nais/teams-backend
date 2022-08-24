@@ -171,6 +171,7 @@ func run() error {
 	for ctx.Err() == nil {
 		select {
 		case <-ctx.Done():
+			//lint:ignore SA4011 outer for loop checks ctx.Err(), and will exit if ctx is done
 			break
 
 		case input := <-teamReconciler:
