@@ -18,6 +18,9 @@ fmt:
 
 generate: generate-sqlc generate-gql generate-mocks
 
+check:
+	go run honnef.co/go/tools/cmd/staticcheck ./...
+
 generate-gql:
 	go run github.com/99designs/gqlgen generate --verbose
 	go run mvdan.cc/gofumpt -w ./pkg/graph/
