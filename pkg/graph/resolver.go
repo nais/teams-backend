@@ -51,15 +51,6 @@ func GetErrorPresenter() graphql.ErrorPresenterFunc {
 	}
 }
 
-func dereference[T any, TPointer *T](in []TPointer) []T {
-	out := make([]T, len(in))
-	for i := range in {
-		out[i] = *in[i]
-	}
-
-	return out
-}
-
 func sqlcRoleFromTeamRole(teamRole model.TeamRole) (sqlc.RoleName, error) {
 	switch teamRole {
 	case model.TeamRoleMember:

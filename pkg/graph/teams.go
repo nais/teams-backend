@@ -94,12 +94,55 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 		return nil, err
 	}
 
-	err = r.database.RemoveUsersFromTeam(ctx, dereference(input.UserIds), *input.TeamID)
+	var team *db.Team
+	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
+		team, err = dbtx.GetTeamByID(ctx, *input.TeamID)
+		if err != nil {
+			return fmt.Errorf("unable to create correlation ID for audit log")
+		}
+
+		members, err := dbtx.GetTeamMembers(ctx, team.ID)
+		if err != nil {
+			return fmt.Errorf("unable to get existing team members: %w", err)
+		}
+
+		for _, userID := range input.UserIds {
+			var member *db.User = nil
+			for _, m := range members {
+				if m.ID == *userID {
+					member = m
+				}
+			}
+			if member == nil {
+				return fmt.Errorf("user %q not in team %q", *userID, *input.TeamID)
+			}
+
+			err = dbtx.RemoveUserFromTeam(ctx, *userID, *input.TeamID)
+			if err != nil {
+				return err
+			}
+
+			correlationID, err := uuid.NewUUID()
+			if err != nil {
+				return fmt.Errorf("unable to create correlation ID for audit log")
+			}
+
+			fields := auditlogger.Fields{
+				Action:          sqlc.AuditActionGraphqlApiTeamRemoveMember,
+				CorrelationID:   correlationID,
+				ActorEmail:      &actor.Email,
+				TargetTeamSlug:  &team.Slug,
+				TargetUserEmail: &member.Email,
+			}
+			r.auditLogger.Logf(ctx, fields, "Removed user")
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	return r.database.GetTeamByID(ctx, *input.TeamID)
+	return team, nil
 }
 
 func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUID) (*db.Team, error) {
@@ -120,6 +163,19 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 	}
 
 	r.teamReconciler <- reconcilerInput
+
+	correlationID, err := uuid.NewUUID()
+	if err != nil {
+		return nil, fmt.Errorf("unable to create correlation ID for audit log")
+	}
+
+	fields := auditlogger.Fields{
+		Action:         sqlc.AuditActionGraphqlApiTeamSetMemberRole,
+		CorrelationID:  correlationID,
+		ActorEmail:     &actor.Email,
+		TargetTeamSlug: &team.Slug,
+	}
+	r.auditLogger.Logf(ctx, fields, "Synchronize team")
 	return team, nil
 }
 
@@ -130,12 +186,45 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 		return nil, err
 	}
 
-	err = r.database.AddUsersToTeam(ctx, dereference(input.UserIds), *input.TeamID)
+	var team *db.Team
+	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
+		team, err = dbtx.GetTeamByID(ctx, *input.TeamID)
+		if err != nil {
+			return fmt.Errorf("team does not exist: %w", err)
+		}
+
+		for _, userID := range input.UserIds {
+			user, err := dbtx.GetUserByID(ctx, *userID)
+			if err != nil {
+				return err
+			}
+
+			err = dbtx.SetTeamMemberRole(ctx, *userID, *input.TeamID, sqlc.RoleNameTeammember)
+			if err != nil {
+				return err
+			}
+
+			correlationID, err := uuid.NewUUID()
+			if err != nil {
+				return fmt.Errorf("unable to create correlation ID for audit log")
+			}
+
+			fields := auditlogger.Fields{
+				Action:          sqlc.AuditActionGraphqlApiTeamAddMember,
+				CorrelationID:   correlationID,
+				ActorEmail:      &actor.Email,
+				TargetTeamSlug:  &team.Slug,
+				TargetUserEmail: &user.Email,
+			}
+			r.auditLogger.Logf(ctx, fields, "Add team member")
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	return r.database.GetTeamByID(ctx, *input.TeamID)
+	return team, nil
 }
 
 func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTeamOwnersInput) (*db.Team, error) {
@@ -145,12 +234,42 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 		return nil, err
 	}
 
-	err = r.database.SetTeamMembersRole(ctx, dereference(input.UserIds), *input.TeamID, sqlc.RoleNameTeamowner)
-	if err != nil {
-		return nil, err
-	}
+	var team *db.Team
+	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
+		team, err = dbtx.GetTeamByID(ctx, *input.TeamID)
+		if err != nil {
+			return fmt.Errorf("team does not exist: %w", err)
+		}
 
-	return r.database.GetTeamByID(ctx, *input.TeamID)
+		for _, userID := range input.UserIds {
+			user, err := dbtx.GetUserByID(ctx, *userID)
+			if err != nil {
+				return err
+			}
+
+			err = dbtx.SetTeamMemberRole(ctx, *userID, *input.TeamID, sqlc.RoleNameTeamowner)
+			if err != nil {
+				return err
+			}
+
+			correlationID, err := uuid.NewUUID()
+			if err != nil {
+				return fmt.Errorf("unable to create correlation ID for audit log")
+			}
+
+			fields := auditlogger.Fields{
+				Action:          sqlc.AuditActionGraphqlApiTeamAddOwner,
+				CorrelationID:   correlationID,
+				ActorEmail:      &actor.Email,
+				TargetTeamSlug:  &team.Slug,
+				TargetUserEmail: &user.Email,
+			}
+			r.auditLogger.Logf(ctx, fields, "User team owner")
+		}
+		return nil
+	})
+
+	return team, nil
 }
 
 func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.SetTeamMemberRoleInput) (*db.Team, error) {
@@ -160,17 +279,51 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 		return nil, err
 	}
 
+	team, err := r.database.GetTeamByID(ctx, *input.TeamID)
+	if err != nil {
+		return nil, err
+	}
+
+	members, err := r.database.GetTeamMembers(ctx, *input.TeamID)
+	if err != nil {
+		return nil, err
+	}
+
+	var member *db.User = nil
+	for _, m := range members {
+		if m.ID == *input.UserID {
+			member = m
+			break
+		}
+	}
+	if member == nil {
+		return nil, fmt.Errorf("user %q not in team %q", *input.UserID, *input.TeamID)
+	}
+
 	desieredRole, err := sqlcRoleFromTeamRole(input.Role)
 	if err != nil {
 		return nil, err
 	}
-
-	err = r.database.SetTeamMembersRole(ctx, []uuid.UUID{*input.UserID}, *input.TeamID, desieredRole)
+	err = r.database.SetTeamMemberRole(ctx, *input.UserID, *input.TeamID, desieredRole)
 	if err != nil {
 		return nil, err
 	}
 
-	return r.database.GetTeamByID(ctx, *input.TeamID)
+	correlationID, err := uuid.NewUUID()
+	if err != nil {
+		return nil, fmt.Errorf("unable to create correlation ID for audit log")
+	}
+
+	fields := auditlogger.Fields{
+		Action:          sqlc.AuditActionGraphqlApiTeamSetMemberRole,
+		CorrelationID:   correlationID,
+		ActorEmail:      &actor.Email,
+		TargetTeamSlug:  &team.Slug,
+		TargetUserEmail: &member.Email,
+	}
+	r.auditLogger.Logf(ctx, fields, "Set team member role to %q", desieredRole)
+
+	return team, nil
 }
 
 func (r *queryResolver) Teams(ctx context.Context) ([]*db.Team, error) {
