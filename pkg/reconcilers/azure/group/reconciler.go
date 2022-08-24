@@ -78,7 +78,12 @@ func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.
 	}
 
 	if created {
-		r.auditLogger.Logf(ctx, sqlc.AuditActionAzureGroupCreate, input.CorrelationID, r.Name(), nil, &input.Team.Slug, nil, "created Azure AD group: %s", grp)
+		fields := auditlogger.Fields{
+			Action:         sqlc.AuditActionAzureGroupCreate,
+			CorrelationID:  input.CorrelationID,
+			TargetTeamSlug: &input.Team.Slug,
+		}
+		r.auditLogger.Logf(ctx, fields, "created Azure AD group: %s", grp)
 
 		id, _ := uuid.Parse(grp.ID)
 		err = r.database.SetSystemState(ctx, r.Name(), input.Team.ID, reconcilers.AzureState{GroupID: &id})
@@ -123,7 +128,13 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 			consoleUserMap[remoteEmail] = user
 		}
 
-		r.auditLogger.Logf(ctx, sqlc.AuditActionAzureGroupDeleteMember, input.CorrelationID, r.Name(), nil, &input.Team.Slug, &remoteEmail, "removed member '%s' from Azure group '%s'", remoteEmail, grp.MailNickname)
+		fields := auditlogger.Fields{
+			Action:          sqlc.AuditActionAzureGroupDeleteMember,
+			CorrelationID:   input.CorrelationID,
+			TargetTeamSlug:  &input.Team.Slug,
+			TargetUserEmail: &remoteEmail,
+		}
+		r.auditLogger.Logf(ctx, fields, "removed member '%s' from Azure group '%s'", remoteEmail, grp.MailNickname)
 	}
 
 	membersToAdd := localOnlyMembers(members, localMembers)
@@ -139,7 +150,13 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 			continue
 		}
 
-		r.auditLogger.Logf(ctx, sqlc.AuditActionAzureGroupAddMember, input.CorrelationID, r.Name(), nil, &input.Team.Slug, &consoleUser.Email, "added member '%s' to Azure group '%s'", consoleUser.Email, grp.MailNickname)
+		fields := auditlogger.Fields{
+			Action:          sqlc.AuditActionAzureGroupAddMember,
+			CorrelationID:   input.CorrelationID,
+			TargetTeamSlug:  &input.Team.Slug,
+			TargetUserEmail: &consoleUser.Email,
+		}
+		r.auditLogger.Logf(ctx, fields, "added member '%s' to Azure group '%s'", consoleUser.Email, grp.MailNickname)
 	}
 
 	return nil

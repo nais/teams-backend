@@ -122,25 +122,27 @@ func TestSync(t *testing.T) {
 			Return(nil).
 			Once()
 
-		systemName := sqlc.SystemNameUsersync
 		auditLogger.
-			On("Logf", ctx, sqlc.AuditActionUsersyncUpdate, mock.AnythingOfType("uuid.UUID"), systemName, mock.Anything, mock.Anything, &updatedLocalUser.Email, mock.MatchedBy(func(message string) bool {
-				return message == "Local user updated: user1@example.com"
-			})).
+			On("Logf", ctx, mock.MatchedBy(func(f auditlogger.Fields) bool {
+				return f.Action == sqlc.AuditActionUsersyncUpdate &&
+					*f.TargetUserEmail == updatedLocalUser.Email
+			}), "Local user updated: user1@example.com").
 			Return(nil).
 			Once()
 
 		auditLogger.
-			On("Logf", ctx, sqlc.AuditActionUsersyncCreate, mock.AnythingOfType("uuid.UUID"), systemName, mock.Anything, mock.Anything, &newLocalUser.Email, mock.MatchedBy(func(message string) bool {
-				return message == "Local user created: user2@example.com"
-			})).
+			On("Logf", ctx, mock.MatchedBy(func(f auditlogger.Fields) bool {
+				return f.Action == sqlc.AuditActionUsersyncCreate &&
+					*f.TargetUserEmail == newLocalUser.Email
+			}), "Local user created: user2@example.com").
 			Return(nil).
 			Once()
 
 		auditLogger.
-			On("Logf", ctx, sqlc.AuditActionUsersyncDelete, mock.AnythingOfType("uuid.UUID"), systemName, mock.Anything, mock.Anything, &localUserThatWillBeDeleted.Email, mock.MatchedBy(func(message string) bool {
-				return message == "Local user deleted: delete-me@example.com"
-			})).
+			On("Logf", ctx, mock.MatchedBy(func(f auditlogger.Fields) bool {
+				return f.Action == sqlc.AuditActionUsersyncDelete &&
+					*f.TargetUserEmail == localUserThatWillBeDeleted.Email
+			}), "Local user deleted: delete-me@example.com").
 			Return(nil).
 			Once()
 

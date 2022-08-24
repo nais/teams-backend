@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/fixtures"
@@ -40,7 +41,13 @@ func (r *mutationResolver) CreateServiceAccount(ctx context.Context, input model
 		return nil, err
 	}
 
-	r.auditLogger.Logf(ctx, sqlc.AuditActionGraphqlApiServiceAccountCreate, correlationID, r.systemName, &actor.Email, nil, &serviceAccount.Email, "Service account created")
+	fields := auditlogger.Fields{
+		Action:          sqlc.AuditActionGraphqlApiServiceAccountCreate,
+		CorrelationID:   correlationID,
+		ActorEmail:      &actor.Email,
+		TargetUserEmail: &serviceAccount.Email,
+	}
+	r.auditLogger.Logf(ctx, fields, "Service account created")
 
 	return serviceAccount, nil
 }
@@ -79,7 +86,13 @@ func (r *mutationResolver) DeleteServiceAccount(ctx context.Context, serviceAcco
 		return false, err
 	}
 
-	r.auditLogger.Logf(ctx, sqlc.AuditActionGraphqlApiServiceAccountDelete, correlationID, r.systemName, &actor.Email, nil, &serviceAccount.Email, "Service account deleted")
+	fields := auditlogger.Fields{
+		Action:          sqlc.AuditActionGraphqlApiServiceAccountDelete,
+		CorrelationID:   correlationID,
+		ActorEmail:      &actor.Email,
+		TargetUserEmail: &serviceAccount.Email,
+	}
+	r.auditLogger.Logf(ctx, fields, "Service account deleted")
 
 	return true, nil
 }

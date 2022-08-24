@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/graph/generated"
@@ -33,7 +34,13 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		return nil, err
 	}
 
-	r.auditLogger.Logf(ctx, sqlc.AuditActionGraphqlApiTeamCreate, correlationID, r.systemName, &actor.Email, &team.Slug, nil, "Team created")
+	fields := auditlogger.Fields{
+		Action:         sqlc.AuditActionGraphqlApiTeamCreate,
+		CorrelationID:  correlationID,
+		ActorEmail:     &actor.Email,
+		TargetTeamSlug: &team.Slug,
+	}
+	r.auditLogger.Logf(ctx, fields, "Team created")
 
 	reconcilerInput, err := reconcilers.CreateReconcilerInput(ctx, r.database, *team)
 	if err != nil {
@@ -62,7 +69,13 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, in
 		return nil, err
 	}
 
-	r.auditLogger.Logf(ctx, sqlc.AuditActionGraphqlApiTeamUpdate, correlationID, r.systemName, &actor.Email, &team.Slug, nil, "Team updated")
+	fields := auditlogger.Fields{
+		Action:         sqlc.AuditActionGraphqlApiTeamUpdate,
+		CorrelationID:  correlationID,
+		ActorEmail:     &actor.Email,
+		TargetTeamSlug: &team.Slug,
+	}
+	r.auditLogger.Logf(ctx, fields, "Team updated")
 
 	reconcilerInput, err := reconcilers.CreateReconcilerInput(ctx, r.database, *team)
 	if err != nil {

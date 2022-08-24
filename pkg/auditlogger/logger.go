@@ -14,11 +14,18 @@ import (
 )
 
 type auditLogger struct {
-	database db.Database
+	database   db.Database
+	systemName sqlc.SystemName
+}
+
+func (a auditLogger) WithSystemName(systemName sqlc.SystemName) AuditLogger {
+	a.systemName = systemName
+	return &a
 }
 
 type AuditLogger interface {
-	Logf(ctx context.Context, action sqlc.AuditAction, correlationID uuid.UUID, systemName sqlc.SystemName, actorEmail *string, targetTeamSlug *slug.Slug, targetUserEmail *string, message string, messageArgs ...interface{}) error
+	Logf(ctx context.Context, entry Fields, message string, messageArgs ...interface{}) error
+	WithSystemName(systemName sqlc.SystemName) AuditLogger
 }
 
 func New(database db.Database) AuditLogger {
@@ -27,21 +34,47 @@ func New(database db.Database) AuditLogger {
 	}
 }
 
-func (l *auditLogger) Logf(ctx context.Context, action sqlc.AuditAction, correlationID uuid.UUID, systemName sqlc.SystemName, actorEmail *string, targetTeamSlug *slug.Slug, targetUserEmail *string, message string, messageArgs ...interface{}) error {
+type Fields struct {
+	Action          sqlc.AuditAction
+	CorrelationID   uuid.UUID
+	ActorEmail      *string
+	TargetTeamSlug  *slug.Slug
+	TargetUserEmail *string
+}
+
+func (l *auditLogger) Logf(ctx context.Context, fields Fields, message string, messageArgs ...interface{}) error {
 	message = fmt.Sprintf(message, messageArgs...)
-	err := l.database.AddAuditLog(ctx, correlationID, systemName, actorEmail, targetTeamSlug, targetUserEmail, action, message)
+	err := l.database.AddAuditLog(
+		ctx,
+		fields.CorrelationID,
+		l.systemName,
+		fields.ActorEmail,
+		fields.TargetTeamSlug,
+		fields.TargetUserEmail,
+		fields.Action,
+		message,
+	)
 	if err != nil {
 		return fmt.Errorf("create audit log entry: %w", err)
 	}
 
-	log.StandardLogger().WithFields(log.Fields{
-		"action":            action,
-		"correlation_id":    correlationID,
-		"system_name":       systemName,
-		"actor_email":       str(actorEmail),
-		"target_team_slug":  str(targetTeamSlug.StringP()),
-		"target_user_email": str(targetUserEmail),
-	}).Infof(message)
+	logFields := log.Fields{
+		"action":         fields.Action,
+		"correlation_id": fields.CorrelationID,
+		"system_name":    l.systemName,
+	}
+	if fields.ActorEmail != nil {
+		logFields["actor_email"] = str(fields.ActorEmail)
+	}
+	if fields.TargetTeamSlug != nil {
+		logFields["target_team_slug"] = str(fields.TargetTeamSlug.StringP())
+	}
+	if fields.TargetUserEmail != nil {
+		logFields["target_user_email"] = str(fields.TargetUserEmail)
+	}
+
+	log.StandardLogger().WithFields(logFields).Infof(message)
+
 	return nil
 }
 

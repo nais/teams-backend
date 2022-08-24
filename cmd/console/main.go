@@ -85,9 +85,9 @@ func run() error {
 	// Control channels for goroutine communication
 	const maxQueueSize = 4096
 	teamReconciler := make(chan reconcilers.Input, maxQueueSize)
-	logger := auditlogger.New(database)
+	auditLogger := auditlogger.New(database) // base audit logger
 
-	recs, err := initReconcilers(ctx, database, cfg, logger)
+	recs, err := initReconcilers(ctx, database, cfg, auditLogger)
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func run() error {
 		return err
 	}
 
-	handler := setupGraphAPI(database, cfg.TenantDomain, teamReconciler, logger)
+	handler := setupGraphAPI(database, cfg.TenantDomain, teamReconciler, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi))
 	srv, err := setupHTTPServer(cfg, database, handler, authHandler, store)
 	if err != nil {
 		return err
@@ -158,7 +158,7 @@ func run() error {
 
 	// User synchronizer
 	userSyncTimer := time.NewTimer(1 * time.Second)
-	userSyncer, err := usersync.NewFromConfig(cfg, database, logger)
+	userSyncer, err := usersync.NewFromConfig(cfg, database, auditLogger.WithSystemName(sqlc.SystemNameUsersync))
 	if err != nil {
 		userSyncTimer.Stop()
 		if err != usersync.ErrNotEnabled {
@@ -328,7 +328,7 @@ func initReconcilers(ctx context.Context, database db.Database, cfg *config.Conf
 	}
 
 	for name, factory := range factories {
-		rec, err := factory(ctx, database, cfg, logger)
+		rec, err := factory(ctx, database, cfg, logger.WithSystemName(name))
 		switch err {
 		case reconcilers.ErrReconcilerNotEnabled:
 			log.Warnf("Reconciler '%s' is disabled through configuration", name)
@@ -343,8 +343,8 @@ func initReconcilers(ctx context.Context, database db.Database, cfg *config.Conf
 	return recs, nil
 }
 
-func setupGraphAPI(database db.Database, domain string, teamReconciler chan<- reconcilers.Input, logger auditlogger.AuditLogger) *graphql_handler.Server {
-	resolver := graph.NewResolver(database, domain, teamReconciler, logger)
+func setupGraphAPI(database db.Database, domain string, teamReconciler chan<- reconcilers.Input, auditLogger auditlogger.AuditLogger) *graphql_handler.Server {
+	resolver := graph.NewResolver(database, domain, teamReconciler, auditLogger)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
 	gc.Directives.Auth = directives.Auth(database)

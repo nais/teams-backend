@@ -145,8 +145,12 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *rec
 		return nil, fmt.Errorf("unable to convert operation response to the created GCP project: %w", err)
 	}
 
-	msg := fmt.Sprintf("created GCP project %q for team %q in environment %q", createdProject.Name, input.Team.Slug, environment)
-	r.auditLogger.Logf(ctx, sqlc.AuditActionGoogleGcpProjectCreateProject, input.CorrelationID, r.Name(), nil, &input.Team.Slug, nil, msg)
+	fields := auditlogger.Fields{
+		Action:         sqlc.AuditActionGoogleGcpProjectCreateProject,
+		CorrelationID:  input.CorrelationID,
+		TargetTeamSlug: &input.Team.Slug,
+	}
+	r.auditLogger.Logf(ctx, fields, "created GCP project %q for team %q in environment %q", createdProject.Name, input.Team.Slug, environment)
 
 	return createdProject, nil
 }
@@ -176,8 +180,12 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 	}
 
 	// FIXME: No need to log if no changes are made
-	msg := fmt.Sprintf("assigned GCP project IAM permissions for %q", projectName)
-	r.auditLogger.Logf(ctx, sqlc.AuditActionGoogleGcpProjectAssignPermissions, input.CorrelationID, r.Name(), nil, &input.Team.Slug, nil, msg)
+	fields := auditlogger.Fields{
+		Action:         sqlc.AuditActionGoogleGcpProjectAssignPermissions,
+		CorrelationID:  input.CorrelationID,
+		TargetTeamSlug: &input.Team.Slug,
+	}
+	r.auditLogger.Logf(ctx, fields, "assigned GCP project IAM permissions for %q", projectName)
 
 	return nil
 }

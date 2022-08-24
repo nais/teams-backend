@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/sqlc"
@@ -44,7 +45,13 @@ func (r *mutationResolver) CreateAPIKey(ctx context.Context, userID *uuid.UUID) 
 		return nil, fmt.Errorf("unable to create API key for user: %w", err)
 	}
 
-	r.auditLogger.Logf(ctx, sqlc.AuditActionGraphqlApiApiKeyCreate, correlationID, r.systemName, &actor.Email, nil, &serviceAccount.Email, "API key created")
+	fields := auditlogger.Fields{
+		Action:          sqlc.AuditActionGraphqlApiApiKeyCreate,
+		CorrelationID:   correlationID,
+		ActorEmail:      &actor.Email,
+		TargetUserEmail: &serviceAccount.Email,
+	}
+	r.auditLogger.Logf(ctx, fields, "API key created")
 
 	return &model.APIKey{
 		Key: apiKey,
