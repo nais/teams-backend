@@ -22,10 +22,6 @@ func (d *database) AssignTargetedRoleToUser(ctx context.Context, userID uuid.UUI
 	})
 }
 
-func (d *database) GetRoleNames() []sqlc.RoleName {
-	return sqlc.AllRoleNameValues()
-}
-
 // IsGlobal Check if the role is globally assigned or not
 func (r Role) IsGlobal() bool {
 	return !r.TargetID.Valid

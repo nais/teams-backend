@@ -32,29 +32,6 @@ func (_m *MockDatabase) AddAuditLog(ctx context.Context, correlationID uuid.UUID
 	return r0
 }
 
-// AddServiceAccount provides a mock function with given fields: ctx, name, email, userID
-func (_m *MockDatabase) AddServiceAccount(ctx context.Context, name slug.Slug, email string, userID uuid.UUID) (*User, error) {
-	ret := _m.Called(ctx, name, email, userID)
-
-	var r0 *User
-	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug, string, uuid.UUID) *User); ok {
-		r0 = rf(ctx, name, email, userID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*User)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug, string, uuid.UUID) error); ok {
-		r1 = rf(ctx, name, email, userID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // AddTeam provides a mock function with given fields: ctx, name, _a2, purpose, userID
 func (_m *MockDatabase) AddTeam(ctx context.Context, name string, _a2 slug.Slug, purpose *string, userID uuid.UUID) (*Team, error) {
 	ret := _m.Called(ctx, name, _a2, purpose, userID)
@@ -178,38 +155,6 @@ func (_m *MockDatabase) GetAuditLogsForTeam(ctx context.Context, _a1 slug.Slug) 
 	}
 
 	return r0, r1
-}
-
-// GetRoleNames provides a mock function with given fields:
-func (_m *MockDatabase) GetRoleNames() []sqlc.RoleName {
-	ret := _m.Called()
-
-	var r0 []sqlc.RoleName
-	if rf, ok := ret.Get(0).(func() []sqlc.RoleName); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]sqlc.RoleName)
-		}
-	}
-
-	return r0
-}
-
-// GetSystemNames provides a mock function with given fields:
-func (_m *MockDatabase) GetSystemNames() []sqlc.SystemName {
-	ret := _m.Called()
-
-	var r0 []sqlc.SystemName
-	if rf, ok := ret.Get(0).(func() []sqlc.SystemName); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]sqlc.SystemName)
-		}
-	}
-
-	return r0
 }
 
 // GetTeamByID provides a mock function with given fields: ctx, ID

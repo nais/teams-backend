@@ -3,8 +3,6 @@ package db
 import (
 	"context"
 
-	"github.com/nais/console/pkg/slug"
-
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/sqlc"
 )
@@ -35,41 +33,6 @@ func (d *database) AddUser(ctx context.Context, name, email string) (*User, erro
 	}
 
 	return &User{User: user}, nil
-}
-
-func (d *database) AddServiceAccount(ctx context.Context, name slug.Slug, email string, userID uuid.UUID) (*User, error) {
-	id, err := uuid.NewUUID()
-	if err != nil {
-		return nil, err
-	}
-
-	var serviceAccount *sqlc.User
-	err = d.querier.Transaction(ctx, func(querier Querier) error {
-		serviceAccount, err = querier.CreateUser(ctx, sqlc.CreateUserParams{
-			ID:    id,
-			Name:  string(name),
-			Email: email,
-		})
-		if err != nil {
-			return err
-		}
-
-		err = querier.AddTargetedUserRole(ctx, sqlc.AddTargetedUserRoleParams{
-			UserID:   userID,
-			RoleName: sqlc.RoleNameServiceaccountowner,
-			TargetID: nullUUID(&serviceAccount.ID),
-		})
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &User{User: serviceAccount}, nil
 }
 
 func (d *database) DeleteUser(ctx context.Context, userID uuid.UUID) error {
