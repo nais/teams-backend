@@ -18,18 +18,11 @@ type MemberResponse struct {
 	Value []*Member
 }
 
-type OwnerResponse struct {
-	Value []*Owner
-}
-
 type Member struct {
-	ID   string `json:"id,omitempty"`
-	Mail string `json:"mail,omitempty"`
-}
-
-type Owner struct {
-	ID                string `json:"id,omitempty"`
-	UserPrincipalName string `json:"userPrincipalName,omitempty"`
+	ID        string `json:"id,omitempty"`
+	GivenName string `json:"givenNAme,omitempty"`
+	Surname   string `json:"surname,omitempty"`
+	Mail      string `json:"mail,omitempty"`
 }
 
 type AddMemberRequest struct {
@@ -38,4 +31,8 @@ type AddMemberRequest struct {
 
 func (m Member) ODataID() string {
 	return "https://graph.microsoft.com/v1.0/directoryObjects/" + m.ID
+}
+
+func (m Member) Name() string {
+	return m.GivenName + " " + m.Surname
 }

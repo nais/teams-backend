@@ -47,34 +47,29 @@ func (gimp *GroupImporter) GroupMembers(groupID string) ([]*db.User, error) {
 	if err != nil {
 		return nil, err
 	}
-	users := make([]*db.User, 0, len(members))
-	for _, member := range members {
-		users = append(users, &db.User{
-			User: &sqlc.User{
-				Email: member.Mail,
-				Name:  member.Mail,
-			},
-		})
-	}
-	return users, nil
+	return dbUsers(members), nil
 }
 
 func (gimp *GroupImporter) GroupOwners(groupID string) ([]*db.User, error) {
 	ctx := context.Background()
-	members, err := gimp.client.ListGroupOwners(ctx, &azureclient.Group{
+	owners, err := gimp.client.ListGroupOwners(ctx, &azureclient.Group{
 		ID: groupID,
 	})
 	if err != nil {
 		return nil, err
 	}
+	return dbUsers(owners), nil
+}
+
+func dbUsers(members []*azureclient.Member) []*db.User {
 	users := make([]*db.User, 0, len(members))
 	for _, member := range members {
 		users = append(users, &db.User{
 			User: &sqlc.User{
-				Email: member.UserPrincipalName,
-				Name:  member.UserPrincipalName,
+				Email: member.Mail,
+				Name:  member.Name(),
 			},
 		})
 	}
-	return users, nil
+	return users
 }

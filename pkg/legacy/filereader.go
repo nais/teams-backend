@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/google/uuid"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
@@ -37,12 +36,14 @@ func (t *Team) Convert() *db.Team {
 		meta["slack-channel-platform-alerts"] = t.PlatformAlertsChannel
 	}
 
+	desc := sql.NullString{}
+	desc.Scan(t.Description)
+
 	return &db.Team{
 		Team: &sqlc.Team{
-			ID:      uuid.New(),
 			Slug:    slug.Slug(t.Name),
 			Name:    t.Name,
-			Purpose: sql.NullString{},
+			Purpose: desc,
 		},
 		Metadata: meta,
 	}

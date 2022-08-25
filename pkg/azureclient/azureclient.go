@@ -24,7 +24,7 @@ type Client interface {
 	GetOrCreateGroup(ctx context.Context, state reconcilers.AzureState, slug, name string, description *string) (*Group, bool, error)
 	GetUser(ctx context.Context, email string) (*Member, error)
 	ListGroupMembers(ctx context.Context, grp *Group) ([]*Member, error)
-	ListGroupOwners(ctx context.Context, grp *Group) ([]*Owner, error)
+	ListGroupOwners(ctx context.Context, grp *Group) ([]*Member, error)
 	RemoveMemberFromGroup(ctx context.Context, grp *Group, member *Member) error
 }
 
@@ -159,7 +159,7 @@ func (s *client) GetOrCreateGroup(ctx context.Context, state reconcilers.AzureSt
 }
 
 // https://docs.microsoft.com/en-us/graph/api/group-list-owners?view=graph-rest-1.0&tabs=http
-func (s *client) ListGroupOwners(ctx context.Context, grp *Group) ([]*Owner, error) {
+func (s *client) ListGroupOwners(ctx context.Context, grp *Group) ([]*Member, error) {
 	u := fmt.Sprintf("https://graph.microsoft.com/v1.0/groups/%s/owners", grp.ID)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
@@ -179,7 +179,7 @@ func (s *client) ListGroupOwners(ctx context.Context, grp *Group) ([]*Owner, err
 
 	defer resp.Body.Close()
 	dec := json.NewDecoder(resp.Body)
-	owners := &OwnerResponse{}
+	owners := &MemberResponse{}
 	err = dec.Decode(owners)
 
 	if err != nil {

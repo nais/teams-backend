@@ -153,15 +153,15 @@ func (_m *MockClient) ListGroupMembers(ctx context.Context, grp *Group) ([]*Memb
 }
 
 // ListGroupOwners provides a mock function with given fields: ctx, grp
-func (_m *MockClient) ListGroupOwners(ctx context.Context, grp *Group) ([]*Owner, error) {
+func (_m *MockClient) ListGroupOwners(ctx context.Context, grp *Group) ([]*Member, error) {
 	ret := _m.Called(ctx, grp)
 
-	var r0 []*Owner
-	if rf, ok := ret.Get(0).(func(context.Context, *Group) []*Owner); ok {
+	var r0 []*Member
+	if rf, ok := ret.Get(0).(func(context.Context, *Group) []*Member); ok {
 		r0 = rf(ctx, grp)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*Owner)
+			r0 = ret.Get(0).([]*Member)
 		}
 	}
 
