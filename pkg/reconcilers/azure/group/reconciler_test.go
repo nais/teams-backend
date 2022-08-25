@@ -72,12 +72,12 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Name:    teamName,
 			Purpose: teamPurpose,
 		},
-		Members: []*db.User{addUser, keepUser},
 	}
 
 	input := reconcilers.Input{
 		CorrelationID: correlationID,
 		Team:          team,
+		TeamMembers:   []*db.User{addUser, keepUser},
 	}
 
 	logHook := test.NewGlobal()

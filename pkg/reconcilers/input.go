@@ -11,6 +11,7 @@ import (
 type Input struct {
 	CorrelationID uuid.UUID
 	Team          db.Team
+	TeamMembers   []*db.User
 }
 
 // CreateReconcilerInput Helper function to create input for reconcilers, with members already set on the team object
@@ -25,11 +26,10 @@ func CreateReconcilerInput(ctx context.Context, database db.Database, team db.Te
 		return Input{}, err
 	}
 
-	team.Members = members
-
 	return Input{
 		CorrelationID: correlationID,
 		Team:          team,
+		TeamMembers:   members,
 	}, nil
 }
 

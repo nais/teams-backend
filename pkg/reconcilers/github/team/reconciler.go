@@ -86,7 +86,7 @@ func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.
 		log.Errorf("system state not persisted: %s", err)
 	}
 
-	return r.connectUsers(ctx, githubTeam, input.CorrelationID, input.Team)
+	return r.connectUsers(ctx, githubTeam, input)
 }
 
 func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconcilers.GitHubState, correlationID uuid.UUID, team db.Team) (*github.Team, error) {
@@ -127,13 +127,13 @@ func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconc
 	return githubTeam, nil
 }
 
-func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *github.Team, correlationID uuid.UUID, team db.Team) error {
+func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *github.Team, input reconcilers.Input) error {
 	membersAccordingToGitHub, err := r.getTeamMembers(ctx, *githubTeam.Slug)
 	if err != nil {
 		return fmt.Errorf("list existing members in GitHub team '%s': %w", *githubTeam.Slug, err)
 	}
 
-	membersAccordingToConsole := helpers.DomainUsers(team.Members, r.domain)
+	membersAccordingToConsole := helpers.DomainUsers(input.TeamMembers, r.domain)
 	consoleUserWithGitHubUser, err := r.mapSSOUsers(ctx, membersAccordingToConsole)
 	if err != nil {
 		return err
@@ -164,8 +164,8 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 
 		fields := auditlogger.Fields{
 			Action:         sqlc.AuditActionGithubTeamDeleteMember,
-			CorrelationID:  correlationID,
-			TargetTeamSlug: &team.Slug,
+			CorrelationID:  input.CorrelationID,
+			TargetTeamSlug: &input.Team.Slug,
 		}
 		r.auditLogger.Logf(ctx, fields, "deleted member '%s' from GitHub team '%s'", username, *githubTeam.Slug)
 	}
@@ -181,8 +181,8 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 
 		fields := auditlogger.Fields{
 			Action:          sqlc.AuditActionGithubTeamAddMember,
-			CorrelationID:   correlationID,
-			TargetTeamSlug:  &team.Slug,
+			CorrelationID:   input.CorrelationID,
+			TargetTeamSlug:  &input.Team.Slug,
 			TargetUserEmail: &consoleUser.Email,
 		}
 		r.auditLogger.Logf(ctx, fields, "added member '%s' to GitHub team '%s'", username, *githubTeam.Slug)

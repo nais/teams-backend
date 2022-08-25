@@ -101,7 +101,7 @@ func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.
 }
 
 func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclient.Group, input reconcilers.Input) error {
-	consoleTeamMembers := input.Team.Members
+	consoleTeamMembers := input.TeamMembers
 	members, err := r.client.ListGroupMembers(ctx, grp)
 	if err != nil {
 		return fmt.Errorf("list existing members in Azure group '%s': %s", grp.MailNickname, err)

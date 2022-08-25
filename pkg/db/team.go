@@ -12,7 +12,6 @@ import (
 type Team struct {
 	*sqlc.Team
 	Metadata map[string]string
-	Members  []*User
 }
 
 func (d *database) RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, teamID uuid.UUID) error {

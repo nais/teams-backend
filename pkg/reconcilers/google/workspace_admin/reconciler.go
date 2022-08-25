@@ -127,7 +127,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 	}
 
 	consoleUserMap := make(map[string]*db.User)
-	localMembers := helpers.DomainUsers(input.Team.Members, r.domain)
+	localMembers := helpers.DomainUsers(input.TeamMembers, r.domain)
 
 	membersToRemove := remoteOnlyMembers(membersAccordingToGoogle.Members, localMembers)
 	for _, member := range membersToRemove {

@@ -295,15 +295,15 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 			Name:    teamName,
 			Purpose: teamPurpose,
 		},
-		Members: []*db.User{
-			{User: &sqlc.User{Email: createEmail}},
-			{User: &sqlc.User{Email: keepEmail}},
-		},
 	}
 
 	input := reconcilers.Input{
 		CorrelationID: correlationID,
 		Team:          team,
+		TeamMembers: []*db.User{
+			{User: &sqlc.User{Email: createEmail}},
+			{User: &sqlc.User{Email: keepEmail}},
+		},
 	}
 
 	systemName := github_team_reconciler.Name
