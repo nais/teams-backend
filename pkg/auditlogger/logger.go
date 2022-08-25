@@ -2,6 +2,7 @@ package auditlogger
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/nais/console/pkg/slug"
@@ -18,9 +19,11 @@ type auditLogger struct {
 	systemName sqlc.SystemName
 }
 
-func (a auditLogger) WithSystemName(systemName sqlc.SystemName) AuditLogger {
-	a.systemName = systemName
-	return &a
+func (l *auditLogger) WithSystemName(systemName sqlc.SystemName) AuditLogger {
+	return &auditLogger{
+		database:   l.database,
+		systemName: systemName,
+	}
 }
 
 type AuditLogger interface {
@@ -43,6 +46,10 @@ type Fields struct {
 }
 
 func (l *auditLogger) Logf(ctx context.Context, fields Fields, message string, messageArgs ...interface{}) error {
+	if l.systemName == "" {
+		return errors.New("unable to create auditlog entry: missing systemName")
+	}
+
 	message = fmt.Sprintf(message, messageArgs...)
 	err := l.database.AddAuditLog(
 		ctx,
