@@ -74,7 +74,12 @@ CREATE TYPE audit_action AS ENUM (
 	'google:gcp:project:create-project',
 	'google:gcp:project:assign-permissions',
 
-	'nais:namespace:create-namespace'
+	'nais:namespace:create-namespace',
+
+    'legacy-importer:team:create',
+    'legacy-importer:team:add-member',
+    'legacy-importer:team:add-owner',
+    'legacy-importer:user:create'
 );
 
 CREATE TYPE system_name AS ENUM (
@@ -85,7 +90,8 @@ CREATE TYPE system_name AS ENUM (
     'google:workspace-admin',
     'nais:namespace',
     'graphql-api',
-    'usersync'
+    'usersync',
+    'legacy-importer'
 );
 
 -- users

@@ -53,6 +53,10 @@ const (
 	AuditActionGoogleGcpProjectCreateProject             AuditAction = "google:gcp:project:create-project"
 	AuditActionGoogleGcpProjectAssignPermissions         AuditAction = "google:gcp:project:assign-permissions"
 	AuditActionNaisNamespaceCreateNamespace              AuditAction = "nais:namespace:create-namespace"
+	AuditActionLegacyImporterTeamCreate                  AuditAction = "legacy-importer:team:create"
+	AuditActionLegacyImporterTeamAddMember               AuditAction = "legacy-importer:team:add-member"
+	AuditActionLegacyImporterTeamAddOwner                AuditAction = "legacy-importer:team:add-owner"
+	AuditActionLegacyImporterUserCreate                  AuditAction = "legacy-importer:user:create"
 )
 
 func (e *AuditAction) Scan(src interface{}) error {
@@ -126,7 +130,11 @@ func (e AuditAction) Valid() bool {
 		AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup,
 		AuditActionGoogleGcpProjectCreateProject,
 		AuditActionGoogleGcpProjectAssignPermissions,
-		AuditActionNaisNamespaceCreateNamespace:
+		AuditActionNaisNamespaceCreateNamespace,
+		AuditActionLegacyImporterTeamCreate,
+		AuditActionLegacyImporterTeamAddMember,
+		AuditActionLegacyImporterTeamAddOwner,
+		AuditActionLegacyImporterUserCreate:
 		return true
 	}
 	return false
@@ -169,6 +177,10 @@ func AllAuditActionValues() []AuditAction {
 		AuditActionGoogleGcpProjectCreateProject,
 		AuditActionGoogleGcpProjectAssignPermissions,
 		AuditActionNaisNamespaceCreateNamespace,
+		AuditActionLegacyImporterTeamCreate,
+		AuditActionLegacyImporterTeamAddMember,
+		AuditActionLegacyImporterTeamAddOwner,
+		AuditActionLegacyImporterUserCreate,
 	}
 }
 
@@ -362,6 +374,7 @@ const (
 	SystemNameNaisNamespace        SystemName = "nais:namespace"
 	SystemNameGraphqlApi           SystemName = "graphql-api"
 	SystemNameUsersync             SystemName = "usersync"
+	SystemNameLegacyImporter       SystemName = "legacy-importer"
 )
 
 func (e *SystemName) Scan(src interface{}) error {
@@ -408,7 +421,8 @@ func (e SystemName) Valid() bool {
 		SystemNameGoogleWorkspaceAdmin,
 		SystemNameNaisNamespace,
 		SystemNameGraphqlApi,
-		SystemNameUsersync:
+		SystemNameUsersync,
+		SystemNameLegacyImporter:
 		return true
 	}
 	return false
@@ -424,6 +438,7 @@ func AllSystemNameValues() []SystemName {
 		SystemNameNaisNamespace,
 		SystemNameGraphqlApi,
 		SystemNameUsersync,
+		SystemNameLegacyImporter,
 	}
 }
 
