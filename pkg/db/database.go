@@ -38,6 +38,8 @@ type Database interface {
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error)
 
 	AddTeam(ctx context.Context, name string, slug slug.Slug, purpose *string, userID uuid.UUID) (*Team, error)
+	SetTeamMetadata(ctx context.Context, teamID uuid.UUID, metadata TeamMetadata) error
+	GetTeamMetadata(ctx context.Context, teamID uuid.UUID) (TeamMetadata, error)
 	UpdateTeam(ctx context.Context, teamID uuid.UUID, name, purpose *string) (*Team, error)
 	GetTeamByID(ctx context.Context, ID uuid.UUID) (*Team, error)
 	GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)

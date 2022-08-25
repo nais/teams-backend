@@ -152,7 +152,7 @@ func TestImportTeamsFromLegacyAzure(t *testing.T) {
 			}
 
 			_, owner := first(teamOwners)
-			convertedTeam := yamlteam.Convert()
+			convertedTeam, metadata := yamlteam.Convert()
 
 			team, err := dbtx.GetTeamBySlug(ctx, convertedTeam.Slug)
 			if err != nil {
@@ -161,7 +161,10 @@ func TestImportTeamsFromLegacyAzure(t *testing.T) {
 					return err
 				}
 
-				// TODO: Store metadata
+				err = dbtx.SetTeamMetadata(ctx, team.ID, metadata)
+				if err != nil {
+					return err
+				}
 
 				err = auditLogger.Logf(ctx, auditlogger.Fields{
 					Action:         sqlc.AuditActionLegacyImporterTeamCreate,

@@ -21,5 +21,8 @@ ORDER BY users.name ASC;
 -- name: GetTeamMetadata :many
 SELECT * FROM team_metadata WHERE team_id = $1;
 
+-- name: SetTeamMetadata :exec
+INSERT INTO team_metadata (team_id, key, value) VALUES ($1, $2, $3) ON CONFLICT (team_id, key) DO UPDATE SET value = $3;
+
 -- name: UpdateTeam :one
 UPDATE teams SET name = COALESCE(sqlc.narg('name'), name), purpose = COALESCE(sqlc.arg('purpose'), purpose) WHERE id = sqlc.arg('id') RETURNING *;

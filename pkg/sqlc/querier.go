@@ -38,6 +38,7 @@ type Querier interface {
 	RemoveApiKeysFromUser(ctx context.Context, userID uuid.UUID) error
 	RemoveGlobalUserRole(ctx context.Context, arg RemoveGlobalUserRoleParams) error
 	RemoveTargetedUserRole(ctx context.Context, arg RemoveTargetedUserRoleParams) error
+	SetTeamMetadata(ctx context.Context, arg SetTeamMetadataParams) error
 	SetTeamSystemState(ctx context.Context, arg SetTeamSystemStateParams) error
 	SetUserName(ctx context.Context, arg SetUserNameParams) (*User, error)
 	UpdateTeam(ctx context.Context, arg UpdateTeamParams) (*Team, error)

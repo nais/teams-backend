@@ -361,12 +361,17 @@ func (r *teamResolver) Metadata(ctx context.Context, obj *db.Team) (map[string]i
 		return nil, err
 	}
 
-	metadata := make(map[string]interface{})
-	for k, v := range obj.Metadata {
-		metadata[k] = v
+	metadata, err := r.database.GetTeamMetadata(ctx, obj.ID)
+	if err != nil {
+		return nil, err
 	}
 
-	return metadata, nil
+	result := make(map[string]interface{})
+	for k, v := range metadata {
+		result[k] = v
+	}
+
+	return result, nil
 }
 
 func (r *teamResolver) AuditLogs(ctx context.Context, obj *db.Team) ([]*db.AuditLog, error) {

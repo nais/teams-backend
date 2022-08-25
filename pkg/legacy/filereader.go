@@ -25,8 +25,8 @@ type Team struct {
 	PlatformAlertsChannel string `yaml:"platform-alerts-channel"`
 }
 
-func (t *Team) Convert() *db.Team {
-	meta := make(map[string]string)
+func (t *Team) Convert() (*db.Team, db.TeamMetadata) {
+	meta := make(db.TeamMetadata)
 
 	if len(t.SlackChannel) > 0 {
 		meta["slack-channel-generic"] = t.SlackChannel
@@ -45,8 +45,7 @@ func (t *Team) Convert() *db.Team {
 			Name:    t.Name,
 			Purpose: desc,
 		},
-		Metadata: meta,
-	}
+	}, meta
 }
 
 func ReadTeamFiles(ymlPath, jsonPath string) (map[string]*Team, error) {

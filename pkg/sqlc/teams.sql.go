@@ -155,6 +155,21 @@ func (q *Queries) GetTeams(ctx context.Context) ([]*Team, error) {
 	return items, nil
 }
 
+const setTeamMetadata = `-- name: SetTeamMetadata :exec
+INSERT INTO team_metadata (team_id, key, value) VALUES ($1, $2, $3) ON CONFLICT (team_id, key) DO UPDATE SET value = $3
+`
+
+type SetTeamMetadataParams struct {
+	TeamID uuid.UUID
+	Key    string
+	Value  sql.NullString
+}
+
+func (q *Queries) SetTeamMetadata(ctx context.Context, arg SetTeamMetadataParams) error {
+	_, err := q.db.Exec(ctx, setTeamMetadata, arg.TeamID, arg.Key, arg.Value)
+	return err
+}
+
 const updateTeam = `-- name: UpdateTeam :one
 UPDATE teams SET name = COALESCE($1, name), purpose = COALESCE($2, purpose) WHERE id = $3 RETURNING id, slug, name, purpose
 `

@@ -9,9 +9,41 @@ import (
 	"github.com/nais/console/pkg/sqlc"
 )
 
+type TeamMetadata map[string]string
+
 type Team struct {
 	*sqlc.Team
-	Metadata map[string]string
+}
+
+func (d *database) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) (TeamMetadata, error) {
+	rows, err := d.querier.GetTeamMetadata(ctx, teamID)
+	if err != nil {
+		return nil, err
+	}
+
+	metadata := make(TeamMetadata)
+	for _, row := range rows {
+		metadata[row.Key] = row.Value.String
+	}
+
+	return metadata, nil
+}
+
+func (d *database) SetTeamMetadata(ctx context.Context, teamID uuid.UUID, metadata TeamMetadata) error {
+	return d.querier.Transaction(ctx, func(querier Querier) error {
+		for k, v := range metadata {
+			err := querier.SetTeamMetadata(ctx, sqlc.SetTeamMetadataParams{
+				TeamID: teamID,
+				Key:    k,
+				Value:  nullString(&v),
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 }
 
 func (d *database) RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, teamID uuid.UUID) error {
@@ -90,7 +122,7 @@ func (d *database) GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, er
 		return nil, err
 	}
 
-	return d.getTeam(ctx, &Team{Team: team})
+	return &Team{Team: team}, nil
 }
 
 func (d *database) GetTeamByID(ctx context.Context, id uuid.UUID) (*Team, error) {
@@ -99,7 +131,7 @@ func (d *database) GetTeamByID(ctx context.Context, id uuid.UUID) (*Team, error)
 		return nil, err
 	}
 
-	return d.getTeam(ctx, &Team{Team: team})
+	return &Team{Team: team}, nil
 }
 
 func (d *database) GetTeams(ctx context.Context) ([]*Team, error) {
@@ -128,22 +160,6 @@ func (d *database) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team,
 	}
 
 	return teams, nil
-}
-
-func (d *database) getTeam(ctx context.Context, team *Team) (*Team, error) {
-	metadata, err := d.querier.GetTeamMetadata(ctx, team.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	if team.Metadata == nil {
-		team.Metadata = make(map[string]string)
-	}
-	for _, row := range metadata {
-		team.Metadata[row.Key] = row.Value.String
-	}
-
-	return team, nil
 }
 
 func (d *database) GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error) {
