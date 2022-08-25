@@ -314,7 +314,7 @@ func setupDatabase(ctx context.Context, dbUrl string) (db.Database, error) {
 	}
 
 	queries := db.Wrap(sqlc.New(dbc), dbc)
-	return db.NewDatabase(queries, dbc), nil
+	return db.NewDatabase(queries), nil
 }
 
 func initReconcilers(ctx context.Context, database db.Database, cfg *config.Config, logger auditlogger.AuditLogger) ([]reconcilers.Reconciler, error) {

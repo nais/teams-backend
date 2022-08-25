@@ -49,39 +49,35 @@ func (d *database) UpdateTeam(ctx context.Context, teamID uuid.UUID, name, purpo
 	return &Team{Team: team}, nil
 }
 
-func (d *database) AddTeam(ctx context.Context, name string, slug slug.Slug, purpose *string, userID uuid.UUID) (*Team, error) {
+func (d *database) AddTeam(ctx context.Context, name string, slug slug.Slug, purpose *string, ownerUserID uuid.UUID) (*Team, error) {
 	id, err := uuid.NewUUID()
 	if err != nil {
 		return nil, err
 	}
 
-	tx, err := d.connPool.Begin(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback(ctx)
+	var team *sqlc.Team
+	err = d.querier.Transaction(ctx, func(querier Querier) error {
+		team, err = querier.CreateTeam(ctx, sqlc.CreateTeamParams{
+			ID:      id,
+			Name:    name,
+			Slug:    slug,
+			Purpose: nullString(purpose),
+		})
+		if err != nil {
+			return err
+		}
 
-	querier := d.querier.WithTx(tx)
-	team, err := querier.CreateTeam(ctx, sqlc.CreateTeamParams{
-		ID:      id,
-		Name:    name,
-		Slug:    slug,
-		Purpose: nullString(purpose),
+		err = querier.AddTargetedUserRole(ctx, sqlc.AddTargetedUserRoleParams{
+			UserID:   ownerUserID,
+			TargetID: nullUUID(&team.ID),
+			RoleName: sqlc.RoleNameTeamowner,
+		})
+		if err != nil {
+			return err
+		}
+
+		return nil
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	err = querier.AddTargetedUserRole(ctx, sqlc.AddTargetedUserRoleParams{
-		UserID:   userID,
-		TargetID: nullUUID(&team.ID),
-		RoleName: sqlc.RoleNameTeamowner,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	err = tx.Commit(ctx)
 	if err != nil {
 		return nil, err
 	}

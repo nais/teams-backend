@@ -11,15 +11,13 @@ import (
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/sqlc/schemas"
 )
 
 type database struct {
-	querier  Querier
-	connPool *pgxpool.Pool
+	querier Querier
 }
 
 type TransactionFunc func(ctx context.Context, dbtx Database) error
@@ -73,8 +71,8 @@ type Database interface {
 	SetUserName(ctx context.Context, userID uuid.UUID, name string) (*User, error)
 }
 
-func NewDatabase(q Querier, conn *pgxpool.Pool) Database {
-	return &database{querier: q, connPool: conn}
+func NewDatabase(q Querier) Database {
+	return &database{querier: q}
 }
 
 func NullStringToStringP(ns sql.NullString) *string {

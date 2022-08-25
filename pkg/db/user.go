@@ -44,32 +44,28 @@ func (d *database) AddServiceAccount(ctx context.Context, name slug.Slug, email 
 		return nil, err
 	}
 
-	tx, err := d.connPool.Begin(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback(ctx)
+	var serviceAccount *sqlc.User
+	err = d.querier.Transaction(ctx, func(querier Querier) error {
+		serviceAccount, err = querier.CreateUser(ctx, sqlc.CreateUserParams{
+			ID:    id,
+			Name:  string(name),
+			Email: email,
+		})
+		if err != nil {
+			return err
+		}
 
-	querier := d.querier.WithTx(tx)
-	serviceAccount, err := querier.CreateUser(ctx, sqlc.CreateUserParams{
-		ID:    id,
-		Name:  string(name),
-		Email: email,
+		err = querier.AddTargetedUserRole(ctx, sqlc.AddTargetedUserRoleParams{
+			UserID:   userID,
+			RoleName: sqlc.RoleNameServiceaccountowner,
+			TargetID: nullUUID(&serviceAccount.ID),
+		})
+		if err != nil {
+			return err
+		}
+
+		return nil
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	err = querier.AddTargetedUserRole(ctx, sqlc.AddTargetedUserRoleParams{
-		UserID:   userID,
-		RoleName: sqlc.RoleNameServiceaccountowner,
-		TargetID: nullUUID(&serviceAccount.ID),
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	err = tx.Commit(ctx)
 	if err != nil {
 		return nil, err
 	}

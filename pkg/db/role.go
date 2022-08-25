@@ -52,44 +52,34 @@ func (d *database) UserIsTeamOwner(ctx context.Context, userID, teamID uuid.UUID
 }
 
 func (d *database) SetTeamMemberRole(ctx context.Context, userID uuid.UUID, teamID uuid.UUID, role sqlc.RoleName) error {
-	tx, err := d.connPool.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(ctx)
+	return d.querier.Transaction(ctx, func(querier Querier) error {
+		err := querier.RemoveTargetedUserRole(ctx, sqlc.RemoveTargetedUserRoleParams{
+			UserID:   userID,
+			TargetID: nullUUID(&teamID),
+			RoleName: sqlc.RoleNameTeamowner,
+		})
+		if err != nil {
+			return err
+		}
 
-	querier := d.querier.WithTx(tx)
-	err = querier.RemoveTargetedUserRole(ctx, sqlc.RemoveTargetedUserRoleParams{
-		UserID:   userID,
-		TargetID: nullUUID(&teamID),
-		RoleName: sqlc.RoleNameTeamowner,
+		err = querier.RemoveTargetedUserRole(ctx, sqlc.RemoveTargetedUserRoleParams{
+			UserID:   userID,
+			TargetID: nullUUID(&teamID),
+			RoleName: sqlc.RoleNameTeammember,
+		})
+		if err != nil {
+			return err
+		}
+
+		err = querier.AddTargetedUserRole(ctx, sqlc.AddTargetedUserRoleParams{
+			UserID:   userID,
+			TargetID: nullUUID(&teamID),
+			RoleName: role,
+		})
+		if err != nil {
+			return err
+		}
+
+		return nil
 	})
-	if err != nil {
-		return err
-	}
-
-	err = querier.RemoveTargetedUserRole(ctx, sqlc.RemoveTargetedUserRoleParams{
-		UserID:   userID,
-		TargetID: nullUUID(&teamID),
-		RoleName: sqlc.RoleNameTeammember,
-	})
-	if err != nil {
-		return err
-	}
-
-	err = querier.AddTargetedUserRole(ctx, sqlc.AddTargetedUserRoleParams{
-		UserID:   userID,
-		TargetID: nullUUID(&teamID),
-		RoleName: role,
-	})
-	if err != nil {
-		return err
-	}
-
-	err = tx.Commit(ctx)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
