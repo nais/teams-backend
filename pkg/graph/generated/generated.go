@@ -54,10 +54,6 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
-	APIKey struct {
-		Key func(childComplexity int) int
-	}
-
 	AuditLog struct {
 		Action          func(childComplexity int) int
 		ActorEmail      func(childComplexity int) int
@@ -71,18 +67,13 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddTeamMembers       func(childComplexity int, input model.AddTeamMembersInput) int
-		AddTeamOwners        func(childComplexity int, input model.AddTeamOwnersInput) int
-		CreateAPIKey         func(childComplexity int, userID *uuid.UUID) int
-		CreateServiceAccount func(childComplexity int, input model.CreateServiceAccountInput) int
-		CreateTeam           func(childComplexity int, input model.CreateTeamInput) int
-		DeleteAPIKey         func(childComplexity int, userID *uuid.UUID) int
-		DeleteServiceAccount func(childComplexity int, serviceAccountID *uuid.UUID) int
-		RemoveUsersFromTeam  func(childComplexity int, input model.RemoveUsersFromTeamInput) int
-		SetTeamMemberRole    func(childComplexity int, input model.SetTeamMemberRoleInput) int
-		SynchronizeTeam      func(childComplexity int, teamID *uuid.UUID) int
-		UpdateServiceAccount func(childComplexity int, serviceAccountID *uuid.UUID, input model.UpdateServiceAccountInput) int
-		UpdateTeam           func(childComplexity int, teamID *uuid.UUID, input model.UpdateTeamInput) int
+		AddTeamMembers      func(childComplexity int, input model.AddTeamMembersInput) int
+		AddTeamOwners       func(childComplexity int, input model.AddTeamOwnersInput) int
+		CreateTeam          func(childComplexity int, input model.CreateTeamInput) int
+		RemoveUsersFromTeam func(childComplexity int, input model.RemoveUsersFromTeamInput) int
+		SetTeamMemberRole   func(childComplexity int, input model.SetTeamMemberRoleInput) int
+		SynchronizeTeam     func(childComplexity int, teamID *uuid.UUID) int
+		UpdateTeam          func(childComplexity int, teamID *uuid.UUID, input model.UpdateTeamInput) int
 	}
 
 	Query struct {
@@ -115,12 +106,11 @@ type ComplexityRoot struct {
 	}
 
 	User struct {
-		Email            func(childComplexity int) int
-		ID               func(childComplexity int) int
-		IsServiceAccount func(childComplexity int) int
-		Name             func(childComplexity int) int
-		Roles            func(childComplexity int) int
-		Teams            func(childComplexity int) int
+		Email func(childComplexity int) int
+		ID    func(childComplexity int) int
+		Name  func(childComplexity int) int
+		Roles func(childComplexity int) int
+		Teams func(childComplexity int) int
 	}
 
 	UserTeam struct {
@@ -134,8 +124,6 @@ type AuditLogResolver interface {
 	TargetUserEmail(ctx context.Context, obj *db.AuditLog) (*string, error)
 }
 type MutationResolver interface {
-	CreateAPIKey(ctx context.Context, userID *uuid.UUID) (*model.APIKey, error)
-	DeleteAPIKey(ctx context.Context, userID *uuid.UUID) (bool, error)
 	CreateTeam(ctx context.Context, input model.CreateTeamInput) (*db.Team, error)
 	UpdateTeam(ctx context.Context, teamID *uuid.UUID, input model.UpdateTeamInput) (*db.Team, error)
 	RemoveUsersFromTeam(ctx context.Context, input model.RemoveUsersFromTeamInput) (*db.Team, error)
@@ -143,9 +131,6 @@ type MutationResolver interface {
 	AddTeamMembers(ctx context.Context, input model.AddTeamMembersInput) (*db.Team, error)
 	AddTeamOwners(ctx context.Context, input model.AddTeamOwnersInput) (*db.Team, error)
 	SetTeamMemberRole(ctx context.Context, input model.SetTeamMemberRoleInput) (*db.Team, error)
-	CreateServiceAccount(ctx context.Context, input model.CreateServiceAccountInput) (*db.User, error)
-	UpdateServiceAccount(ctx context.Context, serviceAccountID *uuid.UUID, input model.UpdateServiceAccountInput) (*db.User, error)
-	DeleteServiceAccount(ctx context.Context, serviceAccountID *uuid.UUID) (bool, error)
 }
 type QueryResolver interface {
 	Teams(ctx context.Context) ([]*db.Team, error)
@@ -167,7 +152,6 @@ type TeamResolver interface {
 }
 type UserResolver interface {
 	Teams(ctx context.Context, obj *db.User) ([]*model.UserTeam, error)
-	IsServiceAccount(ctx context.Context, obj *db.User) (bool, error)
 	Roles(ctx context.Context, obj *db.User) ([]*db.Role, error)
 }
 
@@ -185,13 +169,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	ec := executionContext{nil, e}
 	_ = ec
 	switch typeName + "." + field {
-
-	case "APIKey.key":
-		if e.complexity.APIKey.Key == nil {
-			break
-		}
-
-		return e.complexity.APIKey.Key(childComplexity), true
 
 	case "AuditLog.action":
 		if e.complexity.AuditLog.Action == nil {
@@ -280,30 +257,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.AddTeamOwners(childComplexity, args["input"].(model.AddTeamOwnersInput)), true
 
-	case "Mutation.createAPIKey":
-		if e.complexity.Mutation.CreateAPIKey == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_createAPIKey_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.CreateAPIKey(childComplexity, args["userId"].(*uuid.UUID)), true
-
-	case "Mutation.createServiceAccount":
-		if e.complexity.Mutation.CreateServiceAccount == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_createServiceAccount_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.CreateServiceAccount(childComplexity, args["input"].(model.CreateServiceAccountInput)), true
-
 	case "Mutation.createTeam":
 		if e.complexity.Mutation.CreateTeam == nil {
 			break
@@ -315,30 +268,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.CreateTeam(childComplexity, args["input"].(model.CreateTeamInput)), true
-
-	case "Mutation.deleteAPIKey":
-		if e.complexity.Mutation.DeleteAPIKey == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_deleteAPIKey_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.DeleteAPIKey(childComplexity, args["userId"].(*uuid.UUID)), true
-
-	case "Mutation.deleteServiceAccount":
-		if e.complexity.Mutation.DeleteServiceAccount == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_deleteServiceAccount_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.DeleteServiceAccount(childComplexity, args["serviceAccountId"].(*uuid.UUID)), true
 
 	case "Mutation.removeUsersFromTeam":
 		if e.complexity.Mutation.RemoveUsersFromTeam == nil {
@@ -375,18 +304,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.SynchronizeTeam(childComplexity, args["teamId"].(*uuid.UUID)), true
-
-	case "Mutation.updateServiceAccount":
-		if e.complexity.Mutation.UpdateServiceAccount == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_updateServiceAccount_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.UpdateServiceAccount(childComplexity, args["serviceAccountId"].(*uuid.UUID), args["input"].(model.UpdateServiceAccountInput)), true
 
 	case "Mutation.updateTeam":
 		if e.complexity.Mutation.UpdateTeam == nil {
@@ -543,13 +460,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.User.ID(childComplexity), true
 
-	case "User.isServiceAccount":
-		if e.complexity.User.IsServiceAccount == nil {
-			break
-		}
-
-		return e.complexity.User.IsServiceAccount(childComplexity), true
-
 	case "User.name":
 		if e.complexity.User.Name == nil {
 			break
@@ -595,11 +505,9 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputAddTeamMembersInput,
 		ec.unmarshalInputAddTeamOwnersInput,
-		ec.unmarshalInputCreateServiceAccountInput,
 		ec.unmarshalInputCreateTeamInput,
 		ec.unmarshalInputRemoveUsersFromTeamInput,
 		ec.unmarshalInputSetTeamMemberRoleInput,
-		ec.unmarshalInputUpdateServiceAccountInput,
 		ec.unmarshalInputUpdateTeamInput,
 	)
 	first := true
@@ -661,31 +569,6 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
-	{Name: "../../../graphql/apikeys.graphqls", Input: `extend type Mutation {
-    """
-    Create an API key for a user or a service account, then return the created API key.
-
-    Any existing API keys for this user will be invalidated.
-
-    The API key value can only be retrieved through this call, so be sure to save the return value.
-    """
-    createAPIKey(
-        "ID of a user or a service account."
-        userId: UUID!
-    ): APIKey! @auth
-
-    "Delete any API keys associated with a user or a service account."
-    deleteAPIKey(
-        "ID of a user or a service account."
-        userId: UUID!
-    ): Boolean! @auth
-}
-
-"API key type."
-type APIKey {
-    "The API key."
-    key: String!
-}`, BuiltIn: false},
 	{Name: "../../../graphql/auditlogs.graphqls", Input: `"Audit log type."
 type AuditLog {
     "ID of the log entry."
@@ -977,29 +860,6 @@ enum TeamRole {
     me: User! @auth
 }
 
-extend type Mutation {
-    "Create and return a new service account."
-    createServiceAccount(
-        "Input for creation of the new service account."
-        input: CreateServiceAccountInput!
-    ): User! @auth
-
-    "Update an existing service account."
-    updateServiceAccount(
-        "ID of the service account to update."
-        serviceAccountId: UUID!
-
-        "Input for updating an existing service account."
-        input: UpdateServiceAccountInput!
-    ): User! @auth
-
-    "Delete an existing service account."
-    deleteServiceAccount(
-        "ID of the service account to delete."
-        serviceAccountId: UUID!
-    ): Boolean! @auth
-}
-
 "User type."
 type User {
     "Unique ID of the user."
@@ -1014,9 +874,6 @@ type User {
     "List of teams the user is a member of."
     teams: [UserTeam!]!
 
-    "Whether or not the user is a service account."
-    isServiceAccount: Boolean!
-
     "Roles attached to the user."
     roles: [Role!]!
 }
@@ -1028,18 +885,6 @@ type UserTeam {
 
     "The role that the user has in the team."
     role: TeamRole!
-}
-
-"Input for creating a new service account."
-input CreateServiceAccountInput {
-    "The name of the new service account. An email address will be automatically generated using the provided name."
-    name: Slug!
-}
-
-"Input for updating an existing service account."
-input UpdateServiceAccountInput {
-    "The new name of the service account. The email address will be automatically updated."
-    name: Slug!
 }`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
@@ -1078,36 +923,6 @@ func (ec *executionContext) field_Mutation_addTeamOwners_args(ctx context.Contex
 	return args, nil
 }
 
-func (ec *executionContext) field_Mutation_createAPIKey_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 *uuid.UUID
-	if tmp, ok := rawArgs["userId"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
-		arg0, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["userId"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_createServiceAccount_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 model.CreateServiceAccountInput
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNCreateServiceAccountInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐCreateServiceAccountInput(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["input"] = arg0
-	return args, nil
-}
-
 func (ec *executionContext) field_Mutation_createTeam_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -1120,36 +935,6 @@ func (ec *executionContext) field_Mutation_createTeam_args(ctx context.Context, 
 		}
 	}
 	args["input"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_deleteAPIKey_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 *uuid.UUID
-	if tmp, ok := rawArgs["userId"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
-		arg0, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["userId"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_deleteServiceAccount_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 *uuid.UUID
-	if tmp, ok := rawArgs["serviceAccountId"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("serviceAccountId"))
-		arg0, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["serviceAccountId"] = arg0
 	return args, nil
 }
 
@@ -1195,30 +980,6 @@ func (ec *executionContext) field_Mutation_synchronizeTeam_args(ctx context.Cont
 		}
 	}
 	args["teamId"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_updateServiceAccount_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 *uuid.UUID
-	if tmp, ok := rawArgs["serviceAccountId"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("serviceAccountId"))
-		arg0, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["serviceAccountId"] = arg0
-	var arg1 model.UpdateServiceAccountInput
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg1, err = ec.unmarshalNUpdateServiceAccountInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUpdateServiceAccountInput(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["input"] = arg1
 	return args, nil
 }
 
@@ -1328,50 +1089,6 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 // endregion ************************** directives.gotpl **************************
 
 // region    **************************** field.gotpl *****************************
-
-func (ec *executionContext) _APIKey_key(ctx context.Context, field graphql.CollectedField, obj *model.APIKey) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_APIKey_key(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Key, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_APIKey_key(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "APIKey",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
 
 func (ec *executionContext) _AuditLog_id(ctx context.Context, field graphql.CollectedField, obj *db.AuditLog) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_AuditLog_id(ctx, field)
@@ -1756,160 +1473,6 @@ func (ec *executionContext) fieldContext_AuditLog_createdAt(ctx context.Context,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Time does not have child fields")
 		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_createAPIKey(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_createAPIKey(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		directive0 := func(rctx context.Context) (interface{}, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().CreateAPIKey(rctx, fc.Args["userId"].(*uuid.UUID))
-		}
-		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Auth == nil {
-				return nil, errors.New("directive auth is not implemented")
-			}
-			return ec.directives.Auth(ctx, nil, directive0)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*model.APIKey); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/graph/model.APIKey`, tmp)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.APIKey)
-	fc.Result = res
-	return ec.marshalNAPIKey2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAPIKey(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_createAPIKey(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "key":
-				return ec.fieldContext_APIKey_key(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type APIKey", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_createAPIKey_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_deleteAPIKey(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_deleteAPIKey(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		directive0 := func(rctx context.Context) (interface{}, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().DeleteAPIKey(rctx, fc.Args["userId"].(*uuid.UUID))
-		}
-		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Auth == nil {
-				return nil, errors.New("directive auth is not implemented")
-			}
-			return ec.directives.Auth(ctx, nil, directive0)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(bool); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be bool`, tmp)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(bool)
-	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_deleteAPIKey(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_deleteAPIKey_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
 	}
 	return fc, nil
 }
@@ -2551,259 +2114,6 @@ func (ec *executionContext) fieldContext_Mutation_setTeamMemberRole(ctx context.
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_createServiceAccount(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_createServiceAccount(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		directive0 := func(rctx context.Context) (interface{}, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().CreateServiceAccount(rctx, fc.Args["input"].(model.CreateServiceAccountInput))
-		}
-		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Auth == nil {
-				return nil, errors.New("directive auth is not implemented")
-			}
-			return ec.directives.Auth(ctx, nil, directive0)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*db.User); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/db.User`, tmp)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*db.User)
-	fc.Result = res
-	return ec.marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐUser(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_createServiceAccount(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_User_id(ctx, field)
-			case "email":
-				return ec.fieldContext_User_email(ctx, field)
-			case "name":
-				return ec.fieldContext_User_name(ctx, field)
-			case "teams":
-				return ec.fieldContext_User_teams(ctx, field)
-			case "isServiceAccount":
-				return ec.fieldContext_User_isServiceAccount(ctx, field)
-			case "roles":
-				return ec.fieldContext_User_roles(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_createServiceAccount_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_updateServiceAccount(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_updateServiceAccount(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		directive0 := func(rctx context.Context) (interface{}, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().UpdateServiceAccount(rctx, fc.Args["serviceAccountId"].(*uuid.UUID), fc.Args["input"].(model.UpdateServiceAccountInput))
-		}
-		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Auth == nil {
-				return nil, errors.New("directive auth is not implemented")
-			}
-			return ec.directives.Auth(ctx, nil, directive0)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*db.User); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/db.User`, tmp)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*db.User)
-	fc.Result = res
-	return ec.marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐUser(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_updateServiceAccount(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_User_id(ctx, field)
-			case "email":
-				return ec.fieldContext_User_email(ctx, field)
-			case "name":
-				return ec.fieldContext_User_name(ctx, field)
-			case "teams":
-				return ec.fieldContext_User_teams(ctx, field)
-			case "isServiceAccount":
-				return ec.fieldContext_User_isServiceAccount(ctx, field)
-			case "roles":
-				return ec.fieldContext_User_roles(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_updateServiceAccount_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_deleteServiceAccount(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_deleteServiceAccount(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		directive0 := func(rctx context.Context) (interface{}, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().DeleteServiceAccount(rctx, fc.Args["serviceAccountId"].(*uuid.UUID))
-		}
-		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Auth == nil {
-				return nil, errors.New("directive auth is not implemented")
-			}
-			return ec.directives.Auth(ctx, nil, directive0)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(bool); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be bool`, tmp)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(bool)
-	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_deleteServiceAccount(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_deleteServiceAccount_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Query_teams(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query_teams(ctx, field)
 	if err != nil {
@@ -3042,8 +2352,6 @@ func (ec *executionContext) fieldContext_Query_users(ctx context.Context, field 
 				return ec.fieldContext_User_name(ctx, field)
 			case "teams":
 				return ec.fieldContext_User_teams(ctx, field)
-			case "isServiceAccount":
-				return ec.fieldContext_User_isServiceAccount(ctx, field)
 			case "roles":
 				return ec.fieldContext_User_roles(ctx, field)
 			}
@@ -3120,8 +2428,6 @@ func (ec *executionContext) fieldContext_Query_user(ctx context.Context, field g
 				return ec.fieldContext_User_name(ctx, field)
 			case "teams":
 				return ec.fieldContext_User_teams(ctx, field)
-			case "isServiceAccount":
-				return ec.fieldContext_User_isServiceAccount(ctx, field)
 			case "roles":
 				return ec.fieldContext_User_roles(ctx, field)
 			}
@@ -3209,8 +2515,6 @@ func (ec *executionContext) fieldContext_Query_me(ctx context.Context, field gra
 				return ec.fieldContext_User_name(ctx, field)
 			case "teams":
 				return ec.fieldContext_User_teams(ctx, field)
-			case "isServiceAccount":
-				return ec.fieldContext_User_isServiceAccount(ctx, field)
 			case "roles":
 				return ec.fieldContext_User_roles(ctx, field)
 			}
@@ -3853,8 +3157,6 @@ func (ec *executionContext) fieldContext_TeamMember_user(ctx context.Context, fi
 				return ec.fieldContext_User_name(ctx, field)
 			case "teams":
 				return ec.fieldContext_User_teams(ctx, field)
-			case "isServiceAccount":
-				return ec.fieldContext_User_isServiceAccount(ctx, field)
 			case "roles":
 				return ec.fieldContext_User_roles(ctx, field)
 			}
@@ -4085,50 +3387,6 @@ func (ec *executionContext) fieldContext_User_teams(ctx context.Context, field g
 				return ec.fieldContext_UserTeam_role(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UserTeam", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _User_isServiceAccount(ctx context.Context, field graphql.CollectedField, obj *db.User) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_User_isServiceAccount(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.User().IsServiceAccount(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(bool)
-	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_User_isServiceAccount(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "User",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
 		},
 	}
 	return fc, nil
@@ -6125,29 +5383,6 @@ func (ec *executionContext) unmarshalInputAddTeamOwnersInput(ctx context.Context
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputCreateServiceAccountInput(ctx context.Context, obj interface{}) (model.CreateServiceAccountInput, error) {
-	var it model.CreateServiceAccountInput
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "name":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-			it.Name, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
 func (ec *executionContext) unmarshalInputCreateTeamInput(ctx context.Context, obj interface{}) (model.CreateTeamInput, error) {
 	var it model.CreateTeamInput
 	asMap := map[string]interface{}{}
@@ -6257,29 +5492,6 @@ func (ec *executionContext) unmarshalInputSetTeamMemberRoleInput(ctx context.Con
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputUpdateServiceAccountInput(ctx context.Context, obj interface{}) (model.UpdateServiceAccountInput, error) {
-	var it model.UpdateServiceAccountInput
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "name":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-			it.Name, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
 func (ec *executionContext) unmarshalInputUpdateTeamInput(ctx context.Context, obj interface{}) (model.UpdateTeamInput, error) {
 	var it model.UpdateTeamInput
 	asMap := map[string]interface{}{}
@@ -6318,34 +5530,6 @@ func (ec *executionContext) unmarshalInputUpdateTeamInput(ctx context.Context, o
 // endregion ************************** interface.gotpl ***************************
 
 // region    **************************** object.gotpl ****************************
-
-var aPIKeyImplementors = []string{"APIKey"}
-
-func (ec *executionContext) _APIKey(ctx context.Context, sel ast.SelectionSet, obj *model.APIKey) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, aPIKeyImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("APIKey")
-		case "key":
-
-			out.Values[i] = ec._APIKey_key(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
 
 var auditLogImplementors = []string{"AuditLog"}
 
@@ -6467,24 +5651,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Mutation")
-		case "createAPIKey":
-
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_createAPIKey(ctx, field)
-			})
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "deleteAPIKey":
-
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_deleteAPIKey(ctx, field)
-			})
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
 		case "createTeam":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
@@ -6543,33 +5709,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_setTeamMemberRole(ctx, field)
-			})
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "createServiceAccount":
-
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_createServiceAccount(ctx, field)
-			})
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "updateServiceAccount":
-
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_updateServiceAccount(ctx, field)
-			})
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "deleteServiceAccount":
-
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_deleteServiceAccount(ctx, field)
 			})
 
 			if out.Values[i] == graphql.Null {
@@ -7010,26 +6149,6 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 				return innerFunc(ctx)
 
 			})
-		case "isServiceAccount":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._User_isServiceAccount(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
 		case "roles":
 			field := field
 
@@ -7414,20 +6533,6 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 
 // region    ***************************** type.gotpl *****************************
 
-func (ec *executionContext) marshalNAPIKey2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAPIKey(ctx context.Context, sel ast.SelectionSet, v model.APIKey) graphql.Marshaler {
-	return ec._APIKey(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNAPIKey2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAPIKey(ctx context.Context, sel ast.SelectionSet, v *model.APIKey) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._APIKey(ctx, sel, v)
-}
-
 func (ec *executionContext) unmarshalNAddTeamMembersInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAddTeamMembersInput(ctx context.Context, v interface{}) (model.AddTeamMembersInput, error) {
 	res, err := ec.unmarshalInputAddTeamMembersInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -7521,11 +6626,6 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 		}
 	}
 	return res
-}
-
-func (ec *executionContext) unmarshalNCreateServiceAccountInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐCreateServiceAccountInput(ctx context.Context, v interface{}) (model.CreateServiceAccountInput, error) {
-	res, err := ec.unmarshalInputCreateServiceAccountInput(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNCreateTeamInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐCreateTeamInput(ctx context.Context, v interface{}) (model.CreateTeamInput, error) {
@@ -7867,11 +6967,6 @@ func (ec *executionContext) marshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(
 		}
 	}
 	return res
-}
-
-func (ec *executionContext) unmarshalNUpdateServiceAccountInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUpdateServiceAccountInput(ctx context.Context, v interface{}) (model.UpdateServiceAccountInput, error) {
-	res, err := ec.unmarshalInputUpdateServiceAccountInput(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNUpdateTeamInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUpdateTeamInput(ctx context.Context, v interface{}) (model.UpdateTeamInput, error) {
