@@ -34,17 +34,17 @@ func (q *Queries) Transaction(ctx context.Context, callback QuerierTxFn) error {
 		return err
 	}
 
-	defer q.rollback(ctx)
+	defer querier.rollback(ctx)
 
 	err = callback(querier)
 	if err != nil {
 		return err
 	}
 
-	return q.commit(ctx)
+	return querier.commit(ctx)
 }
 
-func (q *Queries) begin(ctx context.Context) (Querier, error) {
+func (q *Queries) begin(ctx context.Context) (*Queries, error) {
 	var err error
 	var tx pgx.Tx
 
