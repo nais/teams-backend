@@ -18,7 +18,7 @@ import (
 )
 
 func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*db.Team, error) {
-	actor := authz.UserFromContext(ctx)
+	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameTeamsCreate)
 	if err != nil {
 		return nil, err
@@ -29,7 +29,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		return nil, fmt.Errorf("unable to create log correlation ID: %w", err)
 	}
 
-	team, err := r.database.AddTeam(ctx, input.Name, *input.Slug, input.Purpose, actor.ID)
+	team, err := r.database.AddTeam(ctx, input.Name, *input.Slug, input.Purpose, actor.User.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +37,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 	fields := auditlogger.Fields{
 		Action:         sqlc.AuditActionGraphqlApiTeamCreate,
 		CorrelationID:  correlationID,
-		ActorEmail:     &actor.Email,
+		ActorEmail:     &actor.User.Email,
 		TargetTeamSlug: &team.Slug,
 	}
 	r.auditLogger.Logf(ctx, fields, "Team created")
@@ -53,7 +53,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 }
 
 func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, input model.UpdateTeamInput) (*db.Team, error) {
-	actor := authz.UserFromContext(ctx)
+	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *teamID)
 	if err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, in
 	fields := auditlogger.Fields{
 		Action:         sqlc.AuditActionGraphqlApiTeamUpdate,
 		CorrelationID:  correlationID,
-		ActorEmail:     &actor.Email,
+		ActorEmail:     &actor.User.Email,
 		TargetTeamSlug: &team.Slug,
 	}
 	r.auditLogger.Logf(ctx, fields, "Team updated")
@@ -88,7 +88,7 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, in
 }
 
 func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.RemoveUsersFromTeamInput) (*db.Team, error) {
-	actor := authz.UserFromContext(ctx)
+	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *input.TeamID)
 	if err != nil {
 		return nil, err
@@ -130,7 +130,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 			fields := auditlogger.Fields{
 				Action:          sqlc.AuditActionGraphqlApiTeamRemoveMember,
 				CorrelationID:   correlationID,
-				ActorEmail:      &actor.Email,
+				ActorEmail:      &actor.User.Email,
 				TargetTeamSlug:  &team.Slug,
 				TargetUserEmail: &member.Email,
 			}
@@ -146,7 +146,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 }
 
 func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUID) (*db.Team, error) {
-	actor := authz.UserFromContext(ctx)
+	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *teamID)
 	if err != nil {
 		return nil, err
@@ -172,7 +172,7 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 	fields := auditlogger.Fields{
 		Action:         sqlc.AuditActionGraphqlApiTeamSetMemberRole,
 		CorrelationID:  correlationID,
-		ActorEmail:     &actor.Email,
+		ActorEmail:     &actor.User.Email,
 		TargetTeamSlug: &team.Slug,
 	}
 	r.auditLogger.Logf(ctx, fields, "Synchronize team")
@@ -180,7 +180,7 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 }
 
 func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTeamMembersInput) (*db.Team, error) {
-	actor := authz.UserFromContext(ctx)
+	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *input.TeamID)
 	if err != nil {
 		return nil, err
@@ -212,7 +212,7 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 			fields := auditlogger.Fields{
 				Action:          sqlc.AuditActionGraphqlApiTeamAddMember,
 				CorrelationID:   correlationID,
-				ActorEmail:      &actor.Email,
+				ActorEmail:      &actor.User.Email,
 				TargetTeamSlug:  &team.Slug,
 				TargetUserEmail: &user.Email,
 			}
@@ -228,7 +228,7 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 }
 
 func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTeamOwnersInput) (*db.Team, error) {
-	actor := authz.UserFromContext(ctx)
+	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *input.TeamID)
 	if err != nil {
 		return nil, err
@@ -260,7 +260,7 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 			fields := auditlogger.Fields{
 				Action:          sqlc.AuditActionGraphqlApiTeamAddOwner,
 				CorrelationID:   correlationID,
-				ActorEmail:      &actor.Email,
+				ActorEmail:      &actor.User.Email,
 				TargetTeamSlug:  &team.Slug,
 				TargetUserEmail: &user.Email,
 			}
@@ -273,7 +273,7 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 }
 
 func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.SetTeamMemberRoleInput) (*db.Team, error) {
-	actor := authz.UserFromContext(ctx)
+	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *input.TeamID)
 	if err != nil {
 		return nil, err
@@ -317,7 +317,7 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 	fields := auditlogger.Fields{
 		Action:          sqlc.AuditActionGraphqlApiTeamSetMemberRole,
 		CorrelationID:   correlationID,
-		ActorEmail:      &actor.Email,
+		ActorEmail:      &actor.User.Email,
 		TargetTeamSlug:  &team.Slug,
 		TargetUserEmail: &member.Email,
 	}
@@ -327,7 +327,7 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 }
 
 func (r *queryResolver) Teams(ctx context.Context) ([]*db.Team, error) {
-	actor := authz.UserFromContext(ctx)
+	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameTeamsList)
 	if err != nil {
 		return nil, err
@@ -337,7 +337,7 @@ func (r *queryResolver) Teams(ctx context.Context) ([]*db.Team, error) {
 }
 
 func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*db.Team, error) {
-	actor := authz.UserFromContext(ctx)
+	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsRead, *id)
 	if err != nil {
 		return nil, err
@@ -355,7 +355,7 @@ func (r *teamResolver) Purpose(ctx context.Context, obj *db.Team) (*string, erro
 }
 
 func (r *teamResolver) Metadata(ctx context.Context, obj *db.Team) (map[string]interface{}, error) {
-	actor := authz.UserFromContext(ctx)
+	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsRead, obj.ID)
 	if err != nil {
 		return nil, err
@@ -370,7 +370,7 @@ func (r *teamResolver) Metadata(ctx context.Context, obj *db.Team) (map[string]i
 }
 
 func (r *teamResolver) AuditLogs(ctx context.Context, obj *db.Team) ([]*db.AuditLog, error) {
-	actor := authz.UserFromContext(ctx)
+	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameAuditLogsRead, obj.ID)
 	if err != nil {
 		return nil, err
@@ -380,7 +380,7 @@ func (r *teamResolver) AuditLogs(ctx context.Context, obj *db.Team) ([]*db.Audit
 }
 
 func (r *teamResolver) Members(ctx context.Context, obj *db.Team) ([]*model.TeamMember, error) {
-	actor := authz.UserFromContext(ctx)
+	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameUsersList)
 	if err != nil {
 		return nil, err

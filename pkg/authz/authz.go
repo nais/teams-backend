@@ -13,26 +13,41 @@ import (
 
 type ContextKey string
 
-const contextKeyUser ContextKey = "user"
-
-// ContextWithUser Return a context with a user module stored.
-func ContextWithUser(ctx context.Context, user *db.User) context.Context {
-	return context.WithValue(ctx, contextKeyUser, user)
+type actor struct {
+	User  *db.User
+	Roles []*db.Role
 }
 
-// UserFromContext Finds any authenticated user from the context. Requires that a middleware has stored a user in the
-// first place.
-func UserFromContext(ctx context.Context) *db.User {
-	user, _ := ctx.Value(contextKeyUser).(*db.User)
-	return user
+func (u *actor) Authenticated() bool {
+	if u == nil || u.User == nil {
+		return false
+	}
+
+	return true
+}
+
+const contextKeyUser ContextKey = "actor"
+
+// ContextWithActor Return a context with an actor attached to it.
+func ContextWithActor(ctx context.Context, user *db.User, roles []*db.Role) context.Context {
+	return context.WithValue(ctx, contextKeyUser, &actor{
+		User:  user,
+		Roles: roles,
+	})
+}
+
+// ActorFromContext Get the actor stored in the context. Requires that a middleware has stored an actor in the first
+// place.
+func ActorFromContext(ctx context.Context) *actor {
+	actor, _ := ctx.Value(contextKeyUser).(*actor)
+	return actor
 }
 
 var ErrNotAuthorized = errors.New("not authorized")
 
-// RequireGlobalAuthorization Require an actor to have a specific authorization through a globally assigned role. The
-// roles must already be attached to the actor.
-func RequireGlobalAuthorization(actor *db.User, requiredAuthzName sqlc.AuthzName) error {
-	if actor == nil {
+// RequireGlobalAuthorization Require an actor to have a specific authorization through a globally assigned role.
+func RequireGlobalAuthorization(actor *actor, requiredAuthzName sqlc.AuthzName) error {
+	if !actor.Authenticated() {
 		return ErrNotAuthorized
 	}
 
@@ -50,9 +65,9 @@ func RequireGlobalAuthorization(actor *db.User, requiredAuthzName sqlc.AuthzName
 }
 
 // RequireAuthorization Require an actor to have a specific authorization through a globally assigned or a correctly
-// targeted role. The roles must already be attached to the actor.
-func RequireAuthorization(actor *db.User, requiredAuthzName sqlc.AuthzName, target uuid.UUID) error {
-	if actor == nil {
+// targeted role.
+func RequireAuthorization(actor *actor, requiredAuthzName sqlc.AuthzName, target uuid.UUID) error {
+	if !actor.Authenticated() {
 		return ErrNotAuthorized
 	}
 
@@ -70,10 +85,13 @@ func RequireAuthorization(actor *db.User, requiredAuthzName sqlc.AuthzName, targ
 }
 
 // RequireAuthorizationOrTargetMatch Require an actor to have a specific authorization through a globally assigned or a
-// correctly targeted role. The roles must already be attached to the actor. If the actor matches the target,
-// the action will be allowed.
-func RequireAuthorizationOrTargetMatch(actor *db.User, requiredAuthzName sqlc.AuthzName, target uuid.UUID) error {
-	if actor != nil && actor.ID == target {
+// correctly targeted role. If the actor matches the target the action will be allowed.
+func RequireAuthorizationOrTargetMatch(actor *actor, requiredAuthzName sqlc.AuthzName, target uuid.UUID) error {
+	if !actor.Authenticated() {
+		return ErrNotAuthorized
+	}
+
+	if actor.User.ID == target {
 		return nil
 	}
 

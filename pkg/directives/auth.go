@@ -15,12 +15,12 @@ type AuthDirective func(ctx context.Context, obj interface{}, next graphql.Resol
 // Auth Make sure there is an authenticated user making this request.
 func Auth(database db.Database) AuthDirective {
 	return func(ctx context.Context, obj interface{}, next graphql.Resolver) (interface{}, error) {
-		user := authz.UserFromContext(ctx)
-		if user == nil {
+		actor := authz.ActorFromContext(ctx)
+		if !actor.Authenticated() {
 			return nil, fmt.Errorf("this endpoint requires an authenticated user")
 		}
 
-		_, err := database.GetUserByID(ctx, user.ID)
+		_, err := database.GetUserByID(ctx, actor.User.ID)
 		if err != nil {
 			return nil, fmt.Errorf("user in context does not exist in database: %w", err)
 		}

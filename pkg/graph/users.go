@@ -20,7 +20,7 @@ import (
 )
 
 func (r *mutationResolver) CreateServiceAccount(ctx context.Context, input model.CreateServiceAccountInput) (*db.User, error) {
-	actor := authz.UserFromContext(ctx)
+	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameServiceAccountsCreate)
 	if err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func (r *mutationResolver) CreateServiceAccount(ctx context.Context, input model
 		return nil, fmt.Errorf("unable to create correlation ID for audit log: %w", err)
 	}
 
-	serviceAccount, err := r.database.AddServiceAccount(ctx, *input.Name, serviceaccount.Email(*input.Name, r.tenantDomain), actor.ID)
+	serviceAccount, err := r.database.AddServiceAccount(ctx, *input.Name, serviceaccount.Email(*input.Name, r.tenantDomain), actor.User.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func (r *mutationResolver) CreateServiceAccount(ctx context.Context, input model
 	fields := auditlogger.Fields{
 		Action:          sqlc.AuditActionGraphqlApiServiceAccountCreate,
 		CorrelationID:   correlationID,
-		ActorEmail:      &actor.Email,
+		ActorEmail:      &actor.User.Email,
 		TargetUserEmail: &serviceAccount.Email,
 	}
 	r.auditLogger.Logf(ctx, fields, "Service account created")
@@ -57,7 +57,7 @@ func (r *mutationResolver) UpdateServiceAccount(ctx context.Context, serviceAcco
 }
 
 func (r *mutationResolver) DeleteServiceAccount(ctx context.Context, serviceAccountID *uuid.UUID) (bool, error) {
-	actor := authz.UserFromContext(ctx)
+	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameServiceAccountsDelete, *serviceAccountID)
 	if err != nil {
 		return false, err
@@ -89,7 +89,7 @@ func (r *mutationResolver) DeleteServiceAccount(ctx context.Context, serviceAcco
 	fields := auditlogger.Fields{
 		Action:          sqlc.AuditActionGraphqlApiServiceAccountDelete,
 		CorrelationID:   correlationID,
-		ActorEmail:      &actor.Email,
+		ActorEmail:      &actor.User.Email,
 		TargetUserEmail: &serviceAccount.Email,
 	}
 	r.auditLogger.Logf(ctx, fields, "Service account deleted")
@@ -98,7 +98,7 @@ func (r *mutationResolver) DeleteServiceAccount(ctx context.Context, serviceAcco
 }
 
 func (r *queryResolver) Users(ctx context.Context) ([]*db.User, error) {
-	actor := authz.UserFromContext(ctx)
+	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameUsersList)
 	if err != nil {
 		return nil, err
@@ -108,7 +108,7 @@ func (r *queryResolver) Users(ctx context.Context) ([]*db.User, error) {
 }
 
 func (r *queryResolver) User(ctx context.Context, id *uuid.UUID) (*db.User, error) {
-	actor := authz.UserFromContext(ctx)
+	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameUsersList)
 	if err != nil {
 		return nil, err
@@ -118,11 +118,11 @@ func (r *queryResolver) User(ctx context.Context, id *uuid.UUID) (*db.User, erro
 }
 
 func (r *queryResolver) Me(ctx context.Context) (*db.User, error) {
-	return authz.UserFromContext(ctx), nil
+	return authz.ActorFromContext(ctx).User, nil
 }
 
 func (r *userResolver) Teams(ctx context.Context, obj *db.User) ([]*model.UserTeam, error) {
-	actor := authz.UserFromContext(ctx)
+	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameTeamsList)
 	if err != nil {
 		return nil, err
@@ -155,7 +155,7 @@ func (r *userResolver) Teams(ctx context.Context, obj *db.User) ([]*model.UserTe
 }
 
 func (r *userResolver) IsServiceAccount(ctx context.Context, obj *db.User) (bool, error) {
-	actor := authz.UserFromContext(ctx)
+	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameServiceAccountsRead, obj.ID)
 	if err != nil {
 		return false, err
@@ -165,7 +165,7 @@ func (r *userResolver) IsServiceAccount(ctx context.Context, obj *db.User) (bool
 }
 
 func (r *userResolver) Roles(ctx context.Context, obj *db.User) ([]*db.Role, error) {
-	actor := authz.UserFromContext(ctx)
+	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorizationOrTargetMatch(actor, sqlc.AuthzNameUsersUpdate, obj.ID)
 	if err != nil {
 		return nil, err

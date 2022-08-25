@@ -20,7 +20,13 @@ func Autologin(database db.Database, email string) func(next http.Handler) http.
 				return
 			}
 
-			ctx = authz.ContextWithUser(ctx, user)
+			roles, err := database.GetUserRoles(ctx, user.ID)
+			if err != nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			ctx = authz.ContextWithActor(ctx, user, roles)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		}
 		return http.HandlerFunc(fn)

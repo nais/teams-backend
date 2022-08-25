@@ -24,8 +24,8 @@ func TestAutologin(t *testing.T) {
 			Once()
 		responseWriter := httptest.NewRecorder()
 		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			user := authz.UserFromContext(r.Context())
-			assert.Nil(t, user)
+			actor := authz.ActorFromContext(r.Context())
+			assert.Nil(t, actor)
 		})
 		req := getRequest()
 		middleware := middleware.Autologin(database, "unknown@example.com")
@@ -40,16 +40,25 @@ func TestAutologin(t *testing.T) {
 				Name:  "User Name",
 			},
 		}
+		roles := []*db.Role{
+			{Name: sqlc.RoleNameAdmin},
+		}
+
 		database := db.NewMockDatabase(t)
 		database.
 			On("GetUserByEmail", mock.Anything, "user@example.com").
 			Return(user, nil).
 			Once()
+		database.
+			On("GetUserRoles", mock.Anything, user.ID).
+			Return(roles, nil).
+			Once()
 		responseWriter := httptest.NewRecorder()
 		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			userInContext := authz.UserFromContext(r.Context())
-			assert.NotNil(t, userInContext)
-			assert.Equal(t, user, userInContext)
+			actor := authz.ActorFromContext(r.Context())
+			assert.NotNil(t, actor)
+			assert.Equal(t, user, actor.User)
+			assert.Equal(t, roles, actor.Roles)
 		})
 		req := getRequest()
 		middleware := middleware.Autologin(database, "user@example.com")

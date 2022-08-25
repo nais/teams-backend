@@ -46,7 +46,7 @@ func TestAuth(t *testing.T) {
 		nextHandler = func(ctx context.Context) (res interface{}, err error) {
 			panic("Should not be executed")
 		}
-		_, err := auth(authz.ContextWithUser(context.Background(), user), obj, nextHandler)
+		_, err := auth(authz.ContextWithActor(context.Background(), user, []*db.Role{}), obj, nextHandler)
 		assert.EqualError(t, err, "user in context does not exist in database: record not found")
 	})
 }

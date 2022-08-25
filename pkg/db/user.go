@@ -11,7 +11,6 @@ import (
 
 type User struct {
 	*sqlc.User
-	Roles []*Role
 }
 
 type Role struct {
@@ -83,7 +82,7 @@ func (d *database) GetUserByEmail(ctx context.Context, email string) (*User, err
 		return nil, err
 	}
 
-	return d.getUser(ctx, &User{User: user})
+	return &User{User: user}, nil
 }
 
 func (d *database) GetUserByApiKey(ctx context.Context, apiKey string) (*User, error) {
@@ -92,7 +91,7 @@ func (d *database) GetUserByApiKey(ctx context.Context, apiKey string) (*User, e
 		return nil, err
 	}
 
-	return d.getUser(ctx, &User{User: user})
+	return &User{User: user}, nil
 }
 
 func (d *database) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
@@ -101,7 +100,7 @@ func (d *database) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error)
 		return nil, err
 	}
 
-	return d.getUser(ctx, &User{User: user})
+	return &User{User: user}, nil
 }
 
 func (d *database) getUserRoles(ctx context.Context, userID uuid.UUID) ([]*Role, error) {
@@ -144,7 +143,7 @@ func (d *database) SetUserName(ctx context.Context, userID uuid.UUID, name strin
 		return nil, err
 	}
 
-	return d.getUser(ctx, &User{User: user})
+	return &User{User: user}, nil
 }
 
 func (d *database) GetUsersByEmail(ctx context.Context, email string) ([]*User, error) {
@@ -153,7 +152,7 @@ func (d *database) GetUsersByEmail(ctx context.Context, email string) ([]*User, 
 		return nil, err
 	}
 
-	return d.getUsers(ctx, users)
+	return d.getUsers(users)
 }
 
 func (d *database) GetUsers(ctx context.Context) ([]*User, error) {
@@ -162,31 +161,16 @@ func (d *database) GetUsers(ctx context.Context) ([]*User, error) {
 		return nil, err
 	}
 
-	return d.getUsers(ctx, users)
+	return d.getUsers(users)
 }
 
-func (d *database) getUsers(ctx context.Context, users []*sqlc.User) ([]*User, error) {
+func (d *database) getUsers(users []*sqlc.User) ([]*User, error) {
 	result := make([]*User, 0)
 	for _, user := range users {
-		u, err := d.getUser(ctx, &User{User: user})
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, u)
+		result = append(result, &User{User: user})
 	}
 
 	return result, nil
-}
-
-func (d *database) getUser(ctx context.Context, user *User) (*User, error) {
-	userRoles, err := d.getUserRoles(ctx, user.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	user.Roles = userRoles
-
-	return user, nil
 }
 
 func (d *database) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*Role, error) {

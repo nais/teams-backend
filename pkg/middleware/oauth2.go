@@ -39,7 +39,13 @@ func Oauth2Authentication(database db.Database, store authn.SessionStore) func(n
 				return
 			}
 
-			ctx = authz.ContextWithUser(r.Context(), user)
+			roles, err := database.GetUserRoles(ctx, user.ID)
+			if err != nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			ctx = authz.ContextWithActor(r.Context(), user, roles)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		}
 		return http.HandlerFunc(fn)

@@ -17,7 +17,7 @@ import (
 )
 
 func (r *mutationResolver) CreateAPIKey(ctx context.Context, userID *uuid.UUID) (*model.APIKey, error) {
-	actor := authz.UserFromContext(ctx)
+	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameServiceAccountsUpdate, *userID)
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func (r *mutationResolver) CreateAPIKey(ctx context.Context, userID *uuid.UUID) 
 	fields := auditlogger.Fields{
 		Action:          sqlc.AuditActionGraphqlApiApiKeyCreate,
 		CorrelationID:   correlationID,
-		ActorEmail:      &actor.Email,
+		ActorEmail:      &actor.User.Email,
 		TargetUserEmail: &serviceAccount.Email,
 	}
 	r.auditLogger.Logf(ctx, fields, "API key created")
@@ -59,7 +59,7 @@ func (r *mutationResolver) CreateAPIKey(ctx context.Context, userID *uuid.UUID) 
 }
 
 func (r *mutationResolver) DeleteAPIKey(ctx context.Context, userID *uuid.UUID) (bool, error) {
-	actor := authz.UserFromContext(ctx)
+	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameServiceAccountsUpdate, *userID)
 	if err != nil {
 		return false, err
