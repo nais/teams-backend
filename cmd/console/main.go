@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/99designs/gqlgen/graphql/handler/extension"
+
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/directives"
 	"github.com/nais/console/pkg/graph"
@@ -349,6 +351,12 @@ func setupGraphAPI(database db.Database, domain string, teamReconciler chan<- re
 	gc := generated.Config{}
 	gc.Resolvers = resolver
 	gc.Directives.Auth = directives.Auth(database)
+	gc.Complexity.User.Teams = func(childComplexity int) int {
+		return 10 * childComplexity
+	}
+	gc.Complexity.Team.Members = func(childComplexity int) int {
+		return 10 * childComplexity
+	}
 
 	handler := graphql_handler.NewDefaultServer(
 		generated.NewExecutableSchema(
@@ -356,6 +364,8 @@ func setupGraphAPI(database db.Database, domain string, teamReconciler chan<- re
 		),
 	)
 	handler.SetErrorPresenter(graph.GetErrorPresenter())
+	handler.Use(extension.FixedComplexityLimit(1000))
+
 	return handler
 }
 
