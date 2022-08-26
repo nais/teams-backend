@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/jackc/pgconn"
+
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/db"
@@ -39,12 +41,10 @@ func NewResolver(database db.Database, tenantDomain string, teamReconciler chan<
 func GetErrorPresenter() graphql.ErrorPresenterFunc {
 	return func(ctx context.Context, e error) *gqlerror.Error {
 		err := graphql.DefaultErrorPresenter(ctx, e)
+		unwrappedError := errors.Unwrap(e)
 
-		if errors.Is(err, db.ErrNoRows) {
-			err.Message = "Not found"
-			err.Extensions = map[string]interface{}{
-				"code": "404",
-			}
+		if pgErr, ok := unwrappedError.(*pgconn.PgError); ok {
+			err.Message = pgErr.Detail
 		}
 
 		return err

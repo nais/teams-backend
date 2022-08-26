@@ -10,7 +10,6 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v4"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/sqlc/schemas"
@@ -21,8 +20,6 @@ type database struct {
 }
 
 type TransactionFunc func(ctx context.Context, dbtx Database) error
-
-var ErrNoRows = pgx.ErrNoRows
 
 type Database interface {
 	AddAuditLog(ctx context.Context, correlationID uuid.UUID, systemName sqlc.SystemName, actorEmail *string, targetTeamSlug *slug.Slug, targetUserEmail *string, action sqlc.AuditAction, message string) error
