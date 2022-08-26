@@ -300,11 +300,11 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 		return nil, fmt.Errorf("user %q not in team %q", *input.UserID, *input.TeamID)
 	}
 
-	desieredRole, err := sqlcRoleFromTeamRole(input.Role)
+	desiredRole, err := sqlcRoleFromTeamRole(input.Role)
 	if err != nil {
 		return nil, err
 	}
-	err = r.database.SetTeamMemberRole(ctx, *input.UserID, *input.TeamID, desieredRole)
+	err = r.database.SetTeamMemberRole(ctx, *input.UserID, *input.TeamID, desiredRole)
 	if err != nil {
 		return nil, err
 	}
@@ -321,7 +321,7 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 		TargetTeamSlug:  &team.Slug,
 		TargetUserEmail: &member.Email,
 	}
-	r.auditLogger.Logf(ctx, fields, "Set team member role to %q", desieredRole)
+	r.auditLogger.Logf(ctx, fields, "Set team member role to %q", desiredRole)
 
 	return team, nil
 }
