@@ -4,17 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/slug"
+
 	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
+	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
 
 	"cloud.google.com/go/pubsub"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
-	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers"
-	"golang.org/x/oauth2/jwt"
 	"google.golang.org/api/option"
-	"gorm.io/gorm"
 )
 
 const (
@@ -32,39 +34,37 @@ type naisdRequest struct {
 }
 
 type naisNamespaceReconciler struct {
-	db               *gorm.DB
-	config           *jwt.Config
+	database         db.Database
 	domain           string
 	auditLogger      auditlogger.AuditLogger
 	projectParentIDs map[string]int64
 	credentialsFile  string
 	projectID        string
-	system           dbmodels.System
 }
 
-const (
-	Name              = "nais:namespace"
-	OpCreateNamespace = "nais:namespace:create-namespace"
-)
+const Name = sqlc.SystemNameNaisNamespace
 
-func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, domain, credentialsFile, projectID string, projectParentIDs map[string]int64) *naisNamespaceReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, domain, credentialsFile, projectID string, projectParentIDs map[string]int64) *naisNamespaceReconciler {
 	return &naisNamespaceReconciler{
-		db:               db,
+		database:         database,
 		auditLogger:      auditLogger,
 		domain:           domain,
 		credentialsFile:  credentialsFile,
 		projectParentIDs: projectParentIDs,
 		projectID:        projectID,
-		system:           system,
 	}
 }
 
-func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.NaisNamespace.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
 
-	return New(db, system, auditLogger, cfg.TenantDomain, cfg.Google.CredentialsFile, cfg.NaisNamespace.ProjectID, cfg.GCP.ProjectParentIDs), nil
+	return New(database, auditLogger, cfg.TenantDomain, cfg.Google.CredentialsFile, cfg.NaisNamespace.ProjectID, cfg.GCP.ProjectParentIDs), nil
+}
+
+func (r *naisNamespaceReconciler) Name() sqlc.SystemName {
+	return Name
 }
 
 func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
@@ -74,23 +74,17 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	}
 
 	namespaceState := &reconcilers.GoogleGcpNaisNamespaceState{
-		Namespaces: make(map[string]dbmodels.Slug),
+		Namespaces: make(map[string]slug.Slug),
 	}
-	err = dbmodels.LoadSystemState(r.db, *r.system.ID, *input.Team.ID, namespaceState)
+	err = r.database.LoadSystemState(ctx, r.Name(), input.Team.ID, namespaceState)
 	if err != nil {
-		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
-	}
-
-	gcpSystem := &dbmodels.System{}
-	err = r.db.Where("name = ?", google_gcp_reconciler.Name).First(gcpSystem).Error
-	if err != nil {
-		return fmt.Errorf("unable to load GCP system: %w", err)
+		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.Name(), err)
 	}
 
 	gcpProjectState := &reconcilers.GoogleGcpProjectState{}
-	err = dbmodels.LoadSystemState(r.db, *gcpSystem.ID, *input.Team.ID, gcpProjectState)
+	err = r.database.LoadSystemState(ctx, google_gcp_reconciler.Name, input.Team.ID, gcpProjectState)
 	if err != nil {
-		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
+		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, google_gcp_reconciler.Name, err)
 	}
 
 	if len(gcpProjectState.Projects) == 0 {
@@ -104,12 +98,17 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 		}
 
 		if _, requested := namespaceState.Namespaces[environment]; !requested {
-			r.auditLogger.Logf(OpCreateNamespace, input.Corr, r.system, nil, &input.Team, nil, "request namespace creation for team '%s' in environment '%s'", input.Team.Slug, environment)
+			fields := auditlogger.Fields{
+				Action:         sqlc.AuditActionNaisNamespaceCreateNamespace,
+				CorrelationID:  input.CorrelationID,
+				TargetTeamSlug: &input.Team.Slug,
+			}
+			r.auditLogger.Logf(ctx, fields, "request namespace creation for team '%s' in environment '%s'", input.Team.Slug, environment)
 			namespaceState.Namespaces[environment] = input.Team.Slug
 		}
 	}
 
-	err = dbmodels.SetSystemState(r.db, *r.system.ID, *input.Team.ID, namespaceState)
+	err = r.database.SetSystemState(ctx, r.Name(), input.Team.ID, namespaceState)
 	if err != nil {
 		log.Errorf("system state not persisted: %s", err)
 	}
@@ -117,11 +116,7 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	return nil
 }
 
-func (r *naisNamespaceReconciler) System() dbmodels.System {
-	return r.system
-}
-
-func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, pubsubService *pubsub.Client, team dbmodels.Team, environment, gcpProjectID string) error {
+func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, pubsubService *pubsub.Client, team db.Team, environment, gcpProjectID string) error {
 	const topicPrefix = "naisd-console-"
 	req := &naisdRequest{
 		Type: NaisdCreateNamespace,

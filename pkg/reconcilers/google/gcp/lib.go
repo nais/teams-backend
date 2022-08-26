@@ -4,10 +4,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"strings"
+
+	"github.com/nais/console/pkg/slug"
 )
 
 // GenerateProjectID Generate a unique project ID for the team in a given environment in a deterministic fashion
-func GenerateProjectID(domain, environment, slug string) string {
+func GenerateProjectID(domain, environment string, slug slug.Slug) string {
 	hasher := sha256.New()
 	hasher.Write([]byte(slug))
 	hasher.Write([]byte{0})
@@ -16,7 +18,7 @@ func GenerateProjectID(domain, environment, slug string) string {
 	hasher.Write([]byte(domain))
 
 	parts := make([]string, 3)
-	parts[0] = truncate(slug, 20)
+	parts[0] = truncate(string(slug), 20)
 	parts[1] = truncate(environment, 4)
 	parts[2] = truncate(hex.EncodeToString(hasher.Sum(nil)), 4)
 

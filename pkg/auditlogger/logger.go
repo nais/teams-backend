@@ -1,64 +1,93 @@
 package auditlogger
 
 import (
+	"context"
+	"errors"
 	"fmt"
+
+	"github.com/nais/console/pkg/slug"
+
+	"github.com/nais/console/pkg/db"
+	log "github.com/sirupsen/logrus"
+
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/dbmodels"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
+	"github.com/nais/console/pkg/sqlc"
 )
 
 type auditLogger struct {
-	db *gorm.DB
+	database   db.Database
+	systemName sqlc.SystemName
+}
+
+func (l *auditLogger) WithSystemName(systemName sqlc.SystemName) AuditLogger {
+	return &auditLogger{
+		database:   l.database,
+		systemName: systemName,
+	}
 }
 
 type AuditLogger interface {
-	Logf(action string, corr dbmodels.Correlation, targetSystem dbmodels.System, actor *dbmodels.User, targetTeam *dbmodels.Team, targetUser *dbmodels.User, message string, messageArgs ...interface{}) error
+	Logf(ctx context.Context, entry Fields, message string, messageArgs ...interface{}) error
+	WithSystemName(systemName sqlc.SystemName) AuditLogger
 }
 
-func New(db *gorm.DB) AuditLogger {
+func New(database db.Database) AuditLogger {
 	return &auditLogger{
-		db: db,
+		database: database,
 	}
 }
 
-func (l *auditLogger) Logf(action string, corr dbmodels.Correlation, targetSystem dbmodels.System, actor *dbmodels.User, targetTeam *dbmodels.Team, targetUser *dbmodels.User, message string, messageArgs ...interface{}) error {
-	var actorId *uuid.UUID
-	var targetTeamId *uuid.UUID
-	var targetUserId *uuid.UUID
+type Fields struct {
+	Action          sqlc.AuditAction
+	CorrelationID   uuid.UUID
+	ActorEmail      *string
+	TargetTeamSlug  *slug.Slug
+	TargetUserEmail *string
+}
 
-	if actor != nil && actor.ID != nil {
-		actorId = actor.ID
+func (l *auditLogger) Logf(ctx context.Context, fields Fields, message string, messageArgs ...interface{}) error {
+	if l.systemName == "" {
+		return errors.New("unable to create auditlog entry: missing systemName")
 	}
 
-	if targetTeam != nil && targetTeam.ID != nil {
-		targetTeamId = targetTeam.ID
-	}
-
-	if targetUser != nil && targetUser.ID != nil {
-		targetUserId = targetUser.ID
-	}
-
-	logEntry := &dbmodels.AuditLog{
-		Action:         action,
-		Actor:          actor,
-		ActorID:        actorId,
-		Correlation:    corr,
-		CorrelationID:  *corr.ID,
-		TargetSystem:   targetSystem,
-		TargetSystemID: *targetSystem.ID,
-		TargetTeam:     targetTeam,
-		TargetUser:     targetUser,
-		TargetTeamID:   targetTeamId,
-		TargetUserID:   targetUserId,
-
-		Message: fmt.Sprintf(message, messageArgs...),
-	}
-	err := l.db.Omit(clause.Associations).Create(logEntry).Error
+	message = fmt.Sprintf(message, messageArgs...)
+	err := l.database.AddAuditLog(
+		ctx,
+		fields.CorrelationID,
+		l.systemName,
+		fields.ActorEmail,
+		fields.TargetTeamSlug,
+		fields.TargetUserEmail,
+		fields.Action,
+		message,
+	)
 	if err != nil {
-		return fmt.Errorf("store audit log line in database: %s", err)
+		return fmt.Errorf("create audit log entry: %w", err)
 	}
 
-	logEntry.Log().Infof(logEntry.Message)
-	return err
+	logFields := log.Fields{
+		"action":         fields.Action,
+		"correlation_id": fields.CorrelationID,
+		"system_name":    l.systemName,
+	}
+	if fields.ActorEmail != nil {
+		logFields["actor_email"] = str(fields.ActorEmail)
+	}
+	if fields.TargetTeamSlug != nil {
+		logFields["target_team_slug"] = str(fields.TargetTeamSlug.StringP())
+	}
+	if fields.TargetUserEmail != nil {
+		logFields["target_user_email"] = str(fields.TargetUserEmail)
+	}
+
+	log.StandardLogger().WithFields(logFields).Infof(message)
+
+	return nil
+}
+
+func str(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }

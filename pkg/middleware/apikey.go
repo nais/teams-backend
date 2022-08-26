@@ -4,14 +4,14 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/nais/console/pkg/db"
+
 	"github.com/nais/console/pkg/authz"
-	"github.com/nais/console/pkg/dbmodels"
-	"gorm.io/gorm"
 )
 
 // ApiKeyAuthentication If the request has an authorization header, we will try to pull the user who owns it from the
 // database and put the user into the context.
-func ApiKeyAuthentication(db *gorm.DB) func(next http.Handler) http.Handler {
+func ApiKeyAuthentication(database db.Database) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("authorization")
@@ -20,14 +20,20 @@ func ApiKeyAuthentication(db *gorm.DB) func(next http.Handler) http.Handler {
 				return
 			}
 
-			key := &dbmodels.ApiKey{}
-			err := db.Preload("User").Where("api_key = ?", authHeader[7:]).First(key).Error
+			ctx := r.Context()
+			user, err := database.GetUserByApiKey(ctx, authHeader[7:])
 			if err != nil {
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			ctx := authz.ContextWithUser(r.Context(), &key.User)
+			roles, err := database.GetUserRoles(ctx, user.ID)
+			if err != nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			ctx = authz.ContextWithActor(ctx, user, roles)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		}
 		return http.HandlerFunc(fn)

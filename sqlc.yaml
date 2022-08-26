@@ -1,0 +1,20 @@
+version: 2
+sql:
+  - engine: postgresql
+    schema: sqlc/schemas
+    queries: sqlc/queries
+    gen:
+      go:
+        package: sqlc
+        out: pkg/sqlc
+        sql_package: pgx/v4
+        emit_interface: true
+        emit_result_struct_pointers: true # set to true to be compliant with gqlgen's resolvers
+        emit_prepared_queries: true
+        emit_all_enum_values: true
+        emit_enum_valid_method: true
+        overrides:
+          - column: teams.slug
+            go_type: github.com/nais/console/pkg/slug.Slug
+          - column: audit_logs.target_team_slug
+            go_type: "*github.com/nais/console/pkg/slug.Slug"

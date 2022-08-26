@@ -1,10 +1,14 @@
 package legacy
 
 import (
+	"database/sql"
 	"encoding/json"
 	"os"
 
-	"github.com/nais/console/pkg/dbmodels"
+	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/slug"
+	"github.com/nais/console/pkg/sqlc"
+
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
@@ -21,30 +25,27 @@ type Team struct {
 	PlatformAlertsChannel string `yaml:"platform-alerts-channel"`
 }
 
-func (t *Team) Convert() *dbmodels.Team {
-	meta := make([]*dbmodels.TeamMetadata, 0)
+func (t *Team) Convert() (*db.Team, db.TeamMetadata) {
+	meta := make(db.TeamMetadata)
 
 	if len(t.SlackChannel) > 0 {
-		meta = append(meta, &dbmodels.TeamMetadata{
-			Key:   "slack-channel-generic",
-			Value: &t.SlackChannel,
-		})
+		meta["slack-channel-generic"] = t.SlackChannel
 	}
 
 	if len(t.PlatformAlertsChannel) > 0 {
-		meta = append(meta, &dbmodels.TeamMetadata{
-			Key:   "slack-channel-platform-alerts",
-			Value: &t.PlatformAlertsChannel,
-		})
+		meta["slack-channel-platform-alerts"] = t.PlatformAlertsChannel
 	}
 
-	slug := dbmodels.Slug(t.Name)
-	return &dbmodels.Team{
-		Slug:     slug,
-		Name:     t.Name,
-		Purpose:  &t.Description,
-		Metadata: meta,
-	}
+	desc := sql.NullString{}
+	desc.Scan(t.Description)
+
+	return &db.Team{
+		Team: &sqlc.Team{
+			Slug:    slug.Slug(t.Name),
+			Name:    t.Name,
+			Purpose: desc,
+		},
+	}, meta
 }
 
 func ReadTeamFiles(ymlPath, jsonPath string) (map[string]*Team, error) {

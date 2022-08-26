@@ -2,14 +2,15 @@ package google_jwt
 
 import (
 	"fmt"
+	"os"
+
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
-	"io/ioutil"
 )
 
 func GetConfig(credentialsFile, delegatedUser string) (*jwt.Config, error) {
-	b, err := ioutil.ReadFile(credentialsFile)
+	b, err := os.ReadFile(credentialsFile)
 	if err != nil {
 		return nil, fmt.Errorf("read google credentials file: %w", err)
 	}

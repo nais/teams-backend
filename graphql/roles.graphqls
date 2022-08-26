@@ -1,61 +1,11 @@
-extend type Query {
-    "Get a collection of roles."
-    roles(
-        "Pagination options."
-        pagination: Pagination
-
-        "Input for filtering the query."
-        query: RolesQuery
-
-        "Input for sorting the collection. If omitted the collection will be sorted by the name of the role in ascending order."
-        sort: RolesSort
-    ): Roles! @auth
-}
-
 "Role binding type."
-type RoleBinding {
-    "The connected role."
-    role: Role!
+type Role {
+    "Name of the role."
+    name: String!
 
     "Whether or not the role is global."
     isGlobal: Boolean!
 
     "Optional target of the role binding."
     targetId: UUID
-}
-
-"Role collection."
-type Roles {
-    "Object related to pagination of the collection."
-    pageInfo: PageInfo!
-
-    "The list of role objects in the collection."
-    nodes: [Role!]!
-}
-
-"Role type."
-type Role {
-    "Name of the role."
-    name: String!
-}
-
-"Input for filtering a collection of roles."
-input RolesQuery {
-    "Filter by role name."
-    name: String
-}
-
-"Input for sorting a collection of roles."
-input RolesSort {
-    "Field to sort by."
-    field: RoleSortField!
-
-    "Sort direction."
-    direction: SortDirection!
-}
-
-"Fields to sort the collection by."
-enum RoleSortField {
-    "Sort by name."
-    NAME
 }

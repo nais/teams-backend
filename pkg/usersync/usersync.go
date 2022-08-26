@@ -4,75 +4,62 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/nais/console/pkg/auditlogger"
-	"github.com/nais/console/pkg/dbmodels"
-	"github.com/nais/console/pkg/google_jwt"
-	"github.com/nais/console/pkg/roles"
-	"google.golang.org/api/option"
-	"gorm.io/gorm"
 	"net/http"
 	"strings"
 
+	"github.com/google/uuid"
+	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
+	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/google_jwt"
+	"github.com/nais/console/pkg/sqlc"
 	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
+	"google.golang.org/api/option"
 )
 
 type userSynchronizer struct {
-	system      dbmodels.System
-	auditLogger auditlogger.AuditLogger
-	domain      string
-	db          *gorm.DB
-	client      *http.Client
+	database     db.Database
+	auditLogger  auditlogger.AuditLogger
+	tenantDomain string
+	client       *http.Client
 }
-
-const (
-	OpPrepare    = "usersync:prepare"
-	OpListRemote = "usersync:list:remote"
-	OpListLocal  = "usersync:list:local"
-	OpCreate     = "usersync:create"
-	OpUpdate     = "usersync:update"
-	OpDelete     = "usersync:delete"
-)
 
 var (
 	ErrNotEnabled    = errors.New("disabled by configuration")
-	DefaultRoleNames = []roles.Role{
-		roles.RoleTeamCreator,
-		roles.RoleTeamViewer,
-		roles.RoleUserViewer,
-		roles.RoleServiceAccountCreator,
+	DefaultRoleNames = []sqlc.RoleName{
+		sqlc.RoleNameTeamcreator,
+		sqlc.RoleNameTeamviewer,
+		sqlc.RoleNameUserviewer,
+		sqlc.RoleNameServiceaccountcreator,
 	}
 )
 
-func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, domain string, client *http.Client) *userSynchronizer {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, client *http.Client) *userSynchronizer {
 	return &userSynchronizer{
-		db:          db,
-		system:      system,
-		auditLogger: auditLogger,
-		domain:      domain,
-		client:      client,
+		database:     database,
+		auditLogger:  auditLogger,
+		tenantDomain: domain,
+		client:       client,
 	}
 }
 
-func NewFromConfig(cfg *config.Config, db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger) (*userSynchronizer, error) {
+func NewFromConfig(cfg *config.Config, database db.Database, auditLogger auditlogger.AuditLogger) (*userSynchronizer, error) {
 	if !cfg.UserSync.Enabled {
 		return nil, ErrNotEnabled
 	}
 
 	cf, err := google_jwt.GetConfig(cfg.Google.CredentialsFile, cfg.Google.DelegatedUser)
-
 	if err != nil {
 		return nil, fmt.Errorf("get google jwt config: %w", err)
 	}
 
-	return New(db, system, auditLogger, cfg.TenantDomain, cf.Client(context.Background())), nil
+	return New(database, auditLogger, cfg.TenantDomain, cf.Client(context.Background())), nil
 }
 
 type auditLogEntry struct {
-	action  string
-	user    dbmodels.User
-	message string
+	action    sqlc.AuditAction
+	userEmail string
+	message   string
 }
 
 // Sync Fetch all users from the tenant and add them as local users in Console. If a user already exists in Console
@@ -81,99 +68,80 @@ type auditLogEntry struct {
 func (s *userSynchronizer) Sync(ctx context.Context) error {
 	srv, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(s.client))
 	if err != nil {
-		return fmt.Errorf("%s: retrieve directory client: %w", OpListRemote, err)
+		return fmt.Errorf("retrieve directory client: %w", err)
 	}
 
-	resp, err := srv.Users.List().Context(ctx).Domain(s.domain).Do()
+	resp, err := srv.Users.List().Context(ctx).Domain(s.tenantDomain).Do()
 	if err != nil {
-		return fmt.Errorf("%s: list remote users: %w", OpListRemote, err)
+		return fmt.Errorf("list remote users: %w", err)
 	}
 
-	corr := &dbmodels.Correlation{}
-	err = s.db.Create(corr).Error
+	correlationID, err := uuid.NewUUID()
 	if err != nil {
-		return fmt.Errorf("%s: unable to create correlation for audit logs: %w", OpPrepare, err)
+		return fmt.Errorf("unable to create UUID for correlation: %w", err)
 	}
 
 	auditLogEntries := make([]*auditLogEntry, 0)
 
-	err = s.db.Transaction(func(tx *gorm.DB) error {
-		userIds := make(map[uuid.UUID]struct{})
-
-		defaultRoles := make([]dbmodels.Role, 0)
-		err = tx.Where("name IN (?)", DefaultRoleNames).Find(&defaultRoles).Error
-		if err != nil {
-			return fmt.Errorf("%s: find default roles: %w", OpPrepare, err)
-		}
+	err = s.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
+		userIDs := make(map[uuid.UUID]struct{})
 
 		for _, remoteUser := range resp.Users {
 			email := strings.ToLower(remoteUser.PrimaryEmail)
-			localUser := &dbmodels.User{
-				Email: email,
-				Name:  remoteUser.Name.FullName,
-			}
-
-			ret := tx.Where("email = ?", email).FirstOrCreate(localUser)
-			if ret.Error != nil {
-				return fmt.Errorf("%s: create local user %s: %w", OpCreate, email, err)
-			}
-
-			if ret.RowsAffected > 0 {
+			localUser, err := dbtx.GetUserByEmail(ctx, email)
+			if err != nil {
+				localUser, err = dbtx.AddUser(ctx, remoteUser.Name.FullName, email)
+				if err != nil {
+					return fmt.Errorf("create local user %s: %w", email, err)
+				}
 				auditLogEntries = append(auditLogEntries, &auditLogEntry{
-					action:  OpCreate,
-					message: fmt.Sprintf("Local user created: %s", email),
-					user:    *localUser,
+					action:    sqlc.AuditActionUsersyncCreate,
+					message:   fmt.Sprintf("Local user created: %s", email),
+					userEmail: localUser.Email,
 				})
 			}
 
 			if localUser.Name != remoteUser.Name.FullName {
-				localUser.Name = remoteUser.Name.FullName
-				err = tx.Save(localUser).Error
+				localUser, err = dbtx.SetUserName(ctx, localUser.ID, remoteUser.Name.FullName)
 				if err != nil {
-					return fmt.Errorf("%s: update local user %s: %w", OpUpdate, email, err)
+					return fmt.Errorf("update local user %s: %w", email, err)
 				}
 				auditLogEntries = append(auditLogEntries, &auditLogEntry{
-					action:  OpUpdate,
-					message: fmt.Sprintf("Local user updated: %s", email),
-					user:    *localUser,
+					action:    sqlc.AuditActionUsersyncUpdate,
+					message:   fmt.Sprintf("Local user updated: %s", email),
+					userEmail: localUser.Email,
 				})
 			}
 
-			for _, role := range defaultRoles {
-				userRole := &dbmodels.UserRole{
-					RoleID: *role.ID,
-					UserID: *localUser.ID,
-				}
-				err = tx.Where("role_id = ? AND user_id = ? AND target_id IS NULL", role.ID, localUser.ID).FirstOrCreate(userRole).Error
+			for _, roleName := range DefaultRoleNames {
+				err = dbtx.AssignGlobalRoleToUser(ctx, localUser.ID, roleName)
 				if err != nil {
-					return fmt.Errorf("%s: attach default roles to user %s: %w", OpUpdate, email, err)
+					return fmt.Errorf("attach default role '%s' to user %s: %w", roleName, email, err)
 				}
 			}
 
-			userIds[*localUser.ID] = struct{}{}
+			userIDs[localUser.ID] = struct{}{}
 		}
 
-		localUsers := make([]*dbmodels.User, 0)
-		domainEmails := "%@" + s.domain
-		err = tx.Where("email LIKE ?", domainEmails).Find(&localUsers).Error
+		localUsers, err := dbtx.GetUsersByEmail(ctx, "%@"+s.tenantDomain)
 		if err != nil {
-			return fmt.Errorf("%s: list local users: %w", OpListLocal, err)
+			return fmt.Errorf("list local users: %w", err)
 		}
 
 		for _, localUser := range localUsers {
-			if _, upserted := userIds[*localUser.ID]; upserted {
+			if _, upserted := userIDs[localUser.ID]; upserted {
 				continue
 			}
 
-			err = tx.Delete(localUser).Error
+			err = dbtx.DeleteUser(ctx, localUser.ID)
 			if err != nil {
-				return fmt.Errorf("%s: delete local user %s: %w", OpDelete, localUser.Email, err)
+				return fmt.Errorf("delete local user %s: %w", localUser.Email, err)
 			}
 
 			auditLogEntries = append(auditLogEntries, &auditLogEntry{
-				action:  OpDelete,
-				message: fmt.Sprintf("Local user deleted: %s", localUser.Email),
-				user:    *localUser,
+				action:    sqlc.AuditActionUsersyncDelete,
+				message:   fmt.Sprintf("Local user deleted: %s", localUser.Email),
+				userEmail: localUser.Email,
 			})
 		}
 
@@ -185,7 +153,12 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 	}
 
 	for _, entry := range auditLogEntries {
-		s.auditLogger.Logf(entry.action, *corr, s.system, nil, nil, &entry.user, entry.message)
+		fields := auditlogger.Fields{
+			Action:          entry.action,
+			CorrelationID:   correlationID,
+			TargetUserEmail: &entry.userEmail,
+		}
+		s.auditLogger.Logf(ctx, fields, entry.message)
 	}
 
 	return nil

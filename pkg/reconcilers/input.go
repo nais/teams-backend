@@ -1,9 +1,40 @@
 package reconcilers
 
-import "github.com/nais/console/pkg/dbmodels"
+import (
+	"context"
+
+	"github.com/google/uuid"
+	"github.com/nais/console/pkg/db"
+)
 
 // Input Input for reconcilers
 type Input struct {
-	Corr dbmodels.Correlation
-	Team dbmodels.Team
+	CorrelationID uuid.UUID
+	Team          db.Team
+	TeamMembers   []*db.User
+}
+
+// CreateReconcilerInput Helper function to create input for reconcilers, with members already set on the team object
+func CreateReconcilerInput(ctx context.Context, database db.Database, team db.Team) (Input, error) {
+	correlationID, err := uuid.NewUUID()
+	if err != nil {
+		return Input{}, err
+	}
+
+	members, err := database.GetTeamMembers(ctx, team.ID)
+	if err != nil {
+		return Input{}, err
+	}
+
+	return Input{
+		CorrelationID: correlationID,
+		Team:          team,
+		TeamMembers:   members,
+	}, nil
+}
+
+func (i Input) WithCorrelationID(correlationID uuid.UUID) Input {
+	i.CorrelationID = correlationID
+
+	return i
 }

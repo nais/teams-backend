@@ -1,12 +1,19 @@
 package graph
 
 import (
-	"github.com/google/uuid"
+	"context"
+	"errors"
+	"fmt"
+
+	"github.com/jackc/pgconn"
+
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/nais/console/pkg/auditlogger"
-	"github.com/nais/console/pkg/dbmodels"
+	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/reconcilers"
-	"gorm.io/gorm"
+	"github.com/nais/console/pkg/sqlc"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
 // This file will not be regenerated automatically.
@@ -14,59 +21,43 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	db             *gorm.DB
+	database       db.Database
 	tenantDomain   string
 	teamReconciler chan<- reconcilers.Input
-	system         *dbmodels.System
+	systemName     sqlc.SystemName
 	auditLogger    auditlogger.AuditLogger
 }
 
-func NewResolver(db *gorm.DB, tenantDomain string, system *dbmodels.System, teamReconciler chan<- reconcilers.Input, auditLogger auditlogger.AuditLogger) *Resolver {
+func NewResolver(database db.Database, tenantDomain string, teamReconciler chan<- reconcilers.Input, auditLogger auditlogger.AuditLogger) *Resolver {
 	return &Resolver{
-		db:             db,
+		database:       database,
 		tenantDomain:   tenantDomain,
-		system:         system,
+		systemName:     sqlc.SystemNameGraphqlApi,
 		teamReconciler: teamReconciler,
 		auditLogger:    auditLogger,
 	}
 }
 
-// Run a query to get data from the database. Populates `collection` and returns pagination metadata.
-func (r *Resolver) paginatedQuery(pagination *model.Pagination, query model.Query, sort model.QueryOrder, dbModel interface{}, collection interface{}) (*model.PageInfo, error) {
-	if pagination == nil {
-		pagination = &model.Pagination{
-			Offset: 0,
-			Limit:  50,
+func GetErrorPresenter() graphql.ErrorPresenterFunc {
+	return func(ctx context.Context, e error) *gqlerror.Error {
+		err := graphql.DefaultErrorPresenter(ctx, e)
+		unwrappedError := errors.Unwrap(e)
+
+		if pgErr, ok := unwrappedError.(*pgconn.PgError); ok {
+			err.Message = pgErr.Detail
 		}
+
+		return err
 	}
-	db := r.db.Model(dbModel).Where(query.GetQuery()).Order(sort.GetOrderString())
-	pageInfo, db := r.withPagination(pagination, db)
-	return pageInfo, db.Find(collection).Error
 }
 
-// Limit a query by its pagination parameters, count number of rows in dataset, and return pagination metadata.
-func (r *Resolver) withPagination(pagination *model.Pagination, db *gorm.DB) (*model.PageInfo, *gorm.DB) {
-	var count int64
-	db = db.Count(&count).Limit(pagination.Limit).Offset(pagination.Offset)
-
-	return &model.PageInfo{
-		Results: int(count),
-		Offset:  pagination.Offset,
-		Limit:   pagination.Limit,
-	}, db
-}
-
-func (r *mutationResolver) teamWithAssociations(teamID uuid.UUID) (*dbmodels.Team, error) {
-	team := &dbmodels.Team{}
-	err := r.db.
-		Where("id = ?", teamID).
-		Preload("Users").
-		Preload("Metadata").
-		First(team).Error
-
-	if err != nil {
-		return nil, err
+func sqlcRoleFromTeamRole(teamRole model.TeamRole) (sqlc.RoleName, error) {
+	switch teamRole {
+	case model.TeamRoleMember:
+		return sqlc.RoleNameTeammember, nil
+	case model.TeamRoleOwner:
+		return sqlc.RoleNameTeamowner, nil
 	}
 
-	return team, nil
+	return "", fmt.Errorf("invalid team role: %v", teamRole)
 }

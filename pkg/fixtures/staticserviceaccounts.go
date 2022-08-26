@@ -1,13 +1,17 @@
 package fixtures
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
 
-	"github.com/nais/console/pkg/console"
-	"github.com/nais/console/pkg/dbmodels"
-	"gorm.io/gorm"
+	"github.com/nais/console/pkg/serviceaccount"
+
+	"github.com/nais/console/pkg/sqlc"
+
+	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/slug"
 )
 
 type ServiceAccount struct {
@@ -18,74 +22,73 @@ type ServiceAccount struct {
 
 const NaisServiceAccountPrefix = "nais-"
 
-// SetupStaticServiceAccounts Create a set of service accounts with roles and API keys
-func SetupStaticServiceAccounts(db *gorm.DB, serviceAccountsRaw, tenantDomain string) error {
-	return db.Transaction(func(tx *gorm.DB) error {
-		serviceAccounts := make([]ServiceAccount, 0)
-		err := json.NewDecoder(strings.NewReader(serviceAccountsRaw)).Decode(&serviceAccounts)
-		if err != nil {
-			return err
+func parseAndValidateServiceAccounts(serviceAccountsJson string) ([]ServiceAccount, error) {
+	serviceAccounts := make([]ServiceAccount, 0)
+	err := json.NewDecoder(strings.NewReader(serviceAccountsJson)).Decode(&serviceAccounts)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, serviceAccount := range serviceAccounts {
+		if !strings.HasPrefix(serviceAccount.Name, NaisServiceAccountPrefix) {
+			return nil, fmt.Errorf("service account is missing required '%s' prefix: '%s'", NaisServiceAccountPrefix, serviceAccount.Name)
 		}
 
-		for _, serviceAccount := range serviceAccounts {
-			if !strings.HasPrefix(serviceAccount.Name, NaisServiceAccountPrefix) {
-				return fmt.Errorf("service account is missing required '%s' prefix: '%s'", NaisServiceAccountPrefix, serviceAccount.Name)
-			}
+		if len(serviceAccount.Roles) == 0 {
+			return nil, fmt.Errorf("service account must have at least one role: '%s'", serviceAccount.Name)
+		}
 
-			if len(serviceAccount.Roles) == 0 {
-				return fmt.Errorf("service account must have at least one role: '%s'", serviceAccount.Name)
-			}
+		if serviceAccount.APIKey == "" {
+			return nil, fmt.Errorf("service account is missing an API key: '%s'", serviceAccount.Name)
+		}
 
-			if serviceAccount.APIKey == "" {
-				return fmt.Errorf("service account is missing an API key: '%s'", serviceAccount.Name)
+		for _, role := range serviceAccount.Roles {
+			if !sqlc.RoleName(role).Valid() {
+				return nil, fmt.Errorf("invalid role name: '%s' for service account '%s'", role, serviceAccount.Name)
 			}
+		}
+	}
 
-			roles := make([]*dbmodels.Role, 0)
-			err = tx.Where("name in (?)", serviceAccount.Roles).Find(&roles).Error
+	return serviceAccounts, nil
+}
+
+// SetupStaticServiceAccounts Create a set of service accounts with roles and API keys
+func SetupStaticServiceAccounts(ctx context.Context, database db.Database, serviceAccountsJson, tenantDomain string) error {
+	serviceAccounts, err := parseAndValidateServiceAccounts(serviceAccountsJson)
+	if err != nil {
+		return err
+	}
+
+	return database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
+		for _, serviceAccountFromInput := range serviceAccounts {
+			email := serviceaccount.Email(slug.Slug(serviceAccountFromInput.Name), tenantDomain)
+
+			serviceAccount, err := dbtx.GetUserByEmail(ctx, email)
 			if err != nil {
-				return err
-			}
-
-			if len(roles) != len(serviceAccount.Roles) {
-				return fmt.Errorf("one or more roles could not be found: %s", serviceAccount.Roles)
-			}
-
-			user := &dbmodels.User{
-				Name:  serviceAccount.Name,
-				Email: console.ServiceAccountEmail(dbmodels.Slug(serviceAccount.Name), tenantDomain),
-			}
-
-			err = tx.Where("email = ?", user.Email).FirstOrCreate(user).Error
-			if err != nil {
-				return err
-			}
-
-			err = tx.Where("user_id = ?", user.ID).Delete(&dbmodels.UserRole{}).Error
-			if err != nil {
-				return err
-			}
-			err = tx.Where("user_id = ?", user.ID).Delete(&dbmodels.ApiKey{}).Error
-			if err != nil {
-				return err
-			}
-
-			userRoles := make([]*dbmodels.UserRole, len(roles))
-			for idx, role := range roles {
-				userRoles[idx] = &dbmodels.UserRole{
-					RoleID: *role.ID,
-					UserID: *user.ID,
+				serviceAccount, err = dbtx.AddUser(ctx, serviceAccountFromInput.Name, email)
+				if err != nil {
+					return err
 				}
 			}
 
-			err = tx.Create(userRoles).Error
+			err = dbtx.RemoveAllUserRoles(ctx, serviceAccount.ID)
 			if err != nil {
 				return err
 			}
 
-			err = tx.Create(&dbmodels.ApiKey{
-				UserID: *user.ID,
-				APIKey: serviceAccount.APIKey,
-			}).Error
+			err = dbtx.RemoveApiKeysFromUser(ctx, serviceAccount.ID)
+			if err != nil {
+				return err
+			}
+
+			for _, roleName := range serviceAccountFromInput.Roles {
+				err = dbtx.AssignGlobalRoleToUser(ctx, serviceAccount.ID, sqlc.RoleName(roleName))
+				if err != nil {
+					return err
+				}
+			}
+
+			err = dbtx.CreateAPIKey(ctx, serviceAccountFromInput.APIKey, serviceAccount.ID)
 			if err != nil {
 				return err
 			}

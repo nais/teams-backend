@@ -4,37 +4,32 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"strings"
+
+	"github.com/nais/console/pkg/slug"
+
 	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-github/v43/github"
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/dbmodels"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/sqlc"
 	"github.com/shurcooL/githubv4"
 	log "github.com/sirupsen/logrus"
-	"gorm.io/gorm"
-	"io/ioutil"
-	"net/http"
-	"strings"
 )
 
-const (
-	Name           = "github:team"
-	OpCreate       = "github:team:create"
-	OpAddMembers   = "github:team:add-members"
-	OpAddMember    = "github:team:add-member"
-	OpDeleteMember = "github:team:delete-member"
-	OpMapSSOUser   = "github:team:map-sso-user"
-)
+const Name = sqlc.SystemNameGithubTeam
 
 var errGitHubUserNotFound = errors.New("GitHub user does not exist")
 
-func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogger, org, domain string, teamsService TeamsService, graphClient GraphClient) *githubTeamReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, org, domain string, teamsService TeamsService, graphClient GraphClient) *githubTeamReconciler {
 	return &githubTeamReconciler{
-		db:           db,
-		system:       system,
+		database:     database,
 		auditLogger:  auditLogger,
 		org:          org,
 		domain:       domain,
@@ -43,7 +38,7 @@ func New(db *gorm.DB, system dbmodels.System, auditLogger auditlogger.AuditLogge
 	}
 }
 
-func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.GitHub.Enabled {
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
@@ -66,36 +61,37 @@ func NewFromConfig(db *gorm.DB, cfg *config.Config, system dbmodels.System, audi
 	restClient := github.NewClient(httpClient)
 	graphClient := githubv4.NewClient(httpClient)
 
-	return New(db, system, auditLogger, cfg.GitHub.Organization, cfg.TenantDomain, restClient.Teams, graphClient), nil
+	return New(database, auditLogger, cfg.GitHub.Organization, cfg.TenantDomain, restClient.Teams, graphClient), nil
+}
+
+func (r *githubTeamReconciler) Name() sqlc.SystemName {
+	return Name
 }
 
 func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	state := &reconcilers.GitHubState{}
-	err := dbmodels.LoadSystemState(r.db, *r.system.ID, *input.Team.ID, state)
+	err := r.database.LoadSystemState(ctx, r.Name(), input.Team.ID, state)
 	if err != nil {
-		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
+		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.Name(), err)
 	}
 
-	githubTeam, err := r.getOrCreateTeam(ctx, *state, input.Corr, input.Team)
+	githubTeam, err := r.getOrCreateTeam(ctx, *state, input.CorrelationID, input.Team)
 	if err != nil {
-		return fmt.Errorf("unable to get or create a GitHub team for team '%s' in system '%s': %w", input.Team.Slug, r.system.Name, err)
+		return fmt.Errorf("unable to get or create a GitHub team for team '%s' in system '%s': %w", input.Team.Slug, r.Name(), err)
 	}
 
-	err = dbmodels.SetSystemState(r.db, *r.system.ID, *input.Team.ID, reconcilers.GitHubState{Slug: githubTeam.Slug})
+	slug := slug.Slug(*githubTeam.Slug)
+	err = r.database.SetSystemState(ctx, r.Name(), input.Team.ID, reconcilers.GitHubState{Slug: &slug})
 	if err != nil {
 		log.Errorf("system state not persisted: %s", err)
 	}
 
-	return r.connectUsers(ctx, githubTeam, input.Corr, input.Team)
+	return r.connectUsers(ctx, githubTeam, input)
 }
 
-func (r *githubTeamReconciler) System() dbmodels.System {
-	return r.system
-}
-
-func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconcilers.GitHubState, corr dbmodels.Correlation, team dbmodels.Team) (*github.Team, error) {
+func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconcilers.GitHubState, correlationID uuid.UUID, team db.Team) (*github.Team, error) {
 	if state.Slug != nil {
-		existingTeam, resp, err := r.teamsService.GetTeamBySlug(ctx, r.org, *state.Slug)
+		existingTeam, resp, err := r.teamsService.GetTeamBySlug(ctx, r.org, string(*state.Slug))
 		if resp == nil && err != nil {
 			return nil, fmt.Errorf("unable to fetch GitHub team '%s': %w", *state.Slug, err)
 		}
@@ -106,12 +102,12 @@ func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconc
 		case http.StatusOK:
 			return existingTeam, nil
 		default:
-			body, _ := ioutil.ReadAll(resp.Body)
+			body, _ := io.ReadAll(resp.Body)
 			return nil, fmt.Errorf("server error from GitHub: %s: %s", resp.Status, string(body))
 		}
 	}
 
-	description := helpers.TeamPurpose(team.Purpose)
+	description := helpers.TeamPurpose(&team.Purpose.String)
 	githubTeam, resp, err := r.teamsService.CreateTeam(ctx, r.org, github.NewTeam{
 		Name:        string(team.Slug),
 		Description: &description,
@@ -121,45 +117,57 @@ func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconc
 		return nil, fmt.Errorf("unable to create GitHub team: %w", err)
 	}
 
-	r.auditLogger.Logf(OpCreate, corr, r.system, nil, &team, nil, "created GitHub team '%s'", *githubTeam.Slug)
+	fields := auditlogger.Fields{
+		Action:         sqlc.AuditActionGithubTeamCreate,
+		CorrelationID:  correlationID,
+		TargetTeamSlug: &team.Slug,
+	}
+	r.auditLogger.Logf(ctx, fields, "created GitHub team '%s'", *githubTeam.Slug)
 
 	return githubTeam, nil
 }
 
-func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *github.Team, corr dbmodels.Correlation, team dbmodels.Team) error {
+func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *github.Team, input reconcilers.Input) error {
 	membersAccordingToGitHub, err := r.getTeamMembers(ctx, *githubTeam.Slug)
 	if err != nil {
-		return fmt.Errorf("%s: list existing members in GitHub team '%s': %w", OpAddMembers, *githubTeam.Slug, err)
+		return fmt.Errorf("list existing members in GitHub team '%s': %w", *githubTeam.Slug, err)
 	}
 
-	membersAccordingToConsole := helpers.DomainUsers(team.Users, r.domain)
+	membersAccordingToConsole := helpers.DomainUsers(input.TeamMembers, r.domain)
 	consoleUserWithGitHubUser, err := r.mapSSOUsers(ctx, membersAccordingToConsole)
 	if err != nil {
 		return err
 	}
 
-	var targetUser *dbmodels.User
 	membersToRemove := remoteOnlyMembers(membersAccordingToGitHub, consoleUserWithGitHubUser)
 	for _, gitHubUser := range membersToRemove {
 		username := gitHubUser.GetLogin()
 		resp, err := r.teamsService.RemoveTeamMembershipBySlug(ctx, r.org, *githubTeam.Slug, username)
 		err = httpError(http.StatusNoContent, *resp, err)
 		if err != nil {
-			log.Warnf("%s: unable to remove member '%s' from GitHub team '%s': %s", OpDeleteMember, username, *githubTeam.Slug, err)
+			log.Warnf("unable to remove member '%s' from GitHub team '%s': %s", username, *githubTeam.Slug, err)
 			continue
 		}
 
-		targetUser = nil
 		email, err := r.getEmailFromGitHubUsername(ctx, username)
 		if err != nil {
-			log.Warnf("%s: unable to get email from GitHub username '%s' for audit log purposes: %s", OpDeleteMember, username, err)
+			log.Warnf("unable to get email from GitHub username '%s' for audit log purposes: %s", username, err)
 		}
 
 		if email != nil {
-			targetUser = db.GetUserByEmail(r.db, *email)
+			_, err = r.database.GetUserByEmail(ctx, *email)
+			if err != nil {
+				log.Warnf("unable to get Console user with email '%s': %s", *email, err)
+				email = nil
+			}
 		}
 
-		r.auditLogger.Logf(OpDeleteMember, corr, r.system, nil, &team, targetUser, "deleted member '%s' from GitHub team '%s'", username, *githubTeam.Slug)
+		fields := auditlogger.Fields{
+			Action:         sqlc.AuditActionGithubTeamDeleteMember,
+			CorrelationID:  input.CorrelationID,
+			TargetTeamSlug: &input.Team.Slug,
+		}
+		r.auditLogger.Logf(ctx, fields, "deleted member '%s' from GitHub team '%s'", username, *githubTeam.Slug)
 	}
 
 	membersToAdd := localOnlyMembers(consoleUserWithGitHubUser, membersAccordingToGitHub)
@@ -167,11 +175,17 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 		_, resp, err := r.teamsService.AddTeamMembershipBySlug(ctx, r.org, *githubTeam.Slug, username, &github.TeamAddTeamMembershipOptions{})
 		err = httpError(http.StatusOK, *resp, err)
 		if err != nil {
-			log.Warnf("%s: unable to add member '%s' to GitHub team '%s': %s", OpAddMember, username, *githubTeam.Slug, err)
+			log.Warnf("unable to add member '%s' to GitHub team '%s': %s", username, *githubTeam.Slug, err)
 			continue
 		}
 
-		r.auditLogger.Logf(OpAddMember, corr, r.system, nil, &team, consoleUser, "added member '%s' to GitHub team '%s'", username, *githubTeam.Slug)
+		fields := auditlogger.Fields{
+			Action:          sqlc.AuditActionGithubTeamAddMember,
+			CorrelationID:   input.CorrelationID,
+			TargetTeamSlug:  &input.Team.Slug,
+			TargetUserEmail: &consoleUser.Email,
+		}
+		r.auditLogger.Logf(ctx, fields, "added member '%s' to GitHub team '%s'", username, *githubTeam.Slug)
 	}
 
 	return nil
@@ -205,13 +219,13 @@ func (r *githubTeamReconciler) getTeamMembers(ctx context.Context, slug string) 
 
 // localOnlyMembers Given a mapping of GitHub usernames to Console users, and a list of GitHub team members according to
 // GitHub, return members only present in the mapping.
-func localOnlyMembers(consoleUsers map[string]*dbmodels.User, membersAccordingToGitHub []*github.User) map[string]*dbmodels.User {
+func localOnlyMembers(consoleUsers map[string]*db.User, membersAccordingToGitHub []*github.User) map[string]*db.User {
 	gitHubUsernameMap := make(map[string]*github.User, 0)
 	for _, gitHubUser := range membersAccordingToGitHub {
 		gitHubUsernameMap[gitHubUser.GetLogin()] = gitHubUser
 	}
 
-	localOnly := make(map[string]*dbmodels.User, 0)
+	localOnly := make(map[string]*db.User, 0)
 	for gitHubUsername, consoleUser := range consoleUsers {
 		if _, exists := gitHubUsernameMap[gitHubUsername]; !exists {
 			localOnly[gitHubUsername] = consoleUser
@@ -222,7 +236,7 @@ func localOnlyMembers(consoleUsers map[string]*dbmodels.User, membersAccordingTo
 
 // remoteOnlyMembers Given a list of GitHub team members and a mapping of known GitHub usernames to Console users,
 // return members not present in the mapping.
-func remoteOnlyMembers(membersAccordingToGitHub []*github.User, consoleUsers map[string]*dbmodels.User) []*github.User {
+func remoteOnlyMembers(membersAccordingToGitHub []*github.User, consoleUsers map[string]*db.User) []*github.User {
 	unknownMembers := make([]*github.User, 0)
 	for _, member := range membersAccordingToGitHub {
 		if _, exists := consoleUsers[member.GetLogin()]; !exists {
@@ -234,12 +248,12 @@ func remoteOnlyMembers(membersAccordingToGitHub []*github.User, consoleUsers map
 
 // mapSSOUsers Return a mapping of GitHub usernames to Console user objects. Console users with no matching GitHub user
 // will be ignored.
-func (r *githubTeamReconciler) mapSSOUsers(ctx context.Context, users []*dbmodels.User) (map[string]*dbmodels.User, error) {
-	userMap := make(map[string]*dbmodels.User)
+func (r *githubTeamReconciler) mapSSOUsers(ctx context.Context, users []*db.User) (map[string]*db.User, error) {
+	userMap := make(map[string]*db.User)
 	for _, user := range users {
 		githubUsername, err := r.getGitHubUsernameFromEmail(ctx, user.Email)
 		if err == errGitHubUserNotFound {
-			log.Warnf("%s: no GitHub user for email: '%s'", OpMapSSOUser, user.Email)
+			log.Warnf("no GitHub user for email: '%s'", user.Email)
 			continue
 		}
 		if err != nil {
@@ -308,7 +322,7 @@ func httpError(expected int, resp github.Response, err error) error {
 		if resp.Body == nil {
 			return errors.New("unknown error")
 		}
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("unexpected response error %s: %s", resp.Status, string(body))
 	}
 

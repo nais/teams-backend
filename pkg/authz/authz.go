@@ -3,85 +3,108 @@ package authz
 import (
 	"context"
 	"errors"
+	"fmt"
+
+	"github.com/nais/console/pkg/sqlc"
+
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/dbmodels"
-	"github.com/nais/console/pkg/roles"
+	"github.com/nais/console/pkg/db"
 )
 
-const userContextKey = "user"
+type ContextKey string
 
-// ContextWithUser Return a context with a user module stored.
-func ContextWithUser(ctx context.Context, user *dbmodels.User) context.Context {
-	return context.WithValue(ctx, userContextKey, user)
+type actor struct {
+	User  *db.User
+	Roles []*db.Role
 }
 
-// UserFromContext Finds any authenticated user from the context. Requires that a middleware has stored a user in the
-// first place.
-func UserFromContext(ctx context.Context) *dbmodels.User {
-	user, _ := ctx.Value(userContextKey).(*dbmodels.User)
-	return user
+func (u *actor) Authenticated() bool {
+	if u == nil || u.User == nil {
+		return false
+	}
+
+	return true
+}
+
+const contextKeyUser ContextKey = "actor"
+
+// ContextWithActor Return a context with an actor attached to it.
+func ContextWithActor(ctx context.Context, user *db.User, roles []*db.Role) context.Context {
+	return context.WithValue(ctx, contextKeyUser, &actor{
+		User:  user,
+		Roles: roles,
+	})
+}
+
+// ActorFromContext Get the actor stored in the context. Requires that a middleware has stored an actor in the first
+// place.
+func ActorFromContext(ctx context.Context) *actor {
+	actor, _ := ctx.Value(contextKeyUser).(*actor)
+	return actor
 }
 
 var ErrNotAuthorized = errors.New("not authorized")
 
-// RequireGlobalAuthorization Require an actor to have a specific authorization through a globally assigned role. The
-// role bindings must already be attached to the actor.
-func RequireGlobalAuthorization(actor *dbmodels.User, requiredAuthorization roles.Authorization) error {
-	if actor == nil {
+// RequireGlobalAuthorization Require an actor to have a specific authorization through a globally assigned role.
+func RequireGlobalAuthorization(actor *actor, requiredAuthzName sqlc.AuthzName) error {
+	if !actor.Authenticated() {
 		return ErrNotAuthorized
 	}
 
-	authorizations := make(map[dbmodels.Authorization]struct{})
+	authorizations := make(map[sqlc.AuthzName]struct{})
 
-	for _, roleBinding := range actor.RoleBindings {
-		if roleBinding.TargetID == nil {
-			for _, authorization := range roleBinding.Role.Authorizations {
+	for _, role := range actor.Roles {
+		if role.IsGlobal() {
+			for _, authorization := range role.Authorizations {
 				authorizations[authorization] = struct{}{}
 			}
 		}
 	}
 
-	return authorized(authorizations, requiredAuthorization)
+	return authorized(authorizations, requiredAuthzName)
 }
 
 // RequireAuthorization Require an actor to have a specific authorization through a globally assigned or a correctly
-// targetted role. The role bindings must already be attached to the actor.
-func RequireAuthorization(actor *dbmodels.User, requiredAuthorization roles.Authorization, target uuid.UUID) error {
-	if actor == nil {
+// targeted role.
+func RequireAuthorization(actor *actor, requiredAuthzName sqlc.AuthzName, target uuid.UUID) error {
+	if !actor.Authenticated() {
 		return ErrNotAuthorized
 	}
 
-	authorizations := make(map[dbmodels.Authorization]struct{})
+	authorizations := make(map[sqlc.AuthzName]struct{})
 
-	for _, roleBinding := range actor.RoleBindings {
-		if roleBinding.TargetID == nil || *roleBinding.TargetID == target {
-			for _, authorization := range roleBinding.Role.Authorizations {
+	for _, role := range actor.Roles {
+		if role.IsGlobal() || role.Targets(target) {
+			for _, authorization := range role.Authorizations {
 				authorizations[authorization] = struct{}{}
 			}
 		}
 	}
 
-	return authorized(authorizations, requiredAuthorization)
+	return authorized(authorizations, requiredAuthzName)
 }
 
 // RequireAuthorizationOrTargetMatch Require an actor to have a specific authorization through a globally assigned or a
-// correctly targetted role. The role bindings must already be attached to the actor. If the actor matches the target,
-// the action will be allowed.
-func RequireAuthorizationOrTargetMatch(actor *dbmodels.User, requiredAuthorization roles.Authorization, target uuid.UUID) error {
-	if actor != nil && *actor.ID == target {
+// correctly targeted role. If the actor matches the target the action will be allowed.
+func RequireAuthorizationOrTargetMatch(actor *actor, requiredAuthzName sqlc.AuthzName, target uuid.UUID) error {
+	if !actor.Authenticated() {
+		return ErrNotAuthorized
+	}
+
+	if actor.User.ID == target {
 		return nil
 	}
 
-	return RequireAuthorization(actor, requiredAuthorization, target)
+	return RequireAuthorization(actor, requiredAuthzName, target)
 }
 
 // authorized Check if one of the authorizations in the map matches the required authorization.
-func authorized(authorizations map[dbmodels.Authorization]struct{}, requiredAuthorization roles.Authorization) error {
-	for authorization, _ := range authorizations {
-		if roles.Authorization(authorization.Name) == requiredAuthorization {
+func authorized(authorizations map[sqlc.AuthzName]struct{}, requiredAuthzName sqlc.AuthzName) error {
+	for authorization := range authorizations {
+		if authorization == requiredAuthzName {
 			return nil
 		}
 	}
 
-	return ErrNotAuthorized
+	return fmt.Errorf("missing authorization: %q, %w", requiredAuthzName, ErrNotAuthorized)
 }

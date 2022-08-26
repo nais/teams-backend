@@ -36,7 +36,7 @@ resolver:
 # gqlgen will search for any type names in the schema in these go packages
 # if they match it will use them, otherwise it will generate them.
 autobind:
-  - "github.com/nais/console/pkg/dbmodels"
+  - "github.com/nais/console/pkg/db"
 
 # This section declares type mapping between the GraphQL and go type systems
 #
@@ -44,53 +44,29 @@ autobind:
 # modelgen, the others will be allowed when binding to fields. Configure them to
 # your liking
 models:
-  RoleBinding:
+  Slug:
     model:
-      - github.com/nais/console/pkg/dbmodels.UserRole
-    fields:
-      role:
-        resolver: true
+      - github.com/nais/console/pkg/slug.Slug
+
+  AuditAction:
+    model:
+      - github.com/nais/console/pkg/sqlc.AuditAction
+
+  SystemName:
+    model:
+      - github.com/nais/console/pkg/sqlc.SystemName
+
   UUID:
     model:
-      - github.com/nais/console/pkg/dbmodels.UUID
-  ID:
-    model:
-      - github.com/99designs/gqlgen/graphql.ID
-      - github.com/99designs/gqlgen/graphql.Int
-      - github.com/99designs/gqlgen/graphql.Int64
-      - github.com/99designs/gqlgen/graphql.Int32
+      - github.com/nais/console/pkg/db.UUID
+
   Int:
     model:
       - github.com/99designs/gqlgen/graphql.Int
       - github.com/99designs/gqlgen/graphql.Int64
       - github.com/99designs/gqlgen/graphql.Int32
-  Team:
-    fields:
-      users:
-        resolver: true
-      metadata:
-        resolver: true
-      auditLogs:
-        resolver: true
+
   User:
     fields:
       roles:
-        resolver: true
-      teams:
-        resolver: true
-  Role:
-    fields:
-      authorizations:
-        resolver: true
-  AuditLog:
-    fields:
-      actor:
-        resolver: true
-      correlation:
-        resolver: true
-      targetSystem:
-        resolver: true
-      targetTeam:
-        resolver: true
-      targetUser:
         resolver: true

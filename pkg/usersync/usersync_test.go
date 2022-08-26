@@ -2,54 +2,65 @@ package usersync_test
 
 import (
 	"context"
+	"errors"
+	"net/http"
+	"testing"
+
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
-	"github.com/nais/console/pkg/dbmodels"
+	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/pkg/test"
 	"github.com/nais/console/pkg/usersync"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"net/http"
-	"testing"
 )
 
 func TestSync(t *testing.T) {
-	system := &dbmodels.System{Name: "console"}
-	mockAuditLogger := &auditlogger.MockAuditLogger{}
+	domain := "example.com"
 
 	t.Run("Server error from Google", func(t *testing.T) {
-		db, _ := test.GetTestDB()
-		db.Create(system)
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		database := db.NewMockDatabase(t)
 
 		httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
 			return test.Response("500 Internal Server Error", `{"error": "some error"}`)
 		})
 
-		usersync := usersync.New(db, *system, mockAuditLogger, "example.com", httpClient)
+		usersync := usersync.New(database, auditLogger, domain, httpClient)
 		err := usersync.Sync(context.Background())
-		assert.ErrorContains(t, err, "usersync:list:remote: list remote users")
+		assert.ErrorContains(t, err, "list remote users")
 	})
 
 	t.Run("No remote users", func(t *testing.T) {
-		db, _ := test.GetTestDB()
-		db.Create(system)
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		database := db.NewMockDatabase(t)
+
+		database.
+			On("Transaction", mock.Anything, mock.Anything).
+			Return(nil).
+			Once()
 
 		httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
 			return test.Response("200 OK", `{"users":[]}`)
 		})
 
-		usersync := usersync.New(db, *system, mockAuditLogger, "example.com", httpClient)
+		usersync := usersync.New(database, auditLogger, domain, httpClient)
 		err := usersync.Sync(context.Background())
 		assert.NoError(t, err)
 	})
 
 	t.Run("Create, update and delete users", func(t *testing.T) {
-		db, _ := test.GetTestDB()
-		db.Create(system)
-		db.Create([]*dbmodels.User{
-			{Email: "delete-me@example.com", Name: "Delete Me"},   // Will be deleted
-			{Email: "dont-delete-me@service-account.example.com"}, // Will not be touched
-			{Email: "user1@example.com", Name: "Update Me"},       // Will be updated
-		})
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		database := db.NewMockDatabase(t)
+		dbtx := db.NewMockDatabase(t)
+
+		numDefaultRoleNames := len(usersync.DefaultRoleNames)
+
+		localUserWithIncorrectName := getUser("user1@example.com", "Outdated Name", nil)
+		updatedLocalUser := getUser(localUserWithIncorrectName.Email, "Correct Name", &localUserWithIncorrectName.ID)
+		newLocalUser := getUser("user2@example.com", "Create Me", nil)
+		localUserThatWillBeDeleted := getUser("delete-me@example.com", "Delete Me", nil)
 
 		httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
 			return test.Response("200 OK", `{"users":[`+
@@ -57,58 +68,100 @@ func TestSync(t *testing.T) {
 				`{"primaryEmail":"user2@example.com","name":{"fullName":"Create Me"}}]}`) // Will be created
 		})
 
-		mockAuditLogger.
-			On("Logf", usersync.OpUpdate, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(func(targetUser *dbmodels.User) bool {
-				return targetUser.Name == "Correct Name"
-			}), mock.Anything).
-			Return(nil).
-			Once()
-
-		mockAuditLogger.
-			On("Logf", usersync.OpCreate, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(func(targetUser *dbmodels.User) bool {
-				return targetUser.Name == "Create Me"
-			}), mock.Anything).
-			Return(nil).
-			Once()
-
-		mockAuditLogger.
-			On("Logf", usersync.OpDelete, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(func(targetUser *dbmodels.User) bool {
-				return targetUser.Name == "Delete Me"
-			}), mock.Anything).
-			Return(nil).
-			Once()
-
-		usersync := usersync.New(db, *system, mockAuditLogger, "example.com", httpClient)
-		err := usersync.Sync(context.Background())
-		assert.NoError(t, err)
-		mockAuditLogger.AssertExpectations(t)
-	})
-
-	t.Run("Don't insert duplicate role bindings", func(t *testing.T) {
-		db, _ := test.GetTestDBWithRoles()
-		db.Create(system)
-		user1 := &dbmodels.User{Email: "user1@example.com"}
-		user2 := &dbmodels.User{Email: "user2@example.com"}
-		db.Create([]*dbmodels.User{user1, user2})
-
-		roundtripFunc := func(req *http.Request) *http.Response {
-			return test.Response("200 OK", `{"users":[`+
-				`{"primaryEmail":"user1@example.com","name":{"fullName":"Name 1"}},`+
-				`{"primaryEmail":"user2@example.com","name":{"fullName":"Name 2"}}`+
-				`]}`)
-		}
-		httpClient := test.NewTestHttpClient(roundtripFunc, roundtripFunc)
-
 		ctx := context.Background()
-		us := usersync.New(db, *system, auditlogger.New(db), "example.com", httpClient)
-		assert.NoError(t, us.Sync(ctx))
-		assert.NoError(t, us.Sync(ctx)) // Run twice, should only add role bindngs once
+		txCtx := context.Background()
 
-		var count1, count2 int64
-		db.Model(&dbmodels.UserRole{}).Where("user_id = ?", user1.ID).Count(&count1)
-		db.Model(&dbmodels.UserRole{}).Where("user_id = ?", user2.ID).Count(&count2)
+		database.
+			On("Transaction", mock.Anything, mock.Anything).
+			Run(func(args mock.Arguments) {
+				fn := args.Get(1).(db.TransactionFunc)
+				fn(txCtx, dbtx)
+			}).
+			Return(nil).
+			Once()
 
-		assert.EqualValues(t, len(usersync.DefaultRoleNames), count1)
-		assert.EqualValues(t, len(usersync.DefaultRoleNames), count2)
+		dbtx.
+			On("GetUserByEmail", txCtx, localUserWithIncorrectName.Email).
+			Return(localUserWithIncorrectName, nil).
+			Once()
+
+		dbtx.
+			On("SetUserName", txCtx, localUserWithIncorrectName.ID, "Correct Name").
+			Return(updatedLocalUser, nil).
+			Once()
+
+		dbtx.
+			On("AssignGlobalRoleToUser", txCtx, updatedLocalUser.ID, mock.AnythingOfType("sqlc.RoleName")).
+			Return(nil).
+			Times(numDefaultRoleNames)
+
+		dbtx.
+			On("GetUserByEmail", txCtx, newLocalUser.Email).
+			Return(nil, errors.New("user not found")).
+			Once()
+
+		dbtx.
+			On("AddUser", txCtx, newLocalUser.Name, newLocalUser.Email).
+			Return(newLocalUser, nil).
+			Once()
+
+		dbtx.
+			On("AssignGlobalRoleToUser", txCtx, newLocalUser.ID, mock.AnythingOfType("sqlc.RoleName")).
+			Return(nil).
+			Times(numDefaultRoleNames)
+
+		dbtx.
+			On("GetUsersByEmail", txCtx, "%@example.com").
+			Return([]*db.User{
+				updatedLocalUser, newLocalUser, localUserThatWillBeDeleted,
+			}, nil).
+			Once()
+
+		dbtx.
+			On("DeleteUser", txCtx, localUserThatWillBeDeleted.ID).
+			Return(nil).
+			Once()
+
+		auditLogger.
+			On("Logf", ctx, mock.MatchedBy(func(f auditlogger.Fields) bool {
+				return f.Action == sqlc.AuditActionUsersyncUpdate &&
+					*f.TargetUserEmail == updatedLocalUser.Email
+			}), "Local user updated: user1@example.com").
+			Return(nil).
+			Once()
+
+		auditLogger.
+			On("Logf", ctx, mock.MatchedBy(func(f auditlogger.Fields) bool {
+				return f.Action == sqlc.AuditActionUsersyncCreate &&
+					*f.TargetUserEmail == newLocalUser.Email
+			}), "Local user created: user2@example.com").
+			Return(nil).
+			Once()
+
+		auditLogger.
+			On("Logf", ctx, mock.MatchedBy(func(f auditlogger.Fields) bool {
+				return f.Action == sqlc.AuditActionUsersyncDelete &&
+					*f.TargetUserEmail == localUserThatWillBeDeleted.Email
+			}), "Local user deleted: delete-me@example.com").
+			Return(nil).
+			Once()
+
+		usersync := usersync.New(database, auditLogger, domain, httpClient)
+		err := usersync.Sync(ctx)
+		assert.NoError(t, err)
 	})
+}
+
+func getUser(email, name string, id *uuid.UUID) *db.User {
+	if id == nil {
+		newID := uuid.New()
+		id = &newID
+	}
+	return &db.User{
+		User: &sqlc.User{
+			ID:    *id,
+			Email: email,
+			Name:  name,
+		},
+	}
 }

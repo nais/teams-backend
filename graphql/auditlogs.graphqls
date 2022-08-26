@@ -1,91 +1,29 @@
-extend type Query {
-    "Get a collection of audit log entries."
-    auditLogs(
-        "Pagination options."
-        pagination: Pagination
-
-        "Input for filtering the query."
-        query: AuditLogsQuery
-
-        "Input for sorting the collection. If omitted the collection will be sorted by the creation time in descending order."
-        sort: AuditLogsSort
-    ): AuditLogs! @auth
-}
-
-"Correlation type."
-type Correlation {
-    "ID of the correlation."
-    id: UUID!
-}
-
 "Audit log type."
 type AuditLog {
     "ID of the log entry."
     id: UUID!
 
+    "String representation of the action performed."
+    action: AuditAction!
+
     "The related system."
-    targetSystem: System!
+    systemName: SystemName!
 
     "The related correlation."
-    correlation: Correlation!
+    correlationID: UUID!
 
-    "The actor who performed the action in the entry. When this field is empty it means that the console system itself performed the action."
-    actor: User
+    "The email address of the actor who performed the action. When this field is empty it means that some backend process performed the action."
+    actorEmail: String
 
-    "The target user."
-    targetUser: User
+    "The email address of the target user, if any."
+    targetUserEmail: String
 
-    "The target team."
-    targetTeam: Team
-
-    "String representation of the action performed."
-    action: String!
+    "The target team slug, if any."
+    targetTeamSlug: Slug
 
     "Log entry message."
     message: String!
 
     "Creation time of the log entry."
     createdAt: Time!
-}
-
-"Audit log collection."
-type AuditLogs {
-    "Object related to pagination of the collection."
-    pageInfo: PageInfo!
-
-    "The list of audit log entries in the collection."
-    nodes: [AuditLog!]!
-}
-
-"Input for filtering a collection of audit log entries."
-input AuditLogsQuery {
-    "Filter by actor ID."
-    actorId: UUID
-
-    "Filter by correlation ID."
-    correlationId: UUID
-
-    "Filter by target system ID."
-    targetSystemId: UUID
-
-    "Filter by target team ID."
-    targetTeamId: UUID
-
-    "Filter by target user ID."
-    targetUserId: UUID
-}
-
-"Input for sorting a collection of audit log entries."
-input AuditLogsSort {
-    "Field to sort by."
-    field: AuditLogSortField!
-
-    "Sort direction."
-    direction: SortDirection!
-}
-
-"Fields to sort the collection by."
-enum AuditLogSortField {
-    "Sort by creation time."
-    CREATED_AT
 }
