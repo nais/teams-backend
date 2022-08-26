@@ -1,11 +1,9 @@
-//go:build run_manually
-
-package legacy_test
+package main
 
 import (
 	"context"
+	"os"
 	"strings"
-	"testing"
 
 	"github.com/google/uuid"
 
@@ -23,7 +21,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func TestImportTeamsFromLegacyAzure(t *testing.T) {
+func main() {
+	err := run()
+	if err != nil {
+		log.Errorf("fatal: %s", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	const ymlpath = "./teams.yml"
 	const jsonpath = "./teams.json"
 
@@ -220,6 +226,8 @@ func TestImportTeamsFromLegacyAzure(t *testing.T) {
 	}
 
 	log.Infof("Done")
+
+	return nil
 }
 
 func setupDatabase(ctx context.Context, dbUrl string) (db.Database, error) {

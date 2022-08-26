@@ -10,6 +10,9 @@ all: generate console
 console:
 	go build -o bin/console -ldflags "-s $(LDFLAGS)" cmd/console/*.go
 
+migrate:
+	go build -o bin/migrate -ldflags "-s $(LDFLAGS)" cmd/legacy-migration/*.go
+
 test:
 	go test ./...
 
