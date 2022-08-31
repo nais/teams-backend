@@ -170,11 +170,12 @@ func run() error {
 		log.Warnf("User synchronization disabled: %s", err)
 	}
 
+	defer log.Infof("Main program context canceled; exiting.")
+
 	for ctx.Err() == nil {
 		select {
 		case <-ctx.Done():
-			//lint:ignore SA4011 outer for loop checks ctx.Err(), and will exit if ctx is done
-			break
+			return nil
 
 		case input := <-teamReconciler:
 			if nextReconcile.Before(time.Now()) {
@@ -217,8 +218,6 @@ func run() error {
 			log.Infof("User synchronization complete.")
 		}
 	}
-
-	log.Infof("Main program context canceled; exiting.")
 
 	return nil
 }
