@@ -238,18 +238,6 @@ func reconcileTeams(ctx context.Context, database db.Database, recs []reconciler
 			err := reconciler.Reconcile(ctx, input)
 			if err != nil {
 				log.Error(err)
-				// TODO: Solve issue with duplicates
-				//err = db.Create(&dbmodels.ReconcileError{
-				//	CorrelationID: *input.Corr.ID,
-				//	SystemID:      *reconciler.System().ID,
-				//	TeamID:        *input.Team.ID,
-				//	Message:       err.Error(),
-				//}).Error
-				//
-				//if err != nil {
-				//	log.Warnf("unable to store reconcile error to database: %s", err)
-				//}
-
 				teamErrors++
 				continue
 			}
