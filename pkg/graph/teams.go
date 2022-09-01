@@ -66,7 +66,7 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, in
 
 	team, err := r.database.UpdateTeam(ctx, *teamID, input.Name, input.Purpose)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to update team: %w", err)
 	}
 
 	fields := auditlogger.Fields{
@@ -99,13 +99,12 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 		return nil, fmt.Errorf("unable to create log correlation ID: %w", err)
 	}
 
-	var team *db.Team
-	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
-		team, err = dbtx.GetTeamByID(ctx, *input.TeamID)
-		if err != nil {
-			return fmt.Errorf("unable to get team: %w", err)
-		}
+	team, err := r.database.GetTeamByID(ctx, *input.TeamID)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get team: %w", err)
+	}
 
+	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
 		members, err := dbtx.GetTeamMembers(ctx, team.ID)
 		if err != nil {
 			return fmt.Errorf("unable to get existing team members: %w", err)
@@ -153,14 +152,14 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 		return nil, err
 	}
 
-	team, err := r.database.GetTeamByID(ctx, *teamID)
-	if err != nil {
-		return nil, err
-	}
-
 	correlationID, err := uuid.NewUUID()
 	if err != nil {
 		return nil, fmt.Errorf("unable to create log correlation ID: %w", err)
+	}
+
+	team, err := r.database.GetTeamByID(ctx, *teamID)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get team: %w", err)
 	}
 
 	fields := auditlogger.Fields{
@@ -193,13 +192,12 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 		return nil, fmt.Errorf("unable to create log correlation ID: %w", err)
 	}
 
-	var team *db.Team
-	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
-		team, err = dbtx.GetTeamByID(ctx, *input.TeamID)
-		if err != nil {
-			return fmt.Errorf("team does not exist: %w", err)
-		}
+	team, err := r.database.GetTeamByID(ctx, *input.TeamID)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get team: %w", err)
+	}
 
+	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
 		for _, userID := range input.UserIds {
 			user, err := dbtx.GetUserByID(ctx, *userID)
 			if err != nil {
@@ -241,13 +239,12 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 		return nil, fmt.Errorf("unable to create log correlation ID: %w", err)
 	}
 
-	var team *db.Team
-	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
-		team, err = dbtx.GetTeamByID(ctx, *input.TeamID)
-		if err != nil {
-			return fmt.Errorf("team does not exist: %w", err)
-		}
+	team, err := r.database.GetTeamByID(ctx, *input.TeamID)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get team: %w", err)
+	}
 
+	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
 		for _, userID := range input.UserIds {
 			user, err := dbtx.GetUserByID(ctx, *userID)
 			if err != nil {
@@ -266,10 +263,13 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 				TargetTeamSlug:  &team.Slug,
 				TargetUserEmail: &user.Email,
 			}
-			r.auditLogger.Logf(ctx, fields, "User team owner")
+			r.auditLogger.Logf(ctx, fields, "Add team owner")
 		}
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	return team, nil
 }
@@ -281,14 +281,19 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 		return nil, err
 	}
 
+	correlationID, err := uuid.NewUUID()
+	if err != nil {
+		return nil, fmt.Errorf("unable to create log correlation ID: %w", err)
+	}
+
 	team, err := r.database.GetTeamByID(ctx, *input.TeamID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to get team: %w", err)
 	}
 
 	members, err := r.database.GetTeamMembers(ctx, *input.TeamID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to get team members: %w", err)
 	}
 
 	var member *db.User = nil
@@ -306,14 +311,10 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 	if err != nil {
 		return nil, err
 	}
+
 	err = r.database.SetTeamMemberRole(ctx, *input.UserID, *input.TeamID, desiredRole)
 	if err != nil {
 		return nil, err
-	}
-
-	correlationID, err := uuid.NewUUID()
-	if err != nil {
-		return nil, fmt.Errorf("unable to create log correlation ID: %w", err)
 	}
 
 	fields := auditlogger.Fields{
