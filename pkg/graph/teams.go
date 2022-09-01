@@ -158,25 +158,26 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 		return nil, err
 	}
 
-	reconcilerInput, err := reconcilers.CreateReconcilerInput(ctx, r.database, *team)
-	if err != nil {
-		return nil, err
-	}
-
-	r.teamReconciler <- reconcilerInput
-
 	correlationID, err := uuid.NewUUID()
 	if err != nil {
 		return nil, fmt.Errorf("unable to create log correlation ID: %w", err)
 	}
 
 	fields := auditlogger.Fields{
-		Action:         sqlc.AuditActionGraphqlApiTeamSetMemberRole,
+		Action:         sqlc.AuditActionGraphqlApiTeamSync,
 		CorrelationID:  correlationID,
 		ActorEmail:     &actor.User.Email,
 		TargetTeamSlug: &team.Slug,
 	}
 	r.auditLogger.Logf(ctx, fields, "Synchronize team")
+
+	reconcilerInput, err := reconcilers.CreateReconcilerInput(ctx, r.database, *team)
+	if err != nil {
+		return nil, err
+	}
+
+	r.teamReconciler <- reconcilerInput.WithCorrelationID(correlationID)
+
 	return team, nil
 }
 
