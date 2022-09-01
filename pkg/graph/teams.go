@@ -116,6 +116,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 			for _, m := range members {
 				if m.ID == *userID {
 					member = m
+					break
 				}
 			}
 			if member == nil {
