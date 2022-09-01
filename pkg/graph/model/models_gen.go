@@ -64,6 +64,14 @@ type TeamMember struct {
 	Role TeamRole `json:"role"`
 }
 
+// Team sync type.
+type TeamSync struct {
+	// The team that will be synced.
+	Team *db.Team `json:"team"`
+	// The correlation ID for the sync.
+	CorrelationID *uuid.UUID `json:"correlationID"`
+}
+
 // Input for updating an existing team.
 type UpdateTeamInput struct {
 	// Team name. Must contain a value when specified.

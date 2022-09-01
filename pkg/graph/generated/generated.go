@@ -106,6 +106,11 @@ type ComplexityRoot struct {
 		User func(childComplexity int) int
 	}
 
+	TeamSync struct {
+		CorrelationID func(childComplexity int) int
+		Team          func(childComplexity int) int
+	}
+
 	User struct {
 		Email func(childComplexity int) int
 		ID    func(childComplexity int) int
@@ -128,7 +133,7 @@ type MutationResolver interface {
 	CreateTeam(ctx context.Context, input model.CreateTeamInput) (*db.Team, error)
 	UpdateTeam(ctx context.Context, teamID *uuid.UUID, input model.UpdateTeamInput) (*db.Team, error)
 	RemoveUsersFromTeam(ctx context.Context, input model.RemoveUsersFromTeamInput) (*db.Team, error)
-	SynchronizeTeam(ctx context.Context, teamID *uuid.UUID) (*db.Team, error)
+	SynchronizeTeam(ctx context.Context, teamID *uuid.UUID) (*model.TeamSync, error)
 	AddTeamMembers(ctx context.Context, input model.AddTeamMembersInput) (*db.Team, error)
 	AddTeamOwners(ctx context.Context, input model.AddTeamOwnersInput) (*db.Team, error)
 	SetTeamMemberRole(ctx context.Context, input model.SetTeamMemberRoleInput) (*db.Team, error)
@@ -460,6 +465,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.TeamMember.User(childComplexity), true
 
+	case "TeamSync.correlationID":
+		if e.complexity.TeamSync.CorrelationID == nil {
+			break
+		}
+
+		return e.complexity.TeamSync.CorrelationID(childComplexity), true
+
+	case "TeamSync.team":
+		if e.complexity.TeamSync.Team == nil {
+			break
+		}
+
+		return e.complexity.TeamSync.Team(childComplexity), true
+
 	case "User.email":
 		if e.complexity.User.Email == nil {
 			break
@@ -718,7 +737,7 @@ extend type Mutation {
     synchronizeTeam(
         "The ID of the team to synchronize."
         teamId: UUID!
-    ): Team! @auth
+    ): TeamSync! @auth
 
     """
     Add users to a team as regular team members
@@ -757,6 +776,15 @@ extend type Mutation {
         "Input for setting the team member role."
         input: SetTeamMemberRoleInput!
     ): Team! @auth
+}
+
+"Team sync type."
+type TeamSync {
+    "The team that will be synced."
+    team: Team!
+
+    "The correlation ID for the sync."
+    correlationID: UUID!
 }
 
 "Team type."
@@ -1816,10 +1844,10 @@ func (ec *executionContext) _Mutation_synchronizeTeam(ctx context.Context, field
 		if tmp == nil {
 			return nil, nil
 		}
-		if data, ok := tmp.(*db.Team); ok {
+		if data, ok := tmp.(*model.TeamSync); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/db.Team`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/graph/model.TeamSync`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1831,9 +1859,9 @@ func (ec *executionContext) _Mutation_synchronizeTeam(ctx context.Context, field
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*db.Team)
+	res := resTmp.(*model.TeamSync)
 	fc.Result = res
-	return ec.marshalNTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐTeam(ctx, field.Selections, res)
+	return ec.marshalNTeamSync2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamSync(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_synchronizeTeam(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1844,22 +1872,12 @@ func (ec *executionContext) fieldContext_Mutation_synchronizeTeam(ctx context.Co
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Team_id(ctx, field)
-			case "slug":
-				return ec.fieldContext_Team_slug(ctx, field)
-			case "name":
-				return ec.fieldContext_Team_name(ctx, field)
-			case "purpose":
-				return ec.fieldContext_Team_purpose(ctx, field)
-			case "metadata":
-				return ec.fieldContext_Team_metadata(ctx, field)
-			case "auditLogs":
-				return ec.fieldContext_Team_auditLogs(ctx, field)
-			case "members":
-				return ec.fieldContext_Team_members(ctx, field)
+			case "team":
+				return ec.fieldContext_TeamSync_team(ctx, field)
+			case "correlationID":
+				return ec.fieldContext_TeamSync_correlationID(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type TeamSync", field.Name)
 		},
 	}
 	defer func() {
@@ -3327,6 +3345,110 @@ func (ec *executionContext) fieldContext_TeamMember_role(ctx context.Context, fi
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type TeamRole does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _TeamSync_team(ctx context.Context, field graphql.CollectedField, obj *model.TeamSync) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_TeamSync_team(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Team, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*db.Team)
+	fc.Result = res
+	return ec.marshalNTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐTeam(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_TeamSync_team(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TeamSync",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Team_id(ctx, field)
+			case "slug":
+				return ec.fieldContext_Team_slug(ctx, field)
+			case "name":
+				return ec.fieldContext_Team_name(ctx, field)
+			case "purpose":
+				return ec.fieldContext_Team_purpose(ctx, field)
+			case "metadata":
+				return ec.fieldContext_Team_metadata(ctx, field)
+			case "auditLogs":
+				return ec.fieldContext_Team_auditLogs(ctx, field)
+			case "members":
+				return ec.fieldContext_Team_members(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _TeamSync_correlationID(ctx context.Context, field graphql.CollectedField, obj *model.TeamSync) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_TeamSync_correlationID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CorrelationID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*uuid.UUID)
+	fc.Result = res
+	return ec.marshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_TeamSync_correlationID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TeamSync",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type UUID does not have child fields")
 		},
 	}
 	return fc, nil
@@ -6243,6 +6365,41 @@ func (ec *executionContext) _TeamMember(ctx context.Context, sel ast.SelectionSe
 	return out
 }
 
+var teamSyncImplementors = []string{"TeamSync"}
+
+func (ec *executionContext) _TeamSync(ctx context.Context, sel ast.SelectionSet, obj *model.TeamSync) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, teamSyncImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("TeamSync")
+		case "team":
+
+			out.Values[i] = ec._TeamSync_team(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "correlationID":
+
+			out.Values[i] = ec._TeamSync_correlationID(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var userImplementors = []string{"User"}
 
 func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj *db.User) graphql.Marshaler {
@@ -7029,6 +7186,20 @@ func (ec *executionContext) unmarshalNTeamRole2githubᚗcomᚋnaisᚋconsoleᚋp
 
 func (ec *executionContext) marshalNTeamRole2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamRole(ctx context.Context, sel ast.SelectionSet, v model.TeamRole) graphql.Marshaler {
 	return v
+}
+
+func (ec *executionContext) marshalNTeamSync2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamSync(ctx context.Context, sel ast.SelectionSet, v model.TeamSync) graphql.Marshaler {
+	return ec._TeamSync(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNTeamSync2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamSync(ctx context.Context, sel ast.SelectionSet, v *model.TeamSync) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._TeamSync(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNTime2timeᚐTime(ctx context.Context, v interface{}) (time.Time, error) {

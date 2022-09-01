@@ -58,7 +58,7 @@ extend type Mutation {
     synchronizeTeam(
         "The ID of the team to synchronize."
         teamId: UUID!
-    ): Team! @auth
+    ): TeamSync! @auth
 
     """
     Add users to a team as regular team members
@@ -97,6 +97,15 @@ extend type Mutation {
         "Input for setting the team member role."
         input: SetTeamMemberRoleInput!
     ): Team! @auth
+}
+
+"Team sync type."
+type TeamSync {
+    "The team that will be synced."
+    team: Team!
+
+    "The correlation ID for the sync."
+    correlationID: UUID!
 }
 
 "Team type."

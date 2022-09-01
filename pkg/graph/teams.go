@@ -145,7 +145,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 	return team, nil
 }
 
-func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUID) (*db.Team, error) {
+func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUID) (*model.TeamSync, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *teamID)
 	if err != nil {
@@ -177,7 +177,10 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 
 	r.teamReconciler <- reconcilerInput.WithCorrelationID(correlationID)
 
-	return team, nil
+	return &model.TeamSync{
+		Team:          team,
+		CorrelationID: &correlationID,
+	}, nil
 }
 
 func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTeamMembersInput) (*db.Team, error) {
