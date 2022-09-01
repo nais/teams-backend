@@ -8,6 +8,12 @@ extend type Query {
         id: UUID!
     ): User! @auth
 
+    "Get a specific user by email."
+    userByEmail(
+        "ID of the user."
+        email: String!
+    ): User! @auth
+
     "The currently authenticated user."
     me: User! @auth
 }

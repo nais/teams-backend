@@ -5,7 +5,6 @@ package graph
 
 import (
 	"context"
-
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/db"
@@ -32,6 +31,16 @@ func (r *queryResolver) User(ctx context.Context, id *uuid.UUID) (*db.User, erro
 	}
 
 	return r.database.GetUserByID(ctx, *id)
+}
+
+func (r *queryResolver) UserByEmail(ctx context.Context, email string) (*db.User, error) {
+	actor := authz.ActorFromContext(ctx)
+	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameUsersList)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.database.GetUserByEmail(ctx, email)
 }
 
 func (r *queryResolver) Me(ctx context.Context) (*db.User, error) {
