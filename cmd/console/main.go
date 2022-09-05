@@ -153,9 +153,7 @@ func run() error {
 		}
 
 		// override correlation id as we want to group all actions in the initial reconcile loop
-		input = input.WithCorrelationID(correlationID)
-
-		teamReconciler <- input
+		teamReconciler <- input.WithCorrelationID(correlationID)
 	}
 
 	// User synchronizer
@@ -233,15 +231,24 @@ func reconcileTeams(ctx context.Context, database db.Database, recs []reconciler
 		teamErrors := 0
 
 		for _, reconciler := range recs {
-			log.Infof("Starting reconciler '%s' for team: '%s'", reconciler.Name(), input.Team.Name)
+			log.Infof("Starting reconciler %q for team: %q", reconciler.Name(), input.Team.Slug)
 			err := reconciler.Reconcile(ctx, input)
 			if err != nil {
 				log.Error(err)
 				teamErrors++
+				err = database.AddReconcileError(ctx, input.CorrelationID, input.Team.ID, reconciler.Name(), err)
+				if err != nil {
+					log.Errorf("Unable to add reconcile error to the database: %s", err)
+				}
 				continue
 			}
 
-			log.Infof("Successfully finished reconciler '%s' for team: '%s'", reconciler.Name(), input.Team.Name)
+			err = database.PurgeReconcileError(ctx, input.Team.ID, reconciler.Name())
+			if err != nil {
+				log.Errorf("Unable to delete reconcile error from database: %s", err)
+			}
+
+			log.Infof("Successfully finished reconciler %q for team: %q", reconciler.Name(), input.Team.Slug)
 		}
 
 		if teamErrors == 0 {

@@ -64,6 +64,10 @@ type Database interface {
 	SetSystemState(ctx context.Context, systemName sqlc.SystemName, teamID uuid.UUID, state interface{}) error
 
 	SetUserName(ctx context.Context, userID uuid.UUID, name string) (*User, error)
+
+	AddReconcileError(ctx context.Context, correlationID uuid.UUID, teamID uuid.UUID, systemName sqlc.SystemName, err error) error
+	GetReconcileErrorsForTeam(ctx context.Context, teamID uuid.UUID) ([]*ReconcileError, error)
+	PurgeReconcileError(ctx context.Context, teamID uuid.UUID, systemName sqlc.SystemName) error
 }
 
 func NewDatabase(q Querier) Database {

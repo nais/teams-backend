@@ -435,6 +435,31 @@ func (r *teamResolver) Members(ctx context.Context, obj *db.Team) ([]*model.Team
 	return members, nil
 }
 
+// SyncErrors is the resolver for the syncErrors field.
+func (r *teamResolver) SyncErrors(ctx context.Context, obj *db.Team) ([]*model.SyncError, error) {
+	actor := authz.ActorFromContext(ctx)
+	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsRead, obj.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := r.database.GetReconcileErrorsForTeam(ctx, obj.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	syncErrors := make([]*model.SyncError, 0)
+	for _, row := range rows {
+		syncErrors = append(syncErrors, &model.SyncError{
+			CreatedAt: row.CreatedAt,
+			System:    row.SystemName,
+			Error:     row.ErrorMessage,
+		})
+	}
+
+	return syncErrors, nil
+}
+
 // Team returns generated.TeamResolver implementation.
 func (r *Resolver) Team() generated.TeamResolver { return &teamResolver{r} }
 

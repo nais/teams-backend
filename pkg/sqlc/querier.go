@@ -13,6 +13,7 @@ import (
 
 type Querier interface {
 	AddGlobalUserRole(ctx context.Context, arg AddGlobalUserRoleParams) error
+	AddReconcileError(ctx context.Context, arg AddReconcileErrorParams) error
 	AddTargetedUserRole(ctx context.Context, arg AddTargetedUserRoleParams) error
 	CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) error
 	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) error
@@ -20,6 +21,7 @@ type Querier interface {
 	CreateUser(ctx context.Context, arg CreateUserParams) (*User, error)
 	DeleteUser(ctx context.Context, id uuid.UUID) error
 	GetAuditLogsForTeam(ctx context.Context, targetTeamSlug *slug.Slug) ([]*AuditLog, error)
+	GetReconcileErrorsForTeam(ctx context.Context, teamID uuid.UUID) ([]*ReconcileError, error)
 	GetRoleAuthorizations(ctx context.Context, roleName RoleName) ([]AuthzName, error)
 	GetTeamByID(ctx context.Context, id uuid.UUID) (*Team, error)
 	GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)
@@ -34,6 +36,7 @@ type Querier interface {
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error)
 	GetUsers(ctx context.Context) ([]*User, error)
 	GetUsersByEmail(ctx context.Context, email string) ([]*User, error)
+	PurgeReconcileError(ctx context.Context, arg PurgeReconcileErrorParams) error
 	RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) error
 	RemoveApiKeysFromUser(ctx context.Context, userID uuid.UUID) error
 	RemoveGlobalUserRole(ctx context.Context, arg RemoveGlobalUserRoleParams) error
