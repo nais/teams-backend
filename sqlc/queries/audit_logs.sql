@@ -3,4 +3,4 @@ INSERT INTO audit_logs (id, correlation_id, actor_email, system_name, target_use
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
 
 -- name: GetAuditLogsForTeam :many
-SELECT * FROM audit_logs WHERE target_team_slug = $1 ORDER BY created_at DESC;
+SELECT * FROM audit_logs WHERE target_team_slug = $1 ORDER BY created_at DESC LIMIT 100;
