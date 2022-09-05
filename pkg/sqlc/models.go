@@ -459,15 +459,6 @@ type AuditLog struct {
 	Message         string
 }
 
-type ReconcileRun struct {
-	ID            uuid.UUID
-	CorrelationID uuid.UUID
-	TeamSlug      string
-	SystemName    SystemName
-	CreatedAt     time.Time
-	ErrorMessage  sql.NullString
-}
-
 type RoleAuthz struct {
 	AuthzName AuthzName
 	RoleName  RoleName

@@ -18,11 +18,9 @@ type Querier interface {
 	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) error
 	CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (*User, error)
-	DeleteReconcileRun(ctx context.Context, id uuid.UUID) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
 	GetAuditLogsForTeam(ctx context.Context, targetTeamSlug *slug.Slug) ([]*AuditLog, error)
 	GetRoleAuthorizations(ctx context.Context, roleName RoleName) ([]AuthzName, error)
-	GetSyncRunsForTeam(ctx context.Context, teamSlug string) ([]*ReconcileRun, error)
 	GetTeamByID(ctx context.Context, id uuid.UUID) (*Team, error)
 	GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)
 	GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error)
@@ -36,12 +34,10 @@ type Querier interface {
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error)
 	GetUsers(ctx context.Context) ([]*User, error)
 	GetUsersByEmail(ctx context.Context, email string) ([]*User, error)
-	InitializeReconcileRun(ctx context.Context, arg InitializeReconcileRunParams) (*ReconcileRun, error)
 	RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) error
 	RemoveApiKeysFromUser(ctx context.Context, userID uuid.UUID) error
 	RemoveGlobalUserRole(ctx context.Context, arg RemoveGlobalUserRoleParams) error
 	RemoveTargetedUserRole(ctx context.Context, arg RemoveTargetedUserRoleParams) error
-	SetReconcileRunError(ctx context.Context, arg SetReconcileRunErrorParams) error
 	SetTeamMetadata(ctx context.Context, arg SetTeamMetadataParams) error
 	SetTeamSystemState(ctx context.Context, arg SetTeamSystemStateParams) error
 	SetUserName(ctx context.Context, arg SetUserNameParams) (*User, error)
