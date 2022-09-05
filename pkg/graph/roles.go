@@ -11,10 +11,12 @@ import (
 	"github.com/nais/console/pkg/graph/generated"
 )
 
+// Name is the resolver for the name field.
 func (r *roleResolver) Name(ctx context.Context, obj *db.Role) (string, error) {
 	return string(obj.RoleName), nil
 }
 
+// TargetID is the resolver for the targetId field.
 func (r *roleResolver) TargetID(ctx context.Context, obj *db.Role) (*uuid.UUID, error) {
 	if obj.TargetID.Valid {
 		return &obj.TargetID.UUID, nil

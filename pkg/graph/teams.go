@@ -17,6 +17,7 @@ import (
 	"github.com/nais/console/pkg/sqlc"
 )
 
+// CreateTeam is the resolver for the createTeam field.
 func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameTeamsCreate)
@@ -52,6 +53,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 	return team, nil
 }
 
+// UpdateTeam is the resolver for the updateTeam field.
 func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, input model.UpdateTeamInput) (*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *teamID)
@@ -87,6 +89,7 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, in
 	return team, nil
 }
 
+// RemoveUsersFromTeam is the resolver for the removeUsersFromTeam field.
 func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.RemoveUsersFromTeamInput) (*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *input.TeamID)
@@ -145,6 +148,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 	return team, nil
 }
 
+// SynchronizeTeam is the resolver for the synchronizeTeam field.
 func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUID) (*model.TeamSync, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *teamID)
@@ -183,6 +187,7 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 	}, nil
 }
 
+// AddTeamMembers is the resolver for the addTeamMembers field.
 func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTeamMembersInput) (*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *input.TeamID)
@@ -230,6 +235,7 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 	return team, nil
 }
 
+// AddTeamOwners is the resolver for the addTeamOwners field.
 func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTeamOwnersInput) (*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *input.TeamID)
@@ -277,6 +283,7 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 	return team, nil
 }
 
+// SetTeamMemberRole is the resolver for the setTeamMemberRole field.
 func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.SetTeamMemberRoleInput) (*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *input.TeamID)
@@ -332,6 +339,7 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 	return team, nil
 }
 
+// Teams is the resolver for the teams field.
 func (r *queryResolver) Teams(ctx context.Context) ([]*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameTeamsList)
@@ -342,6 +350,7 @@ func (r *queryResolver) Teams(ctx context.Context) ([]*db.Team, error) {
 	return r.database.GetTeams(ctx)
 }
 
+// Team is the resolver for the team field.
 func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsRead, *id)
@@ -352,6 +361,7 @@ func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*db.Team, erro
 	return r.database.GetTeamByID(ctx, *id)
 }
 
+// Purpose is the resolver for the purpose field.
 func (r *teamResolver) Purpose(ctx context.Context, obj *db.Team) (*string, error) {
 	var purpose *string
 	if obj.Purpose.String != "" {
@@ -360,6 +370,7 @@ func (r *teamResolver) Purpose(ctx context.Context, obj *db.Team) (*string, erro
 	return purpose, nil
 }
 
+// Metadata is the resolver for the metadata field.
 func (r *teamResolver) Metadata(ctx context.Context, obj *db.Team) (map[string]interface{}, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsRead, obj.ID)
@@ -380,6 +391,7 @@ func (r *teamResolver) Metadata(ctx context.Context, obj *db.Team) (map[string]i
 	return result, nil
 }
 
+// AuditLogs is the resolver for the auditLogs field.
 func (r *teamResolver) AuditLogs(ctx context.Context, obj *db.Team) ([]*db.AuditLog, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameAuditLogsRead, obj.ID)
@@ -390,6 +402,7 @@ func (r *teamResolver) AuditLogs(ctx context.Context, obj *db.Team) ([]*db.Audit
 	return r.database.GetAuditLogsForTeam(ctx, obj.Slug)
 }
 
+// Members is the resolver for the members field.
 func (r *teamResolver) Members(ctx context.Context, obj *db.Team) ([]*model.TeamMember, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameUsersList)

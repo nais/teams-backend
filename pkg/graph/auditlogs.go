@@ -10,10 +10,12 @@ import (
 	"github.com/nais/console/pkg/graph/generated"
 )
 
+// ActorEmail is the resolver for the actorEmail field.
 func (r *auditLogResolver) ActorEmail(ctx context.Context, obj *db.AuditLog) (*string, error) {
 	return db.NullStringToStringP(obj.ActorEmail), nil
 }
 
+// TargetUserEmail is the resolver for the targetUserEmail field.
 func (r *auditLogResolver) TargetUserEmail(ctx context.Context, obj *db.AuditLog) (*string, error) {
 	return db.NullStringToStringP(obj.TargetUserEmail), nil
 }

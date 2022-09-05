@@ -14,6 +14,7 @@ import (
 	"github.com/nais/console/pkg/sqlc"
 )
 
+// Users is the resolver for the users field.
 func (r *queryResolver) Users(ctx context.Context) ([]*db.User, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameUsersList)
@@ -24,6 +25,7 @@ func (r *queryResolver) Users(ctx context.Context) ([]*db.User, error) {
 	return r.database.GetUsers(ctx)
 }
 
+// User is the resolver for the user field.
 func (r *queryResolver) User(ctx context.Context, id *uuid.UUID) (*db.User, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameUsersList)
@@ -34,6 +36,7 @@ func (r *queryResolver) User(ctx context.Context, id *uuid.UUID) (*db.User, erro
 	return r.database.GetUserByID(ctx, *id)
 }
 
+// UserByEmail is the resolver for the userByEmail field.
 func (r *queryResolver) UserByEmail(ctx context.Context, email string) (*db.User, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameUsersList)
@@ -44,10 +47,12 @@ func (r *queryResolver) UserByEmail(ctx context.Context, email string) (*db.User
 	return r.database.GetUserByEmail(ctx, email)
 }
 
+// Me is the resolver for the me field.
 func (r *queryResolver) Me(ctx context.Context) (*db.User, error) {
 	return authz.ActorFromContext(ctx).User, nil
 }
 
+// Teams is the resolver for the teams field.
 func (r *userResolver) Teams(ctx context.Context, obj *db.User) ([]*model.UserTeam, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameTeamsList)
@@ -81,6 +86,7 @@ func (r *userResolver) Teams(ctx context.Context, obj *db.User) ([]*model.UserTe
 	return userTeams, nil
 }
 
+// Roles is the resolver for the roles field.
 func (r *userResolver) Roles(ctx context.Context, obj *db.User) ([]*db.Role, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorizationOrTargetMatch(actor, sqlc.AuthzNameUsersUpdate, obj.ID)
