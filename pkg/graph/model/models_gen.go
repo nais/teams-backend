@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/slug"
+	"github.com/nais/console/pkg/sqlc"
 )
 
 // Input for adding users to a team as members.
@@ -54,6 +56,16 @@ type SetTeamMemberRoleInput struct {
 	UserID *uuid.UUID `json:"userId"`
 	// The team role to set.
 	Role TeamRole `json:"role"`
+}
+
+// Sync error type.
+type SyncError struct {
+	// Creation time of the error.
+	CreatedAt time.Time `json:"createdAt"`
+	// The name of the third party system as configured by Console.
+	System sqlc.SystemName `json:"system"`
+	// Error message.
+	Error string `json:"error"`
 }
 
 // Team member.

@@ -130,6 +130,21 @@ type Team {
 
     "Team members."
     members: [TeamMember!]!
+
+    "Possible issues related to synchronization of the team to configured external systems. If there are no entries the team can be considered fully synchronized."
+    syncErrors: [SyncError!]!
+}
+
+"Sync error type."
+type SyncError {
+    "Creation time of the error."
+    createdAt: Time!
+
+    "The name of the third party system as configured by Console."
+    system: SystemName!
+
+    "Error message."
+    error: String!
 }
 
 "Team member."

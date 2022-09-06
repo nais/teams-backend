@@ -91,14 +91,21 @@ type ComplexityRoot struct {
 		TargetID func(childComplexity int) int
 	}
 
+	SyncError struct {
+		CreatedAt func(childComplexity int) int
+		Error     func(childComplexity int) int
+		System    func(childComplexity int) int
+	}
+
 	Team struct {
-		AuditLogs func(childComplexity int) int
-		ID        func(childComplexity int) int
-		Members   func(childComplexity int) int
-		Metadata  func(childComplexity int) int
-		Name      func(childComplexity int) int
-		Purpose   func(childComplexity int) int
-		Slug      func(childComplexity int) int
+		AuditLogs  func(childComplexity int) int
+		ID         func(childComplexity int) int
+		Members    func(childComplexity int) int
+		Metadata   func(childComplexity int) int
+		Name       func(childComplexity int) int
+		Purpose    func(childComplexity int) int
+		Slug       func(childComplexity int) int
+		SyncErrors func(childComplexity int) int
 	}
 
 	TeamMember struct {
@@ -156,6 +163,7 @@ type TeamResolver interface {
 	Metadata(ctx context.Context, obj *db.Team) (map[string]interface{}, error)
 	AuditLogs(ctx context.Context, obj *db.Team) ([]*db.AuditLog, error)
 	Members(ctx context.Context, obj *db.Team) ([]*model.TeamMember, error)
+	SyncErrors(ctx context.Context, obj *db.Team) ([]*model.SyncError, error)
 }
 type UserResolver interface {
 	Teams(ctx context.Context, obj *db.User) ([]*model.UserTeam, error)
@@ -402,6 +410,27 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Role.TargetID(childComplexity), true
 
+	case "SyncError.createdAt":
+		if e.complexity.SyncError.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.SyncError.CreatedAt(childComplexity), true
+
+	case "SyncError.error":
+		if e.complexity.SyncError.Error == nil {
+			break
+		}
+
+		return e.complexity.SyncError.Error(childComplexity), true
+
+	case "SyncError.system":
+		if e.complexity.SyncError.System == nil {
+			break
+		}
+
+		return e.complexity.SyncError.System(childComplexity), true
+
 	case "Team.auditLogs":
 		if e.complexity.Team.AuditLogs == nil {
 			break
@@ -450,6 +479,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Team.Slug(childComplexity), true
+
+	case "Team.syncErrors":
+		if e.complexity.Team.SyncErrors == nil {
+			break
+		}
+
+		return e.complexity.Team.SyncErrors(childComplexity), true
 
 	case "TeamMember.role":
 		if e.complexity.TeamMember.Role == nil {
@@ -809,6 +845,21 @@ type Team {
 
     "Team members."
     members: [TeamMember!]!
+
+    "Possible issues related to synchronization of the team to configured external systems. If there are no entries the team can be considered fully synchronized."
+    syncErrors: [SyncError!]!
+}
+
+"Sync error type."
+type SyncError {
+    "Creation time of the error."
+    createdAt: Time!
+
+    "The name of the third party system as configured by Console."
+    system: SystemName!
+
+    "Error message."
+    error: String!
 }
 
 "Team member."
@@ -1613,6 +1664,8 @@ func (ec *executionContext) fieldContext_Mutation_createTeam(ctx context.Context
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
 				return ec.fieldContext_Team_members(ctx, field)
+			case "syncErrors":
+				return ec.fieldContext_Team_syncErrors(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -1704,6 +1757,8 @@ func (ec *executionContext) fieldContext_Mutation_updateTeam(ctx context.Context
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
 				return ec.fieldContext_Team_members(ctx, field)
+			case "syncErrors":
+				return ec.fieldContext_Team_syncErrors(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -1795,6 +1850,8 @@ func (ec *executionContext) fieldContext_Mutation_removeUsersFromTeam(ctx contex
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
 				return ec.fieldContext_Team_members(ctx, field)
+			case "syncErrors":
+				return ec.fieldContext_Team_syncErrors(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -1967,6 +2024,8 @@ func (ec *executionContext) fieldContext_Mutation_addTeamMembers(ctx context.Con
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
 				return ec.fieldContext_Team_members(ctx, field)
+			case "syncErrors":
+				return ec.fieldContext_Team_syncErrors(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -2058,6 +2117,8 @@ func (ec *executionContext) fieldContext_Mutation_addTeamOwners(ctx context.Cont
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
 				return ec.fieldContext_Team_members(ctx, field)
+			case "syncErrors":
+				return ec.fieldContext_Team_syncErrors(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -2149,6 +2210,8 @@ func (ec *executionContext) fieldContext_Mutation_setTeamMemberRole(ctx context.
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
 				return ec.fieldContext_Team_members(ctx, field)
+			case "syncErrors":
+				return ec.fieldContext_Team_syncErrors(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -2240,6 +2303,8 @@ func (ec *executionContext) fieldContext_Query_teams(ctx context.Context, field 
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
 				return ec.fieldContext_Team_members(ctx, field)
+			case "syncErrors":
+				return ec.fieldContext_Team_syncErrors(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -2320,6 +2385,8 @@ func (ec *executionContext) fieldContext_Query_team(ctx context.Context, field g
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
 				return ec.fieldContext_Team_members(ctx, field)
+			case "syncErrors":
+				return ec.fieldContext_Team_syncErrors(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -2922,6 +2989,138 @@ func (ec *executionContext) fieldContext_Role_targetId(ctx context.Context, fiel
 	return fc, nil
 }
 
+func (ec *executionContext) _SyncError_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.SyncError) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SyncError_createdAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SyncError_createdAt(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SyncError",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SyncError_system(ctx context.Context, field graphql.CollectedField, obj *model.SyncError) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SyncError_system(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.System, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(sqlc.SystemName)
+	fc.Result = res
+	return ec.marshalNSystemName2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐSystemName(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SyncError_system(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SyncError",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type SystemName does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SyncError_error(ctx context.Context, field graphql.CollectedField, obj *model.SyncError) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SyncError_error(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Error, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SyncError_error(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SyncError",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Team_id(ctx context.Context, field graphql.CollectedField, obj *db.Team) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Team_id(ctx, field)
 	if err != nil {
@@ -3250,6 +3449,58 @@ func (ec *executionContext) fieldContext_Team_members(ctx context.Context, field
 	return fc, nil
 }
 
+func (ec *executionContext) _Team_syncErrors(ctx context.Context, field graphql.CollectedField, obj *db.Team) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Team_syncErrors(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Team().SyncErrors(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.SyncError)
+	fc.Result = res
+	return ec.marshalNSyncError2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSyncErrorᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Team_syncErrors(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Team",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "createdAt":
+				return ec.fieldContext_SyncError_createdAt(ctx, field)
+			case "system":
+				return ec.fieldContext_SyncError_system(ctx, field)
+			case "error":
+				return ec.fieldContext_SyncError_error(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type SyncError", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _TeamMember_user(ctx context.Context, field graphql.CollectedField, obj *model.TeamMember) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_TeamMember_user(ctx, field)
 	if err != nil {
@@ -3403,6 +3654,8 @@ func (ec *executionContext) fieldContext_TeamSync_team(ctx context.Context, fiel
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
 				return ec.fieldContext_Team_members(ctx, field)
+			case "syncErrors":
+				return ec.fieldContext_Team_syncErrors(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3741,6 +3994,8 @@ func (ec *executionContext) fieldContext_UserTeam_team(ctx context.Context, fiel
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
 				return ec.fieldContext_Team_members(ctx, field)
+			case "syncErrors":
+				return ec.fieldContext_Team_syncErrors(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -6244,6 +6499,48 @@ func (ec *executionContext) _Role(ctx context.Context, sel ast.SelectionSet, obj
 	return out
 }
 
+var syncErrorImplementors = []string{"SyncError"}
+
+func (ec *executionContext) _SyncError(ctx context.Context, sel ast.SelectionSet, obj *model.SyncError) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, syncErrorImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SyncError")
+		case "createdAt":
+
+			out.Values[i] = ec._SyncError_createdAt(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "system":
+
+			out.Values[i] = ec._SyncError_system(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "error":
+
+			out.Values[i] = ec._SyncError_error(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var teamImplementors = []string{"Team"}
 
 func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj *db.Team) graphql.Marshaler {
@@ -6339,6 +6636,26 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 					}
 				}()
 				res = ec._Team_members(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
+		case "syncErrors":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Team_syncErrors(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -7078,6 +7395,60 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNSyncError2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSyncErrorᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.SyncError) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNSyncError2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSyncError(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNSyncError2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSyncError(ctx context.Context, sel ast.SelectionSet, v *model.SyncError) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._SyncError(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNSystemName2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐSystemName(ctx context.Context, v interface{}) (sqlc.SystemName, error) {

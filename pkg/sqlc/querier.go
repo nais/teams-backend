@@ -14,6 +14,7 @@ import (
 type Querier interface {
 	AddGlobalUserRole(ctx context.Context, arg AddGlobalUserRoleParams) error
 	AddTargetedUserRole(ctx context.Context, arg AddTargetedUserRoleParams) error
+	ClearTeamReconcileErrorForSystem(ctx context.Context, arg ClearTeamReconcileErrorForSystemParams) error
 	CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) error
 	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) error
 	CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, error)
@@ -25,6 +26,7 @@ type Querier interface {
 	GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)
 	GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error)
 	GetTeamMetadata(ctx context.Context, teamID uuid.UUID) ([]*TeamMetadatum, error)
+	GetTeamReconcileErrors(ctx context.Context, teamID uuid.UUID) ([]*ReconcileError, error)
 	GetTeamSystemState(ctx context.Context, arg GetTeamSystemStateParams) (*SystemState, error)
 	GetTeams(ctx context.Context) ([]*Team, error)
 	GetUserByApiKey(ctx context.Context, apiKey string) (*User, error)
@@ -39,6 +41,7 @@ type Querier interface {
 	RemoveGlobalUserRole(ctx context.Context, arg RemoveGlobalUserRoleParams) error
 	RemoveTargetedUserRole(ctx context.Context, arg RemoveTargetedUserRoleParams) error
 	SetTeamMetadata(ctx context.Context, arg SetTeamMetadataParams) error
+	SetTeamReconcileErrorForSystem(ctx context.Context, arg SetTeamReconcileErrorForSystemParams) error
 	SetTeamSystemState(ctx context.Context, arg SetTeamSystemStateParams) error
 	SetUserName(ctx context.Context, arg SetUserNameParams) (*User, error)
 	UpdateTeam(ctx context.Context, arg UpdateTeamParams) (*Team, error)
