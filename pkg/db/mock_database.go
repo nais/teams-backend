@@ -32,20 +32,6 @@ func (_m *MockDatabase) AddAuditLog(ctx context.Context, correlationID uuid.UUID
 	return r0
 }
 
-// AddReconcileError provides a mock function with given fields: ctx, correlationID, teamID, systemName, err
-func (_m *MockDatabase) AddReconcileError(ctx context.Context, correlationID uuid.UUID, teamID uuid.UUID, systemName sqlc.SystemName, err error) error {
-	ret := _m.Called(ctx, correlationID, teamID, systemName, err)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, sqlc.SystemName, error) error); ok {
-		r0 = rf(ctx, correlationID, teamID, systemName, err)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
 // AddTeam provides a mock function with given fields: ctx, name, _a2, purpose, userID
 func (_m *MockDatabase) AddTeam(ctx context.Context, name string, _a2 slug.Slug, purpose *string, userID uuid.UUID) (*Team, error) {
 	ret := _m.Called(ctx, name, _a2, purpose, userID)
@@ -67,6 +53,20 @@ func (_m *MockDatabase) AddTeam(ctx context.Context, name string, _a2 slug.Slug,
 	}
 
 	return r0, r1
+}
+
+// AddTeamReconcileError provides a mock function with given fields: ctx, correlationID, teamID, systemName, err
+func (_m *MockDatabase) AddTeamReconcileError(ctx context.Context, correlationID uuid.UUID, teamID uuid.UUID, systemName sqlc.SystemName, err error) error {
+	ret := _m.Called(ctx, correlationID, teamID, systemName, err)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, sqlc.SystemName, error) error); ok {
+		r0 = rf(ctx, correlationID, teamID, systemName, err)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // AddUser provides a mock function with given fields: ctx, name, email
@@ -171,29 +171,6 @@ func (_m *MockDatabase) GetAuditLogsForTeam(ctx context.Context, _a1 slug.Slug) 
 	return r0, r1
 }
 
-// GetReconcileErrorsForTeam provides a mock function with given fields: ctx, teamID
-func (_m *MockDatabase) GetReconcileErrorsForTeam(ctx context.Context, teamID uuid.UUID) ([]*ReconcileError, error) {
-	ret := _m.Called(ctx, teamID)
-
-	var r0 []*ReconcileError
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) []*ReconcileError); ok {
-		r0 = rf(ctx, teamID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*ReconcileError)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
-		r1 = rf(ctx, teamID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // GetTeamByID provides a mock function with given fields: ctx, ID
 func (_m *MockDatabase) GetTeamByID(ctx context.Context, ID uuid.UUID) (*Team, error) {
 	ret := _m.Called(ctx, ID)
@@ -273,6 +250,29 @@ func (_m *MockDatabase) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) (
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(TeamMetadata)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = rf(ctx, teamID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetTeamReconcileErrors provides a mock function with given fields: ctx, teamID
+func (_m *MockDatabase) GetTeamReconcileErrors(ctx context.Context, teamID uuid.UUID) ([]*ReconcileError, error) {
+	ret := _m.Called(ctx, teamID)
+
+	var r0 []*ReconcileError
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) []*ReconcileError); ok {
+		r0 = rf(ctx, teamID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ReconcileError)
 		}
 	}
 
@@ -484,8 +484,8 @@ func (_m *MockDatabase) LoadSystemState(ctx context.Context, systemName sqlc.Sys
 	return r0
 }
 
-// PurgeReconcileError provides a mock function with given fields: ctx, teamID, systemName
-func (_m *MockDatabase) PurgeReconcileError(ctx context.Context, teamID uuid.UUID, systemName sqlc.SystemName) error {
+// PurgeTeamReconcileErrors provides a mock function with given fields: ctx, teamID, systemName
+func (_m *MockDatabase) PurgeTeamReconcileErrors(ctx context.Context, teamID uuid.UUID, systemName sqlc.SystemName) error {
 	ret := _m.Called(ctx, teamID, systemName)
 
 	var r0 error

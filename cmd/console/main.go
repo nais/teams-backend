@@ -236,14 +236,14 @@ func reconcileTeams(ctx context.Context, database db.Database, recs []reconciler
 			if err != nil {
 				log.Error(err)
 				teamErrors++
-				err = database.AddReconcileError(ctx, input.CorrelationID, input.Team.ID, reconciler.Name(), err)
+				err = database.AddTeamReconcileError(ctx, input.CorrelationID, input.Team.ID, reconciler.Name(), err)
 				if err != nil {
 					log.Errorf("Unable to add reconcile error to the database: %s", err)
 				}
 				continue
 			}
 
-			err = database.PurgeReconcileError(ctx, input.Team.ID, reconciler.Name())
+			err = database.PurgeTeamReconcileErrors(ctx, input.Team.ID, reconciler.Name())
 			if err != nil {
 				log.Errorf("Unable to delete reconcile error from database: %s", err)
 			}

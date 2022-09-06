@@ -11,8 +11,8 @@ type ReconcileError struct {
 	*sqlc.ReconcileError
 }
 
-func (d *database) AddReconcileError(ctx context.Context, correlationID uuid.UUID, teamID uuid.UUID, systemName sqlc.SystemName, err error) error {
-	return d.querier.AddReconcileError(ctx, sqlc.AddReconcileErrorParams{
+func (d *database) AddTeamReconcileError(ctx context.Context, correlationID uuid.UUID, teamID uuid.UUID, systemName sqlc.SystemName, err error) error {
+	return d.querier.AddTeamReconcileError(ctx, sqlc.AddTeamReconcileErrorParams{
 		CorrelationID: correlationID,
 		TeamID:        teamID,
 		SystemName:    systemName,
@@ -20,8 +20,8 @@ func (d *database) AddReconcileError(ctx context.Context, correlationID uuid.UUI
 	})
 }
 
-func (d *database) GetReconcileErrorsForTeam(ctx context.Context, teamID uuid.UUID) ([]*ReconcileError, error) {
-	rows, err := d.querier.GetReconcileErrorsForTeam(ctx, teamID)
+func (d *database) GetTeamReconcileErrors(ctx context.Context, teamID uuid.UUID) ([]*ReconcileError, error) {
+	rows, err := d.querier.GetTeamReconcileErrors(ctx, teamID)
 	if err != nil {
 		return nil, err
 	}
@@ -34,8 +34,8 @@ func (d *database) GetReconcileErrorsForTeam(ctx context.Context, teamID uuid.UU
 	return errors, nil
 }
 
-func (d *database) PurgeReconcileError(ctx context.Context, teamID uuid.UUID, systemName sqlc.SystemName) error {
-	return d.querier.PurgeReconcileError(ctx, sqlc.PurgeReconcileErrorParams{
+func (d *database) PurgeTeamReconcileErrors(ctx context.Context, teamID uuid.UUID, systemName sqlc.SystemName) error {
+	return d.querier.PurgeTeamReconcileErrors(ctx, sqlc.PurgeTeamReconcileErrorsParams{
 		TeamID:     teamID,
 		SystemName: systemName,
 	})

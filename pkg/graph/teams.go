@@ -443,7 +443,7 @@ func (r *teamResolver) SyncErrors(ctx context.Context, obj *db.Team) ([]*model.S
 		return nil, err
 	}
 
-	rows, err := r.database.GetReconcileErrorsForTeam(ctx, obj.ID)
+	rows, err := r.database.GetTeamReconcileErrors(ctx, obj.ID)
 	if err != nil {
 		return nil, err
 	}

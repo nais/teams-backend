@@ -11,22 +11,22 @@ import (
 	"github.com/google/uuid"
 )
 
-const addReconcileError = `-- name: AddReconcileError :exec
+const addTeamReconcileError = `-- name: AddTeamReconcileError :exec
 INSERT INTO reconcile_errors (correlation_id, team_id, system_name, error_message)
 VALUES ($1, $2, $3, $4)
 ON CONFLICT(team_id, system_name) DO
     UPDATE SET correlation_id = $1, created_at = NOW(), error_message = $4
 `
 
-type AddReconcileErrorParams struct {
+type AddTeamReconcileErrorParams struct {
 	CorrelationID uuid.UUID
 	TeamID        uuid.UUID
 	SystemName    SystemName
 	ErrorMessage  string
 }
 
-func (q *Queries) AddReconcileError(ctx context.Context, arg AddReconcileErrorParams) error {
-	_, err := q.db.Exec(ctx, addReconcileError,
+func (q *Queries) AddTeamReconcileError(ctx context.Context, arg AddTeamReconcileErrorParams) error {
+	_, err := q.db.Exec(ctx, addTeamReconcileError,
 		arg.CorrelationID,
 		arg.TeamID,
 		arg.SystemName,
@@ -35,12 +35,12 @@ func (q *Queries) AddReconcileError(ctx context.Context, arg AddReconcileErrorPa
 	return err
 }
 
-const getReconcileErrorsForTeam = `-- name: GetReconcileErrorsForTeam :many
+const getTeamReconcileErrors = `-- name: GetTeamReconcileErrors :many
 SELECT id, correlation_id, team_id, system_name, created_at, error_message FROM reconcile_errors WHERE team_id = $1 ORDER BY created_at DESC
 `
 
-func (q *Queries) GetReconcileErrorsForTeam(ctx context.Context, teamID uuid.UUID) ([]*ReconcileError, error) {
-	rows, err := q.db.Query(ctx, getReconcileErrorsForTeam, teamID)
+func (q *Queries) GetTeamReconcileErrors(ctx context.Context, teamID uuid.UUID) ([]*ReconcileError, error) {
+	rows, err := q.db.Query(ctx, getTeamReconcileErrors, teamID)
 	if err != nil {
 		return nil, err
 	}
@@ -66,16 +66,16 @@ func (q *Queries) GetReconcileErrorsForTeam(ctx context.Context, teamID uuid.UUI
 	return items, nil
 }
 
-const purgeReconcileError = `-- name: PurgeReconcileError :exec
+const purgeTeamReconcileErrors = `-- name: PurgeTeamReconcileErrors :exec
 DELETE FROM reconcile_errors WHERE team_id = $1 AND system_name = $2
 `
 
-type PurgeReconcileErrorParams struct {
+type PurgeTeamReconcileErrorsParams struct {
 	TeamID     uuid.UUID
 	SystemName SystemName
 }
 
-func (q *Queries) PurgeReconcileError(ctx context.Context, arg PurgeReconcileErrorParams) error {
-	_, err := q.db.Exec(ctx, purgeReconcileError, arg.TeamID, arg.SystemName)
+func (q *Queries) PurgeTeamReconcileErrors(ctx context.Context, arg PurgeTeamReconcileErrorsParams) error {
+	_, err := q.db.Exec(ctx, purgeTeamReconcileErrors, arg.TeamID, arg.SystemName)
 	return err
 }
