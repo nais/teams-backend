@@ -231,24 +231,26 @@ func reconcileTeams(ctx context.Context, database db.Database, recs []reconciler
 		teamErrors := 0
 
 		for _, reconciler := range recs {
-			log.Infof("Starting reconciler %q for team: %q", reconciler.Name(), input.Team.Slug)
+			systemName := reconciler.Name()
+
+			log.Infof("Starting reconciler %q for team: %q", systemName, input.Team.Slug)
 			err := reconciler.Reconcile(ctx, input)
 			if err != nil {
 				log.Error(err)
 				teamErrors++
-				err = database.AddTeamReconcileError(ctx, input.CorrelationID, input.Team.ID, reconciler.Name(), err)
+				err = database.AddTeamReconcileError(ctx, input.CorrelationID, input.Team.ID, systemName, err)
 				if err != nil {
 					log.Errorf("Unable to add reconcile error to the database: %s", err)
 				}
 				continue
 			}
 
-			err = database.PurgeTeamReconcileErrors(ctx, input.Team.ID, reconciler.Name())
+			err = database.PurgeTeamReconcileErrors(ctx, input.Team.ID, systemName)
 			if err != nil {
-				log.Errorf("Unable to delete reconcile error from database: %s", err)
+				log.Errorf("Unable to purge reconcile errors for reconciler %q and team %q: %s", systemName, input.Team.Slug, err)
 			}
 
-			log.Infof("Successfully finished reconciler %q for team: %q", reconciler.Name(), input.Team.Slug)
+			log.Infof("Successfully finished reconciler %q for team: %q", systemName, input.Team.Slug)
 		}
 
 		if teamErrors == 0 {
