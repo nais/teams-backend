@@ -131,7 +131,7 @@ type Team {
     "Team members."
     members: [TeamMember!]!
 
-    "Possible issues related to synchronization of the team to configured third party systems. If there are no entries the team can be considered as fully synchronized."
+    "Possible issues related to synchronization of the team to configured external systems. If there are no entries the team can be considered fully synchronized."
     syncErrors: [SyncError!]!
 }
 
