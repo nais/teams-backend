@@ -17,6 +17,9 @@ scalar Slug
 "String value representing an audit action."
 scalar AuditAction
 
+"String value representing a role name."
+scalar RoleName
+
 "String value representing a system name."
 scalar SystemName
 

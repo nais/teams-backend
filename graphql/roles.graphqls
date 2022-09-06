@@ -1,7 +1,7 @@
 "Role binding type."
 type Role {
     "Name of the role."
-    name: String!
+    name: RoleName!
 
     "Whether or not the role is global."
     isGlobal: Boolean!
