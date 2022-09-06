@@ -65,9 +65,9 @@ type Database interface {
 
 	SetUserName(ctx context.Context, userID uuid.UUID, name string) (*User, error)
 
-	AddTeamReconcileError(ctx context.Context, correlationID uuid.UUID, teamID uuid.UUID, systemName sqlc.SystemName, err error) error
+	SetTeamReconcileErrorForSystem(ctx context.Context, correlationID uuid.UUID, teamID uuid.UUID, systemName sqlc.SystemName, err error) error
 	GetTeamReconcileErrors(ctx context.Context, teamID uuid.UUID) ([]*ReconcileError, error)
-	PurgeTeamReconcileErrors(ctx context.Context, teamID uuid.UUID, systemName sqlc.SystemName) error
+	ClearTeamReconcileErrorForSystem(ctx context.Context, teamID uuid.UUID, systemName sqlc.SystemName) error
 }
 
 func NewDatabase(q Querier) Database {

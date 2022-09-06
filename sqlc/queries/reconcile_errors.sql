@@ -1,7 +1,7 @@
--- name: PurgeTeamReconcileErrors :exec
+-- name: ClearTeamReconcileErrorForSystem :exec
 DELETE FROM reconcile_errors WHERE team_id = $1 AND system_name = $2;
 
--- name: AddTeamReconcileError :exec
+-- name: SetTeamReconcileErrorForSystem :exec
 INSERT INTO reconcile_errors (correlation_id, team_id, system_name, error_message)
 VALUES ($1, $2, $3, $4)
 ON CONFLICT(team_id, system_name) DO
