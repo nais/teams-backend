@@ -11,17 +11,18 @@ import (
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
+	"github.com/nais/console/pkg/db"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 )
 
 const (
-	RedirectURICookie               = "redirecturi"
-	OAuthStateCookie                = "oauthstate"
-	SessionCookieName               = "console_session_id"
-	tokenLength                     = 32
-	sessionLength     time.Duration = 7 * time.Hour
-	IDTokenKey                      = "id_token"
+	RedirectURICookie = "redirecturi"
+	OAuthStateCookie  = "oauthstate"
+	SessionCookieName = "console_session_id"
+	tokenLength       = 32
+	sessionLength     = 7 * time.Hour
+	IDTokenKey        = "id_token"
 )
 
 type OAuth2 interface {
@@ -31,14 +32,15 @@ type OAuth2 interface {
 }
 
 type Handler struct {
+	database     db.Database
 	oauth2Config OAuth2
-	log          *logrus.Entry
 	repo         SessionStore
 	frontendURL  url.URL
 }
 
-func New(oauth2Config OAuth2, repo SessionStore, frontendURL url.URL) *Handler {
+func New(oauth2Config OAuth2, database db.Database, repo SessionStore, frontendURL url.URL) *Handler {
 	return &Handler{
+		database:     database,
 		oauth2Config: oauth2Config,
 		repo:         repo,
 		frontendURL:  frontendURL,
@@ -51,7 +53,6 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		Name:     RedirectURICookie,
 		Value:    redirectURI,
 		Path:     "/",
-		Domain:   r.Host,
 		Expires:  time.Now().Add(30 * time.Minute),
 		Secure:   true,
 		HttpOnly: true,
@@ -62,7 +63,6 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		Name:     OAuthStateCookie,
 		Value:    oauthState,
 		Path:     "/",
-		Domain:   r.Host,
 		Expires:  time.Now().Add(30 * time.Minute),
 		Secure:   true,
 		HttpOnly: true,
@@ -79,47 +79,46 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		frontendURL.Path = strings.TrimPrefix(redirectURI.Value, "/")
 	}
 
-	deleteCookie(w, RedirectURICookie, r.Host)
+	deleteCookie(w, RedirectURICookie)
 	code := r.URL.Query().Get("code")
 	if len(code) == 0 {
+		log.Error("Missing code query parameter")
 		http.Redirect(w, r, frontendURL.String()+"?error=unauthenticated", http.StatusFound)
 		return
 	}
 
 	oauthCookie, err := r.Cookie(OAuthStateCookie)
 	if err != nil {
-		h.log.Errorf("Missing oauth state cookie: %v", err)
+		log.WithError(err).Error("Missing oauth state cookie")
 		http.Redirect(w, r, frontendURL.String()+"?error=invalid-state", http.StatusFound)
 		return
 	}
 
-	deleteCookie(w, OAuthStateCookie, r.Host)
-
+	deleteCookie(w, OAuthStateCookie)
 	state := r.URL.Query().Get("state")
 	if state != oauthCookie.Value {
-		h.log.Info("Incoming state does not match local state")
+		log.Error("Incoming state does not match local state")
 		http.Redirect(w, r, frontendURL.String()+"?error=invalid-state", http.StatusFound)
 		return
 	}
 
 	tokens, err := h.oauth2Config.Exchange(r.Context(), code)
 	if err != nil {
-		h.log.Errorf("Exchanging authorization code for tokens: %v", err)
+		log.WithError(err).Error("Exchanging authorization code for tokens")
 		http.Redirect(w, r, frontendURL.String()+"?error=unauthenticated", http.StatusFound)
 		return
 	}
 
 	rawIDToken, ok := tokens.Extra(IDTokenKey).(string)
 	if !ok {
-		h.log.Info("Missing id_token")
+		log.Error("Missing id_token")
 		http.Redirect(w, r, frontendURL.String()+"?error=unauthenticated", http.StatusFound)
 		return
 	}
 
-	// Parse and verify ID Token payload.
 	idToken, err := h.oauth2Config.Verify(r.Context(), rawIDToken)
 	if err != nil {
-		h.log.Info("Invalid id_token")
+		log.WithError(err).Error("Invalid id_token")
 		http.Redirect(w, r, frontendURL.String()+"?error=unauthenticated", http.StatusFound)
 		return
 	}
@@ -129,19 +128,23 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		Expires: time.Now().Add(sessionLength),
 	}
 	if err := idToken.Claims(session); err != nil {
-		h.log.WithError(err).Info("Unable to parse claims")
+		log.WithError(err).Error("Unable to parse claims")
 		http.Redirect(w, r, frontendURL.String()+"?error=unauthenticated", http.StatusFound)
+		return
+	}
+
+	if _, err := h.database.GetUserByEmail(r.Context(), session.Email); err != nil {
+		log.WithError(err).Errorf("User with email %q does not exist in the Console database", session.Email)
+		http.Redirect(w, r, frontendURL.String()+"?error=unknown-user", http.StatusFound)
 		return
 	}
 
 	h.repo.Create(session)
 
-	// TODO(thokra): Encrypt cookie value
 	http.SetCookie(w, &http.Cookie{
 		Name:     SessionCookieName,
 		Value:    session.Key,
 		Path:     "/",
-		Domain:   r.Host,
 		Expires:  session.Expires,
 		Secure:   true,
 		HttpOnly: true,
@@ -150,12 +153,11 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, frontendURL.String(), http.StatusFound)
 }
 
-func deleteCookie(w http.ResponseWriter, name, domain string) {
+func deleteCookie(w http.ResponseWriter, name string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     name,
 		Value:    "",
 		Path:     "/",
-		Domain:   domain,
 		Expires:  time.Unix(0, 0),
 		Secure:   true,
 		HttpOnly: true,
@@ -163,11 +165,11 @@ func deleteCookie(w http.ResponseWriter, name, domain string) {
 }
 
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
-	deleteCookie(w, SessionCookieName, r.Host)
+	deleteCookie(w, SessionCookieName)
 
 	cookie, err := r.Cookie(SessionCookieName)
 	if err != nil {
-		h.log.WithError(err).Info("Unable to logout session")
+		log.WithError(err).Error("Unable to logout session")
 	}
 
 	h.repo.Destroy(cookie.Value)

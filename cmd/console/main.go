@@ -97,7 +97,7 @@ func run() error {
 	log.Infof("Initialized %d reconcilers.", len(recs))
 
 	store := authn.NewStore()
-	authHandler, err := setupAuthHandler(cfg, store)
+	authHandler, err := setupAuthHandler(cfg, database, store)
 	if err != nil {
 		return err
 	}
@@ -266,13 +266,13 @@ func reconcileTeams(ctx context.Context, database db.Database, recs []reconciler
 	return nil
 }
 
-func setupAuthHandler(cfg *config.Config, store authn.SessionStore) (*authn.Handler, error) {
+func setupAuthHandler(cfg *config.Config, database db.Database, store authn.SessionStore) (*authn.Handler, error) {
 	cf := authn.NewGoogle(cfg.OAuth.ClientID, cfg.OAuth.ClientSecret, cfg.OAuth.RedirectURL)
 	frontendURL, err := url.Parse(cfg.FrontendURL)
 	if err != nil {
 		return nil, err
 	}
-	handler := authn.New(cf, store, *frontendURL)
+	handler := authn.New(cf, database, store, *frontendURL)
 	return handler, nil
 }
 
