@@ -4,6 +4,7 @@ ENV GOOS=linux
 COPY . /src
 WORKDIR /src
 RUN make test
+RUN make vulncheck
 RUN make alpine
 
 FROM alpine:3.15

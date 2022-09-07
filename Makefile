@@ -16,6 +16,9 @@ migrate:
 test:
 	go test ./...
 
+vulncheck:
+	go run golang.org/x/vuln/cmd/govulncheck -v ./...
+
 fmt:
 	go run mvdan.cc/gofumpt -w ./
 
