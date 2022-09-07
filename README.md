@@ -218,37 +218,10 @@ bin/console
   * `https://www.googleapis.com/auth/admin.directory.user.readonly`
 
 ### Github
-* Set up single sign-on against tenant's IDP. SCIM is optional, but not required.
+* Set up single sign-on against tenant's IdP. SCIM is recommended, but not required.
 * Create GitHub application and obtain: private key, application ID, installation ID
 * Install GitHub application on organization and give scopes:
   * Organization Administration: `read`
   * Organization Members: `readwrite`
 
 Important: do not share the same GitHub application between tenants.
-
-## ACL
-
-Within a team, users are either _owners_ or _members_. This maps somewhat accurately
-to our target systems.
-
-* Every user has a set of basic rights
-
-User roles:
-
-* Global
-  * `nais:console:teams:admin` -> manage all teams
-  * `nais:console:teams:create` -> create team
-* Per team
-  * `nais:console:teams:<team>:admin` -> manage team
-
-Team roles:
-
-* Per reconciler: disabled, read, readwrite
-  * Only implement "readwrite", and make it look like a boolean option
-
-
-# What should we test?
-
-* reconcilers
-* user synchronizer
-* authentication middleware
