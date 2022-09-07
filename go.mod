@@ -23,6 +23,7 @@ require (
 	github.com/vektah/gqlparser/v2 v2.5.0
 	github.com/vektra/mockery/v2 v2.14.0
 	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5
+	golang.org/x/vuln v0.0.0-20220902211423-27dd78d2ca39
 	google.golang.org/api v0.81.0
 	gopkg.in/yaml.v3 v3.0.1
 	honnef.co/go/tools v0.3.3
@@ -103,7 +104,6 @@ require (
 	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.13-0.20220803210227-8b9a1fbdf5c3 // indirect
-	golang.org/x/vuln v0.0.0-20220902211423-27dd78d2ca39 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20220519153652-3a47de7e79bd // indirect
 	google.golang.org/grpc v1.46.2 // indirect
