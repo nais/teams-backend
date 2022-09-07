@@ -2,7 +2,6 @@ package auditlogger
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/nais/console/pkg/slug"
@@ -46,8 +45,20 @@ type Fields struct {
 }
 
 func (l *auditLogger) Logf(ctx context.Context, fields Fields, message string, messageArgs ...interface{}) error {
-	if l.systemName == "" {
-		return errors.New("unable to create auditlog entry: missing systemName")
+	if l.systemName == "" || !l.systemName.Valid() {
+		return fmt.Errorf("unable to create auditlog entry: missing or invalid systemName")
+	}
+
+	if fields.Action == "" || !fields.Action.Valid() {
+		return fmt.Errorf("unable to create auditlog entry: missing or invalid audit action")
+	}
+
+	if fields.CorrelationID == uuid.Nil {
+		id, err := uuid.NewUUID()
+		if err != nil {
+			return fmt.Errorf("missing correlation ID in fields and unable to generate one: %w", err)
+		}
+		fields.CorrelationID = id
 	}
 
 	message = fmt.Sprintf(message, messageArgs...)
