@@ -12,8 +12,8 @@ import (
 )
 
 type Querier interface {
-	AddGlobalUserRole(ctx context.Context, arg AddGlobalUserRoleParams) error
-	AddTargetedUserRole(ctx context.Context, arg AddTargetedUserRoleParams) error
+	AssignGlobalRoleToUser(ctx context.Context, arg AssignGlobalRoleToUserParams) error
+	AssignTargetedRoleToUser(ctx context.Context, arg AssignTargetedRoleToUserParams) error
 	ClearTeamReconcileErrorForSystem(ctx context.Context, arg ClearTeamReconcileErrorForSystemParams) error
 	CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) error
 	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) error
@@ -39,7 +39,8 @@ type Querier interface {
 	RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) error
 	RemoveApiKeysFromUser(ctx context.Context, userID uuid.UUID) error
 	RemoveGlobalUserRole(ctx context.Context, arg RemoveGlobalUserRoleParams) error
-	RemoveTargetedUserRole(ctx context.Context, arg RemoveTargetedUserRoleParams) error
+	RevokeGlobalRoleFromUser(ctx context.Context, arg RevokeGlobalRoleFromUserParams) error
+	RevokeTargetedRoleFromUser(ctx context.Context, arg RevokeTargetedRoleFromUserParams) error
 	SetTeamMetadata(ctx context.Context, arg SetTeamMetadataParams) error
 	SetTeamReconcileErrorForSystem(ctx context.Context, arg SetTeamReconcileErrorForSystemParams) error
 	SetTeamSystemState(ctx context.Context, arg SetTeamSystemStateParams) error

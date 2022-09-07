@@ -57,6 +57,8 @@ const (
 	AuditActionLegacyImporterTeamAddMember               AuditAction = "legacy-importer:team:add-member"
 	AuditActionLegacyImporterTeamAddOwner                AuditAction = "legacy-importer:team:add-owner"
 	AuditActionLegacyImporterUserCreate                  AuditAction = "legacy-importer:user:create"
+	AuditActionGraphqlApiRolesAssignGlobalRole           AuditAction = "graphql-api:roles:assign-global-role"
+	AuditActionGraphqlApiRolesRevokeGlobalRole           AuditAction = "graphql-api:roles:revoke-global-role"
 )
 
 func (e *AuditAction) Scan(src interface{}) error {
@@ -134,7 +136,9 @@ func (e AuditAction) Valid() bool {
 		AuditActionLegacyImporterTeamCreate,
 		AuditActionLegacyImporterTeamAddMember,
 		AuditActionLegacyImporterTeamAddOwner,
-		AuditActionLegacyImporterUserCreate:
+		AuditActionLegacyImporterUserCreate,
+		AuditActionGraphqlApiRolesAssignGlobalRole,
+		AuditActionGraphqlApiRolesRevokeGlobalRole:
 		return true
 	}
 	return false
@@ -181,6 +185,8 @@ func AllAuditActionValues() []AuditAction {
 		AuditActionLegacyImporterTeamAddMember,
 		AuditActionLegacyImporterTeamAddOwner,
 		AuditActionLegacyImporterUserCreate,
+		AuditActionGraphqlApiRolesAssignGlobalRole,
+		AuditActionGraphqlApiRolesRevokeGlobalRole,
 	}
 }
 

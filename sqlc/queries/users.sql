@@ -30,13 +30,16 @@ SELECT teams.* FROM user_roles JOIN teams ON teams.id = user_roles.target_id WHE
 SELECT * FROM user_roles
 WHERE user_id = $1;
 
--- name: AddTargetedUserRole :exec
-INSERT INTO user_roles (user_id, role_name, target_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING;
-
--- name: AddGlobalUserRole :exec
+-- name: AssignGlobalRoleToUser :exec
 INSERT INTO user_roles (user_id, role_name) VALUES ($1, $2) ON CONFLICT DO NOTHING;
 
--- name: RemoveTargetedUserRole :exec
+-- name: RevokeGlobalRoleFromUser :exec
+DELETE FROM user_roles WHERE user_id = $1 AND role_name = $2;
+
+-- name: AssignTargetedRoleToUser :exec
+INSERT INTO user_roles (user_id, role_name, target_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING;
+
+-- name: RevokeTargetedRoleFromUser :exec
 DELETE FROM user_roles WHERE user_id = $1 AND target_id = $2 AND role_name = $3;
 
 -- name: RemoveGlobalUserRole :exec

@@ -526,6 +526,20 @@ func (_m *MockDatabase) RemoveUserFromTeam(ctx context.Context, userID uuid.UUID
 	return r0
 }
 
+// RevokeGlobalRoleFromUser provides a mock function with given fields: ctx, userID, roleName
+func (_m *MockDatabase) RevokeGlobalRoleFromUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error {
+	ret := _m.Called(ctx, userID, roleName)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, sqlc.RoleName) error); ok {
+		r0 = rf(ctx, userID, roleName)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // SetSystemState provides a mock function with given fields: ctx, systemName, teamID, state
 func (_m *MockDatabase) SetSystemState(ctx context.Context, systemName sqlc.SystemName, teamID uuid.UUID, state interface{}) error {
 	ret := _m.Called(ctx, systemName, teamID, state)

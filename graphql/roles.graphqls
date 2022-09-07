@@ -1,3 +1,40 @@
+extend type Query {
+    "List all Console roles."
+    roles: [RoleName!]!
+}
+
+extend type Mutation {
+    """
+    Assign a global role to a user
+
+    Only users with the admin role are allowed to assign global roles.
+
+    The updated user is returned on success.
+    """
+    assignGlobalRoleToUser(
+        "The role to assign the user."
+        role: RoleName!
+
+        "The user that will be assiged the role."
+        userID: UUID!
+    ): User! @auth
+
+    """
+    Revoke a global role from a user
+
+    Only users with the admin role are allowed to revoke global roles.
+
+    The updated user is returned on success.
+    """
+    revokeGlobalRoleFromUser(
+        "The role to revoke from the user."
+        role: RoleName!
+
+        "The user to revoke the role from."
+        userID: UUID!
+    ): User! @auth
+}
+
 "Role binding type."
 type Role {
     "Name of the role."

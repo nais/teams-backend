@@ -36,6 +36,17 @@ func ContextWithActor(ctx context.Context, user *db.User, roles []*db.Role) cont
 	})
 }
 
+// RequireRole Check if an actor has a required role
+func RequireRole(actor *actor, requiredRoleName sqlc.RoleName) error {
+	for _, role := range actor.Roles {
+		if role.RoleName == requiredRoleName {
+			return nil
+		}
+	}
+
+	return ErrNotAuthorized
+}
+
 // ActorFromContext Get the actor stored in the context. Requires that a middleware has stored an actor in the first
 // place.
 func ActorFromContext(ctx context.Context) *actor {

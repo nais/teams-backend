@@ -67,17 +67,20 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddTeamMembers      func(childComplexity int, input model.AddTeamMembersInput) int
-		AddTeamOwners       func(childComplexity int, input model.AddTeamOwnersInput) int
-		CreateTeam          func(childComplexity int, input model.CreateTeamInput) int
-		RemoveUsersFromTeam func(childComplexity int, input model.RemoveUsersFromTeamInput) int
-		SetTeamMemberRole   func(childComplexity int, input model.SetTeamMemberRoleInput) int
-		SynchronizeTeam     func(childComplexity int, teamID *uuid.UUID) int
-		UpdateTeam          func(childComplexity int, teamID *uuid.UUID, input model.UpdateTeamInput) int
+		AddTeamMembers           func(childComplexity int, input model.AddTeamMembersInput) int
+		AddTeamOwners            func(childComplexity int, input model.AddTeamOwnersInput) int
+		AssignGlobalRoleToUser   func(childComplexity int, role sqlc.RoleName, userID *uuid.UUID) int
+		CreateTeam               func(childComplexity int, input model.CreateTeamInput) int
+		RemoveUsersFromTeam      func(childComplexity int, input model.RemoveUsersFromTeamInput) int
+		RevokeGlobalRoleFromUser func(childComplexity int, role sqlc.RoleName, userID *uuid.UUID) int
+		SetTeamMemberRole        func(childComplexity int, input model.SetTeamMemberRoleInput) int
+		SynchronizeTeam          func(childComplexity int, teamID *uuid.UUID) int
+		UpdateTeam               func(childComplexity int, teamID *uuid.UUID, input model.UpdateTeamInput) int
 	}
 
 	Query struct {
 		Me          func(childComplexity int) int
+		Roles       func(childComplexity int) int
 		Team        func(childComplexity int, id *uuid.UUID) int
 		Teams       func(childComplexity int) int
 		User        func(childComplexity int, id *uuid.UUID) int
@@ -137,6 +140,8 @@ type AuditLogResolver interface {
 	TargetUserEmail(ctx context.Context, obj *db.AuditLog) (*string, error)
 }
 type MutationResolver interface {
+	AssignGlobalRoleToUser(ctx context.Context, role sqlc.RoleName, userID *uuid.UUID) (*db.User, error)
+	RevokeGlobalRoleFromUser(ctx context.Context, role sqlc.RoleName, userID *uuid.UUID) (*db.User, error)
 	CreateTeam(ctx context.Context, input model.CreateTeamInput) (*db.Team, error)
 	UpdateTeam(ctx context.Context, teamID *uuid.UUID, input model.UpdateTeamInput) (*db.Team, error)
 	RemoveUsersFromTeam(ctx context.Context, input model.RemoveUsersFromTeamInput) (*db.Team, error)
@@ -146,6 +151,7 @@ type MutationResolver interface {
 	SetTeamMemberRole(ctx context.Context, input model.SetTeamMemberRoleInput) (*db.Team, error)
 }
 type QueryResolver interface {
+	Roles(ctx context.Context) ([]sqlc.RoleName, error)
 	Teams(ctx context.Context) ([]*db.Team, error)
 	Team(ctx context.Context, id *uuid.UUID) (*db.Team, error)
 	Users(ctx context.Context) ([]*db.User, error)
@@ -270,6 +276,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.AddTeamOwners(childComplexity, args["input"].(model.AddTeamOwnersInput)), true
 
+	case "Mutation.assignGlobalRoleToUser":
+		if e.complexity.Mutation.AssignGlobalRoleToUser == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_assignGlobalRoleToUser_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.AssignGlobalRoleToUser(childComplexity, args["role"].(sqlc.RoleName), args["userID"].(*uuid.UUID)), true
+
 	case "Mutation.createTeam":
 		if e.complexity.Mutation.CreateTeam == nil {
 			break
@@ -293,6 +311,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.RemoveUsersFromTeam(childComplexity, args["input"].(model.RemoveUsersFromTeamInput)), true
+
+	case "Mutation.revokeGlobalRoleFromUser":
+		if e.complexity.Mutation.RevokeGlobalRoleFromUser == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_revokeGlobalRoleFromUser_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.RevokeGlobalRoleFromUser(childComplexity, args["role"].(sqlc.RoleName), args["userID"].(*uuid.UUID)), true
 
 	case "Mutation.setTeamMemberRole":
 		if e.complexity.Mutation.SetTeamMemberRole == nil {
@@ -336,6 +366,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.Me(childComplexity), true
+
+	case "Query.roles":
+		if e.complexity.Query.Roles == nil {
+			break
+		}
+
+		return e.complexity.Query.Roles(childComplexity), true
 
 	case "Query.team":
 		if e.complexity.Query.Team == nil {
@@ -667,7 +704,44 @@ type AuditLog {
 }`, BuiltIn: false},
 	{Name: "../../../graphql/directives.graphqls", Input: `"Require authentication for all requests with this directive."
 directive @auth on FIELD_DEFINITION`, BuiltIn: false},
-	{Name: "../../../graphql/roles.graphqls", Input: `"Role binding type."
+	{Name: "../../../graphql/roles.graphqls", Input: `extend type Query {
+    "List all Console roles."
+    roles: [RoleName!]!
+}
+
+extend type Mutation {
+    """
+    Assign a global role to a user
+
+    Only users with the admin role are allowed to assign global roles.
+
+    The updated user is returned on success.
+    """
+    assignGlobalRoleToUser(
+        "The role to assign the user."
+        role: RoleName!
+
+        "The user that will be assiged the role."
+        userID: UUID!
+    ): User! @auth
+
+    """
+    Revoke a global role from a user
+
+    Only users with the admin role are allowed to revoke global roles.
+
+    The updated user is returned on success.
+    """
+    revokeGlobalRoleFromUser(
+        "The role to revoke from the user."
+        role: RoleName!
+
+        "The user to revoke the role from."
+        userID: UUID!
+    ): User! @auth
+}
+
+"Role binding type."
 type Role {
     "Name of the role."
     name: RoleName!
@@ -1023,6 +1097,30 @@ func (ec *executionContext) field_Mutation_addTeamOwners_args(ctx context.Contex
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_assignGlobalRoleToUser_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 sqlc.RoleName
+	if tmp, ok := rawArgs["role"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("role"))
+		arg0, err = ec.unmarshalNRoleName2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐRoleName(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["role"] = arg0
+	var arg1 *uuid.UUID
+	if tmp, ok := rawArgs["userID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userID"))
+		arg1, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["userID"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_createTeam_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -1050,6 +1148,30 @@ func (ec *executionContext) field_Mutation_removeUsersFromTeam_args(ctx context.
 		}
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_revokeGlobalRoleFromUser_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 sqlc.RoleName
+	if tmp, ok := rawArgs["role"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("role"))
+		arg0, err = ec.unmarshalNRoleName2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐRoleName(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["role"] = arg0
+	var arg1 *uuid.UUID
+	if tmp, ok := rawArgs["userID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userID"))
+		arg1, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["userID"] = arg1
 	return args, nil
 }
 
@@ -1588,6 +1710,180 @@ func (ec *executionContext) fieldContext_AuditLog_createdAt(ctx context.Context,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Time does not have child fields")
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_assignGlobalRoleToUser(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_assignGlobalRoleToUser(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().AssignGlobalRoleToUser(rctx, fc.Args["role"].(sqlc.RoleName), fc.Args["userID"].(*uuid.UUID))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Auth == nil {
+				return nil, errors.New("directive auth is not implemented")
+			}
+			return ec.directives.Auth(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*db.User); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/db.User`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*db.User)
+	fc.Result = res
+	return ec.marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐUser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_assignGlobalRoleToUser(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "name":
+				return ec.fieldContext_User_name(ctx, field)
+			case "teams":
+				return ec.fieldContext_User_teams(ctx, field)
+			case "roles":
+				return ec.fieldContext_User_roles(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_assignGlobalRoleToUser_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_revokeGlobalRoleFromUser(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_revokeGlobalRoleFromUser(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().RevokeGlobalRoleFromUser(rctx, fc.Args["role"].(sqlc.RoleName), fc.Args["userID"].(*uuid.UUID))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Auth == nil {
+				return nil, errors.New("directive auth is not implemented")
+			}
+			return ec.directives.Auth(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*db.User); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/db.User`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*db.User)
+	fc.Result = res
+	return ec.marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐUser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_revokeGlobalRoleFromUser(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "name":
+				return ec.fieldContext_User_name(ctx, field)
+			case "teams":
+				return ec.fieldContext_User_teams(ctx, field)
+			case "roles":
+				return ec.fieldContext_User_roles(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_revokeGlobalRoleFromUser_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
 	}
 	return fc, nil
 }
@@ -2227,6 +2523,50 @@ func (ec *executionContext) fieldContext_Mutation_setTeamMemberRole(ctx context.
 	if fc.Args, err = ec.field_Mutation_setTeamMemberRole_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_roles(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_roles(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Roles(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]sqlc.RoleName)
+	fc.Result = res
+	return ec.marshalNRoleName2ᚕgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐRoleNameᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_roles(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type RoleName does not have child fields")
+		},
 	}
 	return fc, nil
 }
@@ -6181,6 +6521,24 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Mutation")
+		case "assignGlobalRoleToUser":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_assignGlobalRoleToUser(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "revokeGlobalRoleFromUser":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_revokeGlobalRoleFromUser(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "createTeam":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
@@ -6274,6 +6632,29 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Query")
+		case "roles":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_roles(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
 		case "teams":
 			field := field
 
@@ -7343,6 +7724,38 @@ func (ec *executionContext) marshalNRoleName2githubᚗcomᚋnaisᚋconsoleᚋpkg
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNRoleName2ᚕgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐRoleNameᚄ(ctx context.Context, v interface{}) ([]sqlc.RoleName, error) {
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]sqlc.RoleName, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNRoleName2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐRoleName(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNRoleName2ᚕgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐRoleNameᚄ(ctx context.Context, sel ast.SelectionSet, v []sqlc.RoleName) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNRoleName2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐRoleName(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalNSetTeamMemberRoleInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSetTeamMemberRoleInput(ctx context.Context, v interface{}) (model.SetTeamMemberRoleInput, error) {

@@ -47,6 +47,7 @@ type Database interface {
 	GetAuditLogsForTeam(ctx context.Context, slug slug.Slug) ([]*AuditLog, error)
 
 	AssignGlobalRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error
+	RevokeGlobalRoleFromUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error
 	AssignTargetedRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName, targetID uuid.UUID) error
 
 	RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, teamID uuid.UUID) error

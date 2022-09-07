@@ -47,7 +47,7 @@ func (d *database) SetTeamMetadata(ctx context.Context, teamID uuid.UUID, metada
 }
 
 func (d *database) RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, teamID uuid.UUID) error {
-	err := d.querier.RemoveTargetedUserRole(ctx, sqlc.RemoveTargetedUserRoleParams{
+	err := d.querier.RevokeTargetedRoleFromUser(ctx, sqlc.RevokeTargetedRoleFromUserParams{
 		UserID:   userID,
 		TargetID: nullUUID(&teamID),
 		RoleName: sqlc.RoleNameTeammember,
@@ -56,7 +56,7 @@ func (d *database) RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, tea
 		return err
 	}
 
-	return d.querier.RemoveTargetedUserRole(ctx, sqlc.RemoveTargetedUserRoleParams{
+	return d.querier.RevokeTargetedRoleFromUser(ctx, sqlc.RevokeTargetedRoleFromUserParams{
 		UserID:   userID,
 		TargetID: nullUUID(&teamID),
 		RoleName: sqlc.RoleNameTeamowner,
@@ -98,7 +98,7 @@ func (d *database) AddTeam(ctx context.Context, name string, slug slug.Slug, pur
 			return err
 		}
 
-		err = querier.AddTargetedUserRole(ctx, sqlc.AddTargetedUserRoleParams{
+		err = querier.AssignTargetedRoleToUser(ctx, sqlc.AssignTargetedRoleToUserParams{
 			UserID:   ownerUserID,
 			TargetID: nullUUID(&team.ID),
 			RoleName: sqlc.RoleNameTeamowner,

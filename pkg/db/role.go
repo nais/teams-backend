@@ -8,14 +8,21 @@ import (
 )
 
 func (d *database) AssignGlobalRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error {
-	return d.querier.AddGlobalUserRole(ctx, sqlc.AddGlobalUserRoleParams{
+	return d.querier.AssignGlobalRoleToUser(ctx, sqlc.AssignGlobalRoleToUserParams{
+		UserID:   userID,
+		RoleName: roleName,
+	})
+}
+
+func (d *database) RevokeGlobalRoleFromUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error {
+	return d.querier.RevokeGlobalRoleFromUser(ctx, sqlc.RevokeGlobalRoleFromUserParams{
 		UserID:   userID,
 		RoleName: roleName,
 	})
 }
 
 func (d *database) AssignTargetedRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName, targetID uuid.UUID) error {
-	return d.querier.AddTargetedUserRole(ctx, sqlc.AddTargetedUserRoleParams{
+	return d.querier.AssignTargetedRoleToUser(ctx, sqlc.AssignTargetedRoleToUserParams{
 		UserID:   userID,
 		RoleName: roleName,
 		TargetID: nullUUID(&targetID),
@@ -49,7 +56,7 @@ func (d *database) UserIsTeamOwner(ctx context.Context, userID, teamID uuid.UUID
 
 func (d *database) SetTeamMemberRole(ctx context.Context, userID uuid.UUID, teamID uuid.UUID, role sqlc.RoleName) error {
 	return d.querier.Transaction(ctx, func(querier Querier) error {
-		err := querier.RemoveTargetedUserRole(ctx, sqlc.RemoveTargetedUserRoleParams{
+		err := querier.RevokeTargetedRoleFromUser(ctx, sqlc.RevokeTargetedRoleFromUserParams{
 			UserID:   userID,
 			TargetID: nullUUID(&teamID),
 			RoleName: sqlc.RoleNameTeamowner,
@@ -58,7 +65,7 @@ func (d *database) SetTeamMemberRole(ctx context.Context, userID uuid.UUID, team
 			return err
 		}
 
-		err = querier.RemoveTargetedUserRole(ctx, sqlc.RemoveTargetedUserRoleParams{
+		err = querier.RevokeTargetedRoleFromUser(ctx, sqlc.RevokeTargetedRoleFromUserParams{
 			UserID:   userID,
 			TargetID: nullUUID(&teamID),
 			RoleName: sqlc.RoleNameTeammember,
@@ -67,7 +74,7 @@ func (d *database) SetTeamMemberRole(ctx context.Context, userID uuid.UUID, team
 			return err
 		}
 
-		err = querier.AddTargetedUserRole(ctx, sqlc.AddTargetedUserRoleParams{
+		err = querier.AssignTargetedRoleToUser(ctx, sqlc.AssignTargetedRoleToUserParams{
 			UserID:   userID,
 			TargetID: nullUUID(&teamID),
 			RoleName: role,
