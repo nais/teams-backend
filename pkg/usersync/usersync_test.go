@@ -158,10 +158,8 @@ func getUser(email, name string, id *uuid.UUID) *db.User {
 		id = &newID
 	}
 	return &db.User{
-		User: &sqlc.User{
-			ID:    *id,
-			Email: email,
-			Name:  name,
-		},
+		ID:    *id,
+		Email: email,
+		Name:  name,
 	}
 }

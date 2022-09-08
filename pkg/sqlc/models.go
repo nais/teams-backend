@@ -499,9 +499,10 @@ type TeamMetadatum struct {
 }
 
 type User struct {
-	ID    uuid.UUID
-	Email string
-	Name  string
+	ID             uuid.UUID
+	Email          sql.NullString
+	Name           string
+	ServiceAccount bool
 }
 
 type UserRole struct {

@@ -3,11 +3,9 @@ package legacy
 import (
 	"context"
 
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/sqlc"
-
 	"github.com/nais/console/pkg/azureclient"
 	"github.com/nais/console/pkg/config"
+	"github.com/nais/console/pkg/db"
 	"golang.org/x/oauth2/clientcredentials"
 	"golang.org/x/oauth2/microsoft"
 )
@@ -65,10 +63,8 @@ func dbUsers(members []*azureclient.Member) []*db.User {
 	users := make([]*db.User, 0, len(members))
 	for _, member := range members {
 		users = append(users, &db.User{
-			User: &sqlc.User{
-				Email: member.Mail,
-				Name:  member.Name(),
-			},
+			Email: member.Mail,
+			Name:  member.Name(),
 		})
 	}
 	return users

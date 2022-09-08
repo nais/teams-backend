@@ -56,11 +56,9 @@ func TestOauth2Authentication(t *testing.T) {
 	t.Run("Valid cookie with matching session", func(t *testing.T) {
 		store := authn.NewStore()
 		user := &db.User{
-			User: &sqlc.User{
-				ID:    uuid.New(),
-				Email: "user1@example.com",
-				Name:  "User Name",
-			},
+			ID:    uuid.New(),
+			Email: "user1@example.com",
+			Name:  "User Name",
 		}
 		roles := []*db.Role{
 			{Name: sqlc.RoleNameAdmin},

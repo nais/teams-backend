@@ -6,12 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/nais/console/pkg/serviceaccount"
-
-	"github.com/nais/console/pkg/sqlc"
-
 	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/slug"
+	"github.com/nais/console/pkg/sqlc"
 )
 
 type ServiceAccount struct {
@@ -53,7 +49,7 @@ func parseAndValidateServiceAccounts(serviceAccountsJson string) ([]ServiceAccou
 }
 
 // SetupStaticServiceAccounts Create a set of service accounts with roles and API keys
-func SetupStaticServiceAccounts(ctx context.Context, database db.Database, serviceAccountsJson, tenantDomain string) error {
+func SetupStaticServiceAccounts(ctx context.Context, database db.Database, serviceAccountsJson string) error {
 	serviceAccounts, err := parseAndValidateServiceAccounts(serviceAccountsJson)
 	if err != nil {
 		return err
@@ -61,11 +57,9 @@ func SetupStaticServiceAccounts(ctx context.Context, database db.Database, servi
 
 	return database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
 		for _, serviceAccountFromInput := range serviceAccounts {
-			email := serviceaccount.Email(slug.Slug(serviceAccountFromInput.Name), tenantDomain)
-
-			serviceAccount, err := dbtx.GetUserByEmail(ctx, email)
+			serviceAccount, err := dbtx.GetServiceAccount(ctx, serviceAccountFromInput.Name)
 			if err != nil {
-				serviceAccount, err = dbtx.AddUser(ctx, serviceAccountFromInput.Name, email)
+				serviceAccount, err = dbtx.AddServiceAccount(ctx, serviceAccountFromInput.Name)
 				if err != nil {
 					return err
 				}
