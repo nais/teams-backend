@@ -41,7 +41,7 @@ func (q *Queries) AssignTargetedRoleToUser(ctx context.Context, arg AssignTarget
 }
 
 const createServiceAccount = `-- name: CreateServiceAccount :one
-INSERT INTO users (id, name, service_account) VALUES (gen_random_uuid(), $1, true)
+INSERT INTO users (name, service_account) VALUES ($1, true)
 RETURNING id, email, name, service_account
 `
 
@@ -58,18 +58,17 @@ func (q *Queries) CreateServiceAccount(ctx context.Context, name string) (*User,
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (id, name, email, service_account) VALUES ($1, $2, $3::TEXT, false)
+INSERT INTO users (name, email, service_account) VALUES ($1, $2::TEXT, false)
 RETURNING id, email, name, service_account
 `
 
 type CreateUserParams struct {
-	ID    uuid.UUID
 	Name  string
 	Email string
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (*User, error) {
-	row := q.db.QueryRow(ctx, createUser, arg.ID, arg.Name, arg.Email)
+	row := q.db.QueryRow(ctx, createUser, arg.Name, arg.Email)
 	var i User
 	err := row.Scan(
 		&i.ID,

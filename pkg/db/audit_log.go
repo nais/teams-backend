@@ -26,13 +26,7 @@ func (d *database) GetAuditLogsForTeam(ctx context.Context, slug slug.Slug) ([]*
 }
 
 func (d *database) AddAuditLog(ctx context.Context, correlationID uuid.UUID, systemName sqlc.SystemName, actorEmail *string, targetTeamSlug *slug.Slug, targetUserEmail *string, action sqlc.AuditAction, message string) error {
-	id, err := uuid.NewUUID()
-	if err != nil {
-		return err
-	}
-
-	err = d.querier.CreateAuditLog(ctx, sqlc.CreateAuditLogParams{
-		ID:              id,
+	return d.querier.CreateAuditLog(ctx, sqlc.CreateAuditLogParams{
 		CorrelationID:   correlationID,
 		ActorEmail:      nullString(actorEmail),
 		SystemName:      systemName,
@@ -41,9 +35,4 @@ func (d *database) AddAuditLog(ctx context.Context, correlationID uuid.UUID, sys
 		Action:          action,
 		Message:         message,
 	})
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

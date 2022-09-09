@@ -14,24 +14,18 @@ import (
 )
 
 const createTeam = `-- name: CreateTeam :one
-INSERT INTO teams (id, name, slug, purpose) VALUES ($1, $2, $3, $4)
+INSERT INTO teams (name, slug, purpose) VALUES ($1, $2, $3)
 RETURNING id, slug, name, purpose
 `
 
 type CreateTeamParams struct {
-	ID      uuid.UUID
 	Name    string
 	Slug    slug.Slug
 	Purpose sql.NullString
 }
 
 func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, error) {
-	row := q.db.QueryRow(ctx, createTeam,
-		arg.ID,
-		arg.Name,
-		arg.Slug,
-		arg.Purpose,
-	)
+	row := q.db.QueryRow(ctx, createTeam, arg.Name, arg.Slug, arg.Purpose)
 	var i Team
 	err := row.Scan(
 		&i.ID,

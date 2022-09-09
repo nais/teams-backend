@@ -1,9 +1,9 @@
 -- name: CreateUser :one
-INSERT INTO users (id, name, email, service_account) VALUES ($1, $2, sqlc.arg(email)::TEXT, false)
+INSERT INTO users (name, email, service_account) VALUES ($1, sqlc.arg(email)::TEXT, false)
 RETURNING *;
 
 -- name: CreateServiceAccount :one
-INSERT INTO users (id, name, service_account) VALUES (gen_random_uuid(), $1, true)
+INSERT INTO users (name, service_account) VALUES ($1, true)
 RETURNING *;
 
 -- name: GetUsers :many

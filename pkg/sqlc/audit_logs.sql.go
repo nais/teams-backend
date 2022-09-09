@@ -14,12 +14,11 @@ import (
 )
 
 const createAuditLog = `-- name: CreateAuditLog :exec
-INSERT INTO audit_logs (id, correlation_id, actor_email, system_name, target_user_email, target_team_slug, action, message)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO audit_logs (correlation_id, actor_email, system_name, target_user_email, target_team_slug, action, message)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 `
 
 type CreateAuditLogParams struct {
-	ID              uuid.UUID
 	CorrelationID   uuid.UUID
 	ActorEmail      sql.NullString
 	SystemName      SystemName
@@ -31,7 +30,6 @@ type CreateAuditLogParams struct {
 
 func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) error {
 	_, err := q.db.Exec(ctx, createAuditLog,
-		arg.ID,
 		arg.CorrelationID,
 		arg.ActorEmail,
 		arg.SystemName,

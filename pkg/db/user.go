@@ -25,13 +25,7 @@ type Role struct {
 }
 
 func (d *database) AddUser(ctx context.Context, name, email string) (*User, error) {
-	id, err := uuid.NewUUID()
-	if err != nil {
-		return nil, err
-	}
-
 	user, err := d.querier.CreateUser(ctx, sqlc.CreateUserParams{
-		ID:    id,
 		Name:  name,
 		Email: email,
 	})

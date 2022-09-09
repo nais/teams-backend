@@ -97,7 +97,7 @@ func Migrate(connString string) error {
 		return err
 	}
 
-	err = m.Up()
+	err = m.Migrate(6)
 	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return err
 	}

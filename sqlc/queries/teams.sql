@@ -1,5 +1,5 @@
 -- name: CreateTeam :one
-INSERT INTO teams (id, name, slug, purpose) VALUES ($1, $2, $3, $4)
+INSERT INTO teams (name, slug, purpose) VALUES ($1, $2, $3)
 RETURNING *;
 
 -- name: GetTeams :many

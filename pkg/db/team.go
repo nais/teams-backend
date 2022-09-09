@@ -81,15 +81,10 @@ func (d *database) UpdateTeam(ctx context.Context, teamID uuid.UUID, name, purpo
 }
 
 func (d *database) AddTeam(ctx context.Context, name string, slug slug.Slug, purpose *string, ownerUserID uuid.UUID) (*Team, error) {
-	id, err := uuid.NewUUID()
-	if err != nil {
-		return nil, err
-	}
-
 	var team *sqlc.Team
-	err = d.querier.Transaction(ctx, func(querier Querier) error {
+	err := d.querier.Transaction(ctx, func(querier Querier) error {
+		var err error
 		team, err = querier.CreateTeam(ctx, sqlc.CreateTeamParams{
-			ID:      id,
 			Name:    name,
 			Slug:    slug,
 			Purpose: nullString(purpose),
