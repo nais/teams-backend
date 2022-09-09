@@ -14,12 +14,10 @@ import (
 )
 
 func TestSetupStaticServiceAccounts(t *testing.T) {
-	tenantDomain := "example.com"
-
 	t.Run("empty string", func(t *testing.T) {
 		ctx := context.Background()
 		database := db.NewMockDatabase(t)
-		err := fixtures.SetupStaticServiceAccounts(ctx, database, "", tenantDomain)
+		err := fixtures.SetupStaticServiceAccounts(ctx, database, "")
 		assert.EqualError(t, err, "EOF")
 	})
 
@@ -33,7 +31,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 						"roles": []
 					}
 				]`
-		err := fixtures.SetupStaticServiceAccounts(ctx, database, json, tenantDomain)
+		err := fixtures.SetupStaticServiceAccounts(ctx, database, json)
 		assert.EqualError(t, err, "service account must have at least one role: 'nais-service-account'")
 	})
 
@@ -46,7 +44,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 					"roles": ["Admin"]
 				}
 			]`
-		err := fixtures.SetupStaticServiceAccounts(ctx, database, json, tenantDomain)
+		err := fixtures.SetupStaticServiceAccounts(ctx, database, json)
 		assert.EqualError(t, err, "service account is missing an API key: 'nais-service-account'")
 	})
 
@@ -57,10 +55,10 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 				{
 					"name": "service-account",
 					"apiKey": "some key",
-					"roles": ["Team viewer", "invalid name"]
+					"roles": ["Team viewer"]
 				}
 			]`
-		err := fixtures.SetupStaticServiceAccounts(ctx, database, json, tenantDomain)
+		err := fixtures.SetupStaticServiceAccounts(ctx, database, json)
 		assert.EqualError(t, err, "service account is missing required 'nais-' prefix: 'service-account'")
 	})
 
@@ -74,7 +72,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 					"roles": ["role"]
 				}
 			]`
-		err := fixtures.SetupStaticServiceAccounts(ctx, database, json, tenantDomain)
+		err := fixtures.SetupStaticServiceAccounts(ctx, database, json)
 		assert.EqualError(t, err, "invalid role name: 'role' for service account 'nais-service-account'")
 	})
 
@@ -84,8 +82,8 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		dbtx := db.NewMockDatabase(t)
 
-		sa1 := userWithName("nais-service-account-1", tenantDomain)
-		sa2 := userWithName("nais-service-account-2", tenantDomain)
+		sa1 := serviceAccountWithName("nais-service-account-1")
+		sa2 := serviceAccountWithName("nais-service-account-2")
 
 		database.
 			On("Transaction", ctx, mock.AnythingOfType("db.TransactionFunc")).
@@ -98,11 +96,11 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 
 		// First service account
 		dbtx.
-			On("GetUserByEmail", txCtx, "nais-service-account-1@example.com.serviceaccounts.nais.io").
+			On("GetServiceAccount", txCtx, "nais-service-account-1").
 			Return(nil, errors.New("user not found")).
 			Once()
 		dbtx.
-			On("AddUser", txCtx, "nais-service-account-1", "nais-service-account-1@example.com.serviceaccounts.nais.io").
+			On("AddServiceAccount", txCtx, "nais-service-account-1").
 			Return(sa1, nil).
 			Once()
 		dbtx.
@@ -128,7 +126,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 
 		// Second service account
 		dbtx.
-			On("GetUserByEmail", txCtx, "nais-service-account-2@example.com.serviceaccounts.nais.io").
+			On("GetServiceAccount", txCtx, "nais-service-account-2").
 			Return(sa2, nil).
 			Once()
 		dbtx.
@@ -160,17 +158,14 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 					"roles": ["Admin"]
 				}
 			]`
-		err := fixtures.SetupStaticServiceAccounts(ctx, database, json, tenantDomain)
+		err := fixtures.SetupStaticServiceAccounts(ctx, database, json)
 		assert.NoError(t, err)
 	})
 }
 
-func userWithName(name, tenantDomain string) *db.User {
-	return &db.User{
-		User: &sqlc.User{
-			ID:    uuid.New(),
-			Email: name + "@" + tenantDomain + ".serviceaccounts.nais.io",
-			Name:  name,
-		},
+func serviceAccountWithName(name string) *db.ServiceAccount {
+	return &db.ServiceAccount{
+		ID:   uuid.New(),
+		Name: name,
 	}
 }

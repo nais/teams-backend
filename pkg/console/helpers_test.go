@@ -5,7 +5,6 @@ import (
 
 	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/sqlc"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,19 +33,13 @@ func TestDomainUsers(t *testing.T) {
 	t.Run("No users removed", func(t *testing.T) {
 		users := []*db.User{
 			{
-				User: &sqlc.User{
-					Email: "user1@example.com",
-				},
+				Email: "user1@example.com",
 			},
 			{
-				User: &sqlc.User{
-					Email: "user2@example.com",
-				},
+				Email: "user2@example.com",
 			},
 			{
-				User: &sqlc.User{
-					Email: "user3@example.com",
-				},
+				Email: "user3@example.com",
 			},
 		}
 		domainUsers := helpers.DomainUsers(users, "example.com")
@@ -59,19 +52,13 @@ func TestDomainUsers(t *testing.T) {
 	t.Run("Users removed", func(t *testing.T) {
 		users := []*db.User{
 			{
-				User: &sqlc.User{
-					Email: "user1@example.com",
-				},
+				Email: "user1@example.com",
 			},
 			{
-				User: &sqlc.User{
-					Email: "user2@foo.bar",
-				},
+				Email: "user2@foo.bar",
 			},
 			{
-				User: &sqlc.User{
-					Email: "user3@example.com",
-				},
+				Email: "user3@example.com",
 			},
 		}
 		domainUsers := helpers.DomainUsers(users, "example.com")
@@ -87,14 +74,10 @@ func TestDomainUsers(t *testing.T) {
 	t.Run("User with missing email", func(t *testing.T) {
 		users := []*db.User{
 			{
-				User: &sqlc.User{
-					Name: "some name",
-				},
+				Name: "some name",
 			},
 			{
-				User: &sqlc.User{
-					Email: "user1@example.com",
-				},
+				Email: "user1@example.com",
 			},
 		}
 		domainUsers := helpers.DomainUsers(users, "example.com")

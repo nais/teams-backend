@@ -29,10 +29,8 @@ func TestQueryResolver_Users(t *testing.T) {
 
 	t.Run("user with authorization", func(t *testing.T) {
 		user := &db.User{
-			User: &sqlc.User{
-				Email: "user@example.com",
-				Name:  "User Name",
-			},
+			Email: "user@example.com",
+			Name:  "User Name",
 		}
 		ctx := authz.ContextWithActor(ctx, user, []*db.Role{
 			{
@@ -42,8 +40,8 @@ func TestQueryResolver_Users(t *testing.T) {
 		})
 
 		database.On("GetUsers", ctx).Return([]*db.User{
-			{User: &sqlc.User{Email: "user1@example.com"}},
-			{User: &sqlc.User{Email: "user2@example.com"}},
+			{Email: "user1@example.com"},
+			{Email: "user2@example.com"},
 		}, nil)
 
 		users, err := resolver.Users(ctx)

@@ -32,6 +32,29 @@ func (_m *MockDatabase) AddAuditLog(ctx context.Context, correlationID uuid.UUID
 	return r0
 }
 
+// AddServiceAccount provides a mock function with given fields: ctx, name
+func (_m *MockDatabase) AddServiceAccount(ctx context.Context, name string) (*ServiceAccount, error) {
+	ret := _m.Called(ctx, name)
+
+	var r0 *ServiceAccount
+	if rf, ok := ret.Get(0).(func(context.Context, string) *ServiceAccount); ok {
+		r0 = rf(ctx, name)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ServiceAccount)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, name)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // AddTeam provides a mock function with given fields: ctx, name, _a2, purpose, userID
 func (_m *MockDatabase) AddTeam(ctx context.Context, name string, _a2 slug.Slug, purpose *string, userID uuid.UUID) (*Team, error) {
 	ret := _m.Called(ctx, name, _a2, purpose, userID)
@@ -164,6 +187,29 @@ func (_m *MockDatabase) GetAuditLogsForTeam(ctx context.Context, _a1 slug.Slug) 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug) error); ok {
 		r1 = rf(ctx, _a1)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetServiceAccount provides a mock function with given fields: ctx, name
+func (_m *MockDatabase) GetServiceAccount(ctx context.Context, name string) (*ServiceAccount, error) {
+	ret := _m.Called(ctx, name)
+
+	var r0 *ServiceAccount
+	if rf, ok := ret.Get(0).(func(context.Context, string) *ServiceAccount); ok {
+		r0 = rf(ctx, name)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ServiceAccount)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, name)
 	} else {
 		r1 = ret.Error(1)
 	}

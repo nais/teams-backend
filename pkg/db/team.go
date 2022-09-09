@@ -163,14 +163,14 @@ func (d *database) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team,
 }
 
 func (d *database) GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error) {
-	mems, err := d.querier.GetTeamMembers(ctx, teamID)
+	rows, err := d.querier.GetTeamMembers(ctx, teamID)
 	if err != nil {
 		return nil, err
 	}
 
 	members := make([]*User, 0)
-	for _, m := range mems {
-		members = append(members, &User{User: m})
+	for _, row := range rows {
+		members = append(members, userFromSqlcUser(row))
 	}
 
 	return members, nil

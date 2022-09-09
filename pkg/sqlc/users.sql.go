@@ -40,9 +40,26 @@ func (q *Queries) AssignTargetedRoleToUser(ctx context.Context, arg AssignTarget
 	return err
 }
 
+const createServiceAccount = `-- name: CreateServiceAccount :one
+INSERT INTO users (id, name, service_account) VALUES (gen_random_uuid(), $1, true)
+RETURNING id, email, name, service_account
+`
+
+func (q *Queries) CreateServiceAccount(ctx context.Context, name string) (*User, error) {
+	row := q.db.QueryRow(ctx, createServiceAccount, name)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Name,
+		&i.ServiceAccount,
+	)
+	return &i, err
+}
+
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (id, name, email) VALUES ($1, $2, $3)
-RETURNING id, email, name
+INSERT INTO users (id, name, email, service_account) VALUES ($1, $2, $3::TEXT, false)
+RETURNING id, email, name, service_account
 `
 
 type CreateUserParams struct {
@@ -54,7 +71,12 @@ type CreateUserParams struct {
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (*User, error) {
 	row := q.db.QueryRow(ctx, createUser, arg.ID, arg.Name, arg.Email)
 	var i User
-	err := row.Scan(&i.ID, &i.Email, &i.Name)
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Name,
+		&i.ServiceAccount,
+	)
 	return &i, err
 }
 
@@ -67,8 +89,25 @@ func (q *Queries) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const getServiceAccount = `-- name: GetServiceAccount :one
+SELECT id, email, name, service_account FROM users
+WHERE name = $1 AND service_account = true LIMIT 1
+`
+
+func (q *Queries) GetServiceAccount(ctx context.Context, name string) (*User, error) {
+	row := q.db.QueryRow(ctx, getServiceAccount, name)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Name,
+		&i.ServiceAccount,
+	)
+	return &i, err
+}
+
 const getUserByApiKey = `-- name: GetUserByApiKey :one
-SELECT users.id, users.email, users.name FROM api_keys
+SELECT users.id, users.email, users.name, users.service_account FROM api_keys
 JOIN users ON users.id = api_keys.user_id
 WHERE api_keys.api_key = $1 LIMIT 1
 `
@@ -76,31 +115,46 @@ WHERE api_keys.api_key = $1 LIMIT 1
 func (q *Queries) GetUserByApiKey(ctx context.Context, apiKey string) (*User, error) {
 	row := q.db.QueryRow(ctx, getUserByApiKey, apiKey)
 	var i User
-	err := row.Scan(&i.ID, &i.Email, &i.Name)
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Name,
+		&i.ServiceAccount,
+	)
 	return &i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, name FROM users
-WHERE email = $1 LIMIT 1
+SELECT id, email, name, service_account FROM users
+WHERE email = $1::TEXT LIMIT 1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	row := q.db.QueryRow(ctx, getUserByEmail, email)
 	var i User
-	err := row.Scan(&i.ID, &i.Email, &i.Name)
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Name,
+		&i.ServiceAccount,
+	)
 	return &i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, name FROM users
+SELECT id, email, name, service_account FROM users
 WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
 	row := q.db.QueryRow(ctx, getUserByID, id)
 	var i User
-	err := row.Scan(&i.ID, &i.Email, &i.Name)
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Name,
+		&i.ServiceAccount,
+	)
 	return &i, err
 }
 
@@ -164,7 +218,7 @@ func (q *Queries) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, 
 }
 
 const getUsers = `-- name: GetUsers :many
-SELECT id, email, name FROM users
+SELECT id, email, name, service_account FROM users
 ORDER BY name ASC
 `
 
@@ -177,7 +231,12 @@ func (q *Queries) GetUsers(ctx context.Context) ([]*User, error) {
 	var items []*User
 	for rows.Next() {
 		var i User
-		if err := rows.Scan(&i.ID, &i.Email, &i.Name); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.Name,
+			&i.ServiceAccount,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, &i)
@@ -189,8 +248,8 @@ func (q *Queries) GetUsers(ctx context.Context) ([]*User, error) {
 }
 
 const getUsersByEmail = `-- name: GetUsersByEmail :many
-SELECT id, email, name FROM users
-WHERE email LIKE $1 LIMIT 1
+SELECT id, email, name, service_account FROM users
+WHERE email LIKE $1::TEXT LIMIT 1
 `
 
 func (q *Queries) GetUsersByEmail(ctx context.Context, email string) ([]*User, error) {
@@ -202,7 +261,12 @@ func (q *Queries) GetUsersByEmail(ctx context.Context, email string) ([]*User, e
 	var items []*User
 	for rows.Next() {
 		var i User
-		if err := rows.Scan(&i.ID, &i.Email, &i.Name); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.Name,
+			&i.ServiceAccount,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, &i)
@@ -267,7 +331,7 @@ func (q *Queries) RevokeTargetedRoleFromUser(ctx context.Context, arg RevokeTarg
 
 const setUserName = `-- name: SetUserName :one
 UPDATE users SET name = $1 WHERE id = $2
-RETURNING id, email, name
+RETURNING id, email, name, service_account
 `
 
 type SetUserNameParams struct {
@@ -278,6 +342,11 @@ type SetUserNameParams struct {
 func (q *Queries) SetUserName(ctx context.Context, arg SetUserNameParams) (*User, error) {
 	row := q.db.QueryRow(ctx, setUserName, arg.Name, arg.ID)
 	var i User
-	err := row.Scan(&i.ID, &i.Email, &i.Name)
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Name,
+		&i.ServiceAccount,
+	)
 	return &i, err
 }

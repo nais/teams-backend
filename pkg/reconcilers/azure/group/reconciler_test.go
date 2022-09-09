@@ -50,19 +50,13 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		Mail: "removemember@example.com",
 	}
 	addUser := &db.User{
-		User: &sqlc.User{
-			Email: "add@example.com",
-		},
+		Email: "add@example.com",
 	}
 	keepUser := &db.User{
-		User: &sqlc.User{
-			Email: "keeper@example.com",
-		},
+		Email: "keeper@example.com",
 	}
 	removeUser := &db.User{
-		User: &sqlc.User{
-			Email: "removemember@example.com",
-		},
+		Email: "removemember@example.com",
 	}
 	correlationID := uuid.New()
 	team := db.Team{

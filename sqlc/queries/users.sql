@@ -1,5 +1,9 @@
 -- name: CreateUser :one
-INSERT INTO users (id, name, email) VALUES ($1, $2, $3)
+INSERT INTO users (id, name, email, service_account) VALUES ($1, $2, sqlc.arg(email)::TEXT, false)
+RETURNING *;
+
+-- name: CreateServiceAccount :one
+INSERT INTO users (id, name, service_account) VALUES (gen_random_uuid(), $1, true)
 RETURNING *;
 
 -- name: GetUsers :many
@@ -10,13 +14,17 @@ ORDER BY name ASC;
 SELECT * FROM users
 WHERE id = $1 LIMIT 1;
 
+-- name: GetServiceAccount :one
+SELECT * FROM users
+WHERE name = $1 AND service_account = true LIMIT 1;
+
 -- name: GetUserByEmail :one
 SELECT * FROM users
-WHERE email = $1 LIMIT 1;
+WHERE email = sqlc.arg(email)::TEXT LIMIT 1;
 
 -- name: GetUsersByEmail :many
 SELECT * FROM users
-WHERE email LIKE $1 LIMIT 1;
+WHERE email LIKE sqlc.arg(email)::TEXT LIMIT 1;
 
 -- name: GetUserByApiKey :one
 SELECT users.* FROM api_keys

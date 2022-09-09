@@ -9,7 +9,6 @@ import (
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/directives"
-	"github.com/nais/console/pkg/sqlc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -33,10 +32,8 @@ func TestAuth(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		auth := directives.Auth(database)
 
-		userID, _ := uuid.NewUUID()
-		user := &db.User{User: &sqlc.User{
-			ID: userID,
-		}}
+		userID := uuid.New()
+		user := &db.User{ID: userID}
 
 		database.
 			On("GetUserByID", mock.Anything, userID).

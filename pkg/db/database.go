@@ -24,6 +24,8 @@ type TransactionFunc func(ctx context.Context, dbtx Database) error
 type Database interface {
 	AddAuditLog(ctx context.Context, correlationID uuid.UUID, systemName sqlc.SystemName, actorEmail *string, targetTeamSlug *slug.Slug, targetUserEmail *string, action sqlc.AuditAction, message string) error
 	AddUser(ctx context.Context, name, email string) (*User, error)
+	AddServiceAccount(ctx context.Context, name string) (*ServiceAccount, error)
+	GetServiceAccount(ctx context.Context, name string) (*ServiceAccount, error)
 	GetUserByID(ctx context.Context, ID uuid.UUID) (*User, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
 	GetUserByApiKey(ctx context.Context, APIKey string) (*User, error)

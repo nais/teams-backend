@@ -301,8 +301,8 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		CorrelationID: correlationID,
 		Team:          team,
 		TeamMembers: []*db.User{
-			{User: &sqlc.User{Email: createEmail}},
-			{User: &sqlc.User{Email: keepEmail}},
+			{Email: createEmail},
+			{Email: keepEmail},
 		},
 	}
 
@@ -332,7 +332,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 			Once()
 		database.
 			On("GetUserByEmail", ctx, removeEmail).
-			Return(&db.User{User: &sqlc.User{Email: removeEmail, Name: removeLogin}}, nil).
+			Return(&db.User{Email: removeEmail, Name: removeLogin}, nil).
 			Once()
 
 		configureCreateTeam(teamsService, org, teamName, teamPurpose.String)

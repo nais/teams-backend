@@ -78,7 +78,7 @@ func run() error {
 	}
 
 	if cfg.StaticServiceAccounts != "" {
-		err = fixtures.SetupStaticServiceAccounts(ctx, database, cfg.StaticServiceAccounts, cfg.TenantDomain)
+		err = fixtures.SetupStaticServiceAccounts(ctx, database, cfg.StaticServiceAccounts)
 		if err != nil {
 			return err
 		}

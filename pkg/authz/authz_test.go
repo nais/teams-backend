@@ -16,10 +16,8 @@ func TestContextWithUser(t *testing.T) {
 	assert.Nil(t, authz.ActorFromContext(ctx))
 
 	user := &db.User{
-		User: &sqlc.User{
-			Name:  "User Name",
-			Email: "mail@example.com",
-		},
+		Name:  "User Name",
+		Email: "mail@example.com",
 	}
 
 	roles := make([]*db.Role, 0)
@@ -31,10 +29,8 @@ func TestContextWithUser(t *testing.T) {
 
 func TestRequireGlobalAuthorization(t *testing.T) {
 	user := &db.User{
-		User: &sqlc.User{
-			Name:  "User Name",
-			Email: "mail@example.com",
-		},
+		Name:  "User Name",
+		Email: "mail@example.com",
 	}
 
 	t.Run("Nil user", func(t *testing.T) {
@@ -79,10 +75,8 @@ func TestRequireGlobalAuthorization(t *testing.T) {
 
 func TestRequireAuthorizationForTarget(t *testing.T) {
 	user := &db.User{
-		User: &sqlc.User{
-			Name:  "User Name",
-			Email: "mail@example.com",
-		},
+		Name:  "User Name",
+		Email: "mail@example.com",
 	}
 	targetID, _ := uuid.NewUUID()
 
