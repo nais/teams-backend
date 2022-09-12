@@ -242,7 +242,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 
 		assert.Equal(t, 1, len(logHook.Entries))
 		assert.Equal(t, logrus.WarnLevel, logHook.LastEntry().Level)
-		assert.Contains(t, logHook.LastEntry().Message, "unable to remove member 'removemember@example.com' from group 'nais-team-myteam'")
+		assert.Contains(t, logHook.LastEntry().Message, `unable to remove member "removemember@example.com" from group "nais-team-myteam"`)
 	})
 
 	t.Run("GetUser fail", func(t *testing.T) {
@@ -293,7 +293,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 
 		assert.Equal(t, 1, len(logHook.Entries))
 		assert.Equal(t, logrus.WarnLevel, logHook.LastEntry().Level)
-		assert.Contains(t, logHook.LastEntry().Message, "unable to lookup user with email 'add@example.com' in Azure")
+		assert.Contains(t, logHook.LastEntry().Message, `unable to lookup user with email "add@example.com" in Azure`)
 	})
 
 	t.Run("AddMemberToGroup fail", func(t *testing.T) {
@@ -330,6 +330,6 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 
 		assert.Equal(t, 1, len(logHook.Entries))
 		assert.Equal(t, logrus.WarnLevel, logHook.LastEntry().Level)
-		assert.Contains(t, logHook.LastEntry().Message, "unable to add member 'add@example.com' to Azure group 'nais-team-myteam'")
+		assert.Contains(t, logHook.LastEntry().Message, `unable to add member "add@example.com" to Azure group "nais-team-myteam"`)
 	})
 }

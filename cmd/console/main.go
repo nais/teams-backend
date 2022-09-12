@@ -181,7 +181,7 @@ func run() error {
 				reconcileTimer.Reset(immediateReconcile)
 			}
 			if _, exists := pendingTeams[input.Team.ID]; !exists {
-				log.Infof("Scheduling team '%s' for reconciliation in %s", input.Team.Slug, time.Until(nextReconcile))
+				log.Infof("Scheduling team %q for reconciliation in %s", input.Team.Slug, time.Until(nextReconcile))
 				pendingTeams[input.Team.ID] = input
 			}
 
@@ -330,12 +330,12 @@ func initReconcilers(ctx context.Context, database db.Database, cfg *config.Conf
 		rec, err := factory(ctx, database, cfg, logger.WithSystemName(name))
 		switch err {
 		case reconcilers.ErrReconcilerNotEnabled:
-			log.Warnf("Reconciler '%s' is disabled through configuration", name)
+			log.Warnf("Reconciler %q is disabled through configuration", name)
 		case nil:
 			recs = append(recs, rec)
-			log.Infof("Reconciler initialized: '%s' -> %T", rec.Name(), rec)
+			log.Infof("Reconciler initialized: %q -> %T", rec.Name(), rec)
 		default:
-			return nil, fmt.Errorf("reconciler '%s': %w", name, err)
+			return nil, fmt.Errorf("reconciler %q: %w", name, err)
 		}
 	}
 
@@ -398,7 +398,7 @@ func setupHTTPServer(cfg *config.Config, database db.Database, graphApi *graphql
 	// If no other authentication mechanisms produce a authenticated user,
 	// fall back to auto-login if it is enabled.
 	if len(cfg.AutoLoginUser) > 0 {
-		log.Warnf("Auto-login user '%s' is ENABLED for ALL REQUESTS.", cfg.AutoLoginUser)
+		log.Warnf("Auto-login user %q is ENABLED for ALL REQUESTS.", cfg.AutoLoginUser)
 		log.Warnf("THIS IS A MAJOR SECURITY ISSUE! DO NOT RUN THIS CONFIGURATION IN PRODUCTION!!!")
 		middlewares = append(middlewares, middleware.Autologin(database, cfg.AutoLoginUser))
 	}

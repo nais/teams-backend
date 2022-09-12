@@ -82,13 +82,13 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 	}
 	err := r.database.LoadSystemState(ctx, r.Name(), input.Team.ID, state)
 	if err != nil {
-		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.Name(), err)
+		return fmt.Errorf("unable to load system state for team %q in system %q: %w", input.Team.Slug, r.Name(), err)
 	}
 
 	for environment, parentFolderID := range r.projectParentIDs {
 		project, err := r.getOrCreateProject(ctx, state, environment, parentFolderID, input)
 		if err != nil {
-			return fmt.Errorf("unable to get or create a GCP project for team '%s' in environment '%s': %w", input.Team.Slug, environment, err)
+			return fmt.Errorf("unable to get or create a GCP project for team %q in environment %q: %w", input.Team.Slug, environment, err)
 		}
 		state.Projects[environment] = reconcilers.GoogleGcpEnvironmentProject{
 			ProjectID:   project.ProjectId,
@@ -101,7 +101,7 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 
 		err = r.setProjectPermissions(ctx, project.Name, input)
 		if err != nil {
-			return fmt.Errorf("unable to set group permissions to project '%s' for team '%s' in environment '%s': %w", project.Name, input.Team.Slug, environment, err)
+			return fmt.Errorf("unable to set group permissions to project %q for team %q in environment %q: %w", project.Name, input.Team.Slug, environment, err)
 		}
 	}
 

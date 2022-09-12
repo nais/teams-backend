@@ -69,12 +69,12 @@ func (r *googleWorkspaceAdminReconciler) Reconcile(ctx context.Context, input re
 	state := &reconcilers.GoogleWorkspaceState{}
 	err := r.database.LoadSystemState(ctx, r.Name(), input.Team.ID, state)
 	if err != nil {
-		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.Name(), err)
+		return fmt.Errorf("unable to load system state for team %q in system %q: %w", input.Team.Slug, r.Name(), err)
 	}
 
 	grp, err := r.getOrCreateGroup(ctx, state, input)
 	if err != nil {
-		return fmt.Errorf("unable to get or create a Google Workspace group for team '%s' in system '%s': %w", input.Team.Slug, r.Name(), err)
+		return fmt.Errorf("unable to get or create a Google Workspace group for team %q in system %q: %w", input.Team.Slug, r.Name(), err)
 	}
 
 	err = r.database.SetSystemState(ctx, r.Name(), input.Team.ID, reconcilers.GoogleWorkspaceState{GroupID: &grp.Id})
@@ -115,7 +115,7 @@ func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(ctx context.Context, s
 		CorrelationID:  input.CorrelationID,
 		TargetTeamSlug: &input.Team.Slug,
 	}
-	r.auditLogger.Logf(ctx, fields, "created Google Directory group '%s'", group.Email)
+	r.auditLogger.Logf(ctx, fields, "created Google Directory group %q", group.Email)
 
 	return group, nil
 }
@@ -134,7 +134,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 		remoteMemberEmail := strings.ToLower(member.Email)
 		err = r.adminService.Members.Delete(grp.Id, member.Id).Do()
 		if err != nil {
-			log.Warnf("delete member '%s' from Google Directory group '%s': %s", remoteMemberEmail, grp.Email, err)
+			log.Warnf("delete member %q from Google Directory group %q: %s", remoteMemberEmail, grp.Email, err)
 			continue
 		}
 
@@ -152,7 +152,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 			TargetTeamSlug:  &input.Team.Slug,
 			TargetUserEmail: &remoteMemberEmail,
 		}
-		r.auditLogger.Logf(ctx, fields, "deleted member '%s' from Google Directory group '%s'", member.Email, grp.Email)
+		r.auditLogger.Logf(ctx, fields, "deleted member %q from Google Directory group %q", member.Email, grp.Email)
 	}
 
 	membersToAdd := localOnlyMembers(membersAccordingToGoogle.Members, localMembers)
@@ -162,7 +162,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 		}
 		_, err = r.adminService.Members.Insert(grp.Id, member).Do()
 		if err != nil {
-			log.Warnf("add member '%s' to Google Directory group '%s': %s", member.Email, grp.Email, err)
+			log.Warnf("add member %q to Google Directory group %q: %s", member.Email, grp.Email, err)
 			continue
 		}
 		fields := auditlogger.Fields{
@@ -171,7 +171,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 			TargetTeamSlug:  &input.Team.Slug,
 			TargetUserEmail: &user.Email,
 		}
-		r.auditLogger.Logf(ctx, fields, "added member '%s' to Google Directory group '%s'", member.Email, grp.Email)
+		r.auditLogger.Logf(ctx, fields, "added member %q to Google Directory group %q", member.Email, grp.Email)
 	}
 
 	return nil
@@ -191,7 +191,7 @@ func (r *googleWorkspaceAdminReconciler) addToGKESecurityGroup(ctx context.Conte
 		if ok && googleError.Code == http.StatusConflict {
 			return nil
 		}
-		return fmt.Errorf("add group '%s' to GKE security group '%s': %s", member.Email, groupKey, err)
+		return fmt.Errorf("add group %q to GKE security group %q: %s", member.Email, groupKey, err)
 	}
 
 	fields := auditlogger.Fields{
@@ -199,7 +199,7 @@ func (r *googleWorkspaceAdminReconciler) addToGKESecurityGroup(ctx context.Conte
 		CorrelationID:  input.CorrelationID,
 		TargetTeamSlug: &input.Team.Slug,
 	}
-	r.auditLogger.Logf(ctx, fields, "added group '%s' to GKE security group '%s'", member.Email, groupKey)
+	r.auditLogger.Logf(ctx, fields, "added group %q to GKE security group %q", member.Email, groupKey)
 
 	return nil
 }

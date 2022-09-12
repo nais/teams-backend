@@ -27,20 +27,20 @@ func parseAndValidateServiceAccounts(serviceAccountsJson string) ([]ServiceAccou
 
 	for _, serviceAccount := range serviceAccounts {
 		if !strings.HasPrefix(serviceAccount.Name, NaisServiceAccountPrefix) {
-			return nil, fmt.Errorf("service account is missing required '%s' prefix: '%s'", NaisServiceAccountPrefix, serviceAccount.Name)
+			return nil, fmt.Errorf("service account is missing required %q prefix: %q", NaisServiceAccountPrefix, serviceAccount.Name)
 		}
 
 		if len(serviceAccount.Roles) == 0 {
-			return nil, fmt.Errorf("service account must have at least one role: '%s'", serviceAccount.Name)
+			return nil, fmt.Errorf("service account must have at least one role: %q", serviceAccount.Name)
 		}
 
 		if serviceAccount.APIKey == "" {
-			return nil, fmt.Errorf("service account is missing an API key: '%s'", serviceAccount.Name)
+			return nil, fmt.Errorf("service account is missing an API key: %q", serviceAccount.Name)
 		}
 
 		for _, role := range serviceAccount.Roles {
 			if !sqlc.RoleName(role).Valid() {
-				return nil, fmt.Errorf("invalid role name: '%s' for service account '%s'", role, serviceAccount.Name)
+				return nil, fmt.Errorf("invalid role name: %q for service account %q", role, serviceAccount.Name)
 			}
 		}
 	}

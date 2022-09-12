@@ -70,7 +70,7 @@ func run() error {
 
 			err := slug.Slug(yamlteam.Name).Validate()
 			if err != nil {
-				log.Warnf("Skip team '%s' as the name is not a valid Console team slug", yamlteam.Name)
+				log.Warnf("Skip team %q as the name is not a valid Console team slug", yamlteam.Name)
 				continue
 			}
 
@@ -146,13 +146,13 @@ func run() error {
 			}
 
 			if len(teamOwners) == 0 && len(teamMembers) == 0 {
-				log.Warnf("The Azure Group '%s' has no members or administrators, skip creation of the team in Console", yamlteam.Name)
+				log.Warnf("The Azure Group %q has no members or administrators, skip creation of the team in Console", yamlteam.Name)
 				continue
 			}
 
 			if len(teamOwners) == 0 {
 				_, user := first(teamMembers)
-				log.Infof("The Azure Group '%s' has no administrators, setting the first member as owner for the Console team: '%s'", yamlteam.Name, user.Email)
+				log.Infof("The Azure Group %q has no administrators, setting the first member as owner for the Console team: %q", yamlteam.Name, user.Email)
 				teamOwners[user.Email] = user
 				delete(teamMembers, user.Email)
 			}
@@ -216,7 +216,7 @@ func run() error {
 				}
 			}
 
-			log.Infof("Created team '%s' with %d owners and %d members", team.Name, len(teamOwners), len(teamMembers))
+			log.Infof("Created team %q with %d owners and %d members", team.Name, len(teamOwners), len(teamMembers))
 		}
 		return nil
 	})

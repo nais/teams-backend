@@ -146,7 +146,7 @@ func Test_CreateGroupWithInvalidStatus(t *testing.T) {
 	})
 
 	assert.Nil(t, group)
-	assert.EqualError(t, err, `create azure group 'mail': 400 Bad Request: {"error": {"message":"some error"}}`)
+	assert.EqualError(t, err, `create azure group "mail": 400 Bad Request: {"error": {"message":"some error"}}`)
 }
 
 func Test_CreateGroupWithInvalidResponse(t *testing.T) {
@@ -192,7 +192,7 @@ func Test_CreateGroupWithIncompleteResponse(t *testing.T) {
 	})
 
 	assert.Nil(t, group)
-	assert.EqualError(t, err, "azure group 'mail' created, but no ID returned")
+	assert.EqualError(t, err, `azure group "mail" created, but no ID returned`)
 }
 
 func Test_GetOrCreateGroupWithEmptyState(t *testing.T) {
@@ -325,7 +325,7 @@ func Test_ListGroupMembersWhenGroupDoesNotExist(t *testing.T) {
 		MailNickname: "mail",
 	})
 
-	assert.EqualError(t, err, `list group members 'mail': 404 Not Found: {"error":{"message":"some error"}}`)
+	assert.EqualError(t, err, `list group members "mail": 404 Not Found: {"error":{"message":"some error"}}`)
 	assert.Len(t, members, 0)
 }
 
@@ -395,7 +395,7 @@ func Test_AddMemberToGroupWithInvalidResponse(t *testing.T) {
 		Mail: "mail@example.com",
 	})
 
-	assert.EqualError(t, err, "add member 'mail@example.com' to azure group 'group': 200 OK: some response body")
+	assert.EqualError(t, err, `add member "mail@example.com" to azure group "group": 200 OK: some response body`)
 }
 
 func Test_RemoveMemberFromGroup(t *testing.T) {
@@ -439,7 +439,7 @@ func Test_RemoveMemberFromGroupWithInvalidResponse(t *testing.T) {
 		Mail: "mail",
 	})
 
-	assert.EqualError(t, err, "remove member 'mail' from azure group 'mail@example.com': 200 OK: some response body")
+	assert.EqualError(t, err, `remove member "mail" from azure group "mail@example.com": 200 OK: some response body`)
 }
 
 func newUuid() uuid.UUID {

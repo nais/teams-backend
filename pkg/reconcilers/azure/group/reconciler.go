@@ -68,7 +68,7 @@ func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.
 	state := &reconcilers.AzureState{}
 	err := r.database.LoadSystemState(ctx, r.Name(), input.Team.ID, state)
 	if err != nil {
-		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.Name(), err)
+		return fmt.Errorf("unable to load system state for team %q in system %q: %w", input.Team.Slug, r.Name(), err)
 	}
 
 	prefixedName := teamNameWithPrefix(input.Team.Slug)
@@ -104,7 +104,7 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 	consoleTeamMembers := input.TeamMembers
 	members, err := r.client.ListGroupMembers(ctx, grp)
 	if err != nil {
-		return fmt.Errorf("list existing members in Azure group '%s': %s", grp.MailNickname, err)
+		return fmt.Errorf("list existing members in Azure group %q: %s", grp.MailNickname, err)
 	}
 
 	consoleUserMap := make(map[string]*db.User)
@@ -115,14 +115,14 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 		remoteEmail := strings.ToLower(member.Mail)
 		err = r.client.RemoveMemberFromGroup(ctx, grp, member)
 		if err != nil {
-			log.Warnf("unable to remove member '%s' from group '%s' in Azure: %s", remoteEmail, grp.MailNickname, err)
+			log.Warnf("unable to remove member %q from group %q in Azure: %s", remoteEmail, grp.MailNickname, err)
 			continue
 		}
 
 		if _, exists := consoleUserMap[remoteEmail]; !exists {
 			user, err := r.database.GetUserByEmail(ctx, remoteEmail)
 			if err != nil {
-				log.Warnf("unable to lookup local user with email '%s': %s", remoteEmail, err)
+				log.Warnf("unable to lookup local user with email %q: %s", remoteEmail, err)
 				continue
 			}
 			consoleUserMap[remoteEmail] = user
@@ -134,19 +134,19 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 			TargetTeamSlug:  &input.Team.Slug,
 			TargetUserEmail: &remoteEmail,
 		}
-		r.auditLogger.Logf(ctx, fields, "removed member '%s' from Azure group '%s'", remoteEmail, grp.MailNickname)
+		r.auditLogger.Logf(ctx, fields, "removed member %q from Azure group %q", remoteEmail, grp.MailNickname)
 	}
 
 	membersToAdd := localOnlyMembers(members, localMembers)
 	for _, consoleUser := range membersToAdd {
 		member, err := r.client.GetUser(ctx, consoleUser.Email)
 		if err != nil {
-			log.Warnf("unable to lookup user with email '%s' in Azure: %s", consoleUser.Email, err)
+			log.Warnf("unable to lookup user with email %q in Azure: %s", consoleUser.Email, err)
 			continue
 		}
 		err = r.client.AddMemberToGroup(ctx, grp, member)
 		if err != nil {
-			log.Warnf("unable to add member '%s' to Azure group '%s': %s", consoleUser.Email, grp.MailNickname, err)
+			log.Warnf("unable to add member %q to Azure group %q: %s", consoleUser.Email, grp.MailNickname, err)
 			continue
 		}
 
@@ -156,7 +156,7 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 			TargetTeamSlug:  &input.Team.Slug,
 			TargetUserEmail: &consoleUser.Email,
 		}
-		r.auditLogger.Logf(ctx, fields, "added member '%s' to Azure group '%s'", consoleUser.Email, grp.MailNickname)
+		r.auditLogger.Logf(ctx, fields, "added member %q to Azure group %q", consoleUser.Email, grp.MailNickname)
 	}
 
 	return nil

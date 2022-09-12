@@ -78,23 +78,23 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	}
 	err = r.database.LoadSystemState(ctx, r.Name(), input.Team.ID, namespaceState)
 	if err != nil {
-		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, r.Name(), err)
+		return fmt.Errorf("unable to load system state for team %q in system %q: %w", input.Team.Slug, r.Name(), err)
 	}
 
 	gcpProjectState := &reconcilers.GoogleGcpProjectState{}
 	err = r.database.LoadSystemState(ctx, google_gcp_reconciler.Name, input.Team.ID, gcpProjectState)
 	if err != nil {
-		return fmt.Errorf("unable to load system state for team '%s' in system '%s': %w", input.Team.Slug, google_gcp_reconciler.Name, err)
+		return fmt.Errorf("unable to load system state for team %q in system %q: %w", input.Team.Slug, google_gcp_reconciler.Name, err)
 	}
 
 	if len(gcpProjectState.Projects) == 0 {
-		return fmt.Errorf("no GCP project state exists for team '%s' yet", input.Team.Slug)
+		return fmt.Errorf("no GCP project state exists for team %q yet", input.Team.Slug)
 	}
 
 	for environment, project := range gcpProjectState.Projects {
 		err = r.createNamespace(ctx, svc, input.Team, environment, project.ProjectID)
 		if err != nil {
-			return fmt.Errorf("unable to create namespace for project '%s' in environment '%s': %w", project.ProjectID, environment, err)
+			return fmt.Errorf("unable to create namespace for project %q in environment %q: %w", project.ProjectID, environment, err)
 		}
 
 		if _, requested := namespaceState.Namespaces[environment]; !requested {
@@ -103,7 +103,7 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 				CorrelationID:  input.CorrelationID,
 				TargetTeamSlug: &input.Team.Slug,
 			}
-			r.auditLogger.Logf(ctx, fields, "request namespace creation for team '%s' in environment '%s'", input.Team.Slug, environment)
+			r.auditLogger.Logf(ctx, fields, "request namespace creation for team %q in environment %q", input.Team.Slug, environment)
 			namespaceState.Namespaces[environment] = input.Team.Slug
 		}
 	}

@@ -39,7 +39,7 @@ func (s Slug) Validate() error {
 	match := re.MatchString(s.String())
 
 	if !match {
-		return fmt.Errorf("slug '%s' does not match regular expression '%s'", s, re)
+		return fmt.Errorf("slug %q does not match regular expression %q", s, re)
 	}
 
 	return nil

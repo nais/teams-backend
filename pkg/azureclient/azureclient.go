@@ -80,7 +80,7 @@ func (s *client) GetGroupById(ctx context.Context, id uuid.UUID) (*Group, error)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("azure group with ID '%s' does not exist", id.String())
+		return nil, fmt.Errorf("azure group with ID %q does not exist", id.String())
 	}
 
 	dec := json.NewDecoder(resp.Body)
@@ -116,7 +116,7 @@ func (s *client) CreateGroup(ctx context.Context, grp *Group) (*Group, error) {
 
 	if resp.StatusCode != http.StatusCreated {
 		text, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("create azure group '%s': %s: %s", grp.MailNickname, resp.Status, string(text))
+		return nil, fmt.Errorf("create azure group %q: %s: %s", grp.MailNickname, resp.Status, string(text))
 	}
 
 	dec := json.NewDecoder(resp.Body)
@@ -128,7 +128,7 @@ func (s *client) CreateGroup(ctx context.Context, grp *Group) (*Group, error) {
 	}
 
 	if len(grp.ID) == 0 {
-		return nil, fmt.Errorf("azure group '%s' created, but no ID returned", grp.MailNickname)
+		return nil, fmt.Errorf("azure group %q created, but no ID returned", grp.MailNickname)
 	}
 
 	return grp, nil
@@ -174,7 +174,7 @@ func (s *client) ListGroupOwners(ctx context.Context, grp *Group) ([]*Member, er
 
 	if resp.StatusCode != http.StatusOK {
 		text, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("list group owners '%s': %s: %s", grp.MailNickname, resp.Status, string(text))
+		return nil, fmt.Errorf("list group owners %q: %s: %s", grp.MailNickname, resp.Status, string(text))
 	}
 
 	defer resp.Body.Close()
@@ -205,7 +205,7 @@ func (s *client) ListGroupMembers(ctx context.Context, grp *Group) ([]*Member, e
 
 	if resp.StatusCode != http.StatusOK {
 		text, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("list group members '%s': %s: %s", grp.MailNickname, resp.Status, string(text))
+		return nil, fmt.Errorf("list group members %q: %s: %s", grp.MailNickname, resp.Status, string(text))
 	}
 
 	defer resp.Body.Close()
@@ -246,7 +246,7 @@ func (s *client) AddMemberToGroup(ctx context.Context, grp *Group, member *Membe
 
 	if resp.StatusCode != http.StatusNoContent {
 		text, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("add member '%s' to azure group '%s': %s: %s", member.Mail, grp.MailNickname, resp.Status, string(text))
+		return fmt.Errorf("add member %q to azure group %q: %s: %s", member.Mail, grp.MailNickname, resp.Status, string(text))
 	}
 
 	return nil
@@ -268,7 +268,7 @@ func (s *client) RemoveMemberFromGroup(ctx context.Context, grp *Group, member *
 
 	if resp.StatusCode != http.StatusNoContent {
 		text, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("remove member '%s' from azure group '%s': %s: %s", member.Mail, grp.MailNickname, resp.Status, string(text))
+		return fmt.Errorf("remove member %q from azure group %q: %s: %s", member.Mail, grp.MailNickname, resp.Status, string(text))
 	}
 
 	return nil

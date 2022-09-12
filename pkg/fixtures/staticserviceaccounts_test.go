@@ -32,7 +32,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 					}
 				]`
 		err := fixtures.SetupStaticServiceAccounts(ctx, database, json)
-		assert.EqualError(t, err, "service account must have at least one role: 'nais-service-account'")
+		assert.EqualError(t, err, `service account must have at least one role: "nais-service-account"`)
 	})
 
 	t.Run("missing API key", func(t *testing.T) {
@@ -45,7 +45,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 				}
 			]`
 		err := fixtures.SetupStaticServiceAccounts(ctx, database, json)
-		assert.EqualError(t, err, "service account is missing an API key: 'nais-service-account'")
+		assert.EqualError(t, err, `service account is missing an API key: "nais-service-account"`)
 	})
 
 	t.Run("user with invalid name", func(t *testing.T) {
@@ -59,7 +59,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 				}
 			]`
 		err := fixtures.SetupStaticServiceAccounts(ctx, database, json)
-		assert.EqualError(t, err, "service account is missing required 'nais-' prefix: 'service-account'")
+		assert.EqualError(t, err, `service account is missing required "nais-" prefix: "service-account"`)
 	})
 
 	t.Run("user with invalid role", func(t *testing.T) {
@@ -73,7 +73,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 				}
 			]`
 		err := fixtures.SetupStaticServiceAccounts(ctx, database, json)
-		assert.EqualError(t, err, "invalid role name: 'role' for service account 'nais-service-account'")
+		assert.EqualError(t, err, `invalid role name: "role" for service account "nais-service-account"`)
 	})
 
 	t.Run("create multiple service accounts", func(t *testing.T) {

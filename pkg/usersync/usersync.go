@@ -116,7 +116,7 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 			for _, roleName := range DefaultRoleNames {
 				err = dbtx.AssignGlobalRoleToUser(ctx, localUser.ID, roleName)
 				if err != nil {
-					return fmt.Errorf("attach default role '%s' to user %s: %w", roleName, email, err)
+					return fmt.Errorf("attach default role %q to user %s: %w", roleName, email, err)
 				}
 			}
 
