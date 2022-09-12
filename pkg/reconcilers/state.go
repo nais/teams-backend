@@ -14,7 +14,7 @@ type GitHubState struct {
 }
 
 type GoogleWorkspaceState struct {
-	GroupID *string `json:"groupId"`
+	GroupEmail *string `json:"groupEmail"`
 }
 
 type GoogleGcpProjectState struct {

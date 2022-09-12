@@ -77,7 +77,7 @@ func (r *googleWorkspaceAdminReconciler) Reconcile(ctx context.Context, input re
 		return fmt.Errorf("unable to get or create a Google Workspace group for team %q in system %q: %w", input.Team.Slug, r.Name(), err)
 	}
 
-	err = r.database.SetSystemState(ctx, r.Name(), input.Team.ID, reconcilers.GoogleWorkspaceState{GroupID: &grp.Id})
+	err = r.database.SetSystemState(ctx, r.Name(), input.Team.ID, reconcilers.GoogleWorkspaceState{GroupEmail: &grp.Email})
 	if err != nil {
 		log.Errorf("system state not persisted: %s", err)
 	}
@@ -91,8 +91,8 @@ func (r *googleWorkspaceAdminReconciler) Reconcile(ctx context.Context, input re
 }
 
 func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(ctx context.Context, state *reconcilers.GoogleWorkspaceState, input reconcilers.Input) (*admin_directory_v1.Group, error) {
-	if state.GroupID != nil {
-		existingGroup, err := r.adminService.Groups.Get(*state.GroupID).Do()
+	if state.GroupEmail != nil {
+		existingGroup, err := r.adminService.Groups.Get(*state.GroupEmail).Do()
 		if err == nil {
 			return existingGroup, nil
 		}
