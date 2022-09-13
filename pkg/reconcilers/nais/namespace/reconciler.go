@@ -34,24 +34,22 @@ type naisdRequest struct {
 }
 
 type naisNamespaceReconciler struct {
-	database         db.Database
-	domain           string
-	auditLogger      auditlogger.AuditLogger
-	projectParentIDs map[string]int64
-	credentialsFile  string
-	projectID        string
+	database        db.Database
+	domain          string
+	auditLogger     auditlogger.AuditLogger
+	credentialsFile string
+	projectID       string
 }
 
 const Name = sqlc.SystemNameNaisNamespace
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, domain, credentialsFile, projectID string, projectParentIDs map[string]int64) *naisNamespaceReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, domain, credentialsFile, projectID string) *naisNamespaceReconciler {
 	return &naisNamespaceReconciler{
-		database:         database,
-		auditLogger:      auditLogger,
-		domain:           domain,
-		credentialsFile:  credentialsFile,
-		projectParentIDs: projectParentIDs,
-		projectID:        projectID,
+		database:        database,
+		auditLogger:     auditLogger,
+		domain:          domain,
+		credentialsFile: credentialsFile,
+		projectID:       projectID,
 	}
 }
 
@@ -60,7 +58,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		return nil, reconcilers.ErrReconcilerNotEnabled
 	}
 
-	return New(database, auditLogger, cfg.TenantDomain, cfg.Google.CredentialsFile, cfg.NaisNamespace.ProjectID, cfg.GCP.ProjectParentIDs), nil
+	return New(database, auditLogger, cfg.TenantDomain, cfg.Google.CredentialsFile, cfg.NaisNamespace.ProjectID), nil
 }
 
 func (r *naisNamespaceReconciler) Name() sqlc.SystemName {

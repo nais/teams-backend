@@ -26,11 +26,10 @@ type Google struct {
 }
 
 type GCP struct {
-	Enabled          bool             `envconfig:"CONSOLE_GCP_ENABLED"`
-	ProjectParentIDs map[string]int64 `envconfig:"CONSOLE_GCP_PROJECT_PARENT_IDS"` // environment name is key, parentID is value
-	Clusters         string           `envconfig:"CONSOLE_GCP_CLUSTERS"`
-	CnrmRole         string           `envconfig:"CONSOLE_GCP_CNRM_ROLE"`
-	BillingAccount   string           `envconfig:"CONSOLE_GCP_BILLING_ACCOUNT"`
+	Enabled        bool   `envconfig:"CONSOLE_GCP_ENABLED"`
+	Clusters       string `envconfig:"CONSOLE_GCP_CLUSTERS"`
+	CnrmRole       string `envconfig:"CONSOLE_GCP_CNRM_ROLE"`
+	BillingAccount string `envconfig:"CONSOLE_GCP_BILLING_ACCOUNT"`
 }
 
 type NaisNamespace struct {

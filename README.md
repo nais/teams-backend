@@ -151,10 +151,33 @@ To create projects for the team in GCP you will need to set the following enviro
 
 Set to `true` to enable the reconciler.
 
-#### `CONSOLE_GCP_PROJECT_PARENT_IDS`
+#### `CONSOLE_GCP_CLUSTERS`
 
-Comma-separated list of `environment:parent_folder_id` values, where environment is appended to the project name for the
-team.
+JSON-encoded object with info about the clusters:
+
+```json
+{
+  "<env>": {
+    "team_folder_id": 123456789012,
+    "cluster_project_id": "<id>"
+  },
+  ...
+}
+```
+
+where `<env>` can be for example `prod`, and `<id>` is for example `nais-dev-abcd`.
+
+#### `CONSOLE_GCP_CNRM_ROLE`
+
+The name of the custom CNRM role. The value also contains the org ID. Example:
+
+`organizations/<org_id>/roles/CustomCNRMRole`
+
+where `<org_id>` is a numeric ID.
+
+#### `CONSOLE_GCP_BILLING_ACCOUNT`
+
+The ID of the billing account that each team project will use.
 
 ### NAIS namespace
 
