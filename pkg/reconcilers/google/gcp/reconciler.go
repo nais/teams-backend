@@ -6,42 +6,64 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/sqlc"
-	log "github.com/sirupsen/logrus"
+	"google.golang.org/api/cloudbilling/v1"
+
+	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
+
+	"github.com/nais/console/pkg/slug"
 
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
+	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/sqlc"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 	"google.golang.org/api/cloudresourcemanager/v3"
+	"google.golang.org/api/iam/v1"
 	"google.golang.org/api/option"
 )
+
+type Cluster struct {
+	TeamFolderID int64  `json:"team_folder_id"`
+	ProjectID    string `json:"cluster_project_id"`
+}
+
+type ClusterInfo map[string]Cluster
 
 type googleGcpReconciler struct {
 	database                    db.Database
 	config                      *jwt.Config
 	domain                      string
 	auditLogger                 auditlogger.AuditLogger
-	projectParentIDs            map[string]int64
+	clusters                    ClusterInfo
+	cnrmRoleName                string
 	cloudResourceManagerService *cloudresourcemanager.Service
+	iamService                  *iam.Service
+	cloudbillingService         *cloudbilling.APIService
+	billingAccount              string
 }
 
 const (
 	Name = sqlc.SystemNameGoogleGcpProject
 )
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config, projectParentIDs map[string]int64, crmService *cloudresourcemanager.Service) *googleGcpReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config, clusters ClusterInfo, cnrmRoleName string, crmService *cloudresourcemanager.Service, iamService *iam.Service, cloudBilling *cloudbilling.APIService, billingAccount string) *googleGcpReconciler {
 	return &googleGcpReconciler{
 		database:                    database,
 		auditLogger:                 auditLogger,
 		domain:                      domain,
 		config:                      config,
-		projectParentIDs:            projectParentIDs,
+		clusters:                    clusters,
+		cnrmRoleName:                cnrmRoleName,
 		cloudResourceManagerService: crmService,
+		iamService:                  iamService,
+		cloudbillingService:         cloudBilling,
+		billingAccount:              billingAccount,
 	}
 }
 
@@ -64,12 +86,29 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 	}
 
 	client := cf.Client(ctx)
+
 	crmService, err := cloudresourcemanager.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
 		return nil, fmt.Errorf("retrieve cloud resource manager client: %w", err)
 	}
 
-	return New(database, auditLogger, cfg.TenantDomain, cf, cfg.GCP.ProjectParentIDs, crmService), nil
+	iamService, err := iam.NewService(ctx, option.WithHTTPClient(client))
+	if err != nil {
+		return nil, fmt.Errorf("retrieve IAM service client: %w", err)
+	}
+
+	cloudBillingService, err := cloudbilling.NewService(ctx, option.WithHTTPClient(client))
+	if err != nil {
+		return nil, fmt.Errorf("retrieve cloud billing service client: %w", err)
+	}
+
+	clusters := ClusterInfo{}
+	err = json.NewDecoder(strings.NewReader(cfg.GCP.Clusters)).Decode(&clusters)
+	if err != nil {
+		return nil, fmt.Errorf("parse GCP cluster info: %w", err)
+	}
+
+	return New(database, auditLogger, cfg.TenantDomain, cf, clusters, cfg.GCP.CnrmRole, crmService, iamService, cloudBillingService, cfg.GCP.BillingAccount), nil
 }
 
 func (r *googleGcpReconciler) Name() sqlc.SystemName {
@@ -85,8 +124,18 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 		return fmt.Errorf("unable to load system state for team %q in system %q: %w", input.Team.Slug, r.Name(), err)
 	}
 
-	for environment, parentFolderID := range r.projectParentIDs {
-		project, err := r.getOrCreateProject(ctx, state, environment, parentFolderID, input)
+	googleWorkspaceState := &reconcilers.GoogleWorkspaceState{}
+	err = r.database.LoadSystemState(ctx, google_workspace_admin_reconciler.Name, input.Team.ID, googleWorkspaceState)
+	if err != nil {
+		return fmt.Errorf("unable to load system state for team %q in system %q: %w", input.Team.Slug, google_workspace_admin_reconciler.Name, err)
+	}
+
+	if googleWorkspaceState.GroupEmail == nil {
+		return fmt.Errorf("no Google Workspace group exists for team %q yet, is the %q reconciler enabled? ", input.Team.Slug, google_workspace_admin_reconciler.Name)
+	}
+
+	for environment, cluster := range r.clusters {
+		project, err := r.getOrCreateProject(ctx, state, environment, cluster.TeamFolderID, input)
 		if err != nil {
 			return fmt.Errorf("unable to get or create a GCP project for team %q in environment %q: %w", input.Team.Slug, environment, err)
 		}
@@ -94,14 +143,20 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 			ProjectID:   project.ProjectId,
 			ProjectName: project.Name,
 		}
+
 		err = r.database.SetSystemState(ctx, r.Name(), input.Team.ID, state)
 		if err != nil {
 			log.Errorf("system state not persisted: %s", err)
 		}
 
-		err = r.setProjectPermissions(ctx, project.Name, input)
+		err = r.setProjectPermissions(ctx, project, input, *googleWorkspaceState.GroupEmail, environment, cluster)
 		if err != nil {
 			return fmt.Errorf("unable to set group permissions to project %q for team %q in environment %q: %w", project.Name, input.Team.Slug, environment, err)
+		}
+
+		err = r.setProjectBillingInfo(project.Name)
+		if err != nil {
+			return fmt.Errorf("unable to set project billing info for project %q for team %q in environment %q: %w", project.Name, input.Team.Slug, environment, err)
 		}
 	}
 
@@ -155,26 +210,45 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *rec
 	return createdProject, nil
 }
 
-// createPermissions Give owner permissions to the team group. The group is created by the Google Workspace Admin
+// setProjectPermissions Give owner permissions to the team group. The group is created by the Google Workspace Admin
 // reconciler. projectName is in the "projects/{ProjectIdOrNumber}" format, and not the project ID
-func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, projectName string, input reconcilers.Input) error {
-	// FIXME: Check state to make sure we are generating the correct group name
-	member := fmt.Sprintf("group:%s%s@%s", reconcilers.TeamNamePrefix, input.Team.Slug, r.domain)
-	const owner = "roles/owner"
+func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project *cloudresourcemanager.Project, input reconcilers.Input, groupEmail, environment string, cluster Cluster) error {
+	cnrmServiceAccount, err := r.getOrCreateProjectCnrmServiceAccount(ctx, input.Team.Slug, environment, cluster)
+	if err != nil {
+		return fmt.Errorf("unable to create CNRM service account for project %q for team %q in environment %q: %w", project.Name, input.Team.Slug, environment, err)
+	}
 
-	req := &cloudresourcemanager.SetIamPolicyRequest{
-		Policy: &cloudresourcemanager.Policy{
-			Bindings: []*cloudresourcemanager.Binding{
+	// Set workload identity role to the CNRM service account
+	member := fmt.Sprintf("serviceAccount:%s.svc.id.goog[cnrm-system/cnrm-controller-manager-%s]", cluster.ProjectID, input.Team.Slug)
+	_, err = r.iamService.Projects.ServiceAccounts.SetIamPolicy(cnrmServiceAccount.Name, &iam.SetIamPolicyRequest{
+		Policy: &iam.Policy{
+			Bindings: []*iam.Binding{
 				{
 					Members: []string{member},
-					Role:    owner,
+					Role:    "roles/iam.workloadIdentityUser",
 				},
 			},
 		},
+	}).Do()
+	if err != nil {
+		return fmt.Errorf("assign roles for CNRM service account: %w", err)
 	}
 
-	// replace all existing policies for the project
-	_, err := r.cloudResourceManagerService.Projects.SetIamPolicy(projectName, req).Do()
+	// Set worksppace group roles
+	_, err = r.cloudResourceManagerService.Projects.SetIamPolicy(project.Name, &cloudresourcemanager.SetIamPolicyRequest{
+		Policy: &cloudresourcemanager.Policy{
+			Bindings: []*cloudresourcemanager.Binding{
+				{
+					Members: []string{"group:" + groupEmail},
+					Role:    "roles/owner",
+				},
+				{
+					Members: []string{"serviceAccount:" + cnrmServiceAccount.Email},
+					Role:    r.cnrmRoleName,
+				},
+			},
+		},
+	}).Do()
 	if err != nil {
 		return fmt.Errorf("assign GCP project IAM permissions: %w", err)
 	}
@@ -185,7 +259,45 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 		CorrelationID:  input.CorrelationID,
 		TargetTeamSlug: &input.Team.Slug,
 	}
-	r.auditLogger.Logf(ctx, fields, "assigned GCP project IAM permissions for %q", projectName)
+	r.auditLogger.Logf(ctx, fields, "assigned GCP project IAM permissions for %q", project.Name)
 
 	return nil
+}
+
+// getOrCreateProjectCnrmServiceAccount Get the CNRM service account for the project in this env. If the service account
+// does not exist, attempt to create it, and then return it.
+func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(_ context.Context, slug slug.Slug, environment string, cluster Cluster) (*iam.ServiceAccount, error) {
+	name, accountID := cnrmServiceAccountNameAndAccountID(slug, cluster.ProjectID)
+	serviceAccount, err := r.iamService.Projects.ServiceAccounts.Get(name).Do()
+	if err == nil {
+		return serviceAccount, nil
+	}
+
+	createServiceAccontRequest := &iam.CreateServiceAccountRequest{
+		AccountId: accountID,
+		ServiceAccount: &iam.ServiceAccount{
+			DisplayName: fmt.Sprintf("%s CNRM service account (%s)", slug, environment),
+			Description: fmt.Sprintf("CNRM service account for team %q in environment %q", slug, environment),
+		},
+	}
+	serviceAccount, err = r.iamService.Projects.ServiceAccounts.Create("projects/"+cluster.ProjectID, createServiceAccontRequest).Do()
+	if err != nil {
+		return nil, err
+	}
+	return serviceAccount, nil
+}
+
+func (r *googleGcpReconciler) setProjectBillingInfo(projectName string) error {
+	_, err := r.cloudbillingService.Projects.UpdateBillingInfo(projectName, &cloudbilling.ProjectBillingInfo{
+		BillingAccountName: r.billingAccount,
+	}).Do()
+	return err
+}
+
+// cnrmServiceAccountNameAndAccountID Generate a name and an account ID for a CNRM service account
+func cnrmServiceAccountNameAndAccountID(slug slug.Slug, projectID string) (name, accountID string) {
+	accountID = fmt.Sprintf("cnrm-%s", slug)
+	cnrmEmailAddress := fmt.Sprintf("%s@%s.iam.gserviceaccount.com", accountID, projectID)
+	name = "projects/" + projectID + "/serviceAccounts/" + cnrmEmailAddress
+	return
 }
