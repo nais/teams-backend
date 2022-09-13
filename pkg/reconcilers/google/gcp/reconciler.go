@@ -283,12 +283,12 @@ func createGcpServices(ctx context.Context, credentialsFilePath string) (*gcpSer
 		return nil, fmt.Errorf("read google credentials file: %w", err)
 	}
 
-	config, err := google.JWTConfigFromJSON(credentials, cloudresourcemanager.CloudPlatformScope)
+	jwtConfig, err := google.JWTConfigFromJSON(credentials, cloudresourcemanager.CloudPlatformScope)
 	if err != nil {
 		return nil, fmt.Errorf("initialize google credentials: %w", err)
 	}
 
-	client := config.Client(ctx)
+	client := jwtConfig.Client(ctx)
 
 	cloudResourceManagerService, err := cloudresourcemanager.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
