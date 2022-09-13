@@ -14,7 +14,6 @@ import (
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/oauth2/jwt"
 	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
@@ -24,7 +23,6 @@ type googleWorkspaceAdminReconciler struct {
 	database     db.Database
 	auditLogger  auditlogger.AuditLogger
 	domain       string
-	config       *jwt.Config
 	adminService *admin_directory_v1.Service
 }
 
@@ -32,12 +30,11 @@ const (
 	Name = sqlc.SystemNameGoogleWorkspaceAdmin
 )
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, config *jwt.Config, adminService *admin_directory_v1.Service) *googleWorkspaceAdminReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, adminService *admin_directory_v1.Service) *googleWorkspaceAdminReconciler {
 	return &googleWorkspaceAdminReconciler{
 		database:     database,
 		auditLogger:  auditLogger,
 		domain:       domain,
-		config:       config,
 		adminService: adminService,
 	}
 }
@@ -58,7 +55,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		return nil, fmt.Errorf("retrieve directory client: %w", err)
 	}
 
-	return New(database, auditLogger, cfg.TenantDomain, config, srv), nil
+	return New(database, auditLogger, cfg.TenantDomain, srv), nil
 }
 
 func (r *googleWorkspaceAdminReconciler) Name() sqlc.SystemName {

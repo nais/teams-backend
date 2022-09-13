@@ -19,7 +19,6 @@ import (
 	"github.com/nais/console/pkg/auditlogger"
 	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/oauth2/clientcredentials"
 )
 
 func TestAzureReconciler_Reconcile(t *testing.T) {
@@ -30,8 +29,6 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 	teamPurpose.Scan("My purpose")
 
 	ctx := context.Background()
-
-	creds := clientcredentials.Config{}
 
 	group := &azureclient.Group{
 		ID:           "some-group-id",
@@ -80,7 +77,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		mockClient := azureclient.NewMockClient(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		reconciler := azure_group_reconciler.New(database, auditLogger, creds, mockClient, domain)
+		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain)
 
 		database.
 			On("LoadSystemState", ctx, azure_group_reconciler.Name, team.ID, mock.Anything).
@@ -153,7 +150,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		mockClient := azureclient.NewMockClient(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		reconciler := azure_group_reconciler.New(database, auditLogger, creds, mockClient, domain)
+		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain)
 
 		database.
 			On("LoadSystemState", ctx, azure_group_reconciler.Name, team.ID, mock.Anything).
@@ -175,7 +172,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		mockClient := azureclient.NewMockClient(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		reconciler := azure_group_reconciler.New(database, auditLogger, creds, mockClient, domain)
+		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain)
 
 		database.
 			On("LoadSystemState", ctx, azure_group_reconciler.Name, team.ID, mock.Anything).
@@ -202,7 +199,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		mockClient := azureclient.NewMockClient(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		reconciler := azure_group_reconciler.New(database, auditLogger, creds, mockClient, domain)
+		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain)
 
 		team := db.Team{
 			Team: &sqlc.Team{
@@ -250,7 +247,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		mockClient := azureclient.NewMockClient(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		reconciler := azure_group_reconciler.New(database, auditLogger, creds, mockClient, domain)
+		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain)
 
 		database.
 			On("LoadSystemState", ctx, azure_group_reconciler.Name, team.ID, mock.Anything).
@@ -301,7 +298,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		mockClient := azureclient.NewMockClient(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		reconciler := azure_group_reconciler.New(database, auditLogger, creds, mockClient, domain)
+		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain)
 
 		database.
 			On("LoadSystemState", ctx, azure_group_reconciler.Name, team.ID, mock.Anything).

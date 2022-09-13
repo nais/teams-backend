@@ -24,16 +24,14 @@ import (
 type azureGroupReconciler struct {
 	database    db.Database
 	auditLogger auditlogger.AuditLogger
-	oauth       clientcredentials.Config
 	client      azureclient.Client
 	domain      string
 }
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, oauth clientcredentials.Config, client azureclient.Client, domain string) *azureGroupReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, client azureclient.Client, domain string) *azureGroupReconciler {
 	return &azureGroupReconciler{
 		database:    database,
 		auditLogger: auditLogger,
-		oauth:       oauth,
 		client:      client,
 		domain:      domain,
 	}
@@ -57,7 +55,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		},
 	}
 
-	return New(database, auditLogger, conf, azureclient.New(conf.Client(context.Background())), cfg.TenantDomain), nil
+	return New(database, auditLogger, azureclient.New(conf.Client(context.Background())), cfg.TenantDomain), nil
 }
 
 func (r *azureGroupReconciler) Name() sqlc.SystemName {
