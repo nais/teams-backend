@@ -59,6 +59,8 @@ const (
 	AuditActionLegacyImporterUserCreate                  AuditAction = "legacy-importer:user:create"
 	AuditActionGraphqlApiRolesAssignGlobalRole           AuditAction = "graphql-api:roles:assign-global-role"
 	AuditActionGraphqlApiRolesRevokeGlobalRole           AuditAction = "graphql-api:roles:revoke-global-role"
+	AuditActionGoogleGcpProjectSetBillingInfo            AuditAction = "google:gcp:project:set-billing-info"
+	AuditActionGoogleGcpProjectCreateCnrmServiceAccount  AuditAction = "google:gcp:project:create-cnrm-service-account"
 )
 
 func (e *AuditAction) Scan(src interface{}) error {
@@ -138,7 +140,9 @@ func (e AuditAction) Valid() bool {
 		AuditActionLegacyImporterTeamAddOwner,
 		AuditActionLegacyImporterUserCreate,
 		AuditActionGraphqlApiRolesAssignGlobalRole,
-		AuditActionGraphqlApiRolesRevokeGlobalRole:
+		AuditActionGraphqlApiRolesRevokeGlobalRole,
+		AuditActionGoogleGcpProjectSetBillingInfo,
+		AuditActionGoogleGcpProjectCreateCnrmServiceAccount:
 		return true
 	}
 	return false
@@ -187,6 +191,8 @@ func AllAuditActionValues() []AuditAction {
 		AuditActionLegacyImporterUserCreate,
 		AuditActionGraphqlApiRolesAssignGlobalRole,
 		AuditActionGraphqlApiRolesRevokeGlobalRole,
+		AuditActionGoogleGcpProjectSetBillingInfo,
+		AuditActionGoogleGcpProjectCreateCnrmServiceAccount,
 	}
 }
 
