@@ -460,15 +460,15 @@ type ApiKey struct {
 }
 
 type AuditLog struct {
-	ID              uuid.UUID
-	CreatedAt       time.Time
-	CorrelationID   uuid.UUID
-	SystemName      SystemName
-	ActorEmail      sql.NullString
-	TargetUserEmail sql.NullString
-	TargetTeamSlug  *slug.Slug
-	Action          AuditAction
-	Message         string
+	ID             uuid.UUID
+	CreatedAt      time.Time
+	CorrelationID  uuid.UUID
+	SystemName     SystemName
+	Actor          sql.NullString
+	TargetUser     sql.NullString
+	TargetTeamSlug *slug.Slug
+	Action         AuditAction
+	Message        string
 }
 
 type ReconcileError struct {
@@ -509,6 +509,7 @@ type User struct {
 	Email          sql.NullString
 	Name           string
 	ServiceAccount bool
+	ExternalID     sql.NullString
 }
 
 type UserRole struct {

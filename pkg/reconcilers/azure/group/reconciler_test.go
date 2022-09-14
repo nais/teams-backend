@@ -127,7 +127,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 				return f.Action == sqlc.AuditActionAzureGroupDeleteMember &&
 					f.CorrelationID == correlationID &&
 					f.TargetTeamSlug.String() == teamSlug.String() &&
-					*f.TargetUserEmail == removeMember.Mail
+					*f.TargetUser == removeMember.Mail
 			}), mock.Anything, removeMember.Mail, group.MailNickname).
 			Return(nil).
 			Once()
@@ -136,7 +136,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 				return f.Action == sqlc.AuditActionAzureGroupAddMember &&
 					f.CorrelationID == correlationID &&
 					f.TargetTeamSlug.String() == teamSlug.String() &&
-					*f.TargetUserEmail == addUser.Email
+					*f.TargetUser == addUser.Email
 			}), mock.Anything, addUser.Email, group.MailNickname).
 			Return(nil).
 			Once()
@@ -280,7 +280,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 				return f.Action == sqlc.AuditActionAzureGroupDeleteMember &&
 					f.CorrelationID == correlationID &&
 					f.TargetTeamSlug.String() == teamSlug.String() &&
-					*f.TargetUserEmail == removeMember.Mail
+					*f.TargetUser == removeMember.Mail
 			}), mock.Anything, removeMember.Mail, group.MailNickname).
 			Return(nil).
 			Once()

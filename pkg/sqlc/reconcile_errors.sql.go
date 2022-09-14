@@ -12,7 +12,8 @@ import (
 )
 
 const clearTeamReconcileErrorForSystem = `-- name: ClearTeamReconcileErrorForSystem :exec
-DELETE FROM reconcile_errors WHERE team_id = $1 AND system_name = $2
+DELETE FROM reconcile_errors
+WHERE team_id = $1 AND system_name = $2
 `
 
 type ClearTeamReconcileErrorForSystemParams struct {
@@ -26,7 +27,9 @@ func (q *Queries) ClearTeamReconcileErrorForSystem(ctx context.Context, arg Clea
 }
 
 const getTeamReconcileErrors = `-- name: GetTeamReconcileErrors :many
-SELECT id, correlation_id, team_id, system_name, created_at, error_message FROM reconcile_errors WHERE team_id = $1 ORDER BY created_at DESC
+SELECT id, correlation_id, team_id, system_name, created_at, error_message FROM reconcile_errors
+WHERE team_id = $1
+ORDER BY created_at DESC
 `
 
 func (q *Queries) GetTeamReconcileErrors(ctx context.Context, teamID uuid.UUID) ([]*ReconcileError, error) {

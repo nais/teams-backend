@@ -20,10 +20,13 @@ type Querier interface {
 	CreateServiceAccount(ctx context.Context, name string) (*User, error)
 	CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (*User, error)
+	DeleteServiceAccount(ctx context.Context, id uuid.UUID) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
 	GetAuditLogsForTeam(ctx context.Context, targetTeamSlug *slug.Slug) ([]*AuditLog, error)
 	GetRoleAuthorizations(ctx context.Context, roleName RoleName) ([]AuthzName, error)
-	GetServiceAccount(ctx context.Context, name string) (*User, error)
+	GetServiceAccountByApiKey(ctx context.Context, apiKey string) (*User, error)
+	GetServiceAccountByName(ctx context.Context, name string) (*User, error)
+	GetServiceAccounts(ctx context.Context) ([]*User, error)
 	GetTeamByID(ctx context.Context, id uuid.UUID) (*Team, error)
 	GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)
 	GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error)
@@ -31,23 +34,22 @@ type Querier interface {
 	GetTeamReconcileErrors(ctx context.Context, teamID uuid.UUID) ([]*ReconcileError, error)
 	GetTeamSystemState(ctx context.Context, arg GetTeamSystemStateParams) (*SystemState, error)
 	GetTeams(ctx context.Context) ([]*Team, error)
-	GetUserByApiKey(ctx context.Context, apiKey string) (*User, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
+	GetUserByExternalID(ctx context.Context, externalID string) (*User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (*User, error)
 	GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*UserRole, error)
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error)
 	GetUsers(ctx context.Context) ([]*User, error)
-	GetUsersByEmail(ctx context.Context, email string) ([]*User, error)
 	RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) error
-	RemoveApiKeysFromUser(ctx context.Context, userID uuid.UUID) error
+	RemoveApiKeysFromServiceAccount(ctx context.Context, userID uuid.UUID) error
 	RemoveGlobalUserRole(ctx context.Context, arg RemoveGlobalUserRoleParams) error
 	RevokeGlobalRoleFromUser(ctx context.Context, arg RevokeGlobalRoleFromUserParams) error
 	RevokeTargetedRoleFromUser(ctx context.Context, arg RevokeTargetedRoleFromUserParams) error
 	SetTeamMetadata(ctx context.Context, arg SetTeamMetadataParams) error
 	SetTeamReconcileErrorForSystem(ctx context.Context, arg SetTeamReconcileErrorForSystemParams) error
 	SetTeamSystemState(ctx context.Context, arg SetTeamSystemStateParams) error
-	SetUserName(ctx context.Context, arg SetUserNameParams) (*User, error)
 	UpdateTeam(ctx context.Context, arg UpdateTeamParams) (*Team, error)
+	UpdateUser(ctx context.Context, arg UpdateUserParams) (*User, error)
 }
 
 var _ Querier = (*Queries)(nil)

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+
 	"github.com/nais/console/pkg/azureclient"
 	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/reconcilers"
@@ -65,7 +66,7 @@ func Test_GetUserWithInvalidApiResponse(t *testing.T) {
 }
 
 func Test_GetGroupById(t *testing.T) {
-	groupId := newUuid()
+	groupId := uuid.New()
 	httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
 		assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/"+groupId.String(), req.URL.String())
 		assert.Equal(t, http.MethodGet, req.Method)
@@ -85,7 +86,7 @@ func Test_GetGroupById(t *testing.T) {
 }
 
 func Test_GetGroupThatDoesNotExist(t *testing.T) {
-	groupId := newUuid()
+	groupId := uuid.New()
 	httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
 		assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/"+groupId.String(), req.URL.String())
 		assert.Equal(t, http.MethodGet, req.Method)
@@ -220,7 +221,7 @@ func Test_GetOrCreateGroupWithEmptyState(t *testing.T) {
 }
 
 func Test_GetOrCreateGroupWhenGroupInStateDoesNotExist(t *testing.T) {
-	groupId := newUuid()
+	groupId := uuid.New()
 	httpClient := test.NewTestHttpClient(
 		func(req *http.Request) *http.Response {
 			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/"+groupId.String(), req.URL.String())
@@ -252,7 +253,7 @@ func Test_GetOrCreateGroupWhenGroupInStateDoesNotExist(t *testing.T) {
 }
 
 func Test_GetOrCreateGroupWhenGroupInStateExists(t *testing.T) {
-	groupId := newUuid()
+	groupId := uuid.New()
 	httpClient := test.NewTestHttpClient(
 		func(req *http.Request) *http.Response {
 			assert.Equal(t, "https://graph.microsoft.com/v1.0/groups/"+groupId.String(), req.URL.String())
@@ -440,9 +441,4 @@ func Test_RemoveMemberFromGroupWithInvalidResponse(t *testing.T) {
 	})
 
 	assert.EqualError(t, err, `remove member "mail" from azure group "mail@example.com": 200 OK: some response body`)
-}
-
-func newUuid() uuid.UUID {
-	id, _ := uuid.NewUUID()
-	return id
 }

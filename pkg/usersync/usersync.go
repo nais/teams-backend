@@ -88,42 +88,43 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 
 		for _, remoteUser := range resp.Users {
 			email := strings.ToLower(remoteUser.PrimaryEmail)
-			localUser, err := dbtx.GetUserByEmail(ctx, email)
+			localUser, created, err := getOrCreateLocalUserFromRemoteUser(ctx, dbtx, remoteUser)
 			if err != nil {
-				localUser, err = dbtx.AddUser(ctx, remoteUser.Name.FullName, email)
-				if err != nil {
-					return fmt.Errorf("create local user %s: %w", email, err)
-				}
+				return fmt.Errorf("get or create local user %q: %w", email, err)
+			}
+
+			if created {
 				auditLogEntries = append(auditLogEntries, &auditLogEntry{
 					action:    sqlc.AuditActionUsersyncCreate,
-					message:   fmt.Sprintf("Local user created: %s", email),
+					message:   fmt.Sprintf("Local user created: %q", localUser.Email),
 					userEmail: localUser.Email,
 				})
 			}
 
-			if localUser.Name != remoteUser.Name.FullName {
-				localUser, err = dbtx.SetUserName(ctx, localUser.ID, remoteUser.Name.FullName)
+			if localUserIsOutdated(localUser, remoteUser) {
+				updatedUser, err := dbtx.UpdateUser(ctx, localUser.ID, remoteUser.Name.FullName, email, remoteUser.Id)
 				if err != nil {
-					return fmt.Errorf("update local user %s: %w", email, err)
+					return fmt.Errorf("update local user %q: %w", email, err)
 				}
+
 				auditLogEntries = append(auditLogEntries, &auditLogEntry{
 					action:    sqlc.AuditActionUsersyncUpdate,
-					message:   fmt.Sprintf("Local user updated: %s", email),
-					userEmail: localUser.Email,
+					message:   fmt.Sprintf("Local user updated: %q", updatedUser.Email),
+					userEmail: updatedUser.Email,
 				})
 			}
 
 			for _, roleName := range DefaultRoleNames {
 				err = dbtx.AssignGlobalRoleToUser(ctx, localUser.ID, roleName)
 				if err != nil {
-					return fmt.Errorf("attach default role %q to user %s: %w", roleName, email, err)
+					return fmt.Errorf("attach default role %q to user %q: %w", roleName, email, err)
 				}
 			}
 
 			userIDs[localUser.ID] = struct{}{}
 		}
 
-		localUsers, err := dbtx.GetUsersByEmail(ctx, "%@"+s.tenantDomain)
+		localUsers, err := dbtx.GetUsers(ctx)
 		if err != nil {
 			return fmt.Errorf("list local users: %w", err)
 		}
@@ -135,12 +136,12 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 
 			err = dbtx.DeleteUser(ctx, localUser.ID)
 			if err != nil {
-				return fmt.Errorf("delete local user %s: %w", localUser.Email, err)
+				return fmt.Errorf("delete local user %q: %w", localUser.Email, err)
 			}
 
 			auditLogEntries = append(auditLogEntries, &auditLogEntry{
 				action:    sqlc.AuditActionUsersyncDelete,
-				message:   fmt.Sprintf("Local user deleted: %s", localUser.Email),
+				message:   fmt.Sprintf("Local user deleted: %q", localUser.Email),
 				userEmail: localUser.Email,
 			})
 		}
@@ -154,12 +155,41 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 
 	for _, entry := range auditLogEntries {
 		fields := auditlogger.Fields{
-			Action:          entry.action,
-			CorrelationID:   correlationID,
-			TargetUserEmail: &entry.userEmail,
+			Action:        entry.action,
+			CorrelationID: correlationID,
+			TargetUser:    &entry.userEmail,
 		}
 		s.auditLogger.Logf(ctx, fields, entry.message)
 	}
 
 	return nil
+}
+
+// localUserIsOutdated Check if a local user is outdated when compared to the remote user
+func localUserIsOutdated(localUser *db.User, remoteUser *admin_directory_v1.User) bool {
+	return localUser.Name != remoteUser.Name.FullName ||
+		localUser.Email != remoteUser.PrimaryEmail ||
+		localUser.ExternalID != remoteUser.Id
+}
+
+// getOrCreateLocalUserFromRemoteUser Look up the local user table for a match for the remote user. If no match is
+// found, create the user.
+func getOrCreateLocalUserFromRemoteUser(ctx context.Context, db db.Database, remoteUser *admin_directory_v1.User) (localUser *db.User, created bool, err error) {
+	localUser, err = db.GetUserByExternalID(ctx, remoteUser.Id)
+	if err == nil {
+		return localUser, false, nil
+	}
+
+	email := strings.ToLower(remoteUser.PrimaryEmail)
+	localUser, err = db.GetUserByEmail(ctx, email)
+	if err == nil {
+		return localUser, false, nil
+	}
+
+	localUser, err = db.CreateUser(ctx, remoteUser.Name.FullName, email, remoteUser.Id)
+	if err != nil {
+		return nil, false, err
+	}
+
+	return localUser, true, nil
 }

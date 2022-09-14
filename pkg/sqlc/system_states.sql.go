@@ -13,7 +13,8 @@ import (
 )
 
 const getTeamSystemState = `-- name: GetTeamSystemState :one
-SELECT system_name, team_id, state FROM system_states WHERE system_name = $1 AND team_id = $2 LIMIT 1
+SELECT system_name, team_id, state FROM system_states
+WHERE system_name = $1 AND team_id = $2
 `
 
 type GetTeamSystemStateParams struct {
@@ -29,7 +30,10 @@ func (q *Queries) GetTeamSystemState(ctx context.Context, arg GetTeamSystemState
 }
 
 const setTeamSystemState = `-- name: SetTeamSystemState :exec
-INSERT INTO system_states (system_name, team_id, state) VALUES($1, $2, $3) ON CONFLICT (system_name, team_id) DO UPDATE SET state = $3
+INSERT INTO system_states (system_name, team_id, state)
+VALUES($1, $2, $3)
+ON CONFLICT (system_name, team_id) DO
+    UPDATE SET state = $3
 `
 
 type SetTeamSystemStateParams struct {

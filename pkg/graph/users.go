@@ -47,13 +47,8 @@ func (r *queryResolver) UserByEmail(ctx context.Context, email string) (*db.User
 	return r.database.GetUserByEmail(ctx, email)
 }
 
-// Me is the resolver for the me field.
-func (r *queryResolver) Me(ctx context.Context) (*db.User, error) {
-	return authz.ActorFromContext(ctx).User, nil
-}
-
 // Teams is the resolver for the teams field.
-func (r *userResolver) Teams(ctx context.Context, obj *db.User) ([]*model.UserTeam, error) {
+func (r *userResolver) Teams(ctx context.Context, obj *db.User) ([]*model.TeamMembership, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameTeamsList)
 	if err != nil {
@@ -65,7 +60,7 @@ func (r *userResolver) Teams(ctx context.Context, obj *db.User) ([]*model.UserTe
 		return nil, err
 	}
 
-	userTeams := make([]*model.UserTeam, 0, len(teams))
+	userTeams := make([]*model.TeamMembership, 0, len(teams))
 	for _, team := range teams {
 		isOwner, err := r.database.UserIsTeamOwner(ctx, obj.ID, team.ID)
 		if err != nil {
@@ -77,7 +72,7 @@ func (r *userResolver) Teams(ctx context.Context, obj *db.User) ([]*model.UserTe
 			role = model.TeamRoleOwner
 		}
 
-		userTeams = append(userTeams, &model.UserTeam{
+		userTeams = append(userTeams, &model.TeamMembership{
 			Team: team,
 			Role: role,
 		})

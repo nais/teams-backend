@@ -9,8 +9,8 @@ import (
 	"github.com/nais/console/pkg/authz"
 )
 
-// ApiKeyAuthentication If the request has an authorization header, we will try to pull the user who owns it from the
-// database and put the user into the context.
+// ApiKeyAuthentication If the request has an authorization header, we will try to pull the service account who owns it
+// from the database and put the account into the context.
 func ApiKeyAuthentication(database db.Database) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
@@ -21,19 +21,19 @@ func ApiKeyAuthentication(database db.Database) func(next http.Handler) http.Han
 			}
 
 			ctx := r.Context()
-			user, err := database.GetUserByApiKey(ctx, authHeader[7:])
+			serviceAccount, err := database.GetServiceAccountByApiKey(ctx, authHeader[7:])
 			if err != nil {
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			roles, err := database.GetUserRoles(ctx, user.ID)
+			roles, err := database.GetUserRoles(ctx, serviceAccount.ID)
 			if err != nil {
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			ctx = authz.ContextWithActor(ctx, user, roles)
+			ctx = authz.ContextWithActor(ctx, serviceAccount, roles)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		}
 		return http.HandlerFunc(fn)

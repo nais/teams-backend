@@ -9,12 +9,6 @@ import (
 	"github.com/nais/console/pkg/sqlc"
 )
 
-type TeamMetadata map[string]string
-
-type Team struct {
-	*sqlc.Team
-}
-
 func (d *database) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) (TeamMetadata, error) {
 	rows, err := d.querier.GetTeamMetadata(ctx, teamID)
 	if err != nil {
@@ -80,29 +74,11 @@ func (d *database) UpdateTeam(ctx context.Context, teamID uuid.UUID, name, purpo
 	return &Team{Team: team}, nil
 }
 
-func (d *database) AddTeam(ctx context.Context, name string, slug slug.Slug, purpose *string, ownerUserID uuid.UUID) (*Team, error) {
-	var team *sqlc.Team
-	err := d.querier.Transaction(ctx, func(querier Querier) error {
-		var err error
-		team, err = querier.CreateTeam(ctx, sqlc.CreateTeamParams{
-			Name:    name,
-			Slug:    slug,
-			Purpose: nullString(purpose),
-		})
-		if err != nil {
-			return err
-		}
-
-		err = querier.AssignTargetedRoleToUser(ctx, sqlc.AssignTargetedRoleToUserParams{
-			UserID:   ownerUserID,
-			TargetID: nullUUID(&team.ID),
-			RoleName: sqlc.RoleNameTeamowner,
-		})
-		if err != nil {
-			return err
-		}
-
-		return nil
+func (d *database) CreateTeam(ctx context.Context, name string, slug slug.Slug, purpose *string) (*Team, error) {
+	team, err := d.querier.CreateTeam(ctx, sqlc.CreateTeamParams{
+		Name:    name,
+		Slug:    slug,
+		Purpose: nullString(purpose),
 	})
 	if err != nil {
 		return nil, err

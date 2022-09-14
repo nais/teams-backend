@@ -16,9 +16,6 @@ migrate:
 test:
 	go test ./...
 
-vulncheck:
-	go run golang.org/x/vuln/cmd/govulncheck -v ./...
-
 fmt:
 	go run mvdan.cc/gofumpt -w ./
 
@@ -26,6 +23,7 @@ generate: generate-sqlc generate-gql generate-mocks
 
 check:
 	go run honnef.co/go/tools/cmd/staticcheck ./...
+	go run golang.org/x/vuln/cmd/govulncheck -v ./...
 
 generate-gql:
 	go run github.com/99designs/gqlgen generate --verbose

@@ -7,10 +7,6 @@ import (
 	"github.com/nais/console/pkg/sqlc"
 )
 
-type ReconcileError struct {
-	*sqlc.ReconcileError
-}
-
 func (d *database) SetTeamReconcileErrorForSystem(ctx context.Context, correlationID uuid.UUID, teamID uuid.UUID, systemName sqlc.SystemName, err error) error {
 	return d.querier.SetTeamReconcileErrorForSystem(ctx, sqlc.SetTeamReconcileErrorForSystemParams{
 		CorrelationID: correlationID,

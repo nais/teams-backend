@@ -180,10 +180,10 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 		}
 
 		fields := auditlogger.Fields{
-			Action:          sqlc.AuditActionGithubTeamAddMember,
-			CorrelationID:   input.CorrelationID,
-			TargetTeamSlug:  &input.Team.Slug,
-			TargetUserEmail: &consoleUser.Email,
+			Action:         sqlc.AuditActionGithubTeamAddMember,
+			CorrelationID:  input.CorrelationID,
+			TargetTeamSlug: &input.Team.Slug,
+			TargetUser:     &consoleUser.Email,
 		}
 		r.auditLogger.Logf(ctx, fields, "added member %q to GitHub team %q", username, *githubTeam.Slug)
 	}

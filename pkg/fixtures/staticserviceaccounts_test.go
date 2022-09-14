@@ -76,7 +76,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 		assert.EqualError(t, err, `invalid role name: "role" for service account "nais-service-account"`)
 	})
 
-	t.Run("create multiple service accounts", func(t *testing.T) {
+	t.Run("create multiple service accounts and delete old one", func(t *testing.T) {
 		ctx := context.Background()
 		txCtx := context.Background()
 		database := db.NewMockDatabase(t)
@@ -84,11 +84,12 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 
 		sa1 := serviceAccountWithName("nais-service-account-1")
 		sa2 := serviceAccountWithName("nais-service-account-2")
+		sa3 := serviceAccountWithName("nais-service-account-3")
 
 		database.
-			On("Transaction", ctx, mock.AnythingOfType("db.TransactionFunc")).
+			On("Transaction", ctx, mock.AnythingOfType("db.DatabaseTransactionFunc")).
 			Run(func(args mock.Arguments) {
-				fn := args.Get(1).(db.TransactionFunc)
+				fn := args.Get(1).(db.DatabaseTransactionFunc)
 				fn(txCtx, dbtx)
 			}).
 			Return(nil).
@@ -96,11 +97,11 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 
 		// First service account
 		dbtx.
-			On("GetServiceAccount", txCtx, "nais-service-account-1").
+			On("GetServiceAccountByName", txCtx, "nais-service-account-1").
 			Return(nil, errors.New("user not found")).
 			Once()
 		dbtx.
-			On("AddServiceAccount", txCtx, "nais-service-account-1").
+			On("CreateServiceAccount", txCtx, "nais-service-account-1").
 			Return(sa1, nil).
 			Once()
 		dbtx.
@@ -108,7 +109,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 			Return(nil).
 			Once()
 		dbtx.
-			On("RemoveApiKeysFromUser", txCtx, sa1.ID).
+			On("RemoveApiKeysFromServiceAccount", txCtx, sa1.ID).
 			Return(nil).
 			Once()
 		dbtx.
@@ -126,7 +127,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 
 		// Second service account
 		dbtx.
-			On("GetServiceAccount", txCtx, "nais-service-account-2").
+			On("GetServiceAccountByName", txCtx, "nais-service-account-2").
 			Return(sa2, nil).
 			Once()
 		dbtx.
@@ -134,7 +135,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 			Return(nil).
 			Once()
 		dbtx.
-			On("RemoveApiKeysFromUser", txCtx, sa2.ID).
+			On("RemoveApiKeysFromServiceAccount", txCtx, sa2.ID).
 			Return(nil).
 			Once()
 		dbtx.
@@ -143,6 +144,16 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 			Once()
 		dbtx.
 			On("CreateAPIKey", txCtx, "key-2", sa2.ID).
+			Return(nil).
+			Once()
+
+		// Delete old service account
+		dbtx.
+			On("GetServiceAccounts", txCtx).
+			Return([]*db.ServiceAccount{sa1, sa2, sa3}, nil).
+			Once()
+		dbtx.
+			On("DeleteServiceAccount", txCtx, sa3.ID).
 			Return(nil).
 			Once()
 

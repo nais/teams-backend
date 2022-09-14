@@ -37,11 +37,11 @@ func New(database db.Database) AuditLogger {
 }
 
 type Fields struct {
-	Action          sqlc.AuditAction
-	CorrelationID   uuid.UUID
-	ActorEmail      *string
-	TargetTeamSlug  *slug.Slug
-	TargetUserEmail *string
+	Action         sqlc.AuditAction
+	CorrelationID  uuid.UUID
+	Actor          *string
+	TargetTeamSlug *slug.Slug
+	TargetUser     *string
 }
 
 func (l *auditLogger) Logf(ctx context.Context, fields Fields, message string, messageArgs ...interface{}) error {
@@ -62,13 +62,13 @@ func (l *auditLogger) Logf(ctx context.Context, fields Fields, message string, m
 	}
 
 	message = fmt.Sprintf(message, messageArgs...)
-	err := l.database.AddAuditLog(
+	err := l.database.CreateAuditLogEntry(
 		ctx,
 		fields.CorrelationID,
 		l.systemName,
-		fields.ActorEmail,
+		fields.Actor,
 		fields.TargetTeamSlug,
-		fields.TargetUserEmail,
+		fields.TargetUser,
 		fields.Action,
 		message,
 	)
@@ -81,14 +81,14 @@ func (l *auditLogger) Logf(ctx context.Context, fields Fields, message string, m
 		"correlation_id": fields.CorrelationID,
 		"system_name":    l.systemName,
 	}
-	if fields.ActorEmail != nil {
-		logFields["actor_email"] = str(fields.ActorEmail)
+	if fields.Actor != nil {
+		logFields["actor"] = str(fields.Actor)
 	}
 	if fields.TargetTeamSlug != nil {
 		logFields["target_team_slug"] = str(fields.TargetTeamSlug.StringP())
 	}
-	if fields.TargetUserEmail != nil {
-		logFields["target_user_email"] = str(fields.TargetUserEmail)
+	if fields.TargetUser != nil {
+		logFields["target_user"] = str(fields.TargetUser)
 	}
 
 	log.StandardLogger().WithFields(logFields).Infof(message)

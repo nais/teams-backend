@@ -36,7 +36,7 @@ func TestApiKeyAuthentication(t *testing.T) {
 	t.Run("Unknown API key in header", func(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		database.
-			On("GetUserByApiKey", mock.Anything, "unknown").
+			On("GetServiceAccountByApiKey", mock.Anything, "unknown").
 			Return(nil, errors.New("user not found")).
 			Once()
 		responseWriter := httptest.NewRecorder()
@@ -51,10 +51,9 @@ func TestApiKeyAuthentication(t *testing.T) {
 	})
 
 	t.Run("Valid API key", func(t *testing.T) {
-		user := &db.User{
-			ID:    uuid.New(),
-			Email: "user@example.com",
-			Name:  "User Name",
+		serviceAccount := &db.ServiceAccount{
+			ID:   uuid.New(),
+			Name: "User Name",
 		}
 		roles := []*db.Role{
 			{Name: sqlc.RoleNameAdmin},
@@ -62,11 +61,11 @@ func TestApiKeyAuthentication(t *testing.T) {
 
 		database := db.NewMockDatabase(t)
 		database.
-			On("GetUserByApiKey", mock.Anything, "user1-key").
-			Return(user, nil).
+			On("GetServiceAccountByApiKey", mock.Anything, "user1-key").
+			Return(serviceAccount, nil).
 			Once()
 		database.
-			On("GetUserRoles", mock.Anything, user.ID).
+			On("GetUserRoles", mock.Anything, serviceAccount.ID).
 			Return(roles, nil).
 			Once()
 
@@ -75,7 +74,7 @@ func TestApiKeyAuthentication(t *testing.T) {
 		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			actor := authz.ActorFromContext(r.Context())
 			assert.NotNil(t, actor)
-			assert.Equal(t, user, actor.User)
+			assert.Equal(t, serviceAccount, actor.User)
 			assert.Equal(t, roles, actor.Roles)
 		})
 		req := getRequest()

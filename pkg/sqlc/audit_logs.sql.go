@@ -14,26 +14,26 @@ import (
 )
 
 const createAuditLog = `-- name: CreateAuditLog :exec
-INSERT INTO audit_logs (correlation_id, actor_email, system_name, target_user_email, target_team_slug, action, message)
+INSERT INTO audit_logs (correlation_id, actor, system_name, target_user, target_team_slug, action, message)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
 `
 
 type CreateAuditLogParams struct {
-	CorrelationID   uuid.UUID
-	ActorEmail      sql.NullString
-	SystemName      SystemName
-	TargetUserEmail sql.NullString
-	TargetTeamSlug  *slug.Slug
-	Action          AuditAction
-	Message         string
+	CorrelationID  uuid.UUID
+	Actor          sql.NullString
+	SystemName     SystemName
+	TargetUser     sql.NullString
+	TargetTeamSlug *slug.Slug
+	Action         AuditAction
+	Message        string
 }
 
 func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) error {
 	_, err := q.db.Exec(ctx, createAuditLog,
 		arg.CorrelationID,
-		arg.ActorEmail,
+		arg.Actor,
 		arg.SystemName,
-		arg.TargetUserEmail,
+		arg.TargetUser,
 		arg.TargetTeamSlug,
 		arg.Action,
 		arg.Message,
@@ -42,7 +42,10 @@ func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) 
 }
 
 const getAuditLogsForTeam = `-- name: GetAuditLogsForTeam :many
-SELECT id, created_at, correlation_id, system_name, actor_email, target_user_email, target_team_slug, action, message FROM audit_logs WHERE target_team_slug = $1 ORDER BY created_at DESC LIMIT 100
+SELECT id, created_at, correlation_id, system_name, actor, target_user, target_team_slug, action, message FROM audit_logs
+WHERE target_team_slug = $1
+ORDER BY created_at DESC
+LIMIT 100
 `
 
 func (q *Queries) GetAuditLogsForTeam(ctx context.Context, targetTeamSlug *slug.Slug) ([]*AuditLog, error) {
@@ -59,8 +62,8 @@ func (q *Queries) GetAuditLogsForTeam(ctx context.Context, targetTeamSlug *slug.
 			&i.CreatedAt,
 			&i.CorrelationID,
 			&i.SystemName,
-			&i.ActorEmail,
-			&i.TargetUserEmail,
+			&i.Actor,
+			&i.TargetUser,
 			&i.TargetTeamSlug,
 			&i.Action,
 			&i.Message,

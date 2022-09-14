@@ -1,64 +1,61 @@
 -- name: CreateUser :one
-INSERT INTO users (name, email, service_account) VALUES ($1, sqlc.arg(email)::TEXT, false)
+INSERT INTO users (name, email, service_account, external_id)
+VALUES ($1, sqlc.arg(email)::TEXT, false, sqlc.arg(external_id)::TEXT)
 RETURNING *;
 
 -- name: CreateServiceAccount :one
-INSERT INTO users (name, service_account) VALUES ($1, true)
+INSERT INTO users (name, service_account)
+VALUES ($1, true)
 RETURNING *;
 
 -- name: GetUsers :many
 SELECT * FROM users
+WHERE service_account = false
+ORDER BY name ASC;
+
+-- name: GetServiceAccounts :many
+SELECT * FROM users
+WHERE service_account = true
 ORDER BY name ASC;
 
 -- name: GetUserByID :one
 SELECT * FROM users
-WHERE id = $1 LIMIT 1;
+WHERE id = $1 AND service_account = false;
 
--- name: GetServiceAccount :one
+-- name: GetUserByExternalID :one
 SELECT * FROM users
-WHERE name = $1 AND service_account = true LIMIT 1;
+WHERE external_id = sqlc.arg(external_id)::TEXT AND service_account = false;
+
+-- name: GetServiceAccountByName :one
+SELECT * FROM users
+WHERE name = $1 AND service_account = true;
 
 -- name: GetUserByEmail :one
 SELECT * FROM users
-WHERE email = sqlc.arg(email)::TEXT LIMIT 1;
+WHERE email = sqlc.arg(email)::TEXT AND service_account = false;
 
--- name: GetUsersByEmail :many
-SELECT * FROM users
-WHERE email LIKE sqlc.arg(email)::TEXT LIMIT 1;
-
--- name: GetUserByApiKey :one
+-- name: GetServiceAccountByApiKey :one
 SELECT users.* FROM api_keys
 JOIN users ON users.id = api_keys.user_id
-WHERE api_keys.api_key = $1 LIMIT 1;
+WHERE api_keys.api_key = $1 AND users.service_account = true;
 
 -- name: GetUserTeams :many
-SELECT teams.* FROM user_roles JOIN teams ON teams.id = user_roles.target_id WHERE user_roles.user_id = $1 ORDER BY teams.name ASC;
+SELECT teams.* FROM user_roles
+JOIN teams ON teams.id = user_roles.target_id
+JOIN users ON users.id = user_roles.user_id
+WHERE user_roles.user_id = $1 AND users.service_account = false
+ORDER BY teams.name ASC;
 
--- name: GetUserRoles :many
-SELECT * FROM user_roles
-WHERE user_id = $1;
-
--- name: AssignGlobalRoleToUser :exec
-INSERT INTO user_roles (user_id, role_name) VALUES ($1, $2) ON CONFLICT DO NOTHING;
-
--- name: RevokeGlobalRoleFromUser :exec
-DELETE FROM user_roles WHERE user_id = $1 AND role_name = $2;
-
--- name: AssignTargetedRoleToUser :exec
-INSERT INTO user_roles (user_id, role_name, target_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING;
-
--- name: RevokeTargetedRoleFromUser :exec
-DELETE FROM user_roles WHERE user_id = $1 AND target_id = $2 AND role_name = $3;
-
--- name: RemoveGlobalUserRole :exec
-DELETE FROM user_roles WHERE user_id = $1 AND target_id IS NULL AND role_name = $2;
-
--- name: RemoveAllUserRoles :exec
-DELETE FROM user_roles WHERE user_id = $1;
-
--- name: SetUserName :one
-UPDATE users SET name = $1 WHERE id = $2
+-- name: UpdateUser :one
+UPDATE users
+SET name = $1, email = sqlc.arg(email)::TEXT, external_id = sqlc.arg(external_id)::TEXT
+WHERE id = $2 AND service_account = false
 RETURNING *;
 
 -- name: DeleteUser :exec
-DELETE FROM users WHERE id = $1;
+DELETE FROM users
+WHERE id = $1 AND service_account = false;
+
+-- name: DeleteServiceAccount :exec
+DELETE FROM users
+WHERE id = $1 AND service_account = true;

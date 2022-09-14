@@ -14,7 +14,8 @@ import (
 )
 
 const createTeam = `-- name: CreateTeam :one
-INSERT INTO teams (name, slug, purpose) VALUES ($1, $2, $3)
+INSERT INTO teams (name, slug, purpose)
+VALUES ($1, $2, $3)
 RETURNING id, slug, name, purpose
 `
 
@@ -37,7 +38,8 @@ func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, 
 }
 
 const getTeamByID = `-- name: GetTeamByID :one
-SELECT id, slug, name, purpose FROM teams WHERE id = $1 LIMIT 1
+SELECT id, slug, name, purpose FROM teams
+WHERE id = $1
 `
 
 func (q *Queries) GetTeamByID(ctx context.Context, id uuid.UUID) (*Team, error) {
@@ -53,7 +55,8 @@ func (q *Queries) GetTeamByID(ctx context.Context, id uuid.UUID) (*Team, error) 
 }
 
 const getTeamBySlug = `-- name: GetTeamBySlug :one
-SELECT id, slug, name, purpose FROM teams WHERE slug = $1 LIMIT 1
+SELECT id, slug, name, purpose FROM teams
+WHERE slug = $1
 `
 
 func (q *Queries) GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error) {
@@ -69,10 +72,10 @@ func (q *Queries) GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, err
 }
 
 const getTeamMembers = `-- name: GetTeamMembers :many
-SELECT users.id, users.email, users.name, users.service_account FROM user_roles
+SELECT users.id, users.email, users.name, users.service_account, users.external_id FROM user_roles
 JOIN teams ON teams.id = user_roles.target_id
 JOIN users ON users.id = user_roles.user_id
-WHERE user_roles.target_id = $1::UUID
+WHERE user_roles.target_id = $1::UUID AND users.service_account = false
 ORDER BY users.name ASC
 `
 
@@ -90,6 +93,7 @@ func (q *Queries) GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User
 			&i.Email,
 			&i.Name,
 			&i.ServiceAccount,
+			&i.ExternalID,
 		); err != nil {
 			return nil, err
 		}
@@ -102,7 +106,8 @@ func (q *Queries) GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User
 }
 
 const getTeamMetadata = `-- name: GetTeamMetadata :many
-SELECT team_id, key, value FROM team_metadata WHERE team_id = $1
+SELECT team_id, key, value FROM team_metadata
+WHERE team_id = $1
 `
 
 func (q *Queries) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) ([]*TeamMetadatum, error) {
@@ -126,7 +131,8 @@ func (q *Queries) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) ([]*Tea
 }
 
 const getTeams = `-- name: GetTeams :many
-SELECT id, slug, name, purpose FROM teams ORDER BY name ASC
+SELECT id, slug, name, purpose FROM teams
+ORDER BY name ASC
 `
 
 func (q *Queries) GetTeams(ctx context.Context) ([]*Team, error) {
@@ -155,7 +161,10 @@ func (q *Queries) GetTeams(ctx context.Context) ([]*Team, error) {
 }
 
 const setTeamMetadata = `-- name: SetTeamMetadata :exec
-INSERT INTO team_metadata (team_id, key, value) VALUES ($1, $2, $3) ON CONFLICT (team_id, key) DO UPDATE SET value = $3
+INSERT INTO team_metadata (team_id, key, value)
+VALUES ($1, $2, $3)
+ON CONFLICT (team_id, key) DO
+    UPDATE SET value = $3
 `
 
 type SetTeamMetadataParams struct {
@@ -170,7 +179,10 @@ func (q *Queries) SetTeamMetadata(ctx context.Context, arg SetTeamMetadataParams
 }
 
 const updateTeam = `-- name: UpdateTeam :one
-UPDATE teams SET name = COALESCE($1, name), purpose = COALESCE($2, purpose) WHERE id = $3 RETURNING id, slug, name, purpose
+UPDATE teams
+SET name = COALESCE($1, name), purpose = COALESCE($2, purpose)
+WHERE id = $3
+RETURNING id, slug, name, purpose
 `
 
 type UpdateTeamParams struct {

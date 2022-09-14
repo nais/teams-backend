@@ -8,19 +8,6 @@ import (
 	"github.com/nais/console/pkg/sqlc"
 )
 
-type QuerierTxFn func(querier Querier) error
-
-type Querier interface {
-	sqlc.Querier
-	Transaction(ctx context.Context, callback QuerierTxFn) error
-}
-
-type Queries struct {
-	*sqlc.Queries
-	connPool *pgxpool.Pool
-	tx       pgx.Tx
-}
-
 func Wrap(q *sqlc.Queries, connPool *pgxpool.Pool) Querier {
 	return &Queries{
 		Queries:  q,
@@ -28,7 +15,7 @@ func Wrap(q *sqlc.Queries, connPool *pgxpool.Pool) Querier {
 	}
 }
 
-func (q *Queries) Transaction(ctx context.Context, callback QuerierTxFn) error {
+func (q *Queries) Transaction(ctx context.Context, callback QuerierTransactionFunc) error {
 	querier, err := q.begin(ctx)
 	if err != nil {
 		return err

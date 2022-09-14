@@ -13,9 +13,6 @@ extend type Query {
         "ID of the user."
         email: String!
     ): User! @auth
-
-    "The currently authenticated user."
-    me: User! @auth
 }
 
 "User type."
@@ -29,18 +26,9 @@ type User {
     "The name of the user."
     name: String!
 
-    "List of teams the user is a member of."
-    teams: [UserTeam!]!
+    "List of team memberships."
+    teams: [TeamMembership!]!
 
     "Roles attached to the user."
     roles: [Role!]!
-}
-
-"User team."
-type UserTeam {
-    "Team instance."
-    team: Team!
-
-    "The role that the user has in the team."
-    role: TeamRole!
 }

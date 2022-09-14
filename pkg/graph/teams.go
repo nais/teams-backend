@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
+	"github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
@@ -29,7 +30,24 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		return nil, fmt.Errorf("unable to create log correlation ID: %w", err)
 	}
 
-	team, err := r.database.AddTeam(ctx, input.Name, *input.Slug, input.Purpose, actor.User.ID)
+	var team *db.Team
+	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
+		team, err = dbtx.CreateTeam(ctx, input.Name, *input.Slug, input.Purpose)
+		if err != nil {
+			return err
+		}
+
+		if actor.User.IsServiceAccount() {
+			return nil
+		}
+
+		err = dbtx.SetTeamMemberRole(ctx, actor.User.GetID(), team.ID, sqlc.RoleNameTeamowner)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +55,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 	fields := auditlogger.Fields{
 		Action:         sqlc.AuditActionGraphqlApiTeamCreate,
 		CorrelationID:  correlationID,
-		ActorEmail:     &actor.User.Email,
+		Actor:          console.Strp(actor.User.Identity()),
 		TargetTeamSlug: &team.Slug,
 	}
 	r.auditLogger.Logf(ctx, fields, "Team created")
@@ -68,7 +86,7 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, in
 	fields := auditlogger.Fields{
 		Action:         sqlc.AuditActionGraphqlApiTeamUpdate,
 		CorrelationID:  correlationID,
-		ActorEmail:     &actor.User.Email,
+		Actor:          console.Strp(actor.User.Identity()),
 		TargetTeamSlug: &team.Slug,
 	}
 	r.auditLogger.Logf(ctx, fields, "Team updated")
@@ -120,11 +138,11 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 			}
 
 			fields := auditlogger.Fields{
-				Action:          sqlc.AuditActionGraphqlApiTeamRemoveMember,
-				CorrelationID:   correlationID,
-				ActorEmail:      &actor.User.Email,
-				TargetTeamSlug:  &team.Slug,
-				TargetUserEmail: &member.Email,
+				Action:         sqlc.AuditActionGraphqlApiTeamRemoveMember,
+				CorrelationID:  correlationID,
+				Actor:          console.Strp(actor.User.Identity()),
+				TargetTeamSlug: &team.Slug,
+				TargetUser:     &member.Email,
 			}
 			r.auditLogger.Logf(ctx, fields, "Removed user")
 		}
@@ -160,7 +178,7 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 	fields := auditlogger.Fields{
 		Action:         sqlc.AuditActionGraphqlApiTeamSync,
 		CorrelationID:  correlationID,
-		ActorEmail:     &actor.User.Email,
+		Actor:          console.Strp(actor.User.Identity()),
 		TargetTeamSlug: &team.Slug,
 	}
 	r.auditLogger.Logf(ctx, fields, "Synchronize team")
@@ -204,11 +222,11 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 			}
 
 			fields := auditlogger.Fields{
-				Action:          sqlc.AuditActionGraphqlApiTeamAddMember,
-				CorrelationID:   correlationID,
-				ActorEmail:      &actor.User.Email,
-				TargetTeamSlug:  &team.Slug,
-				TargetUserEmail: &user.Email,
+				Action:         sqlc.AuditActionGraphqlApiTeamAddMember,
+				CorrelationID:  correlationID,
+				Actor:          console.Strp(actor.User.Identity()),
+				TargetTeamSlug: &team.Slug,
+				TargetUser:     &user.Email,
 			}
 			r.auditLogger.Logf(ctx, fields, "Add team member")
 		}
@@ -254,11 +272,11 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 			}
 
 			fields := auditlogger.Fields{
-				Action:          sqlc.AuditActionGraphqlApiTeamAddOwner,
-				CorrelationID:   correlationID,
-				ActorEmail:      &actor.User.Email,
-				TargetTeamSlug:  &team.Slug,
-				TargetUserEmail: &user.Email,
+				Action:         sqlc.AuditActionGraphqlApiTeamAddOwner,
+				CorrelationID:  correlationID,
+				Actor:          console.Strp(actor.User.Identity()),
+				TargetTeamSlug: &team.Slug,
+				TargetUser:     &user.Email,
 			}
 			r.auditLogger.Logf(ctx, fields, "Add team owner")
 		}
@@ -318,11 +336,11 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 	}
 
 	fields := auditlogger.Fields{
-		Action:          sqlc.AuditActionGraphqlApiTeamSetMemberRole,
-		CorrelationID:   correlationID,
-		ActorEmail:      &actor.User.Email,
-		TargetTeamSlug:  &team.Slug,
-		TargetUserEmail: &member.Email,
+		Action:         sqlc.AuditActionGraphqlApiTeamSetMemberRole,
+		CorrelationID:  correlationID,
+		Actor:          console.Strp(actor.User.Identity()),
+		TargetTeamSlug: &team.Slug,
+		TargetUser:     &member.Email,
 	}
 	r.auditLogger.Logf(ctx, fields, "Set team member role to %q", desiredRole)
 
