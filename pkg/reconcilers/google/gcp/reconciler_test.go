@@ -3,7 +3,7 @@ package google_gcp_reconciler_test
 import (
 	"testing"
 
-	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
+	"github.com/nais/console/pkg/reconcilers/google/gcp"
 	"github.com/stretchr/testify/assert"
 )
 

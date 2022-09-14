@@ -2,6 +2,8 @@ package google_gcp_reconciler
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,19 +11,17 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/api/cloudbilling/v1"
-
-	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
-
-	"github.com/nais/console/pkg/slug"
-
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
+	"github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/reconcilers/google/workspace_admin"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/api/cloudbilling/v1"
 	"google.golang.org/api/cloudresourcemanager/v3"
 	"google.golang.org/api/iam/v1"
 	"google.golang.org/api/option"
@@ -310,4 +310,21 @@ func createGcpServices(ctx context.Context, credentialsFilePath string) (*gcpSer
 		cloudResourceManager: cloudResourceManagerService,
 		iam:                  iamService,
 	}, nil
+}
+
+// GenerateProjectID Generate a unique project ID for the team in a given environment in a deterministic fashion
+func GenerateProjectID(domain, environment string, slug slug.Slug) string {
+	hasher := sha256.New()
+	hasher.Write([]byte(slug))
+	hasher.Write([]byte{0})
+	hasher.Write([]byte(environment))
+	hasher.Write([]byte{0})
+	hasher.Write([]byte(domain))
+
+	parts := make([]string, 3)
+	parts[0] = console.Truncate(string(slug), 20)
+	parts[1] = console.Truncate(environment, 4)
+	parts[2] = console.Truncate(hex.EncodeToString(hasher.Sum(nil)), 4)
+
+	return strings.Join(parts, "-")
 }

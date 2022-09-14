@@ -218,8 +218,8 @@ func remoteOnlyMembers(googleGroupMembers []*admin_directory_v1.Member, consoleU
 	return googleGroupMembers
 }
 
-// Given a list of Google group members and a list of users,
-// return users not present in members directory.
+// localOnlyMembers Given a list of Google group members and a list of users, return users not present in members
+// directory.
 func localOnlyMembers(googleGroupMembers []*admin_directory_v1.Member, consoleUsers []*db.User) []*db.User {
 	localUserMap := make(map[string]*db.User)
 	for _, user := range consoleUsers {

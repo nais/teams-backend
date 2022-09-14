@@ -85,3 +85,17 @@ func TestDomainUsers(t *testing.T) {
 		assert.Equal(t, "user1@example.com", domainUsers[0].Email)
 	})
 }
+
+func TestTruncate(t *testing.T) {
+	t.Run("Empty string", func(t *testing.T) {
+		assert.Equal(t, "", helpers.Truncate("", 5))
+	})
+
+	t.Run("String shorter than truncate length", func(t *testing.T) {
+		assert.Equal(t, "some string", helpers.Truncate("some string", 20))
+	})
+
+	t.Run("String longer than truncate length", func(t *testing.T) {
+		assert.Equal(t, "some ", helpers.Truncate("some string", 5))
+	})
+}
