@@ -13,7 +13,6 @@ import (
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
-	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/sqlc"
 )
 
@@ -43,12 +42,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 	}
 	r.auditLogger.Logf(ctx, fields, "Team created")
 
-	reconcilerInput, err := reconcilers.CreateReconcilerInput(ctx, r.database, *team)
-	if err != nil {
-		return nil, fmt.Errorf("unable to reconcile team: %w", err)
-	}
-
-	r.teamReconciler <- reconcilerInput
+	r.reconcileTeam(ctx, correlationID, *team)
 
 	return team, nil
 }
@@ -79,12 +73,7 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, in
 	}
 	r.auditLogger.Logf(ctx, fields, "Team updated")
 
-	reconcilerInput, err := reconcilers.CreateReconcilerInput(ctx, r.database, *team)
-	if err != nil {
-		return nil, err
-	}
-
-	r.teamReconciler <- reconcilerInput.WithCorrelationID(correlationID)
+	r.reconcileTeam(ctx, correlationID, *team)
 
 	return team, nil
 }
@@ -145,6 +134,8 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 		return nil, err
 	}
 
+	r.reconcileTeam(ctx, correlationID, *team)
+
 	return team, nil
 }
 
@@ -174,12 +165,7 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 	}
 	r.auditLogger.Logf(ctx, fields, "Synchronize team")
 
-	reconcilerInput, err := reconcilers.CreateReconcilerInput(ctx, r.database, *team)
-	if err != nil {
-		return nil, err
-	}
-
-	r.teamReconciler <- reconcilerInput.WithCorrelationID(correlationID)
+	r.reconcileTeam(ctx, correlationID, *team)
 
 	return &model.TeamSync{
 		Team:          team,
@@ -232,6 +218,8 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 		return nil, err
 	}
 
+	r.reconcileTeam(ctx, correlationID, *team)
+
 	return team, nil
 }
 
@@ -279,6 +267,8 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 	if err != nil {
 		return nil, err
 	}
+
+	r.reconcileTeam(ctx, correlationID, *team)
 
 	return team, nil
 }
@@ -335,6 +325,8 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 		TargetUserEmail: &member.Email,
 	}
 	r.auditLogger.Logf(ctx, fields, "Set team member role to %q", desiredRole)
+
+	r.reconcileTeam(ctx, correlationID, *team)
 
 	return team, nil
 }

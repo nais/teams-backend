@@ -5,14 +5,15 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/jackc/pgconn"
-
 	"github.com/99designs/gqlgen/graphql"
+	"github.com/google/uuid"
+	"github.com/jackc/pgconn"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/sqlc"
+	log "github.com/sirupsen/logrus"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
@@ -36,6 +37,17 @@ func NewResolver(database db.Database, tenantDomain string, teamReconciler chan<
 		teamReconciler: teamReconciler,
 		auditLogger:    auditLogger,
 	}
+}
+
+// reconcileTeam Trigger team reconcilers for a given team
+func (r *Resolver) reconcileTeam(ctx context.Context, correlationID uuid.UUID, team db.Team) {
+	reconcilerInput, err := reconcilers.CreateReconcilerInput(ctx, r.database, team)
+	if err != nil {
+		log.Errorf("unable to generate reconcile input for team %q: %s", team.Slug, err)
+		return
+	}
+
+	r.teamReconciler <- reconcilerInput.WithCorrelationID(correlationID)
 }
 
 func GetErrorPresenter() graphql.ErrorPresenterFunc {
