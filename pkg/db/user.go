@@ -7,27 +7,11 @@ import (
 	"github.com/nais/console/pkg/sqlc"
 )
 
-type User struct {
-	ID    uuid.UUID
-	Email string
-	Name  string
-}
-
-type ServiceAccount struct {
-	ID   uuid.UUID
-	Name string
-}
-
-type Role struct {
-	*sqlc.UserRole
-	Name           sqlc.RoleName
-	Authorizations []sqlc.AuthzName
-}
-
-func (d *database) AddUser(ctx context.Context, name, email string) (*User, error) {
+func (d *database) CreateUser(ctx context.Context, name, email, externalID string) (*User, error) {
 	user, err := d.querier.CreateUser(ctx, sqlc.CreateUserParams{
-		Name:  name,
-		Email: email,
+		Name:       name,
+		Email:      email,
+		ExternalID: externalID,
 	})
 	if err != nil {
 		return nil, err
@@ -36,7 +20,7 @@ func (d *database) AddUser(ctx context.Context, name, email string) (*User, erro
 	return userFromSqlcUser(user), nil
 }
 
-func (d *database) AddServiceAccount(ctx context.Context, name string) (*ServiceAccount, error) {
+func (d *database) CreateServiceAccount(ctx context.Context, name string) (*ServiceAccount, error) {
 	serviceAccount, err := d.querier.CreateServiceAccount(ctx, name)
 	if err != nil {
 		return nil, err
@@ -49,8 +33,8 @@ func (d *database) DeleteUser(ctx context.Context, userID uuid.UUID) error {
 	return d.querier.DeleteUser(ctx, userID)
 }
 
-func (d *database) GetServiceAccount(ctx context.Context, name string) (*ServiceAccount, error) {
-	serviceAccount, err := d.querier.GetServiceAccount(ctx, name)
+func (d *database) GetServiceAccountByName(ctx context.Context, name string) (*ServiceAccount, error) {
+	serviceAccount, err := d.querier.GetServiceAccountByName(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -67,8 +51,17 @@ func (d *database) GetUserByEmail(ctx context.Context, email string) (*User, err
 	return userFromSqlcUser(user), nil
 }
 
-func (d *database) GetUserByApiKey(ctx context.Context, apiKey string) (*User, error) {
-	user, err := d.querier.GetUserByApiKey(ctx, apiKey)
+func (d *database) GetServiceAccountByApiKey(ctx context.Context, apiKey string) (*ServiceAccount, error) {
+	serviceAccount, err := d.querier.GetServiceAccountByApiKey(ctx, apiKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return serviceAccountFromSqlcUser(serviceAccount), nil
+}
+
+func (d *database) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
+	user, err := d.querier.GetUserByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -76,8 +69,8 @@ func (d *database) GetUserByApiKey(ctx context.Context, apiKey string) (*User, e
 	return userFromSqlcUser(user), nil
 }
 
-func (d *database) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
-	user, err := d.querier.GetUserByID(ctx, id)
+func (d *database) GetUserByExternalID(ctx context.Context, externalID string) (*User, error) {
+	user, err := d.querier.GetUserByExternalID(ctx, externalID)
 	if err != nil {
 		return nil, err
 	}
@@ -112,29 +105,18 @@ func (d *database) RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) err
 	return d.querier.RemoveAllUserRoles(ctx, userID)
 }
 
-func (d *database) RemoveApiKeysFromUser(ctx context.Context, userID uuid.UUID) error {
-	return d.querier.RemoveApiKeysFromUser(ctx, userID)
-}
-
-func (d *database) SetUserName(ctx context.Context, userID uuid.UUID, name string) (*User, error) {
-	user, err := d.querier.SetUserName(ctx, sqlc.SetUserNameParams{
-		Name: name,
-		ID:   userID,
+func (d *database) UpdateUser(ctx context.Context, userID uuid.UUID, name, email, externalID string) (*User, error) {
+	user, err := d.querier.UpdateUser(ctx, sqlc.UpdateUserParams{
+		Email:      email,
+		ExternalID: externalID,
+		ID:         userID,
+		Name:       name,
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	return userFromSqlcUser(user), nil
-}
-
-func (d *database) GetUsersByEmail(ctx context.Context, email string) ([]*User, error) {
-	users, err := d.querier.GetUsersByEmail(ctx, email)
-	if err != nil {
-		return nil, err
-	}
-
-	return d.getUsers(users)
 }
 
 func (d *database) GetUsers(ctx context.Context) ([]*User, error) {
@@ -159,8 +141,26 @@ func (d *database) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*Role,
 	return d.getUserRoles(ctx, userID)
 }
 
+func (d *database) GetServiceAccounts(ctx context.Context) ([]*ServiceAccount, error) {
+	rows, err := d.querier.GetServiceAccounts(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	serviceAccounts := make([]*ServiceAccount, 0)
+	for _, row := range rows {
+		serviceAccounts = append(serviceAccounts, serviceAccountFromSqlcUser(row))
+	}
+
+	return serviceAccounts, nil
+}
+
+func (d *database) DeleteServiceAccount(ctx context.Context, serviceAccountID uuid.UUID) error {
+	return d.querier.DeleteServiceAccount(ctx, serviceAccountID)
+}
+
 func userFromSqlcUser(u *sqlc.User) *User {
-	return &User{ID: u.ID, Email: u.Email.String, Name: u.Name}
+	return &User{ID: u.ID, Email: u.Email.String, Name: u.Name, ExternalID: u.ExternalID.String}
 }
 
 func serviceAccountFromSqlcUser(u *sqlc.User) *ServiceAccount {

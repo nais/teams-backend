@@ -56,10 +56,12 @@ func SetupStaticServiceAccounts(ctx context.Context, database db.Database, servi
 	}
 
 	return database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
+		serviceAccountNames := make(map[string]struct{})
 		for _, serviceAccountFromInput := range serviceAccounts {
-			serviceAccount, err := dbtx.GetServiceAccount(ctx, serviceAccountFromInput.Name)
+			serviceAccountNames[serviceAccountFromInput.Name] = struct{}{}
+			serviceAccount, err := dbtx.GetServiceAccountByName(ctx, serviceAccountFromInput.Name)
 			if err != nil {
-				serviceAccount, err = dbtx.AddServiceAccount(ctx, serviceAccountFromInput.Name)
+				serviceAccount, err = dbtx.CreateServiceAccount(ctx, serviceAccountFromInput.Name)
 				if err != nil {
 					return err
 				}
@@ -70,7 +72,7 @@ func SetupStaticServiceAccounts(ctx context.Context, database db.Database, servi
 				return err
 			}
 
-			err = dbtx.RemoveApiKeysFromUser(ctx, serviceAccount.ID)
+			err = dbtx.RemoveApiKeysFromServiceAccount(ctx, serviceAccount.ID)
 			if err != nil {
 				return err
 			}
@@ -84,6 +86,26 @@ func SetupStaticServiceAccounts(ctx context.Context, database db.Database, servi
 
 			err = dbtx.CreateAPIKey(ctx, serviceAccountFromInput.APIKey, serviceAccount.ID)
 			if err != nil {
+				return err
+			}
+		}
+
+		// remove all NAIS service accounts that is not present in the JSON input
+		serviceAccounts, err := dbtx.GetServiceAccounts(ctx)
+		if err != nil {
+			return err
+		}
+
+		for _, serviceAccount := range serviceAccounts {
+			if !strings.HasPrefix(serviceAccount.Name, NaisServiceAccountPrefix) {
+				continue
+			}
+
+			if _, shouldExist := serviceAccountNames[serviceAccount.Name]; shouldExist {
+				continue
+			}
+
+			if err := dbtx.DeleteServiceAccount(ctx, serviceAccount.ID); err != nil {
 				return err
 			}
 		}

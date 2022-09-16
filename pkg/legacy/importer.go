@@ -63,8 +63,9 @@ func dbUsers(members []*azureclient.Member) []*db.User {
 	users := make([]*db.User, 0, len(members))
 	for _, member := range members {
 		users = append(users, &db.User{
-			Email: member.Mail,
-			Name:  member.Name(),
+			Email:      member.Mail,
+			ExternalID: member.Mail, // We don't have the external ID at this point, use the email instead and the user sync will automatically fix it
+			Name:       member.Name(),
 		})
 	}
 	return users

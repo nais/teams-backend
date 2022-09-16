@@ -12,7 +12,8 @@ import (
 )
 
 const createAPIKey = `-- name: CreateAPIKey :exec
-INSERT INTO api_keys (api_key, user_id) VALUES ($1, $2)
+INSERT INTO api_keys (api_key, user_id)
+VALUES ($1, $2)
 `
 
 type CreateAPIKeyParams struct {
@@ -25,11 +26,12 @@ func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) erro
 	return err
 }
 
-const removeApiKeysFromUser = `-- name: RemoveApiKeysFromUser :exec
-DELETE FROM api_keys WHERE user_id = $1
+const removeApiKeysFromServiceAccount = `-- name: RemoveApiKeysFromServiceAccount :exec
+DELETE FROM api_keys
+WHERE user_id = $1
 `
 
-func (q *Queries) RemoveApiKeysFromUser(ctx context.Context, userID uuid.UUID) error {
-	_, err := q.db.Exec(ctx, removeApiKeysFromUser, userID)
+func (q *Queries) RemoveApiKeysFromServiceAccount(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, removeApiKeysFromServiceAccount, userID)
 	return err
 }

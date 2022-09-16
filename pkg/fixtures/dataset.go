@@ -9,31 +9,39 @@ import (
 )
 
 const (
-	AdminUserName        = "nais-console user"
-	AdminUserEmailPrefix = "nais-console" // matches the default nais admin user account in the tenant GCP org
+	AdminServiceAccountName = "admin"
 )
 
-// InsertInitialDataset Insert an initial dataset into the database
-func InsertInitialDataset(ctx context.Context, database db.Database, tenantDomain string, adminApiKey string) error {
-	if adminApiKey != "" {
-		_, err := database.GetUserByEmail(ctx, AdminUserEmailPrefix+"@"+tenantDomain)
+// CreateAdminServiceAccount Create an admin service account with a specific API key
+func CreateAdminServiceAccount(ctx context.Context, database db.Database, adminApiKey string) error {
+	if adminApiKey == "" {
+		return nil
+	}
+
+	return database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
+		admin, err := dbtx.GetServiceAccountByName(ctx, AdminServiceAccountName)
 		if err != nil {
-			admin, err := database.AddUser(ctx, AdminUserName, AdminUserEmailPrefix+"@"+tenantDomain)
-			if err != nil {
-				return err
-			}
-
-			err = database.CreateAPIKey(ctx, adminApiKey, admin.ID)
-			if err != nil {
-				return err
-			}
-
-			err = database.AssignGlobalRoleToUser(ctx, admin.ID, sqlc.RoleNameAdmin)
+			admin, err = dbtx.CreateServiceAccount(ctx, AdminServiceAccountName)
 			if err != nil {
 				return err
 			}
 		}
-	}
 
-	return nil
+		err = dbtx.RemoveApiKeysFromServiceAccount(ctx, admin.ID)
+		if err != nil {
+			return err
+		}
+
+		err = dbtx.CreateAPIKey(ctx, adminApiKey, admin.ID)
+		if err != nil {
+			return err
+		}
+
+		err = dbtx.AssignGlobalRoleToUser(ctx, admin.ID, sqlc.RoleNameAdmin)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
 }

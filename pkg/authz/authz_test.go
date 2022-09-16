@@ -78,7 +78,7 @@ func TestRequireAuthorizationForTarget(t *testing.T) {
 		Name:  "User Name",
 		Email: "mail@example.com",
 	}
-	targetID, _ := uuid.NewUUID()
+	targetID := uuid.New()
 
 	t.Run("Nil user", func(t *testing.T) {
 		assert.ErrorIs(t, authz.RequireAuthorization(nil, sqlc.AuthzNameTeamsCreate, targetID), authz.ErrNotAuthorized)

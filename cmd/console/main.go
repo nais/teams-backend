@@ -72,7 +72,7 @@ func run() error {
 		return err
 	}
 
-	err = fixtures.InsertInitialDataset(ctx, database, cfg.TenantDomain, cfg.AdminApiKey)
+	err = fixtures.CreateAdminServiceAccount(ctx, database, cfg.AdminApiKey)
 	if err != nil {
 		return err
 	}
@@ -346,7 +346,7 @@ func setupGraphAPI(database db.Database, domain string, teamReconciler chan<- re
 	resolver := graph.NewResolver(database, domain, teamReconciler, auditLogger)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
-	gc.Directives.Auth = directives.Auth(database)
+	gc.Directives.Auth = directives.Auth()
 	gc.Complexity.User.Teams = func(childComplexity int) int {
 		return 10 * childComplexity
 	}

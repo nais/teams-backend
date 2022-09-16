@@ -13,7 +13,7 @@ extend type Mutation {
     """
     Create a new team
 
-    The user creating the team will be granted team ownership.
+    The user creating the team will be granted team ownership, unless the user is a service account, in which case the team will not get an initial owner. To add one or more owners to the team, refer to the `addTeamOwners` mutation.
 
     The new team will be returned on success.
     """
@@ -145,6 +145,15 @@ type SyncError {
 
     "Error message."
     error: String!
+}
+
+"Team membership type."
+type TeamMembership {
+    "Team instance."
+    team: Team!
+
+    "The role that the member has in the team."
+    role: TeamRole!
 }
 
 "Team member."

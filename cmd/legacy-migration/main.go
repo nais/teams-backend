@@ -88,15 +88,15 @@ func run() error {
 				if _, exists := users[gimpOwner.Email]; !exists {
 					owner, err := dbtx.GetUserByEmail(ctx, gimpOwner.Email)
 					if err != nil {
-						owner, err = dbtx.AddUser(ctx, gimpOwner.Name, gimpOwner.Email)
+						owner, err = dbtx.CreateUser(ctx, gimpOwner.Name, gimpOwner.Email, gimpOwner.ExternalID)
 						if err != nil {
 							return err
 						}
 
 						err = auditLogger.Logf(ctx, auditlogger.Fields{
-							Action:          sqlc.AuditActionLegacyImporterUserCreate,
-							CorrelationID:   correlationID,
-							TargetUserEmail: &owner.Email,
+							Action:        sqlc.AuditActionLegacyImporterUserCreate,
+							CorrelationID: correlationID,
+							TargetUser:    &owner.Email,
 						}, "created user")
 						if err != nil {
 							return err
@@ -126,15 +126,15 @@ func run() error {
 				if _, exists := users[gimpMember.Email]; !exists {
 					member, err := dbtx.GetUserByEmail(ctx, gimpMember.Email)
 					if err != nil {
-						member, err = dbtx.AddUser(ctx, gimpMember.Name, gimpMember.Email)
+						member, err = dbtx.CreateUser(ctx, gimpMember.Name, gimpMember.Email, gimpMember.ExternalID)
 						if err != nil {
 							return err
 						}
 
 						err = auditLogger.Logf(ctx, auditlogger.Fields{
-							Action:          sqlc.AuditActionLegacyImporterUserCreate,
-							CorrelationID:   correlationID,
-							TargetUserEmail: &member.Email,
+							Action:        sqlc.AuditActionLegacyImporterUserCreate,
+							CorrelationID: correlationID,
+							TargetUser:    &member.Email,
 						}, "created user")
 						if err != nil {
 							return err
@@ -162,7 +162,12 @@ func run() error {
 
 			team, err := dbtx.GetTeamBySlug(ctx, convertedTeam.Slug)
 			if err != nil {
-				team, err = dbtx.AddTeam(ctx, convertedTeam.Name, convertedTeam.Slug, &convertedTeam.Purpose.String, owner.ID)
+				team, err = dbtx.CreateTeam(ctx, convertedTeam.Name, convertedTeam.Slug, &convertedTeam.Purpose.String)
+				if err != nil {
+					return err
+				}
+
+				err := dbtx.SetTeamMemberRole(ctx, owner.ID, team.ID, sqlc.RoleNameTeamowner)
 				if err != nil {
 					return err
 				}
@@ -189,10 +194,10 @@ func run() error {
 				}
 
 				err = auditLogger.Logf(ctx, auditlogger.Fields{
-					Action:          sqlc.AuditActionLegacyImporterTeamAddOwner,
-					CorrelationID:   correlationID,
-					TargetTeamSlug:  &team.Slug,
-					TargetUserEmail: &user.Email,
+					Action:         sqlc.AuditActionLegacyImporterTeamAddOwner,
+					CorrelationID:  correlationID,
+					TargetTeamSlug: &team.Slug,
+					TargetUser:     &user.Email,
 				}, "add team owner")
 				if err != nil {
 					return err
@@ -206,10 +211,10 @@ func run() error {
 				}
 
 				err = auditLogger.Logf(ctx, auditlogger.Fields{
-					Action:          sqlc.AuditActionLegacyImporterTeamAddMember,
-					CorrelationID:   correlationID,
-					TargetTeamSlug:  &team.Slug,
-					TargetUserEmail: &user.Email,
+					Action:         sqlc.AuditActionLegacyImporterTeamAddMember,
+					CorrelationID:  correlationID,
+					TargetTeamSlug: &team.Slug,
+					TargetUser:     &user.Email,
 				}, "add team member")
 				if err != nil {
 					return err

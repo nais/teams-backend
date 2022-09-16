@@ -76,6 +76,14 @@ type TeamMember struct {
 	Role TeamRole `json:"role"`
 }
 
+// Team membership type.
+type TeamMembership struct {
+	// Team instance.
+	Team *db.Team `json:"team"`
+	// The role that the member has in the team.
+	Role TeamRole `json:"role"`
+}
+
 // Team sync type.
 type TeamSync struct {
 	// The team that will be synced.
@@ -90,14 +98,6 @@ type UpdateTeamInput struct {
 	Name *string `json:"name"`
 	// Team purpose. Set to an empty string to remove the existing team purpose.
 	Purpose *string `json:"purpose"`
-}
-
-// User team.
-type UserTeam struct {
-	// Team instance.
-	Team *db.Team `json:"team"`
-	// The role that the user has in the team.
-	Role TeamRole `json:"role"`
 }
 
 // Available team roles.

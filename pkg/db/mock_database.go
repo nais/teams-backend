@@ -18,89 +18,6 @@ type MockDatabase struct {
 	mock.Mock
 }
 
-// AddAuditLog provides a mock function with given fields: ctx, correlationID, systemName, actorEmail, targetTeamSlug, targetUserEmail, action, message
-func (_m *MockDatabase) AddAuditLog(ctx context.Context, correlationID uuid.UUID, systemName sqlc.SystemName, actorEmail *string, targetTeamSlug *slug.Slug, targetUserEmail *string, action sqlc.AuditAction, message string) error {
-	ret := _m.Called(ctx, correlationID, systemName, actorEmail, targetTeamSlug, targetUserEmail, action, message)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, sqlc.SystemName, *string, *slug.Slug, *string, sqlc.AuditAction, string) error); ok {
-		r0 = rf(ctx, correlationID, systemName, actorEmail, targetTeamSlug, targetUserEmail, action, message)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// AddServiceAccount provides a mock function with given fields: ctx, name
-func (_m *MockDatabase) AddServiceAccount(ctx context.Context, name string) (*ServiceAccount, error) {
-	ret := _m.Called(ctx, name)
-
-	var r0 *ServiceAccount
-	if rf, ok := ret.Get(0).(func(context.Context, string) *ServiceAccount); ok {
-		r0 = rf(ctx, name)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*ServiceAccount)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, name)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// AddTeam provides a mock function with given fields: ctx, name, _a2, purpose, userID
-func (_m *MockDatabase) AddTeam(ctx context.Context, name string, _a2 slug.Slug, purpose *string, userID uuid.UUID) (*Team, error) {
-	ret := _m.Called(ctx, name, _a2, purpose, userID)
-
-	var r0 *Team
-	if rf, ok := ret.Get(0).(func(context.Context, string, slug.Slug, *string, uuid.UUID) *Team); ok {
-		r0 = rf(ctx, name, _a2, purpose, userID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*Team)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, slug.Slug, *string, uuid.UUID) error); ok {
-		r1 = rf(ctx, name, _a2, purpose, userID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// AddUser provides a mock function with given fields: ctx, name, email
-func (_m *MockDatabase) AddUser(ctx context.Context, name string, email string) (*User, error) {
-	ret := _m.Called(ctx, name, email)
-
-	var r0 *User
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) *User); ok {
-		r0 = rf(ctx, name, email)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*User)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
-		r1 = rf(ctx, name, email)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // AssignGlobalRoleToUser provides a mock function with given fields: ctx, userID, roleName
 func (_m *MockDatabase) AssignGlobalRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error {
 	ret := _m.Called(ctx, userID, roleName)
@@ -143,13 +60,110 @@ func (_m *MockDatabase) ClearTeamReconcileErrorForSystem(ctx context.Context, te
 	return r0
 }
 
-// CreateAPIKey provides a mock function with given fields: ctx, apiKey, userID
-func (_m *MockDatabase) CreateAPIKey(ctx context.Context, apiKey string, userID uuid.UUID) error {
-	ret := _m.Called(ctx, apiKey, userID)
+// CreateAPIKey provides a mock function with given fields: ctx, apiKey, serviceAccountID
+func (_m *MockDatabase) CreateAPIKey(ctx context.Context, apiKey string, serviceAccountID uuid.UUID) error {
+	ret := _m.Called(ctx, apiKey, serviceAccountID)
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, string, uuid.UUID) error); ok {
-		r0 = rf(ctx, apiKey, userID)
+		r0 = rf(ctx, apiKey, serviceAccountID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// CreateAuditLogEntry provides a mock function with given fields: ctx, correlationID, systemName, actor, targetTeamSlug, targetUser, action, message
+func (_m *MockDatabase) CreateAuditLogEntry(ctx context.Context, correlationID uuid.UUID, systemName sqlc.SystemName, actor *string, targetTeamSlug *slug.Slug, targetUser *string, action sqlc.AuditAction, message string) error {
+	ret := _m.Called(ctx, correlationID, systemName, actor, targetTeamSlug, targetUser, action, message)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, sqlc.SystemName, *string, *slug.Slug, *string, sqlc.AuditAction, string) error); ok {
+		r0 = rf(ctx, correlationID, systemName, actor, targetTeamSlug, targetUser, action, message)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// CreateServiceAccount provides a mock function with given fields: ctx, name
+func (_m *MockDatabase) CreateServiceAccount(ctx context.Context, name string) (*ServiceAccount, error) {
+	ret := _m.Called(ctx, name)
+
+	var r0 *ServiceAccount
+	if rf, ok := ret.Get(0).(func(context.Context, string) *ServiceAccount); ok {
+		r0 = rf(ctx, name)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ServiceAccount)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, name)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreateTeam provides a mock function with given fields: ctx, name, _a2, purpose
+func (_m *MockDatabase) CreateTeam(ctx context.Context, name string, _a2 slug.Slug, purpose *string) (*Team, error) {
+	ret := _m.Called(ctx, name, _a2, purpose)
+
+	var r0 *Team
+	if rf, ok := ret.Get(0).(func(context.Context, string, slug.Slug, *string) *Team); ok {
+		r0 = rf(ctx, name, _a2, purpose)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*Team)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string, slug.Slug, *string) error); ok {
+		r1 = rf(ctx, name, _a2, purpose)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreateUser provides a mock function with given fields: ctx, name, email, externalID
+func (_m *MockDatabase) CreateUser(ctx context.Context, name string, email string, externalID string) (*User, error) {
+	ret := _m.Called(ctx, name, email, externalID)
+
+	var r0 *User
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) *User); ok {
+		r0 = rf(ctx, name, email, externalID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*User)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, string) error); ok {
+		r1 = rf(ctx, name, email, externalID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteServiceAccount provides a mock function with given fields: ctx, serviceAccountID
+func (_m *MockDatabase) DeleteServiceAccount(ctx context.Context, serviceAccountID uuid.UUID) error {
+	ret := _m.Called(ctx, serviceAccountID)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
+		r0 = rf(ctx, serviceAccountID)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -194,8 +208,31 @@ func (_m *MockDatabase) GetAuditLogsForTeam(ctx context.Context, _a1 slug.Slug) 
 	return r0, r1
 }
 
-// GetServiceAccount provides a mock function with given fields: ctx, name
-func (_m *MockDatabase) GetServiceAccount(ctx context.Context, name string) (*ServiceAccount, error) {
+// GetServiceAccountByApiKey provides a mock function with given fields: ctx, APIKey
+func (_m *MockDatabase) GetServiceAccountByApiKey(ctx context.Context, APIKey string) (*ServiceAccount, error) {
+	ret := _m.Called(ctx, APIKey)
+
+	var r0 *ServiceAccount
+	if rf, ok := ret.Get(0).(func(context.Context, string) *ServiceAccount); ok {
+		r0 = rf(ctx, APIKey)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ServiceAccount)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, APIKey)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetServiceAccountByName provides a mock function with given fields: ctx, name
+func (_m *MockDatabase) GetServiceAccountByName(ctx context.Context, name string) (*ServiceAccount, error) {
 	ret := _m.Called(ctx, name)
 
 	var r0 *ServiceAccount
@@ -210,6 +247,29 @@ func (_m *MockDatabase) GetServiceAccount(ctx context.Context, name string) (*Se
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = rf(ctx, name)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetServiceAccounts provides a mock function with given fields: ctx
+func (_m *MockDatabase) GetServiceAccounts(ctx context.Context) ([]*ServiceAccount, error) {
+	ret := _m.Called(ctx)
+
+	var r0 []*ServiceAccount
+	if rf, ok := ret.Get(0).(func(context.Context) []*ServiceAccount); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ServiceAccount)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -355,29 +415,6 @@ func (_m *MockDatabase) GetTeams(ctx context.Context) ([]*Team, error) {
 	return r0, r1
 }
 
-// GetUserByApiKey provides a mock function with given fields: ctx, APIKey
-func (_m *MockDatabase) GetUserByApiKey(ctx context.Context, APIKey string) (*User, error) {
-	ret := _m.Called(ctx, APIKey)
-
-	var r0 *User
-	if rf, ok := ret.Get(0).(func(context.Context, string) *User); ok {
-		r0 = rf(ctx, APIKey)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*User)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, APIKey)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // GetUserByEmail provides a mock function with given fields: ctx, email
 func (_m *MockDatabase) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	ret := _m.Called(ctx, email)
@@ -394,6 +431,29 @@ func (_m *MockDatabase) GetUserByEmail(ctx context.Context, email string) (*User
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = rf(ctx, email)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetUserByExternalID provides a mock function with given fields: ctx, externalID
+func (_m *MockDatabase) GetUserByExternalID(ctx context.Context, externalID string) (*User, error) {
+	ret := _m.Called(ctx, externalID)
+
+	var r0 *User
+	if rf, ok := ret.Get(0).(func(context.Context, string) *User); ok {
+		r0 = rf(ctx, externalID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*User)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, externalID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -493,29 +553,6 @@ func (_m *MockDatabase) GetUsers(ctx context.Context) ([]*User, error) {
 	return r0, r1
 }
 
-// GetUsersByEmail provides a mock function with given fields: ctx, email
-func (_m *MockDatabase) GetUsersByEmail(ctx context.Context, email string) ([]*User, error) {
-	ret := _m.Called(ctx, email)
-
-	var r0 []*User
-	if rf, ok := ret.Get(0).(func(context.Context, string) []*User); ok {
-		r0 = rf(ctx, email)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*User)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, email)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // LoadSystemState provides a mock function with given fields: ctx, systemName, teamID, state
 func (_m *MockDatabase) LoadSystemState(ctx context.Context, systemName sqlc.SystemName, teamID uuid.UUID, state interface{}) error {
 	ret := _m.Called(ctx, systemName, teamID, state)
@@ -544,13 +581,13 @@ func (_m *MockDatabase) RemoveAllUserRoles(ctx context.Context, userID uuid.UUID
 	return r0
 }
 
-// RemoveApiKeysFromUser provides a mock function with given fields: ctx, userID
-func (_m *MockDatabase) RemoveApiKeysFromUser(ctx context.Context, userID uuid.UUID) error {
-	ret := _m.Called(ctx, userID)
+// RemoveApiKeysFromServiceAccount provides a mock function with given fields: ctx, serviceAccountID
+func (_m *MockDatabase) RemoveApiKeysFromServiceAccount(ctx context.Context, serviceAccountID uuid.UUID) error {
+	ret := _m.Called(ctx, serviceAccountID)
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
-		r0 = rf(ctx, userID)
+		r0 = rf(ctx, serviceAccountID)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -642,35 +679,12 @@ func (_m *MockDatabase) SetTeamReconcileErrorForSystem(ctx context.Context, corr
 	return r0
 }
 
-// SetUserName provides a mock function with given fields: ctx, userID, name
-func (_m *MockDatabase) SetUserName(ctx context.Context, userID uuid.UUID, name string) (*User, error) {
-	ret := _m.Called(ctx, userID, name)
-
-	var r0 *User
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, string) *User); ok {
-		r0 = rf(ctx, userID, name)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*User)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, string) error); ok {
-		r1 = rf(ctx, userID, name)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // Transaction provides a mock function with given fields: ctx, fn
-func (_m *MockDatabase) Transaction(ctx context.Context, fn TransactionFunc) error {
+func (_m *MockDatabase) Transaction(ctx context.Context, fn DatabaseTransactionFunc) error {
 	ret := _m.Called(ctx, fn)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, TransactionFunc) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, DatabaseTransactionFunc) error); ok {
 		r0 = rf(ctx, fn)
 	} else {
 		r0 = ret.Error(0)
@@ -695,6 +709,29 @@ func (_m *MockDatabase) UpdateTeam(ctx context.Context, teamID uuid.UUID, name *
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, *string, *string) error); ok {
 		r1 = rf(ctx, teamID, name, purpose)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// UpdateUser provides a mock function with given fields: ctx, userID, name, email, externalID
+func (_m *MockDatabase) UpdateUser(ctx context.Context, userID uuid.UUID, name string, email string, externalID string) (*User, error) {
+	ret := _m.Called(ctx, userID, name, email, externalID)
+
+	var r0 *User
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, string, string) *User); ok {
+		r0 = rf(ctx, userID, name, email, externalID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*User)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, string, string, string) error); ok {
+		r1 = rf(ctx, userID, name, email, externalID)
 	} else {
 		r1 = ret.Error(1)
 	}

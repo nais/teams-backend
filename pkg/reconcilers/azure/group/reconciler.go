@@ -127,10 +127,10 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 		}
 
 		fields := auditlogger.Fields{
-			Action:          sqlc.AuditActionAzureGroupDeleteMember,
-			CorrelationID:   input.CorrelationID,
-			TargetTeamSlug:  &input.Team.Slug,
-			TargetUserEmail: &remoteEmail,
+			Action:         sqlc.AuditActionAzureGroupDeleteMember,
+			CorrelationID:  input.CorrelationID,
+			TargetTeamSlug: &input.Team.Slug,
+			TargetUser:     &remoteEmail,
 		}
 		r.auditLogger.Logf(ctx, fields, "removed member %q from Azure group %q", remoteEmail, grp.MailNickname)
 	}
@@ -149,10 +149,10 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 		}
 
 		fields := auditlogger.Fields{
-			Action:          sqlc.AuditActionAzureGroupAddMember,
-			CorrelationID:   input.CorrelationID,
-			TargetTeamSlug:  &input.Team.Slug,
-			TargetUserEmail: &consoleUser.Email,
+			Action:         sqlc.AuditActionAzureGroupAddMember,
+			CorrelationID:  input.CorrelationID,
+			TargetTeamSlug: &input.Team.Slug,
+			TargetUser:     &consoleUser.Email,
 		}
 		r.auditLogger.Logf(ctx, fields, "added member %q to Azure group %q", consoleUser.Email, grp.MailNickname)
 	}

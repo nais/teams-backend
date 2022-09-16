@@ -11,38 +11,10 @@ import (
 	"github.com/google/uuid"
 )
 
-const assignGlobalRoleToUser = `-- name: AssignGlobalRoleToUser :exec
-INSERT INTO user_roles (user_id, role_name) VALUES ($1, $2) ON CONFLICT DO NOTHING
-`
-
-type AssignGlobalRoleToUserParams struct {
-	UserID   uuid.UUID
-	RoleName RoleName
-}
-
-func (q *Queries) AssignGlobalRoleToUser(ctx context.Context, arg AssignGlobalRoleToUserParams) error {
-	_, err := q.db.Exec(ctx, assignGlobalRoleToUser, arg.UserID, arg.RoleName)
-	return err
-}
-
-const assignTargetedRoleToUser = `-- name: AssignTargetedRoleToUser :exec
-INSERT INTO user_roles (user_id, role_name, target_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING
-`
-
-type AssignTargetedRoleToUserParams struct {
-	UserID   uuid.UUID
-	RoleName RoleName
-	TargetID uuid.NullUUID
-}
-
-func (q *Queries) AssignTargetedRoleToUser(ctx context.Context, arg AssignTargetedRoleToUserParams) error {
-	_, err := q.db.Exec(ctx, assignTargetedRoleToUser, arg.UserID, arg.RoleName, arg.TargetID)
-	return err
-}
-
 const createServiceAccount = `-- name: CreateServiceAccount :one
-INSERT INTO users (name, service_account) VALUES ($1, true)
-RETURNING id, email, name, service_account
+INSERT INTO users (name, service_account)
+VALUES ($1, true)
+RETURNING id, email, name, service_account, external_id
 `
 
 func (q *Queries) CreateServiceAccount(ctx context.Context, name string) (*User, error) {
@@ -53,34 +25,49 @@ func (q *Queries) CreateServiceAccount(ctx context.Context, name string) (*User,
 		&i.Email,
 		&i.Name,
 		&i.ServiceAccount,
+		&i.ExternalID,
 	)
 	return &i, err
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (name, email, service_account) VALUES ($1, $2::TEXT, false)
-RETURNING id, email, name, service_account
+INSERT INTO users (name, email, service_account, external_id)
+VALUES ($1, $2::TEXT, false, $3::TEXT)
+RETURNING id, email, name, service_account, external_id
 `
 
 type CreateUserParams struct {
-	Name  string
-	Email string
+	Name       string
+	Email      string
+	ExternalID string
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (*User, error) {
-	row := q.db.QueryRow(ctx, createUser, arg.Name, arg.Email)
+	row := q.db.QueryRow(ctx, createUser, arg.Name, arg.Email, arg.ExternalID)
 	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
 		&i.Name,
 		&i.ServiceAccount,
+		&i.ExternalID,
 	)
 	return &i, err
 }
 
+const deleteServiceAccount = `-- name: DeleteServiceAccount :exec
+DELETE FROM users
+WHERE id = $1 AND service_account = true
+`
+
+func (q *Queries) DeleteServiceAccount(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteServiceAccount, id)
+	return err
+}
+
 const deleteUser = `-- name: DeleteUser :exec
-DELETE FROM users WHERE id = $1
+DELETE FROM users
+WHERE id = $1 AND service_account = false
 `
 
 func (q *Queries) DeleteUser(ctx context.Context, id uuid.UUID) error {
@@ -88,94 +75,64 @@ func (q *Queries) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
-const getServiceAccount = `-- name: GetServiceAccount :one
-SELECT id, email, name, service_account FROM users
-WHERE name = $1 AND service_account = true LIMIT 1
-`
-
-func (q *Queries) GetServiceAccount(ctx context.Context, name string) (*User, error) {
-	row := q.db.QueryRow(ctx, getServiceAccount, name)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Email,
-		&i.Name,
-		&i.ServiceAccount,
-	)
-	return &i, err
-}
-
-const getUserByApiKey = `-- name: GetUserByApiKey :one
-SELECT users.id, users.email, users.name, users.service_account FROM api_keys
+const getServiceAccountByApiKey = `-- name: GetServiceAccountByApiKey :one
+SELECT users.id, users.email, users.name, users.service_account, users.external_id FROM api_keys
 JOIN users ON users.id = api_keys.user_id
-WHERE api_keys.api_key = $1 LIMIT 1
+WHERE api_keys.api_key = $1 AND users.service_account = true
 `
 
-func (q *Queries) GetUserByApiKey(ctx context.Context, apiKey string) (*User, error) {
-	row := q.db.QueryRow(ctx, getUserByApiKey, apiKey)
+func (q *Queries) GetServiceAccountByApiKey(ctx context.Context, apiKey string) (*User, error) {
+	row := q.db.QueryRow(ctx, getServiceAccountByApiKey, apiKey)
 	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
 		&i.Name,
 		&i.ServiceAccount,
+		&i.ExternalID,
 	)
 	return &i, err
 }
 
-const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, name, service_account FROM users
-WHERE email = $1::TEXT LIMIT 1
+const getServiceAccountByName = `-- name: GetServiceAccountByName :one
+SELECT id, email, name, service_account, external_id FROM users
+WHERE name = $1 AND service_account = true
 `
 
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (*User, error) {
-	row := q.db.QueryRow(ctx, getUserByEmail, email)
+func (q *Queries) GetServiceAccountByName(ctx context.Context, name string) (*User, error) {
+	row := q.db.QueryRow(ctx, getServiceAccountByName, name)
 	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
 		&i.Name,
 		&i.ServiceAccount,
+		&i.ExternalID,
 	)
 	return &i, err
 }
 
-const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, name, service_account FROM users
-WHERE id = $1 LIMIT 1
+const getServiceAccounts = `-- name: GetServiceAccounts :many
+SELECT id, email, name, service_account, external_id FROM users
+WHERE service_account = true
+ORDER BY name ASC
 `
 
-func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
-	row := q.db.QueryRow(ctx, getUserByID, id)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Email,
-		&i.Name,
-		&i.ServiceAccount,
-	)
-	return &i, err
-}
-
-const getUserRoles = `-- name: GetUserRoles :many
-SELECT id, role_name, user_id, target_id FROM user_roles
-WHERE user_id = $1
-`
-
-func (q *Queries) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*UserRole, error) {
-	rows, err := q.db.Query(ctx, getUserRoles, userID)
+func (q *Queries) GetServiceAccounts(ctx context.Context) ([]*User, error) {
+	rows, err := q.db.Query(ctx, getServiceAccounts)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []*UserRole
+	var items []*User
 	for rows.Next() {
-		var i UserRole
+		var i User
 		if err := rows.Scan(
 			&i.ID,
-			&i.RoleName,
-			&i.UserID,
-			&i.TargetID,
+			&i.Email,
+			&i.Name,
+			&i.ServiceAccount,
+			&i.ExternalID,
 		); err != nil {
 			return nil, err
 		}
@@ -187,8 +144,66 @@ func (q *Queries) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*UserRo
 	return items, nil
 }
 
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, email, name, service_account, external_id FROM users
+WHERE email = $1::TEXT AND service_account = false
+`
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (*User, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Name,
+		&i.ServiceAccount,
+		&i.ExternalID,
+	)
+	return &i, err
+}
+
+const getUserByExternalID = `-- name: GetUserByExternalID :one
+SELECT id, email, name, service_account, external_id FROM users
+WHERE external_id = $1::TEXT AND service_account = false
+`
+
+func (q *Queries) GetUserByExternalID(ctx context.Context, externalID string) (*User, error) {
+	row := q.db.QueryRow(ctx, getUserByExternalID, externalID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Name,
+		&i.ServiceAccount,
+		&i.ExternalID,
+	)
+	return &i, err
+}
+
+const getUserByID = `-- name: GetUserByID :one
+SELECT id, email, name, service_account, external_id FROM users
+WHERE id = $1 AND service_account = false
+`
+
+func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
+	row := q.db.QueryRow(ctx, getUserByID, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Name,
+		&i.ServiceAccount,
+		&i.ExternalID,
+	)
+	return &i, err
+}
+
 const getUserTeams = `-- name: GetUserTeams :many
-SELECT teams.id, teams.slug, teams.name, teams.purpose FROM user_roles JOIN teams ON teams.id = user_roles.target_id WHERE user_roles.user_id = $1 ORDER BY teams.name ASC
+SELECT teams.id, teams.slug, teams.name, teams.purpose FROM user_roles
+JOIN teams ON teams.id = user_roles.target_id
+JOIN users ON users.id = user_roles.user_id
+WHERE user_roles.user_id = $1 AND users.service_account = false
+ORDER BY teams.name ASC
 `
 
 func (q *Queries) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error) {
@@ -217,7 +232,8 @@ func (q *Queries) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, 
 }
 
 const getUsers = `-- name: GetUsers :many
-SELECT id, email, name, service_account FROM users
+SELECT id, email, name, service_account, external_id FROM users
+WHERE service_account = false
 ORDER BY name ASC
 `
 
@@ -235,6 +251,7 @@ func (q *Queries) GetUsers(ctx context.Context) ([]*User, error) {
 			&i.Email,
 			&i.Name,
 			&i.ServiceAccount,
+			&i.ExternalID,
 		); err != nil {
 			return nil, err
 		}
@@ -246,106 +263,34 @@ func (q *Queries) GetUsers(ctx context.Context) ([]*User, error) {
 	return items, nil
 }
 
-const getUsersByEmail = `-- name: GetUsersByEmail :many
-SELECT id, email, name, service_account FROM users
-WHERE email LIKE $1::TEXT LIMIT 1
+const updateUser = `-- name: UpdateUser :one
+UPDATE users
+SET name = $1, email = $3::TEXT, external_id = $4::TEXT
+WHERE id = $2 AND service_account = false
+RETURNING id, email, name, service_account, external_id
 `
 
-func (q *Queries) GetUsersByEmail(ctx context.Context, email string) ([]*User, error) {
-	rows, err := q.db.Query(ctx, getUsersByEmail, email)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []*User
-	for rows.Next() {
-		var i User
-		if err := rows.Scan(
-			&i.ID,
-			&i.Email,
-			&i.Name,
-			&i.ServiceAccount,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, &i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type UpdateUserParams struct {
+	Name       string
+	ID         uuid.UUID
+	Email      string
+	ExternalID string
 }
 
-const removeAllUserRoles = `-- name: RemoveAllUserRoles :exec
-DELETE FROM user_roles WHERE user_id = $1
-`
-
-func (q *Queries) RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) error {
-	_, err := q.db.Exec(ctx, removeAllUserRoles, userID)
-	return err
-}
-
-const removeGlobalUserRole = `-- name: RemoveGlobalUserRole :exec
-DELETE FROM user_roles WHERE user_id = $1 AND target_id IS NULL AND role_name = $2
-`
-
-type RemoveGlobalUserRoleParams struct {
-	UserID   uuid.UUID
-	RoleName RoleName
-}
-
-func (q *Queries) RemoveGlobalUserRole(ctx context.Context, arg RemoveGlobalUserRoleParams) error {
-	_, err := q.db.Exec(ctx, removeGlobalUserRole, arg.UserID, arg.RoleName)
-	return err
-}
-
-const revokeGlobalRoleFromUser = `-- name: RevokeGlobalRoleFromUser :exec
-DELETE FROM user_roles WHERE user_id = $1 AND role_name = $2
-`
-
-type RevokeGlobalRoleFromUserParams struct {
-	UserID   uuid.UUID
-	RoleName RoleName
-}
-
-func (q *Queries) RevokeGlobalRoleFromUser(ctx context.Context, arg RevokeGlobalRoleFromUserParams) error {
-	_, err := q.db.Exec(ctx, revokeGlobalRoleFromUser, arg.UserID, arg.RoleName)
-	return err
-}
-
-const revokeTargetedRoleFromUser = `-- name: RevokeTargetedRoleFromUser :exec
-DELETE FROM user_roles WHERE user_id = $1 AND target_id = $2 AND role_name = $3
-`
-
-type RevokeTargetedRoleFromUserParams struct {
-	UserID   uuid.UUID
-	TargetID uuid.NullUUID
-	RoleName RoleName
-}
-
-func (q *Queries) RevokeTargetedRoleFromUser(ctx context.Context, arg RevokeTargetedRoleFromUserParams) error {
-	_, err := q.db.Exec(ctx, revokeTargetedRoleFromUser, arg.UserID, arg.TargetID, arg.RoleName)
-	return err
-}
-
-const setUserName = `-- name: SetUserName :one
-UPDATE users SET name = $1 WHERE id = $2
-RETURNING id, email, name, service_account
-`
-
-type SetUserNameParams struct {
-	Name string
-	ID   uuid.UUID
-}
-
-func (q *Queries) SetUserName(ctx context.Context, arg SetUserNameParams) (*User, error) {
-	row := q.db.QueryRow(ctx, setUserName, arg.Name, arg.ID)
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (*User, error) {
+	row := q.db.QueryRow(ctx, updateUser,
+		arg.Name,
+		arg.ID,
+		arg.Email,
+		arg.ExternalID,
+	)
 	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
 		&i.Name,
 		&i.ServiceAccount,
+		&i.ExternalID,
 	)
 	return &i, err
 }

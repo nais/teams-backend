@@ -57,15 +57,21 @@ func TestSync(t *testing.T) {
 
 		numDefaultRoleNames := len(usersync.DefaultRoleNames)
 
-		localUserWithIncorrectName := getUser("user1@example.com", "Outdated Name", nil)
-		updatedLocalUser := getUser(localUserWithIncorrectName.Email, "Correct Name", &localUserWithIncorrectName.ID)
-		newLocalUser := getUser("user2@example.com", "Create Me", nil)
-		localUserThatWillBeDeleted := getUser("delete-me@example.com", "Delete Me", nil)
+		localUserWithIncorrectName := &db.User{ID: serialUuid(1), Email: "user1@example.com", ExternalID: "123", Name: "Incorrect Name"}
+		localUserWithCorrectName := &db.User{ID: serialUuid(1), Email: "user1@example.com", ExternalID: "123", Name: "Correct Name"}
+
+		localUserWithIncorrectEmail := &db.User{ID: serialUuid(2), Email: "user-123@example.com", Name: "Some Name"}
+		localUserWithCorrectEmail := &db.User{ID: serialUuid(2), Email: "user3@example.com", Name: "Some Name"}
+
+		localUserThatWillBeDeleted := &db.User{ID: serialUuid(3), Email: "delete-me@example.com", Name: "Delete Me"}
+
+		createdLocalUser := &db.User{ID: serialUuid(4), Email: "user2@example.com", ExternalID: "456", Name: "Create Me"}
 
 		httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
 			return test.Response("200 OK", `{"users":[`+
-				`{"primaryEmail":"user1@example.com","name":{"fullName":"Correct Name"}},`+
-				`{"primaryEmail":"user2@example.com","name":{"fullName":"Create Me"}}]}`) // Will be created
+				`{"Id": "123", "primaryEmail":"user1@example.com","name":{"fullName":"Correct Name"}},`+ // Will update name of local user
+				`{"Id": "456", "primaryEmail":"user2@example.com","name":{"fullName":"Create Me"}},`+ // Will be created
+				`{"Id": "789", "primaryEmail":"user3@example.com","name":{"fullName":"Some Name"}}]}`) // Will update email of local user
 		})
 
 		ctx := context.Background()
@@ -74,46 +80,62 @@ func TestSync(t *testing.T) {
 		database.
 			On("Transaction", mock.Anything, mock.Anything).
 			Run(func(args mock.Arguments) {
-				fn := args.Get(1).(db.TransactionFunc)
+				fn := args.Get(1).(db.DatabaseTransactionFunc)
 				fn(txCtx, dbtx)
 			}).
 			Return(nil).
 			Once()
 
+		// user1@example.com
 		dbtx.
-			On("GetUserByEmail", txCtx, localUserWithIncorrectName.Email).
+			On("GetUserByExternalID", txCtx, "123").
 			Return(localUserWithIncorrectName, nil).
 			Once()
-
 		dbtx.
-			On("SetUserName", txCtx, localUserWithIncorrectName.ID, "Correct Name").
-			Return(updatedLocalUser, nil).
+			On("UpdateUser", txCtx, localUserWithIncorrectName.ID, "Correct Name", "user1@example.com", "123").
+			Return(localUserWithCorrectName, nil).
 			Once()
-
 		dbtx.
-			On("AssignGlobalRoleToUser", txCtx, updatedLocalUser.ID, mock.AnythingOfType("sqlc.RoleName")).
+			On("AssignGlobalRoleToUser", txCtx, localUserWithCorrectName.ID, mock.AnythingOfType("sqlc.RoleName")).
 			Return(nil).
 			Times(numDefaultRoleNames)
 
+		// user2@example.com
 		dbtx.
-			On("GetUserByEmail", txCtx, newLocalUser.Email).
+			On("GetUserByExternalID", txCtx, "456").
 			Return(nil, errors.New("user not found")).
 			Once()
-
 		dbtx.
-			On("AddUser", txCtx, newLocalUser.Name, newLocalUser.Email).
-			Return(newLocalUser, nil).
+			On("GetUserByEmail", txCtx, "user2@example.com").
+			Return(nil, errors.New("user not found")).
 			Once()
-
 		dbtx.
-			On("AssignGlobalRoleToUser", txCtx, newLocalUser.ID, mock.AnythingOfType("sqlc.RoleName")).
+			On("CreateUser", txCtx, "Create Me", "user2@example.com", "456").
+			Return(createdLocalUser, nil).
+			Once()
+		dbtx.
+			On("AssignGlobalRoleToUser", txCtx, createdLocalUser.ID, mock.AnythingOfType("sqlc.RoleName")).
+			Return(nil).
+			Times(numDefaultRoleNames)
+
+		// user3@example.com
+		dbtx.
+			On("GetUserByExternalID", txCtx, "789").
+			Return(localUserWithIncorrectEmail, nil).
+			Once()
+		dbtx.
+			On("UpdateUser", txCtx, localUserWithIncorrectEmail.ID, "Some Name", "user3@example.com", "789").
+			Return(localUserWithCorrectEmail, nil).
+			Once()
+		dbtx.
+			On("AssignGlobalRoleToUser", txCtx, localUserWithCorrectEmail.ID, mock.AnythingOfType("sqlc.RoleName")).
 			Return(nil).
 			Times(numDefaultRoleNames)
 
 		dbtx.
-			On("GetUsersByEmail", txCtx, "%@example.com").
+			On("GetUsers", txCtx).
 			Return([]*db.User{
-				updatedLocalUser, newLocalUser, localUserThatWillBeDeleted,
+				localUserWithCorrectName, localUserWithCorrectEmail, localUserThatWillBeDeleted, createdLocalUser,
 			}, nil).
 			Once()
 
@@ -125,24 +147,29 @@ func TestSync(t *testing.T) {
 		auditLogger.
 			On("Logf", ctx, mock.MatchedBy(func(f auditlogger.Fields) bool {
 				return f.Action == sqlc.AuditActionUsersyncUpdate &&
-					*f.TargetUserEmail == updatedLocalUser.Email
-			}), "Local user updated: user1@example.com").
+					*f.TargetUser == "user1@example.com"
+			}), "Local user updated: \"user1@example.com\"").
 			Return(nil).
 			Once()
-
 		auditLogger.
 			On("Logf", ctx, mock.MatchedBy(func(f auditlogger.Fields) bool {
 				return f.Action == sqlc.AuditActionUsersyncCreate &&
-					*f.TargetUserEmail == newLocalUser.Email
-			}), "Local user created: user2@example.com").
+					*f.TargetUser == "user2@example.com"
+			}), "Local user created: \"user2@example.com\"").
 			Return(nil).
 			Once()
-
+		auditLogger.
+			On("Logf", ctx, mock.MatchedBy(func(f auditlogger.Fields) bool {
+				return f.Action == sqlc.AuditActionUsersyncUpdate &&
+					*f.TargetUser == "user3@example.com"
+			}), "Local user updated: \"user3@example.com\"").
+			Return(nil).
+			Once()
 		auditLogger.
 			On("Logf", ctx, mock.MatchedBy(func(f auditlogger.Fields) bool {
 				return f.Action == sqlc.AuditActionUsersyncDelete &&
-					*f.TargetUserEmail == localUserThatWillBeDeleted.Email
-			}), "Local user deleted: delete-me@example.com").
+					*f.TargetUser == "delete-me@example.com"
+			}), "Local user deleted: \"delete-me@example.com\"").
 			Return(nil).
 			Once()
 
@@ -152,14 +179,6 @@ func TestSync(t *testing.T) {
 	})
 }
 
-func getUser(email, name string, id *uuid.UUID) *db.User {
-	if id == nil {
-		newID := uuid.New()
-		id = &newID
-	}
-	return &db.User{
-		ID:    *id,
-		Email: email,
-		Name:  name,
-	}
+func serialUuid(serial byte) uuid.UUID {
+	return uuid.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, serial}
 }

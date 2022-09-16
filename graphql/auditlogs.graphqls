@@ -9,14 +9,14 @@ type AuditLog {
     "The related system."
     systemName: SystemName!
 
-    "The related correlation."
+    "The related correlation ID."
     correlationID: UUID!
 
-    "The email address of the actor who performed the action. When this field is empty it means that some backend process performed the action."
-    actorEmail: String
+    "The identity of the actor who performed the action. When this field is empty it means that some backend process performed the action. The value, when present, is either the name of a service account, or the email address of a user."
+    actor: String
 
-    "The email address of the target user, if any."
-    targetUserEmail: String
+    "The target user, if any. For service accounts this is the name of the service account, while for users this will be the email address of the user."
+    targetUser: String
 
     "The target team slug, if any."
     targetTeamSlug: Slug

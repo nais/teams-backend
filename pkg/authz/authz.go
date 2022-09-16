@@ -14,7 +14,7 @@ import (
 type ContextKey string
 
 type actor struct {
-	User  *db.User
+	User  db.AuthenticatedUser
 	Roles []*db.Role
 }
 
@@ -29,7 +29,7 @@ func (u *actor) Authenticated() bool {
 const contextKeyUser ContextKey = "actor"
 
 // ContextWithActor Return a context with an actor attached to it.
-func ContextWithActor(ctx context.Context, user *db.User, roles []*db.Role) context.Context {
+func ContextWithActor(ctx context.Context, user db.AuthenticatedUser, roles []*db.Role) context.Context {
 	return context.WithValue(ctx, contextKeyUser, &actor{
 		User:  user,
 		Roles: roles,
@@ -102,7 +102,7 @@ func RequireAuthorizationOrTargetMatch(actor *actor, requiredAuthzName sqlc.Auth
 		return ErrNotAuthorized
 	}
 
-	if actor.User.ID == target {
+	if actor.User.GetID() == target {
 		return nil
 	}
 
