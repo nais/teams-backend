@@ -3,11 +3,10 @@ package db
 import (
 	"context"
 
-	"github.com/nais/console/pkg/slug"
-
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 )
 
@@ -39,6 +38,10 @@ type Role struct {
 type ServiceAccount struct {
 	ID   uuid.UUID
 	Name string
+}
+
+type Session struct {
+	*sqlc.Session
 }
 
 type TeamMetadata map[string]string
@@ -109,6 +112,10 @@ type Database interface {
 	GetServiceAccounts(ctx context.Context) ([]*ServiceAccount, error)
 	DeleteServiceAccount(ctx context.Context, serviceAccountID uuid.UUID) error
 	GetUserByExternalID(ctx context.Context, externalID string) (*User, error)
+	CreateSession(ctx context.Context, userID uuid.UUID) (*Session, error)
+	DeleteSession(ctx context.Context, sessionID uuid.UUID) error
+	GetSessionByID(ctx context.Context, sessionID uuid.UUID) (*Session, error)
+	ExtendSession(ctx context.Context, sessionID uuid.UUID) (*Session, error)
 }
 
 func (u User) GetID() uuid.UUID {

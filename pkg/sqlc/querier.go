@@ -18,15 +18,18 @@ type Querier interface {
 	CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) error
 	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) error
 	CreateServiceAccount(ctx context.Context, name string) (*User, error)
+	CreateSession(ctx context.Context, arg CreateSessionParams) (*Session, error)
 	CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (*User, error)
 	DeleteServiceAccount(ctx context.Context, id uuid.UUID) error
+	DeleteSession(ctx context.Context, id uuid.UUID) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
 	GetAuditLogsForTeam(ctx context.Context, targetTeamSlug *slug.Slug) ([]*AuditLog, error)
 	GetRoleAuthorizations(ctx context.Context, roleName RoleName) ([]AuthzName, error)
 	GetServiceAccountByApiKey(ctx context.Context, apiKey string) (*User, error)
 	GetServiceAccountByName(ctx context.Context, name string) (*User, error)
 	GetServiceAccounts(ctx context.Context) ([]*User, error)
+	GetSessionByID(ctx context.Context, id uuid.UUID) (*Session, error)
 	GetTeamByID(ctx context.Context, id uuid.UUID) (*Team, error)
 	GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)
 	GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error)
@@ -45,6 +48,7 @@ type Querier interface {
 	RemoveGlobalUserRole(ctx context.Context, arg RemoveGlobalUserRoleParams) error
 	RevokeGlobalRoleFromUser(ctx context.Context, arg RevokeGlobalRoleFromUserParams) error
 	RevokeTargetedRoleFromUser(ctx context.Context, arg RevokeTargetedRoleFromUserParams) error
+	SetSessionExpires(ctx context.Context, arg SetSessionExpiresParams) (*Session, error)
 	SetTeamMetadata(ctx context.Context, arg SetTeamMetadataParams) error
 	SetTeamReconcileErrorForSystem(ctx context.Context, arg SetTeamReconcileErrorForSystemParams) error
 	SetTeamSystemState(ctx context.Context, arg SetTeamSystemStateParams) error

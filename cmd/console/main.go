@@ -10,22 +10,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/99designs/gqlgen/graphql/handler/extension"
-
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/directives"
-	"github.com/nais/console/pkg/graph"
-	"github.com/nais/console/pkg/graph/generated"
-	"github.com/nais/console/pkg/sqlc"
-
-	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
-	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
-	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
-	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
-	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
-	nais_namespace_reconciler "github.com/nais/console/pkg/reconcilers/nais/namespace"
-
 	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
@@ -34,9 +20,20 @@ import (
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authn"
 	"github.com/nais/console/pkg/config"
+	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/directives"
 	"github.com/nais/console/pkg/fixtures"
+	"github.com/nais/console/pkg/graph"
+	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/middleware"
 	"github.com/nais/console/pkg/reconcilers"
+	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
+	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
+	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
+	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
+	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
+	nais_namespace_reconciler "github.com/nais/console/pkg/reconcilers/nais/namespace"
+	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/pkg/usersync"
 	"github.com/nais/console/pkg/version"
 	log "github.com/sirupsen/logrus"
@@ -96,14 +93,13 @@ func run() error {
 
 	log.Infof("Initialized %d reconcilers.", len(recs))
 
-	store := authn.NewStore()
-	authHandler, err := setupAuthHandler(cfg, database, store)
+	authHandler, err := setupAuthHandler(cfg, database)
 	if err != nil {
 		return err
 	}
 
 	handler := setupGraphAPI(database, cfg.TenantDomain, teamReconciler, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi))
-	srv, err := setupHTTPServer(cfg, database, handler, authHandler, store)
+	srv, err := setupHTTPServer(cfg, database, handler, authHandler)
 	if err != nil {
 		return err
 	}
@@ -266,13 +262,13 @@ func reconcileTeams(ctx context.Context, database db.Database, recs []reconciler
 	return nil
 }
 
-func setupAuthHandler(cfg *config.Config, database db.Database, store authn.SessionStore) (*authn.Handler, error) {
+func setupAuthHandler(cfg *config.Config, database db.Database) (*authn.Handler, error) {
 	cf := authn.NewGoogle(cfg.OAuth.ClientID, cfg.OAuth.ClientSecret, cfg.OAuth.RedirectURL)
 	frontendURL, err := url.Parse(cfg.FrontendURL)
 	if err != nil {
 		return nil, err
 	}
-	handler := authn.New(cf, database, store, *frontendURL)
+	handler := authn.New(cf, database, *frontendURL)
 	return handler, nil
 }
 
@@ -382,7 +378,7 @@ func corsConfig() cors.Options {
 	}
 }
 
-func setupHTTPServer(cfg *config.Config, database db.Database, graphApi *graphql_handler.Server, authHandler *authn.Handler, store authn.SessionStore) (*http.Server, error) {
+func setupHTTPServer(cfg *config.Config, database db.Database, graphApi *graphql_handler.Server, authHandler *authn.Handler) (*http.Server, error) {
 	r := chi.NewRouter()
 
 	r.Get("/healthz", func(_ http.ResponseWriter, _ *http.Request) {})
@@ -392,7 +388,7 @@ func setupHTTPServer(cfg *config.Config, database db.Database, graphApi *graphql
 	middlewares := []func(http.Handler) http.Handler{
 		cors.New(corsConfig()).Handler,
 		middleware.ApiKeyAuthentication(database),
-		middleware.Oauth2Authentication(database, store),
+		middleware.Oauth2Authentication(database),
 	}
 
 	// If no other authentication mechanisms produce a authenticated user,
