@@ -30,8 +30,8 @@ func main() {
 }
 
 func run() error {
-	const ymlpath = "./teams.yml"
-	const jsonpath = "./teams.json"
+	const ymlpath = "./local/teams.yml"
+	const jsonpath = "./local/teams.json"
 
 	ctx := context.Background()
 
@@ -45,8 +45,6 @@ func run() error {
 		panic(err)
 	}
 
-	auditLogger := auditlogger.New(database).WithSystemName(sqlc.SystemNameLegacyImporter)
-
 	gimp, err := legacy.NewFromConfig(cfg)
 	if err != nil {
 		panic(err)
@@ -57,27 +55,27 @@ func run() error {
 		panic(err)
 	}
 
-	correlationID, err := uuid.NewUUID()
-	if err != nil {
-		panic(err)
-	}
+	correlationID := uuid.New()
 
 	users := make(map[string]*db.User)
 	err = database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
+		auditLogger := auditlogger.New(dbtx).WithSystemName(sqlc.SystemNameLegacyImporter)
+
 		for _, yamlteam := range teams {
 			teamOwners := make(map[string]*db.User, 0)
 			teamMembers := make(map[string]*db.User, 0)
 
 			err := slug.Slug(yamlteam.Name).Validate()
 			if err != nil {
-				log.Warnf("Skip team %q as the name is not a valid Console team slug", yamlteam.Name)
+				log.WithError(err).Warnf("Skip team %q as the name is not a valid Console team slug", yamlteam.Name)
 				continue
 			}
 
 			log.Infof("Fetch team administrators for %s...", yamlteam.Name)
 			owners, err := gimp.GroupOwners(yamlteam.AzureID)
 			if err != nil {
-				return err
+				log.WithError(err).Errorf("Unable to get team owners for team: %q", yamlteam.Name)
+				continue
 			}
 			for _, gimpOwner := range owners {
 				if !strings.HasSuffix(gimpOwner.Email, cfg.TenantDomain) {
@@ -225,7 +223,6 @@ func run() error {
 		}
 		return nil
 	})
-
 	if err != nil {
 		panic(err)
 	}
