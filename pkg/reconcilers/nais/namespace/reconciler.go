@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
 
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/slug"
@@ -26,6 +27,7 @@ const (
 type naisdData struct {
 	Name       string `json:"name"`
 	GcpProject string `json:"gcpProject"` // the user specified "project id"; not the "projects/ID" format
+	GroupEmail string `json:"groupEmail"`
 }
 
 type naisdRequest struct {
@@ -89,8 +91,14 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 		return fmt.Errorf("no GCP project state exists for team %q yet", input.Team.Slug)
 	}
 
+	workspaceState := &reconcilers.GoogleWorkspaceState{}
+	err = r.database.LoadSystemState(ctx, google_workspace_admin_reconciler.Name, input.Team.ID, workspaceState)
+	if err != nil || workspaceState.GroupEmail == nil {
+		return fmt.Errorf("no workspace admin state exists for team %q, or group email not set", input.Team.Slug)
+	}
+
 	for environment, project := range gcpProjectState.Projects {
-		err = r.createNamespace(ctx, svc, input.Team, environment, project.ProjectID)
+		err = r.createNamespace(ctx, svc, input.Team, environment, project.ProjectID, *workspaceState.GroupEmail)
 		if err != nil {
 			return fmt.Errorf("unable to create namespace for project %q in environment %q: %w", project.ProjectID, environment, err)
 		}
@@ -114,13 +122,14 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	return nil
 }
 
-func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, pubsubService *pubsub.Client, team db.Team, environment, gcpProjectID string) error {
+func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, pubsubService *pubsub.Client, team db.Team, environment, gcpProjectID string, groupEmail string) error {
 	const topicPrefix = "naisd-console-"
 	req := &naisdRequest{
 		Type: NaisdCreateNamespace,
 		Data: naisdData{
 			Name:       string(team.Slug),
 			GcpProject: gcpProjectID,
+			GroupEmail: groupEmail,
 		},
 	}
 
