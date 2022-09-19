@@ -1,6 +1,7 @@
 package middleware_test
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -14,64 +15,100 @@ import (
 	"github.com/nais/console/pkg/middleware"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 func TestOauth2Authentication(t *testing.T) {
 	t.Run("No cookie in request", func(t *testing.T) {
-		store := authn.NewStore()
 		database := db.NewMockDatabase(t)
 		responseWriter := httptest.NewRecorder()
 		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			actor := authz.ActorFromContext(r.Context())
 			assert.Nil(t, actor)
 		})
-		req := getRequest()
-		middleware := middleware.Oauth2Authentication(database, store)
+		req := getRequest(context.Background())
+		middleware := middleware.Oauth2Authentication(database)
 		middleware(next).ServeHTTP(responseWriter, req)
 	})
 
-	t.Run("Valid cookie, no session in store", func(t *testing.T) {
-		store := authn.NewStore()
+	t.Run("Invalid cookie value", func(t *testing.T) {
+		ctx := context.Background()
 		database := db.NewMockDatabase(t)
 		responseWriter := httptest.NewRecorder()
 		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			actor := authz.ActorFromContext(r.Context())
 			assert.Nil(t, actor)
 		})
-		req := getRequest()
+		req := getRequest(ctx)
 		req.AddCookie(&http.Cookie{
 			Name:  authn.SessionCookieName,
 			Value: "unknown-session-key",
 		})
-		store.Create(&authn.Session{
-			Key:     "session-key",
-			Expires: time.Now().Add(10 * time.Second),
-			Email:   "user1@example.com",
+		middleware := middleware.Oauth2Authentication(database)
+		middleware(next).ServeHTTP(responseWriter, req)
+	})
+
+	t.Run("Valid cookie, no session in store", func(t *testing.T) {
+		ctx := context.Background()
+		database := db.NewMockDatabase(t)
+		responseWriter := httptest.NewRecorder()
+		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			actor := authz.ActorFromContext(r.Context())
+			assert.Nil(t, actor)
 		})
-		middleware := middleware.Oauth2Authentication(database, store)
+		req := getRequest(ctx)
+		sessionID := uuid.New()
+		req.AddCookie(&http.Cookie{
+			Name:  authn.SessionCookieName,
+			Value: sessionID.String(),
+		})
+		notFoundErr := errors.New("not found")
+		database.
+			On("GetSessionByID", ctx, sessionID).
+			Return(nil, notFoundErr).
+			Once()
+		middleware := middleware.Oauth2Authentication(database)
 		middleware(next).ServeHTTP(responseWriter, req)
 	})
 
 	t.Run("Valid cookie with matching session", func(t *testing.T) {
-		store := authn.NewStore()
+		ctx := context.Background()
+		sessionID := uuid.New()
+		userID := uuid.New()
 		user := &db.User{
-			ID:    uuid.New(),
-			Email: "user1@example.com",
+			ID:    userID,
+			Email: "user@example.com",
 			Name:  "User Name",
 		}
 		roles := []*db.Role{
 			{Name: sqlc.RoleNameAdmin},
 		}
+		session := &db.Session{Session: &sqlc.Session{
+			ID:      sessionID,
+			UserID:  userID,
+			Expires: time.Now().Add(10 * time.Second),
+		}}
+		extendedSession := &db.Session{Session: &sqlc.Session{
+			ID:      sessionID,
+			UserID:  userID,
+			Expires: time.Now().Add(30 * time.Minute),
+		}}
 
 		database := db.NewMockDatabase(t)
 		database.
-			On("GetUserByEmail", mock.Anything, "user1@example.com").
+			On("GetSessionByID", ctx, sessionID).
+			Return(session, nil).
+			Once()
+		database.
+			On("GetUserByID", ctx, userID).
 			Return(user, nil).
 			Once()
 		database.
-			On("GetUserRoles", mock.Anything, user.ID).
+			On("GetUserRoles", ctx, user.ID).
 			Return(roles, nil).
+			Once()
+		database.
+			On("ExtendSession", ctx, sessionID).
+			Return(extendedSession, nil).
 			Once()
 
 		responseWriter := httptest.NewRecorder()
@@ -81,71 +118,83 @@ func TestOauth2Authentication(t *testing.T) {
 			assert.Equal(t, user, actor.User)
 			assert.Equal(t, roles, actor.Roles)
 		})
-		req := getRequest()
+		req := getRequest(ctx)
 		req.AddCookie(&http.Cookie{
 			Name:  authn.SessionCookieName,
-			Value: "session-key-1",
-		})
-		store.Create(&authn.Session{
-			Key:     "session-key-1",
-			Expires: time.Now().Add(10 * time.Second),
-			Email:   "user1@example.com",
-		})
-		store.Create(&authn.Session{
-			Key:     "session-key-2",
-			Expires: time.Now().Add(10 * time.Second),
-			Email:   "user2@example.com",
+			Value: sessionID.String(),
 		})
 
-		middleware := middleware.Oauth2Authentication(database, store)
+		middleware := middleware.Oauth2Authentication(database)
 		middleware(next).ServeHTTP(responseWriter, req)
 	})
 
 	t.Run("Valid cookie with matching expired session", func(t *testing.T) {
-		store := authn.NewStore()
+		ctx := context.Background()
+		sessionID := uuid.New()
+		userID := uuid.New()
 		database := db.NewMockDatabase(t)
 		responseWriter := httptest.NewRecorder()
 		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			actor := authz.ActorFromContext(r.Context())
 			assert.Nil(t, actor)
 		})
-		req := getRequest()
+		req := getRequest(ctx)
 		req.AddCookie(&http.Cookie{
 			Name:  authn.SessionCookieName,
-			Value: "session-key-1",
+			Value: sessionID.String(),
 		})
-		store.Create(&authn.Session{
-			Key:     "session-key-1",
+		session := &db.Session{Session: &sqlc.Session{
+			ID:      sessionID,
+			UserID:  userID,
 			Expires: time.Now().Add(-10 * time.Second),
-			Email:   "user1@example.com",
-		})
-		middleware := middleware.Oauth2Authentication(database, store)
+		}}
+		database.
+			On("GetSessionByID", ctx, sessionID).
+			Return(session, nil).
+			Once()
+		database.
+			On("DeleteSession", ctx, sessionID).
+			Return(nil).
+			Once()
+
+		middleware := middleware.Oauth2Authentication(database)
 		middleware(next).ServeHTTP(responseWriter, req)
 	})
 
-	t.Run("Valid cookie with matching session with invalid email in session", func(t *testing.T) {
-		store := authn.NewStore()
+	t.Run("Valid cookie with matching session with invalid userID in session", func(t *testing.T) {
+		ctx := context.Background()
+		sessionID := uuid.New()
+		userID := uuid.New()
 		database := db.NewMockDatabase(t)
-		database.
-			On("GetUserByEmail", mock.Anything, "user1@example.com").
-			Return(nil, errors.New("user not found")).
-			Once()
 		responseWriter := httptest.NewRecorder()
 		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			actor := authz.ActorFromContext(r.Context())
 			assert.Nil(t, actor)
 		})
-		req := getRequest()
+		req := getRequest(ctx)
 		req.AddCookie(&http.Cookie{
 			Name:  authn.SessionCookieName,
-			Value: "session-key-1",
+			Value: sessionID.String(),
 		})
-		store.Create(&authn.Session{
-			Key:     "session-key-1",
+		session := &db.Session{Session: &sqlc.Session{
+			ID:      sessionID,
+			UserID:  userID,
 			Expires: time.Now().Add(10 * time.Second),
-			Email:   "user1@example.com",
-		})
-		middleware := middleware.Oauth2Authentication(database, store)
+		}}
+		database.
+			On("GetSessionByID", ctx, sessionID).
+			Return(session, nil).
+			Once()
+		database.
+			On("GetUserByID", ctx, userID).
+			Return(nil, errors.New("not found")).
+			Once()
+		database.
+			On("DeleteSession", ctx, sessionID).
+			Return(nil).
+			Once()
+
+		middleware := middleware.Oauth2Authentication(database)
 		middleware(next).ServeHTTP(responseWriter, req)
 	})
 }

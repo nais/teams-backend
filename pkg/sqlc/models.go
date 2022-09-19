@@ -485,6 +485,12 @@ type RoleAuthz struct {
 	RoleName  RoleName
 }
 
+type Session struct {
+	ID      uuid.UUID
+	UserID  uuid.UUID
+	Expires time.Time
+}
+
 type SystemState struct {
 	SystemName SystemName
 	TeamID     uuid.UUID

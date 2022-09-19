@@ -1,6 +1,7 @@
 package middleware_test
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -15,11 +16,6 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func getRequest() *http.Request {
-	req, _ := http.NewRequest(http.MethodPost, "/query", nil)
-	return req
-}
-
 func TestApiKeyAuthentication(t *testing.T) {
 	t.Run("No authorization header", func(t *testing.T) {
 		database := db.NewMockDatabase(t)
@@ -29,7 +25,7 @@ func TestApiKeyAuthentication(t *testing.T) {
 			actor := authz.ActorFromContext(r.Context())
 			assert.Nil(t, actor)
 		})
-		req := getRequest()
+		req := getRequest(context.Background())
 		middleware(next).ServeHTTP(responseWriter, req)
 	})
 
@@ -45,7 +41,7 @@ func TestApiKeyAuthentication(t *testing.T) {
 			actor := authz.ActorFromContext(r.Context())
 			assert.Nil(t, actor)
 		})
-		req := getRequest()
+		req := getRequest(context.Background())
 		req.Header.Set("Authorization", "Bearer unknown")
 		middleware(next).ServeHTTP(responseWriter, req)
 	})
@@ -77,8 +73,13 @@ func TestApiKeyAuthentication(t *testing.T) {
 			assert.Equal(t, serviceAccount, actor.User)
 			assert.Equal(t, roles, actor.Roles)
 		})
-		req := getRequest()
+		req := getRequest(context.Background())
 		req.Header.Set("Authorization", "Bearer user1-key")
 		middleware(next).ServeHTTP(responseWriter, req)
 	})
+}
+
+func getRequest(ctx context.Context) *http.Request {
+	req, _ := http.NewRequest(http.MethodPost, "/query", nil)
+	return req.WithContext(ctx)
 }

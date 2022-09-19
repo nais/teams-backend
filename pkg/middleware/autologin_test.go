@@ -1,6 +1,7 @@
 package middleware_test
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -27,7 +28,7 @@ func TestAutologin(t *testing.T) {
 			actor := authz.ActorFromContext(r.Context())
 			assert.Nil(t, actor)
 		})
-		req := getRequest()
+		req := getRequest(context.Background())
 		middleware := middleware.Autologin(database, "unknown@example.com")
 		middleware(next).ServeHTTP(responseWriter, req)
 	})
@@ -58,7 +59,7 @@ func TestAutologin(t *testing.T) {
 			assert.Equal(t, user, actor.User)
 			assert.Equal(t, roles, actor.Roles)
 		})
-		req := getRequest()
+		req := getRequest(context.Background())
 		middleware := middleware.Autologin(database, "user@example.com")
 		middleware(next).ServeHTTP(responseWriter, req)
 	})

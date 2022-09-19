@@ -2,8 +2,6 @@ package authn
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"net/http"
 	"net/url"
 	"strings"
@@ -20,8 +18,6 @@ const (
 	RedirectURICookie = "redirecturi"
 	OAuthStateCookie  = "oauthstate"
 	SessionCookieName = "console_session_id"
-	tokenLength       = 32
-	sessionLength     = 7 * time.Hour
 	IDTokenKey        = "id_token"
 )
 
@@ -34,17 +30,19 @@ type OAuth2 interface {
 type Handler struct {
 	database     db.Database
 	oauth2Config OAuth2
-	repo         SessionStore
 	frontendURL  url.URL
 }
 
-func New(oauth2Config OAuth2, database db.Database, repo SessionStore, frontendURL url.URL) *Handler {
+func New(oauth2Config OAuth2, database db.Database, frontendURL url.URL) *Handler {
 	return &Handler{
 		database:     database,
 		oauth2Config: oauth2Config,
-		repo:         repo,
 		frontendURL:  frontendURL,
 	}
+}
+
+type claims struct {
+	Email string
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
@@ -123,34 +121,67 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session := &Session{
-		Key:     generateSecureToken(tokenLength),
-		Expires: time.Now().Add(sessionLength),
-	}
-	if err := idToken.Claims(session); err != nil {
+	claims := &claims{}
+	if err := idToken.Claims(claims); err != nil {
 		log.WithError(err).Error("Unable to parse claims")
 		http.Redirect(w, r, frontendURL.String()+"?error=unauthenticated", http.StatusFound)
 		return
 	}
 
-	if _, err := h.database.GetUserByEmail(r.Context(), session.Email); err != nil {
-		log.WithError(err).Errorf("User with email %q does not exist in the Console database", session.Email)
+	user, err := h.database.GetUserByEmail(r.Context(), claims.Email)
+	if err != nil {
+		log.WithError(err).Errorf("User with email %q does not exist in the Console database", claims.Email)
 		http.Redirect(w, r, frontendURL.String()+"?error=unknown-user", http.StatusFound)
 		return
 	}
 
-	h.repo.Create(session)
+	session, err := h.database.CreateSession(r.Context(), user.ID)
+	if err != nil {
+		log.WithError(err).Errorf("Unable to create session")
+		http.Redirect(w, r, frontendURL.String()+"?error=unable-to-create-session", http.StatusFound)
+		return
+	}
 
+	SetSessionCookie(w, session)
+	http.Redirect(w, r, frontendURL.String(), http.StatusFound)
+}
+
+func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	redirectUrl := "/"
+	cookie, err := r.Cookie(SessionCookieName)
+	if err != nil {
+		log.WithError(err).Error("Unable to logout session")
+		http.Redirect(w, r, redirectUrl, http.StatusFound)
+		return
+	}
+
+	sessionID, err := uuid.Parse(cookie.Value)
+	if err != nil {
+		log.WithError(err).Error("Unable to parse cookie value as UUID")
+		http.Redirect(w, r, redirectUrl, http.StatusFound)
+		return
+	}
+
+	err = h.database.DeleteSession(r.Context(), sessionID)
+	if err != nil {
+		log.WithError(err).Error("Unable to delete session from database")
+		http.Redirect(w, r, redirectUrl, http.StatusFound)
+		return
+	}
+
+	DeleteSessionCookie(w)
+	http.Redirect(w, r, redirectUrl, http.StatusFound)
+}
+
+func SetSessionCookie(w http.ResponseWriter, session *db.Session) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     SessionCookieName,
-		Value:    session.Key,
+		Value:    session.ID.String(),
 		Path:     "/",
 		Expires:  session.Expires,
 		Secure:   true,
 		HttpOnly: true,
 	})
-
-	http.Redirect(w, r, frontendURL.String(), http.StatusFound)
 }
 
 func deleteCookie(w http.ResponseWriter, name string) {
@@ -164,30 +195,6 @@ func deleteCookie(w http.ResponseWriter, name string) {
 	})
 }
 
-func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+func DeleteSessionCookie(w http.ResponseWriter) {
 	deleteCookie(w, SessionCookieName)
-
-	cookie, err := r.Cookie(SessionCookieName)
-	if err != nil {
-		log.WithError(err).Error("Unable to logout session")
-	}
-
-	h.repo.Destroy(cookie.Value)
-
-	var loginPage string
-	if strings.HasPrefix(r.Host, "localhost") {
-		loginPage = "http://localhost:3000/"
-	} else {
-		loginPage = "/"
-	}
-
-	http.Redirect(w, r, loginPage, http.StatusFound)
-}
-
-func generateSecureToken(length int) string {
-	b := make([]byte, length)
-	if _, err := rand.Read(b); err != nil {
-		return ""
-	}
-	return hex.EncodeToString(b)
 }

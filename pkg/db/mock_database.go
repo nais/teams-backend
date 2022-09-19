@@ -111,6 +111,29 @@ func (_m *MockDatabase) CreateServiceAccount(ctx context.Context, name string) (
 	return r0, r1
 }
 
+// CreateSession provides a mock function with given fields: ctx, userID
+func (_m *MockDatabase) CreateSession(ctx context.Context, userID uuid.UUID) (*Session, error) {
+	ret := _m.Called(ctx, userID)
+
+	var r0 *Session
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) *Session); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*Session)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = rf(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CreateTeam provides a mock function with given fields: ctx, name, _a2, purpose
 func (_m *MockDatabase) CreateTeam(ctx context.Context, name string, _a2 slug.Slug, purpose *string) (*Team, error) {
 	ret := _m.Called(ctx, name, _a2, purpose)
@@ -171,6 +194,20 @@ func (_m *MockDatabase) DeleteServiceAccount(ctx context.Context, serviceAccount
 	return r0
 }
 
+// DeleteSession provides a mock function with given fields: ctx, sessionID
+func (_m *MockDatabase) DeleteSession(ctx context.Context, sessionID uuid.UUID) error {
+	ret := _m.Called(ctx, sessionID)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
+		r0 = rf(ctx, sessionID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // DeleteUser provides a mock function with given fields: ctx, userID
 func (_m *MockDatabase) DeleteUser(ctx context.Context, userID uuid.UUID) error {
 	ret := _m.Called(ctx, userID)
@@ -183,6 +220,29 @@ func (_m *MockDatabase) DeleteUser(ctx context.Context, userID uuid.UUID) error 
 	}
 
 	return r0
+}
+
+// ExtendSession provides a mock function with given fields: ctx, sessionID
+func (_m *MockDatabase) ExtendSession(ctx context.Context, sessionID uuid.UUID) (*Session, error) {
+	ret := _m.Called(ctx, sessionID)
+
+	var r0 *Session
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) *Session); ok {
+		r0 = rf(ctx, sessionID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*Session)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = rf(ctx, sessionID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // GetAuditLogsForTeam provides a mock function with given fields: ctx, _a1
@@ -270,6 +330,29 @@ func (_m *MockDatabase) GetServiceAccounts(ctx context.Context) ([]*ServiceAccou
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
 		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetSessionByID provides a mock function with given fields: ctx, sessionID
+func (_m *MockDatabase) GetSessionByID(ctx context.Context, sessionID uuid.UUID) (*Session, error) {
+	ret := _m.Called(ctx, sessionID)
+
+	var r0 *Session
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) *Session); ok {
+		r0 = rf(ctx, sessionID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*Session)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = rf(ctx, sessionID)
 	} else {
 		r1 = ret.Error(1)
 	}
