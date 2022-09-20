@@ -797,12 +797,19 @@ scalar UUID
 scalar Time
 
 """
-Slugs must contain only lowercase letters and dashes, and must be between 3 and 20 characters. Slugs must start and end with a lowercase letter.
+The slug must:
+
+- contain only lowercase alphanumeric characters or hyphens
+- contain at least 3 characters and at most 30 characters
+- start with an alphabetic character
+- end with an alphanumeric character
+- not contain two hyphens in a row
 
 Examples of valid slugs:
 
 - ` + "`" + `some-value` + "`" + `
 - ` + "`" + `someothervalue` + "`" + `
+- ` + "`" + `my-team-123` + "`" + `
 """
 scalar Slug
 
