@@ -11,8 +11,6 @@ import (
 
 	"github.com/jackc/pgx/v4/pgxpool"
 
-	"github.com/nais/console/pkg/slug"
-
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/sqlc"
 
@@ -30,8 +28,8 @@ func main() {
 }
 
 func run() error {
-	const ymlpath = "./teams.yml"
-	const jsonpath = "./teams.json"
+	const ymlpath = "./local/teams.yml"
+	const jsonpath = "./local/teams.json"
 
 	ctx := context.Background()
 
@@ -45,8 +43,6 @@ func run() error {
 		panic(err)
 	}
 
-	auditLogger := auditlogger.New(database).WithSystemName(sqlc.SystemNameLegacyImporter)
-
 	gimp, err := legacy.NewFromConfig(cfg)
 	if err != nil {
 		panic(err)
@@ -57,31 +53,25 @@ func run() error {
 		panic(err)
 	}
 
-	correlationID, err := uuid.NewUUID()
-	if err != nil {
-		panic(err)
-	}
+	correlationID := uuid.New()
 
 	users := make(map[string]*db.User)
 	err = database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
+		auditLogger := auditlogger.New(dbtx).WithSystemName(sqlc.SystemNameLegacyImporter)
+
 		for _, yamlteam := range teams {
 			teamOwners := make(map[string]*db.User, 0)
 			teamMembers := make(map[string]*db.User, 0)
 
-			err := slug.Slug(yamlteam.Name).Validate()
-			if err != nil {
-				log.Warnf("Skip team %q as the name is not a valid Console team slug", yamlteam.Name)
-				continue
-			}
-
-			log.Infof("Fetch team administrators for %s...", yamlteam.Name)
+			log.Infof("Fetch team administrators for %q...", yamlteam.Name)
 			owners, err := gimp.GroupOwners(yamlteam.AzureID)
 			if err != nil {
-				return err
+				log.WithError(err).Errorf("Unable to get team owners for team: %q", yamlteam.Name)
+				continue
 			}
 			for _, gimpOwner := range owners {
 				if !strings.HasSuffix(gimpOwner.Email, cfg.TenantDomain) {
-					log.Warnf("Skip owner %s", gimpOwner.Email)
+					log.Warnf("Skip owner %q for team %q", gimpOwner.Email, yamlteam.Name)
 					continue
 				}
 
@@ -114,7 +104,7 @@ func run() error {
 			}
 			for _, gimpMember := range members {
 				if !strings.HasSuffix(gimpMember.Email, cfg.TenantDomain) {
-					log.Warnf("Skip member %s", gimpMember.Email)
+					log.Warnf("Skip member %q for team %q", gimpMember.Email, yamlteam.Name)
 					continue
 				}
 
@@ -146,7 +136,7 @@ func run() error {
 			}
 
 			if len(teamOwners) == 0 && len(teamMembers) == 0 {
-				log.Warnf("The Azure Group %q has no members or administrators, skip creation of the team in Console", yamlteam.Name)
+				log.Errorf("The Azure Group %q has no members or administrators, skip creation of the team in Console", yamlteam.Name)
 				continue
 			}
 
@@ -225,7 +215,6 @@ func run() error {
 		}
 		return nil
 	})
-
 	if err != nil {
 		panic(err)
 	}
