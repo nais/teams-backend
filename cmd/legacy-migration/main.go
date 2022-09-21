@@ -64,7 +64,7 @@ func run() error {
 			teamMembers := make(map[string]*db.User, 0)
 
 			log.Infof("Fetch team administrators for %q...", yamlteam.Name)
-			owners, err := gimp.GroupOwners(yamlteam.AzureID)
+			owners, err := gimp.GroupOwners(yamlteam.AzureState.GroupID.String())
 			if err != nil {
 				log.WithError(err).Errorf("Unable to get team owners for team: %q", yamlteam.Name)
 				continue
@@ -98,7 +98,7 @@ func run() error {
 			}
 
 			log.Infof("Fetch team members for %s...", yamlteam.Name)
-			members, err := gimp.GroupMembers(yamlteam.AzureID)
+			members, err := gimp.GroupMembers(yamlteam.AzureState.GroupID.String())
 			if err != nil {
 				return err
 			}
@@ -209,6 +209,11 @@ func run() error {
 				if err != nil {
 					return err
 				}
+			}
+
+			err = dbtx.SetSystemState(ctx, sqlc.SystemNameAzureGroup, team.ID, yamlteam.AzureState)
+			if err != nil {
+				return err
 			}
 
 			log.Infof("Created team %q with %d owners and %d members", team.Name, len(teamOwners), len(teamMembers))

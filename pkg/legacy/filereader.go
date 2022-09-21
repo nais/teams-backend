@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"os"
 
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
-
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
@@ -18,11 +19,11 @@ type Teams struct {
 }
 
 type Team struct {
-	AzureID               string
 	Name                  string
 	Description           string
 	SlackChannel          string `yaml:"slack-channel"`
 	PlatformAlertsChannel string `yaml:"platform-alerts-channel"`
+	AzureState            reconcilers.AzureState
 }
 
 func (t *Team) Convert() (*db.Team, db.TeamMetadata) {
@@ -81,13 +82,14 @@ func ReadTeamFiles(ymlPath, jsonPath string) (map[string]*Team, error) {
 		return nil, err
 	}
 
-	for azureid, slug := range idmap {
+	for azureID, slug := range idmap {
 		_, exists := teammap[slug]
 		if !exists {
-			log.Errorf("no team for azure mapping (%s, %s)", slug, azureid)
+			log.Errorf("no team for azure mapping (%q, %q)", slug, azureID)
 			continue
 		}
-		teammap[slug].AzureID = azureid
+		groupID := uuid.MustParse(azureID)
+		teammap[slug].AzureState = reconcilers.AzureState{GroupID: &groupID}
 	}
 
 	return teammap, nil
