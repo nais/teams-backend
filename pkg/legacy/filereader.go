@@ -51,7 +51,7 @@ func (t *Team) Convert() (*db.Team, db.TeamMetadata) {
 	}, meta
 }
 
-func ReadTeamFiles(ymlPath, jsonPath, tenandDomain string) (map[string]*Team, error) {
+func ReadTeamFiles(ymlPath, jsonPath, tenantDomain string) (map[string]*Team, error) {
 	yf, err := os.Open(ymlPath)
 	if err != nil {
 		return nil, err
@@ -93,7 +93,7 @@ func ReadTeamFiles(ymlPath, jsonPath, tenandDomain string) (map[string]*Team, er
 
 		azureGroupID := uuid.MustParse(azureID)
 		gitHubTeamSlug := slug.Slug(name)
-		googleWorkspaceGroupEmail := name + "@" + tenandDomain
+		googleWorkspaceGroupEmail := name + "@" + tenantDomain
 
 		teammap[name].AzureState = reconcilers.AzureState{GroupID: &azureGroupID}
 		teammap[name].GitHubState = reconcilers.GitHubState{Slug: &gitHubTeamSlug}
