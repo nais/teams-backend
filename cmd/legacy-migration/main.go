@@ -48,7 +48,7 @@ func run() error {
 		panic(err)
 	}
 
-	teams, err := legacy.ReadTeamFiles(ymlpath, jsonpath)
+	teams, err := legacy.ReadTeamFiles(ymlpath, jsonpath, cfg.TenantDomain)
 	if err != nil {
 		panic(err)
 	}
@@ -212,6 +212,16 @@ func run() error {
 			}
 
 			err = dbtx.SetSystemState(ctx, sqlc.SystemNameAzureGroup, team.ID, yamlteam.AzureState)
+			if err != nil {
+				return err
+			}
+
+			err = dbtx.SetSystemState(ctx, sqlc.SystemNameGithubTeam, team.ID, yamlteam.GitHubState)
+			if err != nil {
+				return err
+			}
+
+			err = dbtx.SetSystemState(ctx, sqlc.SystemNameGoogleWorkspaceAdmin, team.ID, yamlteam.GoogleWorkspaceState)
 			if err != nil {
 				return err
 			}

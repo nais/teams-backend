@@ -24,6 +24,8 @@ type Team struct {
 	SlackChannel          string `yaml:"slack-channel"`
 	PlatformAlertsChannel string `yaml:"platform-alerts-channel"`
 	AzureState            reconcilers.AzureState
+	GitHubState           reconcilers.GitHubState
+	GoogleWorkspaceState  reconcilers.GoogleWorkspaceState
 }
 
 func (t *Team) Convert() (*db.Team, db.TeamMetadata) {
@@ -49,7 +51,7 @@ func (t *Team) Convert() (*db.Team, db.TeamMetadata) {
 	}, meta
 }
 
-func ReadTeamFiles(ymlPath, jsonPath string) (map[string]*Team, error) {
+func ReadTeamFiles(ymlPath, jsonPath, tenandDomain string) (map[string]*Team, error) {
 	yf, err := os.Open(ymlPath)
 	if err != nil {
 		return nil, err
@@ -82,14 +84,20 @@ func ReadTeamFiles(ymlPath, jsonPath string) (map[string]*Team, error) {
 		return nil, err
 	}
 
-	for azureID, slug := range idmap {
-		_, exists := teammap[slug]
+	for azureID, name := range idmap {
+		_, exists := teammap[name]
 		if !exists {
-			log.Errorf("no team for azure mapping (%q, %q)", slug, azureID)
+			log.Errorf("no team for azure mapping (%q, %q)", name, azureID)
 			continue
 		}
-		groupID := uuid.MustParse(azureID)
-		teammap[slug].AzureState = reconcilers.AzureState{GroupID: &groupID}
+
+		azureGroupID := uuid.MustParse(azureID)
+		gitHubTeamSlug := slug.Slug(name)
+		googleWorkspaceGroupEmail := name + "@" + tenandDomain
+
+		teammap[name].AzureState = reconcilers.AzureState{GroupID: &azureGroupID}
+		teammap[name].GitHubState = reconcilers.GitHubState{Slug: &gitHubTeamSlug}
+		teammap[name].GoogleWorkspaceState = reconcilers.GoogleWorkspaceState{GroupEmail: &googleWorkspaceGroupEmail}
 	}
 
 	return teammap, nil
