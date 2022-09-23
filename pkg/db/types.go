@@ -11,7 +11,7 @@ import (
 )
 
 type (
-	QuerierTransactionFunc  func(querier Querier) error
+	QuerierTransactionFunc  func(ctx context.Context, querier Querier) error
 	DatabaseTransactionFunc func(ctx context.Context, dbtx Database) error
 )
 

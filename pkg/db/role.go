@@ -55,7 +55,7 @@ func (d *database) UserIsTeamOwner(ctx context.Context, userID, teamID uuid.UUID
 }
 
 func (d *database) SetTeamMemberRole(ctx context.Context, userID uuid.UUID, teamID uuid.UUID, role sqlc.RoleName) error {
-	return d.querier.Transaction(ctx, func(querier Querier) error {
+	return d.querier.Transaction(ctx, func(ctx context.Context, querier Querier) error {
 		err := querier.RevokeTargetedRoleFromUser(ctx, sqlc.RevokeTargetedRoleFromUserParams{
 			UserID:   userID,
 			TargetID: nullUUID(&teamID),
