@@ -14,13 +14,13 @@ WHERE name = $1;
 -- name: EnableReconciler :one
 UPDATE reconcilers
 SET enabled = true
-WHERE name = $1
+WHERE name = $1 AND enabled = false
 RETURNING *;
 
 -- name: DisableReconciler :one
 UPDATE reconcilers
 SET enabled = false
-WHERE name = $1
+WHERE name = $1 AND enabled = true
 RETURNING *;
 
 -- name: ResetReconcilerConfig :exec
@@ -28,7 +28,7 @@ UPDATE reconciler_config
 SET value = NULL
 WHERE reconciler = $1;
 
--- name: ConfigureReconciler :execresult
+-- name: ConfigureReconciler :exec
 UPDATE reconciler_config
 SET value = sqlc.arg(value)::TEXT
 WHERE reconciler = $1 AND key = $2;

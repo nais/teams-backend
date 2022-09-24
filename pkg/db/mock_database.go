@@ -60,6 +60,29 @@ func (_m *MockDatabase) ClearTeamReconcileErrorForSystem(ctx context.Context, te
 	return r0
 }
 
+// ConfigureReconciler provides a mock function with given fields: ctx, reconcilerName, config
+func (_m *MockDatabase) ConfigureReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName, config map[string]string) (*Reconciler, error) {
+	ret := _m.Called(ctx, reconcilerName, config)
+
+	var r0 *Reconciler
+	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName, map[string]string) *Reconciler); ok {
+		r0 = rf(ctx, reconcilerName, config)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*Reconciler)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, sqlc.ReconcilerName, map[string]string) error); ok {
+		r1 = rf(ctx, reconcilerName, config)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CreateAPIKey provides a mock function with given fields: ctx, apiKey, serviceAccountID
 func (_m *MockDatabase) CreateAPIKey(ctx context.Context, apiKey string, serviceAccountID uuid.UUID) error {
 	ret := _m.Called(ctx, apiKey, serviceAccountID)
@@ -222,6 +245,52 @@ func (_m *MockDatabase) DeleteUser(ctx context.Context, userID uuid.UUID) error 
 	return r0
 }
 
+// DisableReconciler provides a mock function with given fields: ctx, reconcilerName
+func (_m *MockDatabase) DisableReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*Reconciler, error) {
+	ret := _m.Called(ctx, reconcilerName)
+
+	var r0 *Reconciler
+	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName) *Reconciler); ok {
+		r0 = rf(ctx, reconcilerName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*Reconciler)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, sqlc.ReconcilerName) error); ok {
+		r1 = rf(ctx, reconcilerName)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// EnableReconciler provides a mock function with given fields: ctx, reconcilerName
+func (_m *MockDatabase) EnableReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*Reconciler, error) {
+	ret := _m.Called(ctx, reconcilerName)
+
+	var r0 *Reconciler
+	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName) *Reconciler); ok {
+		r0 = rf(ctx, reconcilerName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*Reconciler)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, sqlc.ReconcilerName) error); ok {
+		r1 = rf(ctx, reconcilerName)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ExtendSession provides a mock function with given fields: ctx, sessionID
 func (_m *MockDatabase) ExtendSession(ctx context.Context, sessionID uuid.UUID) (*Session, error) {
 	ret := _m.Called(ctx, sessionID)
@@ -261,6 +330,98 @@ func (_m *MockDatabase) GetAuditLogsForTeam(ctx context.Context, _a1 slug.Slug) 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug) error); ok {
 		r1 = rf(ctx, _a1)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetEnabledReconcilers provides a mock function with given fields: ctx
+func (_m *MockDatabase) GetEnabledReconcilers(ctx context.Context) ([]*Reconciler, error) {
+	ret := _m.Called(ctx)
+
+	var r0 []*Reconciler
+	if rf, ok := ret.Get(0).(func(context.Context) []*Reconciler); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*Reconciler)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetReconciler provides a mock function with given fields: ctx, reconcilerName
+func (_m *MockDatabase) GetReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*Reconciler, error) {
+	ret := _m.Called(ctx, reconcilerName)
+
+	var r0 *Reconciler
+	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName) *Reconciler); ok {
+		r0 = rf(ctx, reconcilerName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*Reconciler)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, sqlc.ReconcilerName) error); ok {
+		r1 = rf(ctx, reconcilerName)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetReconcilerConfig provides a mock function with given fields: ctx, reconcilerName
+func (_m *MockDatabase) GetReconcilerConfig(ctx context.Context, reconcilerName sqlc.ReconcilerName) ([]*ReconcilerConfig, error) {
+	ret := _m.Called(ctx, reconcilerName)
+
+	var r0 []*ReconcilerConfig
+	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName) []*ReconcilerConfig); ok {
+		r0 = rf(ctx, reconcilerName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ReconcilerConfig)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, sqlc.ReconcilerName) error); ok {
+		r1 = rf(ctx, reconcilerName)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetReconcilers provides a mock function with given fields: ctx
+func (_m *MockDatabase) GetReconcilers(ctx context.Context) ([]*Reconciler, error) {
+	ret := _m.Called(ctx)
+
+	var r0 []*Reconciler
+	if rf, ok := ret.Get(0).(func(context.Context) []*Reconciler); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*Reconciler)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -690,6 +851,29 @@ func (_m *MockDatabase) RemoveUserFromTeam(ctx context.Context, userID uuid.UUID
 	}
 
 	return r0
+}
+
+// ResetReconcilerConfig provides a mock function with given fields: ctx, reconcilerName
+func (_m *MockDatabase) ResetReconcilerConfig(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*Reconciler, error) {
+	ret := _m.Called(ctx, reconcilerName)
+
+	var r0 *Reconciler
+	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName) *Reconciler); ok {
+		r0 = rf(ctx, reconcilerName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*Reconciler)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, sqlc.ReconcilerName) error); ok {
+		r1 = rf(ctx, reconcilerName)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // RevokeGlobalRoleFromUser provides a mock function with given fields: ctx, userID, roleName

@@ -8,7 +8,6 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgconn"
 	"github.com/nais/console/pkg/slug"
 )
 
@@ -16,7 +15,7 @@ type Querier interface {
 	AssignGlobalRoleToUser(ctx context.Context, arg AssignGlobalRoleToUserParams) error
 	AssignTargetedRoleToUser(ctx context.Context, arg AssignTargetedRoleToUserParams) error
 	ClearTeamReconcileErrorForSystem(ctx context.Context, arg ClearTeamReconcileErrorForSystemParams) error
-	ConfigureReconciler(ctx context.Context, arg ConfigureReconcilerParams) (pgconn.CommandTag, error)
+	ConfigureReconciler(ctx context.Context, arg ConfigureReconcilerParams) error
 	CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) error
 	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) error
 	CreateServiceAccount(ctx context.Context, name string) (*User, error)

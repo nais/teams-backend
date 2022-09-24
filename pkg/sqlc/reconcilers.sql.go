@@ -7,11 +7,9 @@ package sqlc
 
 import (
 	"context"
-
-	"github.com/jackc/pgconn"
 )
 
-const configureReconciler = `-- name: ConfigureReconciler :execresult
+const configureReconciler = `-- name: ConfigureReconciler :exec
 UPDATE reconciler_config
 SET value = $3::TEXT
 WHERE reconciler = $1 AND key = $2
@@ -23,14 +21,15 @@ type ConfigureReconcilerParams struct {
 	Value      string
 }
 
-func (q *Queries) ConfigureReconciler(ctx context.Context, arg ConfigureReconcilerParams) (pgconn.CommandTag, error) {
-	return q.db.Exec(ctx, configureReconciler, arg.Reconciler, arg.Key, arg.Value)
+func (q *Queries) ConfigureReconciler(ctx context.Context, arg ConfigureReconcilerParams) error {
+	_, err := q.db.Exec(ctx, configureReconciler, arg.Reconciler, arg.Key, arg.Value)
+	return err
 }
 
 const disableReconciler = `-- name: DisableReconciler :one
 UPDATE reconcilers
 SET enabled = false
-WHERE name = $1
+WHERE name = $1 AND enabled = true
 RETURNING name, display_name, description, enabled, run_order
 `
 
@@ -50,7 +49,7 @@ func (q *Queries) DisableReconciler(ctx context.Context, name ReconcilerName) (*
 const enableReconciler = `-- name: EnableReconciler :one
 UPDATE reconcilers
 SET enabled = true
-WHERE name = $1
+WHERE name = $1 AND enabled = false
 RETURNING name, display_name, description, enabled, run_order
 `
 
