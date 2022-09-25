@@ -44,6 +44,7 @@ type ResolverRoot interface {
 	AuditLog() AuditLogResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
+	Reconciler() ReconcilerResolver
 	Role() RoleResolver
 	ServiceAccount() ServiceAccountResolver
 	Team() TeamResolver
@@ -51,7 +52,8 @@ type ResolverRoot interface {
 }
 
 type DirectiveRoot struct {
-	Auth func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
+	Admin func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
+	Auth  func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
 }
 
 type ComplexityRoot struct {
@@ -71,8 +73,12 @@ type ComplexityRoot struct {
 		AddTeamMembers           func(childComplexity int, input model.AddTeamMembersInput) int
 		AddTeamOwners            func(childComplexity int, input model.AddTeamOwnersInput) int
 		AssignGlobalRoleToUser   func(childComplexity int, role sqlc.RoleName, userID *uuid.UUID) int
+		ConfigureReconciler      func(childComplexity int, name sqlc.ReconcilerName, config map[string]interface{}) int
 		CreateTeam               func(childComplexity int, input model.CreateTeamInput) int
+		DisableReconciler        func(childComplexity int, name sqlc.ReconcilerName) int
+		EnableReconciler         func(childComplexity int, name sqlc.ReconcilerName) int
 		RemoveUsersFromTeam      func(childComplexity int, input model.RemoveUsersFromTeamInput) int
+		ResetReconciler          func(childComplexity int, name sqlc.ReconcilerName) int
 		RevokeGlobalRoleFromUser func(childComplexity int, role sqlc.RoleName, userID *uuid.UUID) int
 		SetTeamMemberRole        func(childComplexity int, input model.SetTeamMemberRoleInput) int
 		SynchronizeTeam          func(childComplexity int, teamID *uuid.UUID) int
@@ -81,12 +87,29 @@ type ComplexityRoot struct {
 
 	Query struct {
 		Me          func(childComplexity int) int
+		Reconcilers func(childComplexity int) int
 		Roles       func(childComplexity int) int
 		Team        func(childComplexity int, id *uuid.UUID) int
 		Teams       func(childComplexity int) int
 		User        func(childComplexity int, id *uuid.UUID) int
 		UserByEmail func(childComplexity int, email string) int
 		Users       func(childComplexity int) int
+	}
+
+	Reconciler struct {
+		Config      func(childComplexity int) int
+		Configured  func(childComplexity int) int
+		Description func(childComplexity int) int
+		DisplayName func(childComplexity int) int
+		Enabled     func(childComplexity int) int
+		Name        func(childComplexity int) int
+		RunOrder    func(childComplexity int) int
+	}
+
+	ReconcilerConfig struct {
+		Configured  func(childComplexity int) int
+		Description func(childComplexity int) int
+		Key         func(childComplexity int) int
 	}
 
 	Role struct {
@@ -147,6 +170,10 @@ type AuditLogResolver interface {
 	TargetUser(ctx context.Context, obj *db.AuditLog) (*string, error)
 }
 type MutationResolver interface {
+	EnableReconciler(ctx context.Context, name sqlc.ReconcilerName) (*db.Reconciler, error)
+	DisableReconciler(ctx context.Context, name sqlc.ReconcilerName) (*db.Reconciler, error)
+	ConfigureReconciler(ctx context.Context, name sqlc.ReconcilerName, config map[string]interface{}) (*db.Reconciler, error)
+	ResetReconciler(ctx context.Context, name sqlc.ReconcilerName) (*db.Reconciler, error)
 	AssignGlobalRoleToUser(ctx context.Context, role sqlc.RoleName, userID *uuid.UUID) (*db.User, error)
 	RevokeGlobalRoleFromUser(ctx context.Context, role sqlc.RoleName, userID *uuid.UUID) (*db.User, error)
 	CreateTeam(ctx context.Context, input model.CreateTeamInput) (*db.Team, error)
@@ -159,12 +186,17 @@ type MutationResolver interface {
 }
 type QueryResolver interface {
 	Me(ctx context.Context) (db.AuthenticatedUser, error)
+	Reconcilers(ctx context.Context) ([]*db.Reconciler, error)
 	Roles(ctx context.Context) ([]sqlc.RoleName, error)
 	Teams(ctx context.Context) ([]*db.Team, error)
 	Team(ctx context.Context, id *uuid.UUID) (*db.Team, error)
 	Users(ctx context.Context) ([]*db.User, error)
 	User(ctx context.Context, id *uuid.UUID) (*db.User, error)
 	UserByEmail(ctx context.Context, email string) (*db.User, error)
+}
+type ReconcilerResolver interface {
+	Config(ctx context.Context, obj *db.Reconciler) ([]*db.ReconcilerConfig, error)
+	Configured(ctx context.Context, obj *db.Reconciler) (bool, error)
 }
 type RoleResolver interface {
 	TargetID(ctx context.Context, obj *db.Role) (*uuid.UUID, error)
@@ -298,6 +330,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.AssignGlobalRoleToUser(childComplexity, args["role"].(sqlc.RoleName), args["userID"].(*uuid.UUID)), true
 
+	case "Mutation.configureReconciler":
+		if e.complexity.Mutation.ConfigureReconciler == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_configureReconciler_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.ConfigureReconciler(childComplexity, args["name"].(sqlc.ReconcilerName), args["config"].(map[string]interface{})), true
+
 	case "Mutation.createTeam":
 		if e.complexity.Mutation.CreateTeam == nil {
 			break
@@ -310,6 +354,30 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.CreateTeam(childComplexity, args["input"].(model.CreateTeamInput)), true
 
+	case "Mutation.disableReconciler":
+		if e.complexity.Mutation.DisableReconciler == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_disableReconciler_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DisableReconciler(childComplexity, args["name"].(sqlc.ReconcilerName)), true
+
+	case "Mutation.enableReconciler":
+		if e.complexity.Mutation.EnableReconciler == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_enableReconciler_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.EnableReconciler(childComplexity, args["name"].(sqlc.ReconcilerName)), true
+
 	case "Mutation.removeUsersFromTeam":
 		if e.complexity.Mutation.RemoveUsersFromTeam == nil {
 			break
@@ -321,6 +389,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.RemoveUsersFromTeam(childComplexity, args["input"].(model.RemoveUsersFromTeamInput)), true
+
+	case "Mutation.resetReconciler":
+		if e.complexity.Mutation.ResetReconciler == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_resetReconciler_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.ResetReconciler(childComplexity, args["name"].(sqlc.ReconcilerName)), true
 
 	case "Mutation.revokeGlobalRoleFromUser":
 		if e.complexity.Mutation.RevokeGlobalRoleFromUser == nil {
@@ -376,6 +456,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.Me(childComplexity), true
+
+	case "Query.reconcilers":
+		if e.complexity.Query.Reconcilers == nil {
+			break
+		}
+
+		return e.complexity.Query.Reconcilers(childComplexity), true
 
 	case "Query.roles":
 		if e.complexity.Query.Roles == nil {
@@ -433,6 +520,76 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.Users(childComplexity), true
+
+	case "Reconciler.config":
+		if e.complexity.Reconciler.Config == nil {
+			break
+		}
+
+		return e.complexity.Reconciler.Config(childComplexity), true
+
+	case "Reconciler.configured":
+		if e.complexity.Reconciler.Configured == nil {
+			break
+		}
+
+		return e.complexity.Reconciler.Configured(childComplexity), true
+
+	case "Reconciler.description":
+		if e.complexity.Reconciler.Description == nil {
+			break
+		}
+
+		return e.complexity.Reconciler.Description(childComplexity), true
+
+	case "Reconciler.displayName":
+		if e.complexity.Reconciler.DisplayName == nil {
+			break
+		}
+
+		return e.complexity.Reconciler.DisplayName(childComplexity), true
+
+	case "Reconciler.enabled":
+		if e.complexity.Reconciler.Enabled == nil {
+			break
+		}
+
+		return e.complexity.Reconciler.Enabled(childComplexity), true
+
+	case "Reconciler.name":
+		if e.complexity.Reconciler.Name == nil {
+			break
+		}
+
+		return e.complexity.Reconciler.Name(childComplexity), true
+
+	case "Reconciler.runOrder":
+		if e.complexity.Reconciler.RunOrder == nil {
+			break
+		}
+
+		return e.complexity.Reconciler.RunOrder(childComplexity), true
+
+	case "ReconcilerConfig.configured":
+		if e.complexity.ReconcilerConfig.Configured == nil {
+			break
+		}
+
+		return e.complexity.ReconcilerConfig.Configured(childComplexity), true
+
+	case "ReconcilerConfig.description":
+		if e.complexity.ReconcilerConfig.Description == nil {
+			break
+		}
+
+		return e.complexity.ReconcilerConfig.Description(childComplexity), true
+
+	case "ReconcilerConfig.key":
+		if e.complexity.ReconcilerConfig.Key == nil {
+			break
+		}
+
+		return e.complexity.ReconcilerConfig.Key(childComplexity), true
 
 	case "Role.isGlobal":
 		if e.complexity.Role.IsGlobal == nil {
@@ -740,8 +897,88 @@ type AuditLog {
 
 "Authenticated user type. Can be a user or a service account."
 union AuthenticatedUser = User | ServiceAccount`, BuiltIn: false},
-	{Name: "../../../graphql/directives.graphqls", Input: `"Require authentication for all requests with this directive."
-directive @auth on FIELD_DEFINITION`, BuiltIn: false},
+	{Name: "../../../graphql/directives.graphqls", Input: `"Require an authenticated user for all requests with this directive."
+directive @auth on FIELD_DEFINITION
+
+"Require an authenticated user with the admin role for all requests with this directive."
+directive @admin on FIELD_DEFINITION`, BuiltIn: false},
+	{Name: "../../../graphql/reconcilers.graphqls", Input: `extend type Mutation {
+    """
+    Enable a reconciler
+
+    A reconciler must be fully configured before it can be enabled.
+    """
+    enableReconciler(
+        "The name of the reconciler to enable."
+        name: ReconcilerName!
+    ): Reconciler! @admin
+
+    """
+    Disable a reconciler
+
+    The reconciler configuration will be left intact.
+    """
+    disableReconciler(
+        "The name of the reconciler to disable."
+        name: ReconcilerName!
+    ): Reconciler! @admin
+
+    "Configure a reconciler."
+    configureReconciler(
+        "The name of the reconciler to configure."
+        name: ReconcilerName!
+
+        "Configuration options as a key => value map."
+        config: Map!
+    ): Reconciler! @admin
+
+    "Reset all reconciler configuration options to their initial state and disable the reconciler if it is currently enabled."
+    resetReconciler(
+        "The name of the reconciler to reset."
+        name: ReconcilerName!
+    ): Reconciler! @admin
+}
+
+extend type Query {
+    "Get a collection of reconcilers."
+    reconcilers: [Reconciler!]! @admin
+}
+
+"Reconciler type."
+type Reconciler {
+    "The name of the reconciler."
+    name: ReconcilerName!
+
+    "The human-friendly name of the reconciler."
+    displayName: String!
+
+    "Description of what the reconciler is responsible for."
+    description: String!
+
+    "Whether or not the reconciler is available for teams in Console."
+    enabled: Boolean!
+
+    "Reconciler configuration keys and descriptions."
+    config: [ReconcilerConfig!]!
+
+    "Whether or not the reconciler is fully configured and ready to be enabled."
+    configured: Boolean!
+
+    "The run order of the reconciler."
+    runOrder: Int!
+}
+
+"Reconciler configuration type."
+type ReconcilerConfig {
+    "Configuration key."
+    key: String!
+
+    "Configuration description."
+    description: String!
+
+    "Whether or not the configuration key has a value."
+    configured: Boolean!
+}`, BuiltIn: false},
 	{Name: "../../../graphql/roles.graphqls", Input: `extend type Query {
     "List all Console roles."
     roles: [RoleName!]!
@@ -761,7 +998,7 @@ extend type Mutation {
 
         "The user that will be assiged the role."
         userID: UUID!
-    ): User! @auth
+    ): User! @admin
 
     """
     Revoke a global role from a user
@@ -776,7 +1013,7 @@ extend type Mutation {
 
         "The user to revoke the role from."
         userID: UUID!
-    ): User! @auth
+    ): User! @admin
 }
 
 "Role binding type."
@@ -821,6 +1058,9 @@ scalar RoleName
 
 "String value representing a system name."
 scalar SystemName
+
+"String value representing a reconciler name."
+scalar ReconcilerName
 
 """
 A collection of key => value pairs.
@@ -1174,6 +1414,30 @@ func (ec *executionContext) field_Mutation_assignGlobalRoleToUser_args(ctx conte
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_configureReconciler_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 sqlc.ReconcilerName
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+		arg0, err = ec.unmarshalNReconcilerName2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐReconcilerName(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["name"] = arg0
+	var arg1 map[string]interface{}
+	if tmp, ok := rawArgs["config"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("config"))
+		arg1, err = ec.unmarshalNMap2map(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["config"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_createTeam_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -1189,6 +1453,36 @@ func (ec *executionContext) field_Mutation_createTeam_args(ctx context.Context, 
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_disableReconciler_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 sqlc.ReconcilerName
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+		arg0, err = ec.unmarshalNReconcilerName2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐReconcilerName(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_enableReconciler_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 sqlc.ReconcilerName
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+		arg0, err = ec.unmarshalNReconcilerName2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐReconcilerName(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["name"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_removeUsersFromTeam_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -1201,6 +1495,21 @@ func (ec *executionContext) field_Mutation_removeUsersFromTeam_args(ctx context.
 		}
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_resetReconciler_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 sqlc.ReconcilerName
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+		arg0, err = ec.unmarshalNReconcilerName2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐReconcilerName(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["name"] = arg0
 	return args, nil
 }
 
@@ -1767,6 +2076,370 @@ func (ec *executionContext) fieldContext_AuditLog_createdAt(ctx context.Context,
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_enableReconciler(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_enableReconciler(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().EnableReconciler(rctx, fc.Args["name"].(sqlc.ReconcilerName))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Admin == nil {
+				return nil, errors.New("directive admin is not implemented")
+			}
+			return ec.directives.Admin(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*db.Reconciler); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/db.Reconciler`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*db.Reconciler)
+	fc.Result = res
+	return ec.marshalNReconciler2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐReconciler(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_enableReconciler(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "name":
+				return ec.fieldContext_Reconciler_name(ctx, field)
+			case "displayName":
+				return ec.fieldContext_Reconciler_displayName(ctx, field)
+			case "description":
+				return ec.fieldContext_Reconciler_description(ctx, field)
+			case "enabled":
+				return ec.fieldContext_Reconciler_enabled(ctx, field)
+			case "config":
+				return ec.fieldContext_Reconciler_config(ctx, field)
+			case "configured":
+				return ec.fieldContext_Reconciler_configured(ctx, field)
+			case "runOrder":
+				return ec.fieldContext_Reconciler_runOrder(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Reconciler", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_enableReconciler_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_disableReconciler(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_disableReconciler(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().DisableReconciler(rctx, fc.Args["name"].(sqlc.ReconcilerName))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Admin == nil {
+				return nil, errors.New("directive admin is not implemented")
+			}
+			return ec.directives.Admin(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*db.Reconciler); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/db.Reconciler`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*db.Reconciler)
+	fc.Result = res
+	return ec.marshalNReconciler2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐReconciler(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_disableReconciler(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "name":
+				return ec.fieldContext_Reconciler_name(ctx, field)
+			case "displayName":
+				return ec.fieldContext_Reconciler_displayName(ctx, field)
+			case "description":
+				return ec.fieldContext_Reconciler_description(ctx, field)
+			case "enabled":
+				return ec.fieldContext_Reconciler_enabled(ctx, field)
+			case "config":
+				return ec.fieldContext_Reconciler_config(ctx, field)
+			case "configured":
+				return ec.fieldContext_Reconciler_configured(ctx, field)
+			case "runOrder":
+				return ec.fieldContext_Reconciler_runOrder(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Reconciler", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_disableReconciler_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_configureReconciler(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_configureReconciler(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().ConfigureReconciler(rctx, fc.Args["name"].(sqlc.ReconcilerName), fc.Args["config"].(map[string]interface{}))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Admin == nil {
+				return nil, errors.New("directive admin is not implemented")
+			}
+			return ec.directives.Admin(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*db.Reconciler); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/db.Reconciler`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*db.Reconciler)
+	fc.Result = res
+	return ec.marshalNReconciler2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐReconciler(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_configureReconciler(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "name":
+				return ec.fieldContext_Reconciler_name(ctx, field)
+			case "displayName":
+				return ec.fieldContext_Reconciler_displayName(ctx, field)
+			case "description":
+				return ec.fieldContext_Reconciler_description(ctx, field)
+			case "enabled":
+				return ec.fieldContext_Reconciler_enabled(ctx, field)
+			case "config":
+				return ec.fieldContext_Reconciler_config(ctx, field)
+			case "configured":
+				return ec.fieldContext_Reconciler_configured(ctx, field)
+			case "runOrder":
+				return ec.fieldContext_Reconciler_runOrder(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Reconciler", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_configureReconciler_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_resetReconciler(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_resetReconciler(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().ResetReconciler(rctx, fc.Args["name"].(sqlc.ReconcilerName))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Admin == nil {
+				return nil, errors.New("directive admin is not implemented")
+			}
+			return ec.directives.Admin(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*db.Reconciler); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/db.Reconciler`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*db.Reconciler)
+	fc.Result = res
+	return ec.marshalNReconciler2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐReconciler(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_resetReconciler(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "name":
+				return ec.fieldContext_Reconciler_name(ctx, field)
+			case "displayName":
+				return ec.fieldContext_Reconciler_displayName(ctx, field)
+			case "description":
+				return ec.fieldContext_Reconciler_description(ctx, field)
+			case "enabled":
+				return ec.fieldContext_Reconciler_enabled(ctx, field)
+			case "config":
+				return ec.fieldContext_Reconciler_config(ctx, field)
+			case "configured":
+				return ec.fieldContext_Reconciler_configured(ctx, field)
+			case "runOrder":
+				return ec.fieldContext_Reconciler_runOrder(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Reconciler", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_resetReconciler_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_assignGlobalRoleToUser(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_assignGlobalRoleToUser(ctx, field)
 	if err != nil {
@@ -1785,10 +2458,10 @@ func (ec *executionContext) _Mutation_assignGlobalRoleToUser(ctx context.Context
 			return ec.resolvers.Mutation().AssignGlobalRoleToUser(rctx, fc.Args["role"].(sqlc.RoleName), fc.Args["userID"].(*uuid.UUID))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Auth == nil {
-				return nil, errors.New("directive auth is not implemented")
+			if ec.directives.Admin == nil {
+				return nil, errors.New("directive admin is not implemented")
 			}
-			return ec.directives.Auth(ctx, nil, directive0)
+			return ec.directives.Admin(ctx, nil, directive0)
 		}
 
 		tmp, err := directive1(rctx)
@@ -1872,10 +2545,10 @@ func (ec *executionContext) _Mutation_revokeGlobalRoleFromUser(ctx context.Conte
 			return ec.resolvers.Mutation().RevokeGlobalRoleFromUser(rctx, fc.Args["role"].(sqlc.RoleName), fc.Args["userID"].(*uuid.UUID))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Auth == nil {
-				return nil, errors.New("directive auth is not implemented")
+			if ec.directives.Admin == nil {
+				return nil, errors.New("directive admin is not implemented")
 			}
-			return ec.directives.Auth(ctx, nil, directive0)
+			return ec.directives.Admin(ctx, nil, directive0)
 		}
 
 		tmp, err := directive1(rctx)
@@ -2644,6 +3317,86 @@ func (ec *executionContext) fieldContext_Query_me(ctx context.Context, field gra
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_reconcilers(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_reconcilers(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().Reconcilers(rctx)
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Admin == nil {
+				return nil, errors.New("directive admin is not implemented")
+			}
+			return ec.directives.Admin(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*db.Reconciler); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/nais/console/pkg/db.Reconciler`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*db.Reconciler)
+	fc.Result = res
+	return ec.marshalNReconciler2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐReconcilerᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_reconcilers(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "name":
+				return ec.fieldContext_Reconciler_name(ctx, field)
+			case "displayName":
+				return ec.fieldContext_Reconciler_displayName(ctx, field)
+			case "description":
+				return ec.fieldContext_Reconciler_description(ctx, field)
+			case "enabled":
+				return ec.fieldContext_Reconciler_enabled(ctx, field)
+			case "config":
+				return ec.fieldContext_Reconciler_config(ctx, field)
+			case "configured":
+				return ec.fieldContext_Reconciler_configured(ctx, field)
+			case "runOrder":
+				return ec.fieldContext_Reconciler_runOrder(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Reconciler", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_roles(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query_roles(ctx, field)
 	if err != nil {
@@ -3237,6 +3990,454 @@ func (ec *executionContext) fieldContext_Query___schema(ctx context.Context, fie
 				return ec.fieldContext___Schema_directives(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type __Schema", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Reconciler_name(ctx context.Context, field graphql.CollectedField, obj *db.Reconciler) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Reconciler_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(sqlc.ReconcilerName)
+	fc.Result = res
+	return ec.marshalNReconcilerName2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐReconcilerName(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Reconciler_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Reconciler",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ReconcilerName does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Reconciler_displayName(ctx context.Context, field graphql.CollectedField, obj *db.Reconciler) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Reconciler_displayName(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DisplayName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Reconciler_displayName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Reconciler",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Reconciler_description(ctx context.Context, field graphql.CollectedField, obj *db.Reconciler) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Reconciler_description(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Description, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Reconciler_description(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Reconciler",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Reconciler_enabled(ctx context.Context, field graphql.CollectedField, obj *db.Reconciler) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Reconciler_enabled(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Enabled, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Reconciler_enabled(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Reconciler",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Reconciler_config(ctx context.Context, field graphql.CollectedField, obj *db.Reconciler) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Reconciler_config(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Reconciler().Config(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*db.ReconcilerConfig)
+	fc.Result = res
+	return ec.marshalNReconcilerConfig2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐReconcilerConfigᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Reconciler_config(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Reconciler",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "key":
+				return ec.fieldContext_ReconcilerConfig_key(ctx, field)
+			case "description":
+				return ec.fieldContext_ReconcilerConfig_description(ctx, field)
+			case "configured":
+				return ec.fieldContext_ReconcilerConfig_configured(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ReconcilerConfig", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Reconciler_configured(ctx context.Context, field graphql.CollectedField, obj *db.Reconciler) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Reconciler_configured(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Reconciler().Configured(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Reconciler_configured(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Reconciler",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Reconciler_runOrder(ctx context.Context, field graphql.CollectedField, obj *db.Reconciler) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Reconciler_runOrder(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.RunOrder, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int32)
+	fc.Result = res
+	return ec.marshalNInt2int32(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Reconciler_runOrder(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Reconciler",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ReconcilerConfig_key(ctx context.Context, field graphql.CollectedField, obj *db.ReconcilerConfig) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ReconcilerConfig_key(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Key, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ReconcilerConfig_key(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ReconcilerConfig",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ReconcilerConfig_description(ctx context.Context, field graphql.CollectedField, obj *db.ReconcilerConfig) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ReconcilerConfig_description(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Description, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ReconcilerConfig_description(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ReconcilerConfig",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ReconcilerConfig_configured(ctx context.Context, field graphql.CollectedField, obj *db.ReconcilerConfig) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ReconcilerConfig_configured(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Configured, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ReconcilerConfig_configured(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ReconcilerConfig",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
 		},
 	}
 	return fc, nil
@@ -6725,6 +7926,42 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Mutation")
+		case "enableReconciler":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_enableReconciler(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "disableReconciler":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_disableReconciler(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "configureReconciler":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_configureReconciler(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "resetReconciler":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_resetReconciler(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "assignGlobalRoleToUser":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
@@ -6846,6 +8083,29 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_me(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "reconcilers":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_reconcilers(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -7009,6 +8269,144 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				return ec._Query___schema(ctx, field)
 			})
 
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var reconcilerImplementors = []string{"Reconciler"}
+
+func (ec *executionContext) _Reconciler(ctx context.Context, sel ast.SelectionSet, obj *db.Reconciler) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, reconcilerImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Reconciler")
+		case "name":
+
+			out.Values[i] = ec._Reconciler_name(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "displayName":
+
+			out.Values[i] = ec._Reconciler_displayName(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "description":
+
+			out.Values[i] = ec._Reconciler_description(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "enabled":
+
+			out.Values[i] = ec._Reconciler_enabled(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "config":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Reconciler_config(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
+		case "configured":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Reconciler_configured(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
+		case "runOrder":
+
+			out.Values[i] = ec._Reconciler_runOrder(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var reconcilerConfigImplementors = []string{"ReconcilerConfig"}
+
+func (ec *executionContext) _ReconcilerConfig(ctx context.Context, sel ast.SelectionSet, obj *db.ReconcilerConfig) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, reconcilerConfigImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ReconcilerConfig")
+		case "key":
+
+			out.Values[i] = ec._ReconcilerConfig_key(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "description":
+
+			out.Values[i] = ec._ReconcilerConfig_description(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "configured":
+
+			out.Values[i] = ec._ReconcilerConfig_configured(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -7918,6 +9316,170 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 func (ec *executionContext) unmarshalNCreateTeamInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐCreateTeamInput(ctx context.Context, v interface{}) (model.CreateTeamInput, error) {
 	res, err := ec.unmarshalInputCreateTeamInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNInt2int32(ctx context.Context, v interface{}) (int32, error) {
+	res, err := graphql.UnmarshalInt32(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNInt2int32(ctx context.Context, sel ast.SelectionSet, v int32) graphql.Marshaler {
+	res := graphql.MarshalInt32(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) unmarshalNMap2map(ctx context.Context, v interface{}) (map[string]interface{}, error) {
+	res, err := graphql.UnmarshalMap(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNMap2map(ctx context.Context, sel ast.SelectionSet, v map[string]interface{}) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	res := graphql.MarshalMap(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) marshalNReconciler2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐReconciler(ctx context.Context, sel ast.SelectionSet, v db.Reconciler) graphql.Marshaler {
+	return ec._Reconciler(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNReconciler2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐReconcilerᚄ(ctx context.Context, sel ast.SelectionSet, v []*db.Reconciler) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNReconciler2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐReconciler(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNReconciler2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐReconciler(ctx context.Context, sel ast.SelectionSet, v *db.Reconciler) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Reconciler(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNReconcilerConfig2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐReconcilerConfigᚄ(ctx context.Context, sel ast.SelectionSet, v []*db.ReconcilerConfig) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNReconcilerConfig2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐReconcilerConfig(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNReconcilerConfig2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐReconcilerConfig(ctx context.Context, sel ast.SelectionSet, v *db.ReconcilerConfig) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ReconcilerConfig(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNReconcilerName2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐReconcilerName(ctx context.Context, v interface{}) (sqlc.ReconcilerName, error) {
+	tmp, err := graphql.UnmarshalString(v)
+	res := sqlc.ReconcilerName(tmp)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNReconcilerName2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐReconcilerName(ctx context.Context, sel ast.SelectionSet, v sqlc.ReconcilerName) graphql.Marshaler {
+	res := graphql.MarshalString(string(v))
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
 }
 
 func (ec *executionContext) unmarshalNRemoveUsersFromTeamInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRemoveUsersFromTeamInput(ctx context.Context, v interface{}) (model.RemoveUsersFromTeamInput, error) {

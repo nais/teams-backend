@@ -15,6 +15,7 @@ type Querier interface {
 	AssignGlobalRoleToUser(ctx context.Context, arg AssignGlobalRoleToUserParams) error
 	AssignTargetedRoleToUser(ctx context.Context, arg AssignTargetedRoleToUserParams) error
 	ClearTeamReconcileErrorForSystem(ctx context.Context, arg ClearTeamReconcileErrorForSystemParams) error
+	ConfigureReconciler(ctx context.Context, arg ConfigureReconcilerParams) error
 	CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) error
 	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) error
 	CreateServiceAccount(ctx context.Context, name string) (*User, error)
@@ -24,7 +25,13 @@ type Querier interface {
 	DeleteServiceAccount(ctx context.Context, id uuid.UUID) error
 	DeleteSession(ctx context.Context, id uuid.UUID) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
+	DisableReconciler(ctx context.Context, name ReconcilerName) (*Reconciler, error)
+	EnableReconciler(ctx context.Context, name ReconcilerName) (*Reconciler, error)
 	GetAuditLogsForTeam(ctx context.Context, targetTeamSlug *slug.Slug) ([]*AuditLog, error)
+	GetEnabledReconcilers(ctx context.Context) ([]*Reconciler, error)
+	GetReconciler(ctx context.Context, name ReconcilerName) (*Reconciler, error)
+	GetReconcilerConfig(ctx context.Context, reconciler ReconcilerName) ([]*GetReconcilerConfigRow, error)
+	GetReconcilers(ctx context.Context) ([]*Reconciler, error)
 	GetRoleAuthorizations(ctx context.Context, roleName RoleName) ([]AuthzName, error)
 	GetServiceAccountByApiKey(ctx context.Context, apiKey string) (*User, error)
 	GetServiceAccountByName(ctx context.Context, name string) (*User, error)
@@ -46,6 +53,7 @@ type Querier interface {
 	RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) error
 	RemoveApiKeysFromServiceAccount(ctx context.Context, userID uuid.UUID) error
 	RemoveGlobalUserRole(ctx context.Context, arg RemoveGlobalUserRoleParams) error
+	ResetReconcilerConfig(ctx context.Context, reconciler ReconcilerName) error
 	RevokeGlobalRoleFromUser(ctx context.Context, arg RevokeGlobalRoleFromUserParams) error
 	RevokeTargetedRoleFromUser(ctx context.Context, arg RevokeTargetedRoleFromUserParams) error
 	SetSessionExpires(ctx context.Context, arg SetSessionExpiresParams) (*Session, error)

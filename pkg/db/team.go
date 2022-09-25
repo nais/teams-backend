@@ -24,7 +24,7 @@ func (d *database) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) (TeamM
 }
 
 func (d *database) SetTeamMetadata(ctx context.Context, teamID uuid.UUID, metadata TeamMetadata) error {
-	return d.querier.Transaction(ctx, func(querier Querier) error {
+	return d.querier.Transaction(ctx, func(ctx context.Context, querier Querier) error {
 		for k, v := range metadata {
 			err := querier.SetTeamMetadata(ctx, sqlc.SetTeamMetadataParams{
 				TeamID: teamID,

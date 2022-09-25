@@ -23,7 +23,7 @@ func (q *Queries) Transaction(ctx context.Context, callback QuerierTransactionFu
 
 	defer querier.rollback(ctx)
 
-	err = callback(querier)
+	err = callback(ctx, querier)
 	if err != nil {
 		return err
 	}

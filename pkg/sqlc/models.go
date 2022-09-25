@@ -61,6 +61,10 @@ const (
 	AuditActionGraphqlApiRolesRevokeGlobalRole           AuditAction = "graphql-api:roles:revoke-global-role"
 	AuditActionGoogleGcpProjectSetBillingInfo            AuditAction = "google:gcp:project:set-billing-info"
 	AuditActionGoogleGcpProjectCreateCnrmServiceAccount  AuditAction = "google:gcp:project:create-cnrm-service-account"
+	AuditActionGraphqlApiReconcilersConfigure            AuditAction = "graphql-api:reconcilers:configure"
+	AuditActionGraphqlApiReconcilersDisable              AuditAction = "graphql-api:reconcilers:disable"
+	AuditActionGraphqlApiReconcilersEnable               AuditAction = "graphql-api:reconcilers:enable"
+	AuditActionGraphqlApiReconcilersReset                AuditAction = "graphql-api:reconcilers:reset"
 )
 
 func (e *AuditAction) Scan(src interface{}) error {
@@ -142,7 +146,11 @@ func (e AuditAction) Valid() bool {
 		AuditActionGraphqlApiRolesAssignGlobalRole,
 		AuditActionGraphqlApiRolesRevokeGlobalRole,
 		AuditActionGoogleGcpProjectSetBillingInfo,
-		AuditActionGoogleGcpProjectCreateCnrmServiceAccount:
+		AuditActionGoogleGcpProjectCreateCnrmServiceAccount,
+		AuditActionGraphqlApiReconcilersConfigure,
+		AuditActionGraphqlApiReconcilersDisable,
+		AuditActionGraphqlApiReconcilersEnable,
+		AuditActionGraphqlApiReconcilersReset:
 		return true
 	}
 	return false
@@ -193,6 +201,10 @@ func AllAuditActionValues() []AuditAction {
 		AuditActionGraphqlApiRolesRevokeGlobalRole,
 		AuditActionGoogleGcpProjectSetBillingInfo,
 		AuditActionGoogleGcpProjectCreateCnrmServiceAccount,
+		AuditActionGraphqlApiReconcilersConfigure,
+		AuditActionGraphqlApiReconcilersDisable,
+		AuditActionGraphqlApiReconcilersEnable,
+		AuditActionGraphqlApiReconcilersReset,
 	}
 }
 
@@ -293,6 +305,73 @@ func AllAuthzNameValues() []AuthzName {
 		AuthzNameTeamsUpdate,
 		AuthzNameUsersList,
 		AuthzNameUsersUpdate,
+	}
+}
+
+type ReconcilerName string
+
+const (
+	ReconcilerNameAzureGroup           ReconcilerName = "azure:group"
+	ReconcilerNameGithubTeam           ReconcilerName = "github:team"
+	ReconcilerNameGoogleGcpProject     ReconcilerName = "google:gcp:project"
+	ReconcilerNameGoogleWorkspaceAdmin ReconcilerName = "google:workspace-admin"
+	ReconcilerNameNaisNamespace        ReconcilerName = "nais:namespace"
+)
+
+func (e *ReconcilerName) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ReconcilerName(s)
+	case string:
+		*e = ReconcilerName(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ReconcilerName: %T", src)
+	}
+	return nil
+}
+
+type NullReconcilerName struct {
+	ReconcilerName ReconcilerName
+	Valid          bool // Valid is true if String is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullReconcilerName) Scan(value interface{}) error {
+	if value == nil {
+		ns.ReconcilerName, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ReconcilerName.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullReconcilerName) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return ns.ReconcilerName, nil
+}
+
+func (e ReconcilerName) Valid() bool {
+	switch e {
+	case ReconcilerNameAzureGroup,
+		ReconcilerNameGithubTeam,
+		ReconcilerNameGoogleGcpProject,
+		ReconcilerNameGoogleWorkspaceAdmin,
+		ReconcilerNameNaisNamespace:
+		return true
+	}
+	return false
+}
+
+func AllReconcilerNameValues() []ReconcilerName {
+	return []ReconcilerName{
+		ReconcilerNameAzureGroup,
+		ReconcilerNameGithubTeam,
+		ReconcilerNameGoogleGcpProject,
+		ReconcilerNameGoogleWorkspaceAdmin,
+		ReconcilerNameNaisNamespace,
 	}
 }
 
@@ -478,6 +557,21 @@ type ReconcileError struct {
 	SystemName    SystemName
 	CreatedAt     time.Time
 	ErrorMessage  string
+}
+
+type Reconciler struct {
+	Name        ReconcilerName
+	DisplayName string
+	Description string
+	Enabled     bool
+	RunOrder    int32
+}
+
+type ReconcilerConfig struct {
+	Reconciler  ReconcilerName
+	Key         string
+	Description string
+	Value       sql.NullString
 }
 
 type RoleAuthz struct {

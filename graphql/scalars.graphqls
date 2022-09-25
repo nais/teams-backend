@@ -30,6 +30,9 @@ scalar RoleName
 "String value representing a system name."
 scalar SystemName
 
+"String value representing a reconciler name."
+scalar ReconcilerName
+
 """
 A collection of key => value pairs.
 

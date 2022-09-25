@@ -22,12 +22,6 @@ func (r *mutationResolver) AssignGlobalRoleToUser(ctx context.Context, role sqlc
 		return nil, fmt.Errorf("%q is not a valid role", role)
 	}
 
-	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireRole(actor, sqlc.RoleNameAdmin)
-	if err != nil {
-		return nil, err
-	}
-
 	user, err := r.database.GetUserByID(ctx, *userID)
 	if err != nil {
 		return nil, err
@@ -38,6 +32,7 @@ func (r *mutationResolver) AssignGlobalRoleToUser(ctx context.Context, role sqlc
 		return nil, err
 	}
 
+	actor := authz.ActorFromContext(ctx)
 	fields := auditlogger.Fields{
 		Action:     sqlc.AuditActionGraphqlApiRolesAssignGlobalRole,
 		Actor:      console.Strp(actor.User.Identity()),
@@ -54,12 +49,6 @@ func (r *mutationResolver) RevokeGlobalRoleFromUser(ctx context.Context, role sq
 		return nil, fmt.Errorf("%q is not a valid role", role)
 	}
 
-	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireRole(actor, sqlc.RoleNameAdmin)
-	if err != nil {
-		return nil, err
-	}
-
 	user, err := r.database.GetUserByID(ctx, *userID)
 	if err != nil {
 		return nil, err
@@ -70,6 +59,7 @@ func (r *mutationResolver) RevokeGlobalRoleFromUser(ctx context.Context, role sq
 		return nil, err
 	}
 
+	actor := authz.ActorFromContext(ctx)
 	fields := auditlogger.Fields{
 		Action:     sqlc.AuditActionGraphqlApiRolesRevokeGlobalRole,
 		Actor:      console.Strp(actor.User.Identity()),

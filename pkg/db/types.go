@@ -11,7 +11,7 @@ import (
 )
 
 type (
-	QuerierTransactionFunc  func(querier Querier) error
+	QuerierTransactionFunc  func(ctx context.Context, querier Querier) error
 	DatabaseTransactionFunc func(ctx context.Context, dbtx Database) error
 )
 
@@ -23,6 +23,14 @@ type AuthenticatedUser interface {
 
 type AuditLog struct {
 	*sqlc.AuditLog
+}
+
+type Reconciler struct {
+	*sqlc.Reconciler
+}
+
+type ReconcilerConfig struct {
+	*sqlc.GetReconcilerConfigRow
 }
 
 type ReconcileError struct {
@@ -116,6 +124,14 @@ type Database interface {
 	DeleteSession(ctx context.Context, sessionID uuid.UUID) error
 	GetSessionByID(ctx context.Context, sessionID uuid.UUID) (*Session, error)
 	ExtendSession(ctx context.Context, sessionID uuid.UUID) (*Session, error)
+	GetReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*Reconciler, error)
+	GetReconcilers(ctx context.Context) ([]*Reconciler, error)
+	GetEnabledReconcilers(ctx context.Context) ([]*Reconciler, error)
+	ConfigureReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName, config map[string]string) (*Reconciler, error)
+	GetReconcilerConfig(ctx context.Context, reconcilerName sqlc.ReconcilerName) ([]*ReconcilerConfig, error)
+	ResetReconcilerConfig(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*Reconciler, error)
+	EnableReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*Reconciler, error)
+	DisableReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*Reconciler, error)
 }
 
 func (u User) GetID() uuid.UUID {

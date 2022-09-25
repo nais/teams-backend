@@ -342,6 +342,7 @@ func setupGraphAPI(database db.Database, domain string, teamReconciler chan<- re
 	resolver := graph.NewResolver(database, domain, teamReconciler, auditLogger)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
+	gc.Directives.Admin = directives.Admin()
 	gc.Directives.Auth = directives.Auth()
 	gc.Complexity.User.Teams = func(childComplexity int) int {
 		return 10 * childComplexity
