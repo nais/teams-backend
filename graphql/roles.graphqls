@@ -17,7 +17,7 @@ extend type Mutation {
 
         "The user that will be assiged the role."
         userID: UUID!
-    ): User! @auth
+    ): User! @admin
 
     """
     Revoke a global role from a user
@@ -32,7 +32,7 @@ extend type Mutation {
 
         "The user to revoke the role from."
         userID: UUID!
-    ): User! @auth
+    ): User! @admin
 }
 
 "Role binding type."
