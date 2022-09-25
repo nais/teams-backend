@@ -23,6 +23,7 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/cloudbilling/v1"
 	"google.golang.org/api/cloudresourcemanager/v3"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iam/v1"
 	"google.golang.org/api/option"
 )
@@ -123,6 +124,14 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 			log.Errorf("system state not persisted: %s", err)
 		}
 
+		err = r.ensureProjectHasLabels(ctx, project, map[string]string{
+			"team":        string(input.Team.Slug),
+			"environment": environment,
+		})
+		if err != nil {
+			return fmt.Errorf("unable to set project labels: %w", err)
+		}
+
 		err = r.setProjectPermissions(ctx, project, input, *googleWorkspaceState.GroupEmail, environment, cluster)
 		if err != nil {
 			return fmt.Errorf("unable to set group permissions to project %q for team %q in environment %q: %w", project.ProjectId, input.Team.Slug, environment, err)
@@ -156,20 +165,13 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *rec
 		return nil, fmt.Errorf("unable to create GCP project: %w", err)
 	}
 
-	for !operation.Done {
-		time.Sleep(1 * time.Second) // Make sure not to hammer the Operation API
-		operation, err = r.gcpServices.cloudResourceManager.Operations.Get(operation.Name).Do()
-		if err != nil {
-			return nil, fmt.Errorf("unable to poll GCP project creation: %w", err)
-		}
-	}
-
-	if operation.Error != nil {
-		return nil, fmt.Errorf("unable to create GCP project: %s", operation.Error.Message)
+	response, err := r.getOperationResponse(operation)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create GCP project: %w", err)
 	}
 
 	createdProject := &cloudresourcemanager.Project{}
-	err = json.Unmarshal(operation.Response, createdProject)
+	err = json.Unmarshal(response, createdProject)
 	if err != nil {
 		return nil, fmt.Errorf("unable to convert operation response to the created GCP project: %w", err)
 	}
@@ -293,6 +295,35 @@ func (r *googleGcpReconciler) setTeamProjectBillingInfo(ctx context.Context, pro
 	r.auditLogger.Logf(ctx, fields, "set billing info for %q", project.ProjectId)
 
 	return nil
+}
+
+func (r *googleGcpReconciler) getOperationResponse(operation *cloudresourcemanager.Operation) (googleapi.RawMessage, error) {
+	var err error
+	for !operation.Done {
+		time.Sleep(1 * time.Second) // Make sure not to hammer the Operation API
+		operation, err = r.gcpServices.cloudResourceManager.Operations.Get(operation.Name).Do()
+		if err != nil {
+			return nil, fmt.Errorf("unable to poll operation: %w", err)
+		}
+	}
+
+	if operation.Error != nil {
+		return nil, fmt.Errorf("unable to complete operation: %s", operation.Error.Message)
+	}
+
+	return operation.Response, nil
+}
+
+func (r *googleGcpReconciler) ensureProjectHasLabels(_ context.Context, project *cloudresourcemanager.Project, labels map[string]string) error {
+	operation, err := r.gcpServices.cloudResourceManager.Projects.Patch(project.Name, &cloudresourcemanager.Project{
+		Labels: labels,
+	}).Do()
+	if err != nil {
+		return err
+	}
+
+	_, err = r.getOperationResponse(operation)
+	return err
 }
 
 // cnrmServiceAccountNameAndAccountID Generate a name and an account ID for a CNRM service account
