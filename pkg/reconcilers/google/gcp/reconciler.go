@@ -245,14 +245,14 @@ func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.C
 		return serviceAccount, nil
 	}
 
-	createServiceAccontRequest := &iam.CreateServiceAccountRequest{
+	createServiceAccountRequest := &iam.CreateServiceAccountRequest{
 		AccountId: accountID,
 		ServiceAccount: &iam.ServiceAccount{
 			DisplayName: fmt.Sprintf("%s CNRM service account (%s)", input.Team.Slug, environment),
 			Description: fmt.Sprintf("CNRM service account for team %q in environment %q", input.Team.Slug, environment),
 		},
 	}
-	serviceAccount, err = r.gcpServices.iam.Projects.ServiceAccounts.Create("projects/"+cluster.ProjectID, createServiceAccontRequest).Do()
+	serviceAccount, err = r.gcpServices.iam.Projects.ServiceAccounts.Create("projects/"+cluster.ProjectID, createServiceAccountRequest).Do()
 	if err != nil {
 		return nil, err
 	}
