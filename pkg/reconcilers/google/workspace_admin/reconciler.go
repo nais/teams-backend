@@ -27,7 +27,7 @@ type googleWorkspaceAdminReconciler struct {
 }
 
 const (
-	Name = sqlc.SystemNameGoogleWorkspaceAdmin
+	Name = sqlc.ReconcilerNameGoogleWorkspaceAdmin
 )
 
 func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, adminService *admin_directory_v1.Service) *googleWorkspaceAdminReconciler {
@@ -58,7 +58,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 	return New(database, auditLogger, cfg.TenantDomain, srv), nil
 }
 
-func (r *googleWorkspaceAdminReconciler) Name() sqlc.SystemName {
+func (r *googleWorkspaceAdminReconciler) Name() sqlc.ReconcilerName {
 	return Name
 }
 

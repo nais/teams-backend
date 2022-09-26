@@ -453,7 +453,7 @@ func (r *teamResolver) SyncErrors(ctx context.Context, obj *db.Team) ([]*model.S
 		return nil, err
 	}
 
-	rows, err := r.database.GetTeamReconcileErrors(ctx, obj.ID)
+	rows, err := r.database.GetTeamReconcilerErrors(ctx, obj.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -461,9 +461,9 @@ func (r *teamResolver) SyncErrors(ctx context.Context, obj *db.Team) ([]*model.S
 	syncErrors := make([]*model.SyncError, 0)
 	for _, row := range rows {
 		syncErrors = append(syncErrors, &model.SyncError{
-			CreatedAt: row.CreatedAt,
-			System:    row.SystemName,
-			Error:     row.ErrorMessage,
+			CreatedAt:  row.CreatedAt,
+			Reconciler: row.Reconciler,
+			Error:      row.ErrorMessage,
 		})
 	}
 

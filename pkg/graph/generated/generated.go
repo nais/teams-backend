@@ -126,9 +126,9 @@ type ComplexityRoot struct {
 	}
 
 	SyncError struct {
-		CreatedAt func(childComplexity int) int
-		Error     func(childComplexity int) int
-		System    func(childComplexity int) int
+		CreatedAt  func(childComplexity int) int
+		Error      func(childComplexity int) int
+		Reconciler func(childComplexity int) int
 	}
 
 	Team struct {
@@ -655,12 +655,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.SyncError.Error(childComplexity), true
 
-	case "SyncError.system":
-		if e.complexity.SyncError.System == nil {
+	case "SyncError.reconciler":
+		if e.complexity.SyncError.Reconciler == nil {
 			break
 		}
 
-		return e.complexity.SyncError.System(childComplexity), true
+		return e.complexity.SyncError.Reconciler(childComplexity), true
 
 	case "Team.auditLogs":
 		if e.complexity.Team.AuditLogs == nil {
@@ -1237,8 +1237,8 @@ type SyncError {
     "Creation time of the error."
     createdAt: Time!
 
-    "The name of the third party system as configured by Console."
-    system: SystemName!
+    "The name of the reconciler."
+    reconciler: ReconcilerName!
 
     "Error message."
     error: String!
@@ -4813,8 +4813,8 @@ func (ec *executionContext) fieldContext_SyncError_createdAt(ctx context.Context
 	return fc, nil
 }
 
-func (ec *executionContext) _SyncError_system(ctx context.Context, field graphql.CollectedField, obj *model.SyncError) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_SyncError_system(ctx, field)
+func (ec *executionContext) _SyncError_reconciler(ctx context.Context, field graphql.CollectedField, obj *model.SyncError) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SyncError_reconciler(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -4827,7 +4827,7 @@ func (ec *executionContext) _SyncError_system(ctx context.Context, field graphql
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.System, nil
+		return obj.Reconciler, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4839,19 +4839,19 @@ func (ec *executionContext) _SyncError_system(ctx context.Context, field graphql
 		}
 		return graphql.Null
 	}
-	res := resTmp.(sqlc.SystemName)
+	res := resTmp.(sqlc.ReconcilerName)
 	fc.Result = res
-	return ec.marshalNSystemName2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐSystemName(ctx, field.Selections, res)
+	return ec.marshalNReconcilerName2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐReconcilerName(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_SyncError_system(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SyncError_reconciler(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "SyncError",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type SystemName does not have child fields")
+			return nil, errors.New("field of type ReconcilerName does not have child fields")
 		},
 	}
 	return fc, nil
@@ -5270,8 +5270,8 @@ func (ec *executionContext) fieldContext_Team_syncErrors(ctx context.Context, fi
 			switch field.Name {
 			case "createdAt":
 				return ec.fieldContext_SyncError_createdAt(ctx, field)
-			case "system":
-				return ec.fieldContext_SyncError_system(ctx, field)
+			case "reconciler":
+				return ec.fieldContext_SyncError_reconciler(ctx, field)
 			case "error":
 				return ec.fieldContext_SyncError_error(ctx, field)
 			}
@@ -8606,9 +8606,9 @@ func (ec *executionContext) _SyncError(ctx context.Context, sel ast.SelectionSet
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "system":
+		case "reconciler":
 
-			out.Values[i] = ec._SyncError_system(ctx, field, obj)
+			out.Values[i] = ec._SyncError_reconciler(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++

@@ -33,8 +33,8 @@ type ReconcilerConfig struct {
 	*sqlc.GetReconcilerConfigRow
 }
 
-type ReconcileError struct {
-	*sqlc.ReconcileError
+type ReconcilerError struct {
+	*sqlc.ReconcilerError
 }
 
 type Role struct {
@@ -111,12 +111,12 @@ type Database interface {
 	RemoveApiKeysFromServiceAccount(ctx context.Context, serviceAccountID uuid.UUID) error
 	GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*Role, error)
 	Transaction(ctx context.Context, fn DatabaseTransactionFunc) error
-	LoadReconcilerStateForTeam(ctx context.Context, systemName sqlc.SystemName, teamID uuid.UUID, state interface{}) error
-	SetReconcilerStateForTeam(ctx context.Context, systemName sqlc.SystemName, teamID uuid.UUID, state interface{}) error
+	LoadReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, teamID uuid.UUID, state interface{}) error
+	SetReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, teamID uuid.UUID, state interface{}) error
 	UpdateUser(ctx context.Context, userID uuid.UUID, name, email, externalID string) (*User, error)
-	SetTeamReconcileErrorForSystem(ctx context.Context, correlationID uuid.UUID, teamID uuid.UUID, systemName sqlc.SystemName, err error) error
-	GetTeamReconcileErrors(ctx context.Context, teamID uuid.UUID) ([]*ReconcileError, error)
-	ClearTeamReconcileErrorForSystem(ctx context.Context, teamID uuid.UUID, systemName sqlc.SystemName) error
+	SetReconcilerErrorForTeam(ctx context.Context, correlationID uuid.UUID, teamID uuid.UUID, reconcilerName sqlc.ReconcilerName, err error) error
+	GetTeamReconcilerErrors(ctx context.Context, teamID uuid.UUID) ([]*ReconcilerError, error)
+	ClearReconcilerErrorsForTeam(ctx context.Context, teamID uuid.UUID, reconcilerName sqlc.ReconcilerName) error
 	GetServiceAccounts(ctx context.Context) ([]*ServiceAccount, error)
 	DeleteServiceAccount(ctx context.Context, serviceAccountID uuid.UUID) error
 	GetUserByExternalID(ctx context.Context, externalID string) (*User, error)

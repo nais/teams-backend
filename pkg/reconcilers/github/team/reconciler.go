@@ -23,7 +23,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const Name = sqlc.SystemNameGithubTeam
+const Name = sqlc.ReconcilerNameGithubTeam
 
 var errGitHubUserNotFound = errors.New("GitHub user does not exist")
 
@@ -64,7 +64,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 	return New(database, auditLogger, cfg.GitHub.Organization, cfg.TenantDomain, restClient.Teams, graphClient), nil
 }
 
-func (r *githubTeamReconciler) Name() sqlc.SystemName {
+func (r *githubTeamReconciler) Name() sqlc.ReconcilerName {
 	return Name
 }
 

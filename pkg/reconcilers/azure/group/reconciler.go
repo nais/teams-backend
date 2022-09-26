@@ -37,7 +37,7 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, client azure
 	}
 }
 
-const Name = sqlc.SystemNameAzureGroup
+const Name = sqlc.ReconcilerNameAzureGroup
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
 	if !cfg.Azure.Enabled {
@@ -58,7 +58,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 	return New(database, auditLogger, azureclient.New(conf.Client(context.Background())), cfg.TenantDomain), nil
 }
 
-func (r *azureGroupReconciler) Name() sqlc.SystemName {
+func (r *azureGroupReconciler) Name() sqlc.ReconcilerName {
 	return Name
 }
 

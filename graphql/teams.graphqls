@@ -140,8 +140,8 @@ type SyncError {
     "Creation time of the error."
     createdAt: Time!
 
-    "The name of the third party system as configured by Console."
-    system: SystemName!
+    "The name of the reconciler."
+    reconciler: ReconcilerName!
 
     "Error message."
     error: String!

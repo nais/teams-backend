@@ -44,7 +44,7 @@ type naisNamespaceReconciler struct {
 	projectID       string
 }
 
-const Name = sqlc.SystemNameNaisNamespace
+const Name = sqlc.ReconcilerNameNaisNamespace
 
 func New(database db.Database, auditLogger auditlogger.AuditLogger, domain, credentialsFile, projectID string) *naisNamespaceReconciler {
 	return &naisNamespaceReconciler{
@@ -64,7 +64,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 	return New(database, auditLogger, cfg.TenantDomain, cfg.Google.CredentialsFile, cfg.NaisNamespace.ProjectID), nil
 }
 
-func (r *naisNamespaceReconciler) Name() sqlc.SystemName {
+func (r *naisNamespaceReconciler) Name() sqlc.ReconcilerName {
 	return Name
 }
 

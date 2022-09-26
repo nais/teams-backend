@@ -62,8 +62,8 @@ type SetTeamMemberRoleInput struct {
 type SyncError struct {
 	// Creation time of the error.
 	CreatedAt time.Time `json:"createdAt"`
-	// The name of the third party system as configured by Console.
-	System sqlc.SystemName `json:"system"`
+	// The name of the reconciler.
+	Reconciler sqlc.ReconcilerName `json:"reconciler"`
 	// Error message.
 	Error string `json:"error"`
 }

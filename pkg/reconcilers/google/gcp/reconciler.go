@@ -53,7 +53,7 @@ type googleGcpReconciler struct {
 }
 
 const (
-	Name = sqlc.SystemNameGoogleGcpProject
+	Name = sqlc.ReconcilerNameGoogleGcpProject
 )
 
 func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters clusterInfo, gcpServices *gcpServices, tenantName, domain, cnrmRoleName, billingAccount string) *googleGcpReconciler {
@@ -88,7 +88,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 	return New(database, auditLogger, clusters, gcpServices, cfg.TenantName, cfg.TenantDomain, cfg.GCP.CnrmRole, cfg.GCP.BillingAccount), nil
 }
 
-func (r *googleGcpReconciler) Name() sqlc.SystemName {
+func (r *googleGcpReconciler) Name() sqlc.ReconcilerName {
 	return Name
 }
 

@@ -10,9 +10,9 @@ import (
 )
 
 // LoadReconcilerStateForTeam Load the team state for a given reconciler into the state parameter
-func (d *database) LoadReconcilerStateForTeam(ctx context.Context, systemName sqlc.SystemName, teamID uuid.UUID, state interface{}) error {
+func (d *database) LoadReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, teamID uuid.UUID, state interface{}) error {
 	systemState, err := d.querier.GetReconcilerStateForTeam(ctx, sqlc.GetReconcilerStateForTeamParams{
-		SystemName: systemName,
+		Reconciler: reconcilerName,
 		TeamID:     teamID,
 	})
 	if err != nil {
@@ -29,7 +29,7 @@ func (d *database) LoadReconcilerStateForTeam(ctx context.Context, systemName sq
 }
 
 // SetReconcilerStateForTeam Update the team state for a given reconciler
-func (d *database) SetReconcilerStateForTeam(ctx context.Context, systemName sqlc.SystemName, teamID uuid.UUID, state interface{}) error {
+func (d *database) SetReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, teamID uuid.UUID, state interface{}) error {
 	newState := pgtype.JSONB{}
 	err := newState.Set(state)
 	if err != nil {
@@ -37,7 +37,7 @@ func (d *database) SetReconcilerStateForTeam(ctx context.Context, systemName sql
 	}
 
 	return d.querier.SetReconcilerStateForTeam(ctx, sqlc.SetReconcilerStateForTeamParams{
-		SystemName: systemName,
+		Reconciler: reconcilerName,
 		TeamID:     teamID,
 		State:      newState,
 	})

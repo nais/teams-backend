@@ -550,15 +550,6 @@ type AuditLog struct {
 	Message        string
 }
 
-type ReconcileError struct {
-	ID            int64
-	CorrelationID uuid.UUID
-	TeamID        uuid.UUID
-	SystemName    SystemName
-	CreatedAt     time.Time
-	ErrorMessage  string
-}
-
 type Reconciler struct {
 	Name        ReconcilerName
 	DisplayName string
@@ -575,8 +566,17 @@ type ReconcilerConfig struct {
 	Value       sql.NullString
 }
 
+type ReconcilerError struct {
+	ID            int64
+	CorrelationID uuid.UUID
+	TeamID        uuid.UUID
+	Reconciler    ReconcilerName
+	CreatedAt     time.Time
+	ErrorMessage  string
+}
+
 type ReconcilerState struct {
-	SystemName SystemName
+	Reconciler ReconcilerName
 	TeamID     uuid.UUID
 	State      pgtype.JSONB
 }
