@@ -70,7 +70,7 @@ func (r *githubTeamReconciler) Name() sqlc.SystemName {
 
 func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	state := &reconcilers.GitHubState{}
-	err := r.database.LoadSystemState(ctx, r.Name(), input.Team.ID, state)
+	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), input.Team.ID, state)
 	if err != nil {
 		return fmt.Errorf("unable to load system state for team %q in system %q: %w", input.Team.Slug, r.Name(), err)
 	}
@@ -81,7 +81,7 @@ func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.
 	}
 
 	slug := slug.Slug(*githubTeam.Slug)
-	err = r.database.SetSystemState(ctx, r.Name(), input.Team.ID, reconcilers.GitHubState{Slug: &slug})
+	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.ID, reconcilers.GitHubState{Slug: &slug})
 	if err != nil {
 		log.Errorf("system state not persisted: %s", err)
 	}

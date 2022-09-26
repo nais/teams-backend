@@ -797,8 +797,8 @@ func (_m *MockDatabase) GetUsers(ctx context.Context) ([]*User, error) {
 	return r0, r1
 }
 
-// LoadSystemState provides a mock function with given fields: ctx, systemName, teamID, state
-func (_m *MockDatabase) LoadSystemState(ctx context.Context, systemName sqlc.SystemName, teamID uuid.UUID, state interface{}) error {
+// LoadReconcilerStateForTeam provides a mock function with given fields: ctx, systemName, teamID, state
+func (_m *MockDatabase) LoadReconcilerStateForTeam(ctx context.Context, systemName sqlc.SystemName, teamID uuid.UUID, state interface{}) error {
 	ret := _m.Called(ctx, systemName, teamID, state)
 
 	var r0 error
@@ -890,8 +890,8 @@ func (_m *MockDatabase) RevokeGlobalRoleFromUser(ctx context.Context, userID uui
 	return r0
 }
 
-// SetSystemState provides a mock function with given fields: ctx, systemName, teamID, state
-func (_m *MockDatabase) SetSystemState(ctx context.Context, systemName sqlc.SystemName, teamID uuid.UUID, state interface{}) error {
+// SetReconcilerStateForTeam provides a mock function with given fields: ctx, systemName, teamID, state
+func (_m *MockDatabase) SetReconcilerStateForTeam(ctx context.Context, systemName sqlc.SystemName, teamID uuid.UUID, state interface{}) error {
 	ret := _m.Called(ctx, systemName, teamID, state)
 
 	var r0 error

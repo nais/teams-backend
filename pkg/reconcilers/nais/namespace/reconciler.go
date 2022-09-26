@@ -77,13 +77,13 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	namespaceState := &reconcilers.GoogleGcpNaisNamespaceState{
 		Namespaces: make(map[string]slug.Slug),
 	}
-	err = r.database.LoadSystemState(ctx, r.Name(), input.Team.ID, namespaceState)
+	err = r.database.LoadReconcilerStateForTeam(ctx, r.Name(), input.Team.ID, namespaceState)
 	if err != nil {
 		return fmt.Errorf("unable to load system state for team %q in system %q: %w", input.Team.Slug, r.Name(), err)
 	}
 
 	gcpProjectState := &reconcilers.GoogleGcpProjectState{}
-	err = r.database.LoadSystemState(ctx, google_gcp_reconciler.Name, input.Team.ID, gcpProjectState)
+	err = r.database.LoadReconcilerStateForTeam(ctx, google_gcp_reconciler.Name, input.Team.ID, gcpProjectState)
 	if err != nil {
 		return fmt.Errorf("unable to load system state for team %q in system %q: %w", input.Team.Slug, google_gcp_reconciler.Name, err)
 	}
@@ -93,7 +93,7 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	}
 
 	workspaceState := &reconcilers.GoogleWorkspaceState{}
-	err = r.database.LoadSystemState(ctx, google_workspace_admin_reconciler.Name, input.Team.ID, workspaceState)
+	err = r.database.LoadReconcilerStateForTeam(ctx, google_workspace_admin_reconciler.Name, input.Team.ID, workspaceState)
 	if err != nil || workspaceState.GroupEmail == nil {
 		return fmt.Errorf("no workspace admin state exists for team %q, or group email not set", input.Team.Slug)
 	}
@@ -115,7 +115,7 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 		}
 	}
 
-	err = r.database.SetSystemState(ctx, r.Name(), input.Team.ID, namespaceState)
+	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.ID, namespaceState)
 	if err != nil {
 		log.Errorf("system state not persisted: %s", err)
 	}

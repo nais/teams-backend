@@ -211,17 +211,17 @@ func run() error {
 				}
 			}
 
-			err = dbtx.SetSystemState(ctx, sqlc.SystemNameAzureGroup, team.ID, yamlteam.AzureState)
+			err = dbtx.SetReconcilerStateForTeam(ctx, sqlc.SystemNameAzureGroup, team.ID, yamlteam.AzureState)
 			if err != nil {
 				return err
 			}
 
-			err = dbtx.SetSystemState(ctx, sqlc.SystemNameGithubTeam, team.ID, yamlteam.GitHubState)
+			err = dbtx.SetReconcilerStateForTeam(ctx, sqlc.SystemNameGithubTeam, team.ID, yamlteam.GitHubState)
 			if err != nil {
 				return err
 			}
 
-			err = dbtx.SetSystemState(ctx, sqlc.SystemNameGoogleWorkspaceAdmin, team.ID, yamlteam.GoogleWorkspaceState)
+			err = dbtx.SetReconcilerStateForTeam(ctx, sqlc.SystemNameGoogleWorkspaceAdmin, team.ID, yamlteam.GoogleWorkspaceState)
 			if err != nil {
 				return err
 			}

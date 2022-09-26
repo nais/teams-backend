@@ -80,11 +80,11 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain)
 
 		database.
-			On("LoadSystemState", ctx, azure_group_reconciler.Name, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.ID, mock.Anything).
 			Return(nil).
 			Once()
 		database.
-			On("SetSystemState", ctx, azure_group_reconciler.Name, team.ID, mock.Anything).
+			On("SetReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.ID, mock.Anything).
 			Return(nil).
 			Once()
 		database.
@@ -153,7 +153,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain)
 
 		database.
-			On("LoadSystemState", ctx, azure_group_reconciler.Name, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.ID, mock.Anything).
 			Return(nil).
 			Once()
 
@@ -175,7 +175,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain)
 
 		database.
-			On("LoadSystemState", ctx, azure_group_reconciler.Name, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.ID, mock.Anything).
 			Return(nil).
 			Once()
 
@@ -211,7 +211,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		}
 
 		database.
-			On("LoadSystemState", ctx, azure_group_reconciler.Name, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.ID, mock.Anything).
 			Return(nil).
 			Once()
 
@@ -250,7 +250,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain)
 
 		database.
-			On("LoadSystemState", ctx, azure_group_reconciler.Name, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.ID, mock.Anything).
 			Return(nil).
 			Once()
 		database.
@@ -301,7 +301,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain)
 
 		database.
-			On("LoadSystemState", ctx, azure_group_reconciler.Name, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.ID, mock.Anything).
 			Return(nil).
 			Once()
 

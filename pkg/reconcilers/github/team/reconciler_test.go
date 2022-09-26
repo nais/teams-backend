@@ -54,11 +54,11 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		gitHubClient := github_team_reconciler.NewMockGraphClient(t)
 
 		database.
-			On("LoadSystemState", ctx, systemName, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, systemName, team.ID, mock.Anything).
 			Return(nil).
 			Once()
 		database.
-			On("SetSystemState", ctx, systemName, team.ID, mock.Anything).
+			On("SetReconcilerStateForTeam", ctx, systemName, team.ID, mock.Anything).
 			Return(nil).
 			Once()
 
@@ -112,7 +112,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		gitHubClient := github_team_reconciler.NewMockGraphClient(t)
 
 		database.
-			On("LoadSystemState", ctx, systemName, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, systemName, team.ID, mock.Anything).
 			Return(nil).
 			Once()
 
@@ -142,7 +142,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		gitHubClient := github_team_reconciler.NewMockGraphClient(t)
 
 		database.
-			On("LoadSystemState", ctx, systemName, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, systemName, team.ID, mock.Anything).
 			Run(func(args mock.Arguments) {
 				slug := slug.Slug("existing-slug")
 				state := args.Get(3).(*reconcilers.GitHubState)
@@ -151,7 +151,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			Return(nil).
 			Once()
 		database.
-			On("SetSystemState", ctx, systemName, team.ID, mock.MatchedBy(func(state reconcilers.GitHubState) bool {
+			On("SetReconcilerStateForTeam", ctx, systemName, team.ID, mock.MatchedBy(func(state reconcilers.GitHubState) bool {
 				return *state.Slug == "existing-slug"
 			})).
 			Return(nil).
@@ -197,7 +197,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		gitHubClient := github_team_reconciler.NewMockGraphClient(t)
 
 		database.
-			On("LoadSystemState", ctx, systemName, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, systemName, team.ID, mock.Anything).
 			Run(func(args mock.Arguments) {
 				slug := slug.Slug("existing-slug")
 				state := args.Get(3).(*reconcilers.GitHubState)
@@ -206,7 +206,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			Return(nil).
 			Once()
 		database.
-			On("SetSystemState", ctx, systemName, team.ID, mock.MatchedBy(func(state reconcilers.GitHubState) bool {
+			On("SetReconcilerStateForTeam", ctx, systemName, team.ID, mock.MatchedBy(func(state reconcilers.GitHubState) bool {
 				return *state.Slug == "slug"
 			})).
 			Return(nil).
@@ -321,11 +321,11 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		graphClient := github_team_reconciler.NewMockGraphClient(t)
 
 		database.
-			On("LoadSystemState", ctx, systemName, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, systemName, team.ID, mock.Anything).
 			Return(nil).
 			Once()
 		database.
-			On("SetSystemState", ctx, systemName, team.ID, mock.MatchedBy(func(state reconcilers.GitHubState) bool {
+			On("SetReconcilerStateForTeam", ctx, systemName, team.ID, mock.MatchedBy(func(state reconcilers.GitHubState) bool {
 				return *state.Slug == teamSlug
 			})).
 			Return(nil).
@@ -357,7 +357,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 
 		database.
-			On("LoadSystemState", ctx, systemName, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, systemName, team.ID, mock.Anything).
 			Run(func(args mock.Arguments) {
 				slug := slug.Slug("slug-from-state")
 				state := args.Get(3).(*reconcilers.GitHubState)
