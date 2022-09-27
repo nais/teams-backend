@@ -17,13 +17,44 @@ WHERE reconciler = $1 AND key = $2
 
 type ConfigureReconcilerParams struct {
 	Reconciler ReconcilerName
-	Key        string
+	Key        ReconcilerConfigKey
 	Value      string
 }
 
 func (q *Queries) ConfigureReconciler(ctx context.Context, arg ConfigureReconcilerParams) error {
 	_, err := q.db.Exec(ctx, configureReconciler, arg.Reconciler, arg.Key, arg.Value)
 	return err
+}
+
+const dangerousGetReconcilerConfigValues = `-- name: DangerousGetReconcilerConfigValues :many
+SELECT key, value::TEXT
+FROM reconciler_config
+WHERE reconciler = $1
+`
+
+type DangerousGetReconcilerConfigValuesRow struct {
+	Key   ReconcilerConfigKey
+	Value string
+}
+
+func (q *Queries) DangerousGetReconcilerConfigValues(ctx context.Context, reconciler ReconcilerName) ([]*DangerousGetReconcilerConfigValuesRow, error) {
+	rows, err := q.db.Query(ctx, dangerousGetReconcilerConfigValues, reconciler)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*DangerousGetReconcilerConfigValuesRow
+	for rows.Next() {
+		var i DangerousGetReconcilerConfigValuesRow
+		if err := rows.Scan(&i.Key, &i.Value); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const disableReconciler = `-- name: DisableReconciler :one
@@ -124,7 +155,7 @@ WHERE reconciler = $1
 
 type GetReconcilerConfigRow struct {
 	Reconciler  ReconcilerName
-	Key         string
+	Key         ReconcilerConfigKey
 	DisplayName string
 	Description string
 	Configured  bool

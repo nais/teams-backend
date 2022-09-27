@@ -33,7 +33,7 @@ func run() error {
 
 	ctx := context.Background()
 
-	cfg, err := config.New()
+	cfg, err := config.NewImporterConfig()
 	if err != nil {
 		panic(err)
 	}

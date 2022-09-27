@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/nais/console/pkg/slug"
@@ -39,15 +40,16 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, org, domain 
 }
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
-	if !cfg.GitHub.Enabled {
-		return nil, reconcilers.ErrReconcilerNotEnabled
+	config, err := convertDatabaseConfig(ctx, database)
+	if err != nil {
+		return nil, err
 	}
 
-	transport, err := ghinstallation.NewKeyFromFile(
+	transport, err := ghinstallation.New(
 		http.DefaultTransport,
-		cfg.GitHub.AppID,
-		cfg.GitHub.AppInstallationID,
-		cfg.GitHub.PrivateKeyPath,
+		config.appID,
+		config.installationID,
+		config.privateKey,
 	)
 	if err != nil {
 		return nil, err
@@ -61,7 +63,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 	restClient := github.NewClient(httpClient)
 	graphClient := githubv4.NewClient(httpClient)
 
-	return New(database, auditLogger, cfg.GitHub.Organization, cfg.TenantDomain, restClient.Teams, graphClient), nil
+	return New(database, auditLogger, config.org, cfg.TenantDomain, restClient.Teams, graphClient), nil
 }
 
 func (r *githubTeamReconciler) Name() sqlc.ReconcilerName {
@@ -309,6 +311,30 @@ func (r *githubTeamReconciler) getEmailFromGitHubUsername(ctx context.Context, u
 
 	email := strings.ToLower(string(nodes[0].SamlIdentity.Username))
 	return &email, nil
+}
+
+func convertDatabaseConfig(ctx context.Context, database db.Database) (*reconcilerConfig, error) {
+	config, err := database.DangerousGetReconcilerConfigValues(ctx, Name)
+	if err != nil {
+		return nil, err
+	}
+
+	appID, err := strconv.ParseInt(config.GetValue(sqlc.ReconcilerConfigKeyGithubAppID), 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("unable to convert app ID %q to an integer", config.GetValue(sqlc.ReconcilerConfigKeyGithubAppID))
+	}
+
+	installationID, err := strconv.ParseInt(config.GetValue(sqlc.ReconcilerConfigKeyGithubAppInstallationID), 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("unable to convert app installation ID %q to an integer", config.GetValue(sqlc.ReconcilerConfigKeyGithubAppInstallationID))
+	}
+
+	return &reconcilerConfig{
+		org:            config.GetValue(sqlc.ReconcilerConfigKeyGithubOrg),
+		appID:          appID,
+		installationID: installationID,
+		privateKey:     []byte(config.GetValue(sqlc.ReconcilerConfigKeyGithubAppPrivateKey)),
+	}, nil
 }
 
 // httpError Return an error if the response status code is not as expected, or if the passed err is already set to an

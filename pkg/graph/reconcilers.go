@@ -13,6 +13,7 @@ import (
 	"github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/graph/generated"
+	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/sqlc"
 )
 
@@ -42,7 +43,7 @@ func (r *mutationResolver) EnableReconciler(ctx context.Context, name sqlc.Recon
 		missingOptions := make([]string, 0)
 		for _, config := range configs {
 			if !config.Configured {
-				missingOptions = append(missingOptions, config.Key)
+				missingOptions = append(missingOptions, string(config.Key))
 			}
 		}
 
@@ -111,17 +112,14 @@ func (r *mutationResolver) DisableReconciler(ctx context.Context, name sqlc.Reco
 }
 
 // ConfigureReconciler is the resolver for the configureReconciler field.
-func (r *mutationResolver) ConfigureReconciler(ctx context.Context, name sqlc.ReconcilerName, config map[string]interface{}) (*db.Reconciler, error) {
+func (r *mutationResolver) ConfigureReconciler(ctx context.Context, name sqlc.ReconcilerName, config []*model.ReconcilerConfigInput) (*db.Reconciler, error) {
 	if !name.Valid() {
 		return nil, fmt.Errorf("%q is not a valid name", name)
 	}
 
-	reconcilerConfig := make(map[string]string)
-	for key, value := range config {
-		var ok bool
-		if reconcilerConfig[key], ok = value.(string); !ok {
-			return nil, fmt.Errorf("invalid configuration value for key: %q, must be string", key)
-		}
+	reconcilerConfig := make(map[sqlc.ReconcilerConfigKey]string)
+	for _, entry := range config {
+		reconcilerConfig[entry.Key] = entry.Value
 	}
 
 	reconciler, err := r.database.ConfigureReconciler(ctx, name, reconcilerConfig)

@@ -22,11 +22,11 @@ func New(oauth clientcredentials.Config, client azureclient.Client) *GroupImport
 	}
 }
 
-func NewFromConfig(cfg *config.Config) (*GroupImporter, error) {
-	endpoint := microsoft.AzureADEndpoint(cfg.Azure.TenantID)
+func NewFromConfig(cfg *config.ImporterConfig) (*GroupImporter, error) {
+	endpoint := microsoft.AzureADEndpoint(cfg.AzureTenantID)
 	conf := clientcredentials.Config{
-		ClientID:     cfg.Azure.ClientID,
-		ClientSecret: cfg.Azure.ClientSecret,
+		ClientID:     cfg.AzureClientID,
+		ClientSecret: cfg.AzureClientSecret,
 		TokenURL:     endpoint.TokenURL,
 		AuthStyle:    endpoint.AuthStyle,
 		Scopes: []string{

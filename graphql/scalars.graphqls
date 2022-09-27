@@ -33,6 +33,9 @@ scalar SystemName
 "String value representing a reconciler name."
 scalar ReconcilerName
 
+"String value representing a reconciler configuration key."
+scalar ReconcilerConfigKey
+
 """
 A collection of key => value pairs.
 

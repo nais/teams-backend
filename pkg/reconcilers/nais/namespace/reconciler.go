@@ -57,10 +57,6 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, domain, cred
 }
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
-	if !cfg.NaisNamespace.Enabled {
-		return nil, reconcilers.ErrReconcilerNotEnabled
-	}
-
 	return New(database, auditLogger, cfg.TenantDomain, cfg.Google.CredentialsFile, cfg.NaisNamespace.ProjectID), nil
 }
 

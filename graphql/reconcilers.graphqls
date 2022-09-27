@@ -25,7 +25,7 @@ extend type Mutation {
         name: ReconcilerName!
 
         "Configuration options as a key => value map."
-        config: Map!
+        config: [ReconcilerConfigInput!]!
     ): Reconciler! @admin
 
     "Reset all reconciler configuration options to their initial state and disable the reconciler if it is currently enabled."
@@ -67,7 +67,7 @@ type Reconciler {
 "Reconciler configuration type."
 type ReconcilerConfig {
     "Configuration key."
-    key: String!
+    key: ReconcilerConfigKey!
 
     "The human-friendly name of the configuration key."
     displayName: String!
@@ -77,4 +77,13 @@ type ReconcilerConfig {
 
     "Whether or not the configuration key has a value."
     configured: Boolean!
+}
+
+"Reconciler configuration input."
+input ReconcilerConfigInput {
+    "Configuration key."
+    key: ReconcilerConfigKey!
+
+    "Configuration value."
+    value: String!
 }

@@ -73,7 +73,7 @@ type ComplexityRoot struct {
 		AddTeamMembers           func(childComplexity int, input model.AddTeamMembersInput) int
 		AddTeamOwners            func(childComplexity int, input model.AddTeamOwnersInput) int
 		AssignGlobalRoleToUser   func(childComplexity int, role sqlc.RoleName, userID *uuid.UUID) int
-		ConfigureReconciler      func(childComplexity int, name sqlc.ReconcilerName, config map[string]interface{}) int
+		ConfigureReconciler      func(childComplexity int, name sqlc.ReconcilerName, config []*model.ReconcilerConfigInput) int
 		CreateTeam               func(childComplexity int, input model.CreateTeamInput) int
 		DisableReconciler        func(childComplexity int, name sqlc.ReconcilerName) int
 		EnableReconciler         func(childComplexity int, name sqlc.ReconcilerName) int
@@ -173,7 +173,7 @@ type AuditLogResolver interface {
 type MutationResolver interface {
 	EnableReconciler(ctx context.Context, name sqlc.ReconcilerName) (*db.Reconciler, error)
 	DisableReconciler(ctx context.Context, name sqlc.ReconcilerName) (*db.Reconciler, error)
-	ConfigureReconciler(ctx context.Context, name sqlc.ReconcilerName, config map[string]interface{}) (*db.Reconciler, error)
+	ConfigureReconciler(ctx context.Context, name sqlc.ReconcilerName, config []*model.ReconcilerConfigInput) (*db.Reconciler, error)
 	ResetReconciler(ctx context.Context, name sqlc.ReconcilerName) (*db.Reconciler, error)
 	AssignGlobalRoleToUser(ctx context.Context, role sqlc.RoleName, userID *uuid.UUID) (*db.User, error)
 	RevokeGlobalRoleFromUser(ctx context.Context, role sqlc.RoleName, userID *uuid.UUID) (*db.User, error)
@@ -341,7 +341,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.ConfigureReconciler(childComplexity, args["name"].(sqlc.ReconcilerName), args["config"].(map[string]interface{})), true
+		return e.complexity.Mutation.ConfigureReconciler(childComplexity, args["name"].(sqlc.ReconcilerName), args["config"].([]*model.ReconcilerConfigInput)), true
 
 	case "Mutation.createTeam":
 		if e.complexity.Mutation.CreateTeam == nil {
@@ -806,6 +806,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputAddTeamMembersInput,
 		ec.unmarshalInputAddTeamOwnersInput,
 		ec.unmarshalInputCreateTeamInput,
+		ec.unmarshalInputReconcilerConfigInput,
 		ec.unmarshalInputRemoveUsersFromTeamInput,
 		ec.unmarshalInputSetTeamMemberRoleInput,
 		ec.unmarshalInputUpdateTeamInput,
@@ -937,7 +938,7 @@ directive @admin on FIELD_DEFINITION`, BuiltIn: false},
         name: ReconcilerName!
 
         "Configuration options as a key => value map."
-        config: Map!
+        config: [ReconcilerConfigInput!]!
     ): Reconciler! @admin
 
     "Reset all reconciler configuration options to their initial state and disable the reconciler if it is currently enabled."
@@ -979,7 +980,7 @@ type Reconciler {
 "Reconciler configuration type."
 type ReconcilerConfig {
     "Configuration key."
-    key: String!
+    key: ReconcilerConfigKey!
 
     "The human-friendly name of the configuration key."
     displayName: String!
@@ -989,6 +990,15 @@ type ReconcilerConfig {
 
     "Whether or not the configuration key has a value."
     configured: Boolean!
+}
+
+"Reconciler configuration input."
+input ReconcilerConfigInput {
+    "Configuration key."
+    key: ReconcilerConfigKey!
+
+    "Configuration value."
+    value: String!
 }`, BuiltIn: false},
 	{Name: "../../../graphql/roles.graphqls", Input: `extend type Query {
     "List all Console roles."
@@ -1072,6 +1082,9 @@ scalar SystemName
 
 "String value representing a reconciler name."
 scalar ReconcilerName
+
+"String value representing a reconciler configuration key."
+scalar ReconcilerConfigKey
 
 """
 A collection of key => value pairs.
@@ -1437,10 +1450,10 @@ func (ec *executionContext) field_Mutation_configureReconciler_args(ctx context.
 		}
 	}
 	args["name"] = arg0
-	var arg1 map[string]interface{}
+	var arg1 []*model.ReconcilerConfigInput
 	if tmp, ok := rawArgs["config"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("config"))
-		arg1, err = ec.unmarshalNMap2map(ctx, tmp)
+		arg1, err = ec.unmarshalNReconcilerConfigInput2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐReconcilerConfigInputᚄ(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2284,7 +2297,7 @@ func (ec *executionContext) _Mutation_configureReconciler(ctx context.Context, f
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().ConfigureReconciler(rctx, fc.Args["name"].(sqlc.ReconcilerName), fc.Args["config"].(map[string]interface{}))
+			return ec.resolvers.Mutation().ConfigureReconciler(rctx, fc.Args["name"].(sqlc.ReconcilerName), fc.Args["config"].([]*model.ReconcilerConfigInput))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Admin == nil {
@@ -4350,9 +4363,9 @@ func (ec *executionContext) _ReconcilerConfig_key(ctx context.Context, field gra
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(sqlc.ReconcilerConfigKey)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNReconcilerConfigKey2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐReconcilerConfigKey(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_ReconcilerConfig_key(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4362,7 +4375,7 @@ func (ec *executionContext) fieldContext_ReconcilerConfig_key(ctx context.Contex
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			return nil, errors.New("field of type ReconcilerConfigKey does not have child fields")
 		},
 	}
 	return fc, nil
@@ -7716,6 +7729,42 @@ func (ec *executionContext) unmarshalInputCreateTeamInput(ctx context.Context, o
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputReconcilerConfigInput(ctx context.Context, obj interface{}) (model.ReconcilerConfigInput, error) {
+	var it model.ReconcilerConfigInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"key", "value"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "key":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("key"))
+			it.Key, err = ec.unmarshalNReconcilerConfigKey2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐReconcilerConfigKey(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "value":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("value"))
+			it.Value, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputRemoveUsersFromTeamInput(ctx context.Context, obj interface{}) (model.RemoveUsersFromTeamInput, error) {
 	var it model.RemoveUsersFromTeamInput
 	asMap := map[string]interface{}{}
@@ -9397,27 +9446,6 @@ func (ec *executionContext) marshalNInt2int32(ctx context.Context, sel ast.Selec
 	return res
 }
 
-func (ec *executionContext) unmarshalNMap2map(ctx context.Context, v interface{}) (map[string]interface{}, error) {
-	res, err := graphql.UnmarshalMap(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNMap2map(ctx context.Context, sel ast.SelectionSet, v map[string]interface{}) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	res := graphql.MarshalMap(v)
-	if res == graphql.Null {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-	}
-	return res
-}
-
 func (ec *executionContext) marshalNReconciler2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐReconciler(ctx context.Context, sel ast.SelectionSet, v db.Reconciler) graphql.Marshaler {
 	return ec._Reconciler(ctx, sel, &v)
 }
@@ -9528,6 +9556,44 @@ func (ec *executionContext) marshalNReconcilerConfig2ᚖgithubᚗcomᚋnaisᚋco
 		return graphql.Null
 	}
 	return ec._ReconcilerConfig(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNReconcilerConfigInput2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐReconcilerConfigInputᚄ(ctx context.Context, v interface{}) ([]*model.ReconcilerConfigInput, error) {
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]*model.ReconcilerConfigInput, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNReconcilerConfigInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐReconcilerConfigInput(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) unmarshalNReconcilerConfigInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐReconcilerConfigInput(ctx context.Context, v interface{}) (*model.ReconcilerConfigInput, error) {
+	res, err := ec.unmarshalInputReconcilerConfigInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNReconcilerConfigKey2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐReconcilerConfigKey(ctx context.Context, v interface{}) (sqlc.ReconcilerConfigKey, error) {
+	tmp, err := graphql.UnmarshalString(v)
+	res := sqlc.ReconcilerConfigKey(tmp)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNReconcilerConfigKey2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐReconcilerConfigKey(ctx context.Context, sel ast.SelectionSet, v sqlc.ReconcilerConfigKey) graphql.Marshaler {
+	res := graphql.MarshalString(string(v))
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
 }
 
 func (ec *executionContext) unmarshalNReconcilerName2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐReconcilerName(ctx context.Context, v interface{}) (sqlc.ReconcilerName, error) {

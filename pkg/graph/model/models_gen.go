@@ -40,6 +40,14 @@ type CreateTeamInput struct {
 	Purpose *string `json:"purpose"`
 }
 
+// Reconciler configuration input.
+type ReconcilerConfigInput struct {
+	// Configuration key.
+	Key sqlc.ReconcilerConfigKey `json:"key"`
+	// Configuration value.
+	Value string `json:"value"`
+}
+
 // Input for removing users from a team.
 type RemoveUsersFromTeamInput struct {
 	// List of user IDs that should be removed from the team.

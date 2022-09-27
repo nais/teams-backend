@@ -64,6 +64,10 @@ models:
     model:
       - github.com/nais/console/pkg/sqlc.SystemName
 
+  ReconcilerConfigKey:
+    model:
+      - github.com/nais/console/pkg/sqlc.ReconcilerConfigKey
+
   UUID:
     model:
       - github.com/nais/console/pkg/db.UUID

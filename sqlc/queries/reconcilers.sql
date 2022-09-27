@@ -37,3 +37,8 @@ WHERE reconciler = $1 AND key = $2;
 SELECT reconciler, key, display_name, description, (value IS NOT NULL)::BOOL AS configured
 FROM reconciler_config
 WHERE reconciler = $1;
+
+-- name: DangerousGetReconcilerConfigValues :many
+SELECT key, value::TEXT
+FROM reconciler_config
+WHERE reconciler = $1;

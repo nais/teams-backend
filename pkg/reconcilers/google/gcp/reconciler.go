@@ -70,10 +70,6 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters clu
 }
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
-	if !cfg.GCP.Enabled {
-		return nil, reconcilers.ErrReconcilerNotEnabled
-	}
-
 	gcpServices, err := createGcpServices(ctx, cfg.Google.CredentialsFile)
 	if err != nil {
 		return nil, err

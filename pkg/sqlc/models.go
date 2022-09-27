@@ -308,6 +308,79 @@ func AllAuthzNameValues() []AuthzName {
 	}
 }
 
+type ReconcilerConfigKey string
+
+const (
+	ReconcilerConfigKeyAzureClientID           ReconcilerConfigKey = "azure:client_id"
+	ReconcilerConfigKeyAzureClientSecret       ReconcilerConfigKey = "azure:client_secret"
+	ReconcilerConfigKeyAzureTenantID           ReconcilerConfigKey = "azure:tenant_id"
+	ReconcilerConfigKeyGithubOrg               ReconcilerConfigKey = "github:org"
+	ReconcilerConfigKeyGithubAppID             ReconcilerConfigKey = "github:app_id"
+	ReconcilerConfigKeyGithubAppInstallationID ReconcilerConfigKey = "github:app_installation_id"
+	ReconcilerConfigKeyGithubAppPrivateKey     ReconcilerConfigKey = "github:app_private_key"
+)
+
+func (e *ReconcilerConfigKey) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ReconcilerConfigKey(s)
+	case string:
+		*e = ReconcilerConfigKey(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ReconcilerConfigKey: %T", src)
+	}
+	return nil
+}
+
+type NullReconcilerConfigKey struct {
+	ReconcilerConfigKey ReconcilerConfigKey
+	Valid               bool // Valid is true if String is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullReconcilerConfigKey) Scan(value interface{}) error {
+	if value == nil {
+		ns.ReconcilerConfigKey, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ReconcilerConfigKey.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullReconcilerConfigKey) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return ns.ReconcilerConfigKey, nil
+}
+
+func (e ReconcilerConfigKey) Valid() bool {
+	switch e {
+	case ReconcilerConfigKeyAzureClientID,
+		ReconcilerConfigKeyAzureClientSecret,
+		ReconcilerConfigKeyAzureTenantID,
+		ReconcilerConfigKeyGithubOrg,
+		ReconcilerConfigKeyGithubAppID,
+		ReconcilerConfigKeyGithubAppInstallationID,
+		ReconcilerConfigKeyGithubAppPrivateKey:
+		return true
+	}
+	return false
+}
+
+func AllReconcilerConfigKeyValues() []ReconcilerConfigKey {
+	return []ReconcilerConfigKey{
+		ReconcilerConfigKeyAzureClientID,
+		ReconcilerConfigKeyAzureClientSecret,
+		ReconcilerConfigKeyAzureTenantID,
+		ReconcilerConfigKeyGithubOrg,
+		ReconcilerConfigKeyGithubAppID,
+		ReconcilerConfigKeyGithubAppInstallationID,
+		ReconcilerConfigKeyGithubAppPrivateKey,
+	}
+}
+
 type ReconcilerName string
 
 const (
@@ -560,7 +633,7 @@ type Reconciler struct {
 
 type ReconcilerConfig struct {
 	Reconciler  ReconcilerName
-	Key         string
+	Key         ReconcilerConfigKey
 	DisplayName string
 	Description string
 	Value       sql.NullString

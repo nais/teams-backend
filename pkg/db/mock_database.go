@@ -61,11 +61,11 @@ func (_m *MockDatabase) ClearReconcilerErrorsForTeam(ctx context.Context, teamID
 }
 
 // ConfigureReconciler provides a mock function with given fields: ctx, reconcilerName, config
-func (_m *MockDatabase) ConfigureReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName, config map[string]string) (*Reconciler, error) {
+func (_m *MockDatabase) ConfigureReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName, config map[sqlc.ReconcilerConfigKey]string) (*Reconciler, error) {
 	ret := _m.Called(ctx, reconcilerName, config)
 
 	var r0 *Reconciler
-	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName, map[string]string) *Reconciler); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName, map[sqlc.ReconcilerConfigKey]string) *Reconciler); ok {
 		r0 = rf(ctx, reconcilerName, config)
 	} else {
 		if ret.Get(0) != nil {
@@ -74,7 +74,7 @@ func (_m *MockDatabase) ConfigureReconciler(ctx context.Context, reconcilerName 
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, sqlc.ReconcilerName, map[string]string) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, sqlc.ReconcilerName, map[sqlc.ReconcilerConfigKey]string) error); ok {
 		r1 = rf(ctx, reconcilerName, config)
 	} else {
 		r1 = ret.Error(1)
@@ -196,6 +196,29 @@ func (_m *MockDatabase) CreateUser(ctx context.Context, name string, email strin
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, string, string, string) error); ok {
 		r1 = rf(ctx, name, email, externalID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DangerousGetReconcilerConfigValues provides a mock function with given fields: ctx, reconcilerName
+func (_m *MockDatabase) DangerousGetReconcilerConfigValues(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*ReconcilerConfigValues, error) {
+	ret := _m.Called(ctx, reconcilerName)
+
+	var r0 *ReconcilerConfigValues
+	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName) *ReconcilerConfigValues); ok {
+		r0 = rf(ctx, reconcilerName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ReconcilerConfigValues)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, sqlc.ReconcilerName) error); ok {
+		r1 = rf(ctx, reconcilerName)
 	} else {
 		r1 = ret.Error(1)
 	}

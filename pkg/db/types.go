@@ -33,6 +33,17 @@ type ReconcilerConfig struct {
 	*sqlc.GetReconcilerConfigRow
 }
 
+type ReconcilerConfigValues struct {
+	values map[sqlc.ReconcilerConfigKey]string
+}
+
+func (v ReconcilerConfigValues) GetValue(s sqlc.ReconcilerConfigKey) string {
+	if v, exists := v.values[s]; exists {
+		return v
+	}
+	return ""
+}
+
 type ReconcilerError struct {
 	*sqlc.ReconcilerError
 }
@@ -127,11 +138,12 @@ type Database interface {
 	GetReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*Reconciler, error)
 	GetReconcilers(ctx context.Context) ([]*Reconciler, error)
 	GetEnabledReconcilers(ctx context.Context) ([]*Reconciler, error)
-	ConfigureReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName, config map[string]string) (*Reconciler, error)
+	ConfigureReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName, config map[sqlc.ReconcilerConfigKey]string) (*Reconciler, error)
 	GetReconcilerConfig(ctx context.Context, reconcilerName sqlc.ReconcilerName) ([]*ReconcilerConfig, error)
 	ResetReconcilerConfig(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*Reconciler, error)
 	EnableReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*Reconciler, error)
 	DisableReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*Reconciler, error)
+	DangerousGetReconcilerConfigValues(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*ReconcilerConfigValues, error)
 }
 
 func (u User) GetID() uuid.UUID {

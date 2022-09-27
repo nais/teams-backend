@@ -40,10 +40,6 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, domain strin
 }
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
-	if !cfg.Google.Enabled {
-		return nil, reconcilers.ErrReconcilerNotEnabled
-	}
-
 	config, err := google_jwt.GetConfig(cfg.Google.CredentialsFile, cfg.Google.DelegatedUser)
 	if err != nil {
 		return nil, fmt.Errorf("get google jwt config: %w", err)

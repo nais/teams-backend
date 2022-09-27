@@ -39,15 +39,35 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, client azure
 
 const Name = sqlc.ReconcilerNameAzureGroup
 
-func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
-	if !cfg.Azure.Enabled {
-		return nil, reconcilers.ErrReconcilerNotEnabled
+type reconcilerConfig struct {
+	clientID     string
+	clientSecret string
+	tenantID     string
+}
+
+func convertDatabaseConfig(ctx context.Context, database db.Database) (*reconcilerConfig, error) {
+	config, err := database.DangerousGetReconcilerConfigValues(ctx, Name)
+	if err != nil {
+		return nil, err
 	}
 
-	endpoint := microsoft.AzureADEndpoint(cfg.Azure.TenantID)
+	return &reconcilerConfig{
+		clientSecret: config.GetValue(sqlc.ReconcilerConfigKeyAzureClientSecret),
+		clientID:     config.GetValue(sqlc.ReconcilerConfigKeyAzureClientID),
+		tenantID:     config.GetValue(sqlc.ReconcilerConfigKeyAzureTenantID),
+	}, nil
+}
+
+func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+	config, err := convertDatabaseConfig(ctx, database)
+	if err != nil {
+		return nil, err
+	}
+
+	endpoint := microsoft.AzureADEndpoint(config.tenantID)
 	conf := clientcredentials.Config{
-		ClientID:     cfg.Azure.ClientID,
-		ClientSecret: cfg.Azure.ClientSecret,
+		ClientID:     config.clientID,
+		ClientSecret: config.clientSecret,
 		TokenURL:     endpoint.TokenURL,
 		AuthStyle:    endpoint.AuthStyle,
 		Scopes: []string{

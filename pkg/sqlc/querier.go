@@ -22,6 +22,7 @@ type Querier interface {
 	CreateSession(ctx context.Context, arg CreateSessionParams) (*Session, error)
 	CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (*User, error)
+	DangerousGetReconcilerConfigValues(ctx context.Context, reconciler ReconcilerName) ([]*DangerousGetReconcilerConfigValuesRow, error)
 	DeleteServiceAccount(ctx context.Context, id uuid.UUID) error
 	DeleteSession(ctx context.Context, id uuid.UUID) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
