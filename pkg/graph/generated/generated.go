@@ -937,7 +937,7 @@ directive @admin on FIELD_DEFINITION`, BuiltIn: false},
         "The name of the reconciler to configure."
         name: ReconcilerName!
 
-        "Configuration options as a key => value map."
+        "List of reconciler config inputs."
         config: [ReconcilerConfigInput!]!
     ): Reconciler! @admin
 
