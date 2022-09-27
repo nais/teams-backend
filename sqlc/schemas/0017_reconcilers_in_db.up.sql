@@ -39,4 +39,6 @@ INSERT INTO reconciler_config (reconciler, key, description)
 VALUES
     ('azure:group', 'azure:tenant_id', 'The ID of the Azure AD tenant.');
 
+ALTER TABLE audit_logs DROP CONSTRAINT target_user_or_target_team;
+
 COMMIT;

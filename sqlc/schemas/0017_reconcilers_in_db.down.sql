@@ -26,4 +26,7 @@ UPDATE reconciler_config SET key = 'app_installation_id' WHERE reconciler = 'git
 UPDATE reconciler_config SET key = 'app_private_key' WHERE reconciler = 'github:team' AND key = 'github:app_private_key';
 DROP TYPE reconciler_config_key;
 
+DELETE FROM audit_logs WHERE target_user IS NULL AND target_team_slug IS NULL;
+ALTER TABLE audit_logs ADD CONSTRAINT target_user_or_target_team CHECK (target_user IS NOT NULL OR target_team_slug IS NOT NULL);
+
 COMMIT;
