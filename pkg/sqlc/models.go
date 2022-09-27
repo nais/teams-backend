@@ -208,6 +208,70 @@ func AllAuditActionValues() []AuditAction {
 	}
 }
 
+type AuditLogsTargetType string
+
+const (
+	AuditLogsTargetTypeUser           AuditLogsTargetType = "user"
+	AuditLogsTargetTypeTeam           AuditLogsTargetType = "team"
+	AuditLogsTargetTypeServiceAccount AuditLogsTargetType = "service_account"
+	AuditLogsTargetTypeReconciler     AuditLogsTargetType = "reconciler"
+)
+
+func (e *AuditLogsTargetType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = AuditLogsTargetType(s)
+	case string:
+		*e = AuditLogsTargetType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for AuditLogsTargetType: %T", src)
+	}
+	return nil
+}
+
+type NullAuditLogsTargetType struct {
+	AuditLogsTargetType AuditLogsTargetType
+	Valid               bool // Valid is true if String is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAuditLogsTargetType) Scan(value interface{}) error {
+	if value == nil {
+		ns.AuditLogsTargetType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.AuditLogsTargetType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAuditLogsTargetType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return ns.AuditLogsTargetType, nil
+}
+
+func (e AuditLogsTargetType) Valid() bool {
+	switch e {
+	case AuditLogsTargetTypeUser,
+		AuditLogsTargetTypeTeam,
+		AuditLogsTargetTypeServiceAccount,
+		AuditLogsTargetTypeReconciler:
+		return true
+	}
+	return false
+}
+
+func AllAuditLogsTargetTypeValues() []AuditLogsTargetType {
+	return []AuditLogsTargetType{
+		AuditLogsTargetTypeUser,
+		AuditLogsTargetTypeTeam,
+		AuditLogsTargetTypeServiceAccount,
+		AuditLogsTargetTypeReconciler,
+	}
+}
+
 type AuthzName string
 
 const (
@@ -612,15 +676,15 @@ type ApiKey struct {
 }
 
 type AuditLog struct {
-	ID             uuid.UUID
-	CreatedAt      time.Time
-	CorrelationID  uuid.UUID
-	SystemName     SystemName
-	Actor          sql.NullString
-	TargetUser     sql.NullString
-	TargetTeamSlug *slug.Slug
-	Action         AuditAction
-	Message        string
+	ID               uuid.UUID
+	CreatedAt        time.Time
+	CorrelationID    uuid.UUID
+	SystemName       SystemName
+	Actor            sql.NullString
+	Action           AuditAction
+	Message          string
+	TargetType       AuditLogsTargetType
+	TargetIdentifier string
 }
 
 type Reconciler struct {

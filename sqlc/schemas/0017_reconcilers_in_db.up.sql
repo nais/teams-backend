@@ -39,6 +39,37 @@ INSERT INTO reconciler_config (reconciler, key, description)
 VALUES
     ('azure:group', 'azure:tenant_id', 'The ID of the Azure AD tenant.');
 
+CREATE TYPE audit_logs_target_type AS ENUM (
+     'user',
+    'team',
+    'service_account',
+    'reconciler'
+);
+
 ALTER TABLE audit_logs DROP CONSTRAINT target_user_or_target_team;
+
+ALTER TABLE audit_logs
+    ADD COLUMN target_type audit_logs_target_type,
+    ADD COLUMN target_identifier TEXT;
+
+/* Insert extra rows for the teams in the rows with both user and teams present */
+INSERT INTO audit_logs (created_at, correlation_id, system_name, actor, action, message, target_type, target_identifier)
+    SELECT created_at, correlation_id, system_name, actor, action, message, 'team', target_team_slug
+    FROM audit_logs
+    WHERE target_user IS NOT NULL AND target_team_slug IS NOT NULL;
+
+UPDATE audit_logs
+SET target_type = 'user', target_identifier = target_user
+WHERE target_user IS NOT NULL;
+
+UPDATE audit_logs
+SET target_type = 'team', target_identifier = target_team_slug
+WHERE target_team_slug IS NOT NULL AND target_user IS NULL;
+
+ALTER TABLE audit_logs
+    DROP COLUMN target_user,
+    DROP COLUMN target_team_slug,
+    ALTER COLUMN target_type SET NOT NULL,
+    ALTER COLUMN target_identifier SET NOT NULL;
 
 COMMIT;

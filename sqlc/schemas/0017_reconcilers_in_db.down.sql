@@ -26,7 +26,27 @@ UPDATE reconciler_config SET key = 'app_installation_id' WHERE reconciler = 'git
 UPDATE reconciler_config SET key = 'app_private_key' WHERE reconciler = 'github:team' AND key = 'github:app_private_key';
 DROP TYPE reconciler_config_key;
 
+/* the audit log will be in a less than optimal state after this down migration, as the up migration split some rows
+   into multiple rows, and the down migration will not try to merge these rows back to their original rows. */
+ALTER TABLE audit_logs
+    ADD COLUMN target_user TEXT,
+    ADD COLUMN target_team_slug TEXT;
+
+UPDATE audit_logs
+SET target_user = target_identifier
+WHERE target_type = 'user';
+
+UPDATE audit_logs
+SET target_team_slug = target_identifier
+WHERE target_type = 'team';
+
+/* remove entries no longer valid for this version of the table */
 DELETE FROM audit_logs WHERE target_user IS NULL AND target_team_slug IS NULL;
-ALTER TABLE audit_logs ADD CONSTRAINT target_user_or_target_team CHECK (target_user IS NOT NULL OR target_team_slug IS NOT NULL);
+ALTER TABLE audit_logs
+    ADD CONSTRAINT target_user_or_target_team CHECK (target_user IS NOT NULL OR target_team_slug IS NOT NULL),
+    DROP COLUMN target_type,
+    DROP COLUMN target_identifier;
+
+DROP TYPE audit_logs_target_type;
 
 COMMIT;

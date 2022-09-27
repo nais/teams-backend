@@ -15,11 +15,11 @@ type AuditLog {
     "The identity of the actor who performed the action. When this field is empty it means that some backend process performed the action. The value, when present, is either the name of a service account, or the email address of a user."
     actor: String
 
-    "The target user, if any. For service accounts this is the name of the service account, while for users this will be the email address of the user."
-    targetUser: String
+    "The type of the audit log target."
+    targetType: AuditLogsTargetType!
 
-    "The target team slug, if any."
-    targetTeamSlug: Slug
+    "The identifier of the target."
+    targetIdentifier: String!
 
     "Log entry message."
     message: String!

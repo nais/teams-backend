@@ -83,11 +83,14 @@ func run() error {
 							return err
 						}
 
-						err = auditLogger.Logf(ctx, auditlogger.Fields{
+						targets := []auditlogger.Target{
+							auditlogger.UserTarget(owner.Email),
+						}
+						fields := auditlogger.Fields{
 							Action:        sqlc.AuditActionLegacyImporterUserCreate,
 							CorrelationID: correlationID,
-							TargetUser:    &owner.Email,
-						}, "created user")
+						}
+						err = auditLogger.Logf(ctx, targets, fields, "created user")
 						if err != nil {
 							return err
 						}
@@ -121,11 +124,14 @@ func run() error {
 							return err
 						}
 
-						err = auditLogger.Logf(ctx, auditlogger.Fields{
+						targets := []auditlogger.Target{
+							auditlogger.UserTarget(member.Email),
+						}
+						fields := auditlogger.Fields{
 							Action:        sqlc.AuditActionLegacyImporterUserCreate,
 							CorrelationID: correlationID,
-							TargetUser:    &member.Email,
-						}, "created user")
+						}
+						err = auditLogger.Logf(ctx, targets, fields, "created user")
 						if err != nil {
 							return err
 						}
@@ -167,11 +173,14 @@ func run() error {
 					return err
 				}
 
-				err = auditLogger.Logf(ctx, auditlogger.Fields{
-					Action:         sqlc.AuditActionLegacyImporterTeamCreate,
-					CorrelationID:  correlationID,
-					TargetTeamSlug: &team.Slug,
-				}, "add team")
+				targets := []auditlogger.Target{
+					auditlogger.TeamTarget(team.Slug),
+				}
+				fields := auditlogger.Fields{
+					Action:        sqlc.AuditActionLegacyImporterTeamCreate,
+					CorrelationID: correlationID,
+				}
+				err = auditLogger.Logf(ctx, targets, fields, "add team")
 				if err != nil {
 					return err
 				}
@@ -183,12 +192,15 @@ func run() error {
 					return err
 				}
 
-				err = auditLogger.Logf(ctx, auditlogger.Fields{
-					Action:         sqlc.AuditActionLegacyImporterTeamAddOwner,
-					CorrelationID:  correlationID,
-					TargetTeamSlug: &team.Slug,
-					TargetUser:     &user.Email,
-				}, "add team owner")
+				targets := []auditlogger.Target{
+					auditlogger.TeamTarget(team.Slug),
+					auditlogger.UserTarget(user.Email),
+				}
+				fields := auditlogger.Fields{
+					Action:        sqlc.AuditActionLegacyImporterTeamAddOwner,
+					CorrelationID: correlationID,
+				}
+				err = auditLogger.Logf(ctx, targets, fields, "add team owner")
 				if err != nil {
 					return err
 				}
@@ -200,12 +212,15 @@ func run() error {
 					return err
 				}
 
-				err = auditLogger.Logf(ctx, auditlogger.Fields{
-					Action:         sqlc.AuditActionLegacyImporterTeamAddMember,
-					CorrelationID:  correlationID,
-					TargetTeamSlug: &team.Slug,
-					TargetUser:     &user.Email,
-				}, "add team member")
+				targets := []auditlogger.Target{
+					auditlogger.TeamTarget(team.Slug),
+					auditlogger.UserTarget(user.Email),
+				}
+				fields := auditlogger.Fields{
+					Action:        sqlc.AuditActionLegacyImporterTeamAddMember,
+					CorrelationID: correlationID,
+				}
+				err = auditLogger.Logf(ctx, targets, fields, "add team member")
 				if err != nil {
 					return err
 				}

@@ -15,11 +15,6 @@ func (r *auditLogResolver) Actor(ctx context.Context, obj *db.AuditLog) (*string
 	return db.NullStringToStringP(obj.Actor), nil
 }
 
-// TargetUser is the resolver for the targetUser field.
-func (r *auditLogResolver) TargetUser(ctx context.Context, obj *db.AuditLog) (*string, error) {
-	return db.NullStringToStringP(obj.TargetUser), nil
-}
-
 // AuditLog returns generated.AuditLogResolver implementation.
 func (r *Resolver) AuditLog() generated.AuditLogResolver { return &auditLogResolver{r} }
 

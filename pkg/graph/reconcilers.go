@@ -63,11 +63,14 @@ func (r *mutationResolver) EnableReconciler(ctx context.Context, name sqlc.Recon
 	}
 
 	actor := authz.ActorFromContext(ctx)
+	targets := []auditlogger.Target{
+		auditlogger.ReconcilerTarget(name),
+	}
 	fields := auditlogger.Fields{
 		Action: sqlc.AuditActionGraphqlApiReconcilersEnable,
 		Actor:  console.Strp(actor.User.Identity()),
 	}
-	r.auditLogger.Logf(ctx, fields, "Enable reconciler: %q", name)
+	r.auditLogger.Logf(ctx, targets, fields, "Enable reconciler: %q", name)
 
 	return reconciler, nil
 }
@@ -102,11 +105,14 @@ func (r *mutationResolver) DisableReconciler(ctx context.Context, name sqlc.Reco
 	}
 
 	actor := authz.ActorFromContext(ctx)
+	targets := []auditlogger.Target{
+		auditlogger.ReconcilerTarget(name),
+	}
 	fields := auditlogger.Fields{
 		Action: sqlc.AuditActionGraphqlApiReconcilersDisable,
 		Actor:  console.Strp(actor.User.Identity()),
 	}
-	r.auditLogger.Logf(ctx, fields, "Disable reconciler: %q", name)
+	r.auditLogger.Logf(ctx, targets, fields, "Disable reconciler: %q", name)
 
 	return reconciler, nil
 }
@@ -128,11 +134,14 @@ func (r *mutationResolver) ConfigureReconciler(ctx context.Context, name sqlc.Re
 	}
 
 	actor := authz.ActorFromContext(ctx)
+	targets := []auditlogger.Target{
+		auditlogger.ReconcilerTarget(name),
+	}
 	fields := auditlogger.Fields{
 		Action: sqlc.AuditActionGraphqlApiReconcilersConfigure,
 		Actor:  console.Strp(actor.User.Identity()),
 	}
-	r.auditLogger.Logf(ctx, fields, "Configure reconciler: %q", name)
+	r.auditLogger.Logf(ctx, targets, fields, "Configure reconciler: %q", name)
 
 	return reconciler, nil
 }
@@ -167,11 +176,14 @@ func (r *mutationResolver) ResetReconciler(ctx context.Context, name sqlc.Reconc
 	}
 
 	actor := authz.ActorFromContext(ctx)
+	targets := []auditlogger.Target{
+		auditlogger.ReconcilerTarget(name),
+	}
 	fields := auditlogger.Fields{
 		Action: sqlc.AuditActionGraphqlApiReconcilersReset,
 		Actor:  console.Strp(actor.User.Identity()),
 	}
-	r.auditLogger.Logf(ctx, fields, "Reset reconciler: %q", name)
+	r.auditLogger.Logf(ctx, targets, fields, "Reset reconciler: %q", name)
 
 	return reconciler, nil
 }
@@ -200,6 +212,11 @@ func (r *reconcilerResolver) Configured(ctx context.Context, obj *db.Reconciler)
 	}
 
 	return true, nil
+}
+
+// AuditLogs is the resolver for the auditLogs field.
+func (r *reconcilerResolver) AuditLogs(ctx context.Context, obj *db.Reconciler) ([]*db.AuditLog, error) {
+	return r.database.GetAuditLogsForReconciler(ctx, obj.Name)
 }
 
 // Reconciler returns generated.ReconcilerResolver implementation.

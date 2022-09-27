@@ -97,13 +97,13 @@ func (_m *MockDatabase) CreateAPIKey(ctx context.Context, apiKey string, service
 	return r0
 }
 
-// CreateAuditLogEntry provides a mock function with given fields: ctx, correlationID, systemName, actor, targetTeamSlug, targetUser, action, message
-func (_m *MockDatabase) CreateAuditLogEntry(ctx context.Context, correlationID uuid.UUID, systemName sqlc.SystemName, actor *string, targetTeamSlug *slug.Slug, targetUser *string, action sqlc.AuditAction, message string) error {
-	ret := _m.Called(ctx, correlationID, systemName, actor, targetTeamSlug, targetUser, action, message)
+// CreateAuditLogEntry provides a mock function with given fields: ctx, correlationID, systemName, actor, targetType, targetIdentifier, action, message
+func (_m *MockDatabase) CreateAuditLogEntry(ctx context.Context, correlationID uuid.UUID, systemName sqlc.SystemName, actor *string, targetType sqlc.AuditLogsTargetType, targetIdentifier string, action sqlc.AuditAction, message string) error {
+	ret := _m.Called(ctx, correlationID, systemName, actor, targetType, targetIdentifier, action, message)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, sqlc.SystemName, *string, *slug.Slug, *string, sqlc.AuditAction, string) error); ok {
-		r0 = rf(ctx, correlationID, systemName, actor, targetTeamSlug, targetUser, action, message)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, sqlc.SystemName, *string, sqlc.AuditLogsTargetType, string, sqlc.AuditAction, string) error); ok {
+		r0 = rf(ctx, correlationID, systemName, actor, targetType, targetIdentifier, action, message)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -330,6 +330,29 @@ func (_m *MockDatabase) ExtendSession(ctx context.Context, sessionID uuid.UUID) 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
 		r1 = rf(ctx, sessionID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetAuditLogsForReconciler provides a mock function with given fields: ctx, reconcilerName
+func (_m *MockDatabase) GetAuditLogsForReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) ([]*AuditLog, error) {
+	ret := _m.Called(ctx, reconcilerName)
+
+	var r0 []*AuditLog
+	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName) []*AuditLog); ok {
+		r0 = rf(ctx, reconcilerName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*AuditLog)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, sqlc.ReconcilerName) error); ok {
+		r1 = rf(ctx, reconcilerName)
 	} else {
 		r1 = ret.Error(1)
 	}

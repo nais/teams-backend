@@ -101,12 +101,14 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 		}
 
 		if _, requested := namespaceState.Namespaces[environment]; !requested {
-			fields := auditlogger.Fields{
-				Action:         sqlc.AuditActionNaisNamespaceCreateNamespace,
-				CorrelationID:  input.CorrelationID,
-				TargetTeamSlug: &input.Team.Slug,
+			targets := []auditlogger.Target{
+				auditlogger.TeamTarget(input.Team.Slug),
 			}
-			r.auditLogger.Logf(ctx, fields, "request namespace creation for team %q in environment %q", input.Team.Slug, environment)
+			fields := auditlogger.Fields{
+				Action:        sqlc.AuditActionNaisNamespaceCreateNamespace,
+				CorrelationID: input.CorrelationID,
+			}
+			r.auditLogger.Logf(ctx, targets, fields, "request namespace creation for team %q in environment %q", input.Team.Slug, environment)
 			namespaceState.Namespaces[environment] = input.Team.Slug
 		}
 	}

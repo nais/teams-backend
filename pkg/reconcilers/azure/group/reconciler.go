@@ -96,12 +96,14 @@ func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.
 	}
 
 	if created {
-		fields := auditlogger.Fields{
-			Action:         sqlc.AuditActionAzureGroupCreate,
-			CorrelationID:  input.CorrelationID,
-			TargetTeamSlug: &input.Team.Slug,
+		targets := []auditlogger.Target{
+			auditlogger.TeamTarget(input.Team.Slug),
 		}
-		r.auditLogger.Logf(ctx, fields, "created Azure AD group: %s", grp)
+		fields := auditlogger.Fields{
+			Action:        sqlc.AuditActionAzureGroupCreate,
+			CorrelationID: input.CorrelationID,
+		}
+		r.auditLogger.Logf(ctx, targets, fields, "created Azure AD group: %s", grp)
 
 		id, _ := uuid.Parse(grp.ID)
 		err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.ID, reconcilers.AzureState{GroupID: &id})
@@ -146,13 +148,15 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 			consoleUserMap[remoteEmail] = user
 		}
 
-		fields := auditlogger.Fields{
-			Action:         sqlc.AuditActionAzureGroupDeleteMember,
-			CorrelationID:  input.CorrelationID,
-			TargetTeamSlug: &input.Team.Slug,
-			TargetUser:     &remoteEmail,
+		targets := []auditlogger.Target{
+			auditlogger.TeamTarget(input.Team.Slug),
+			auditlogger.UserTarget(remoteEmail),
 		}
-		r.auditLogger.Logf(ctx, fields, "removed member %q from Azure group %q", remoteEmail, grp.MailNickname)
+		fields := auditlogger.Fields{
+			Action:        sqlc.AuditActionAzureGroupDeleteMember,
+			CorrelationID: input.CorrelationID,
+		}
+		r.auditLogger.Logf(ctx, targets, fields, "removed member %q from Azure group %q", remoteEmail, grp.MailNickname)
 	}
 
 	membersToAdd := localOnlyMembers(members, localMembers)
@@ -168,13 +172,15 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 			continue
 		}
 
-		fields := auditlogger.Fields{
-			Action:         sqlc.AuditActionAzureGroupAddMember,
-			CorrelationID:  input.CorrelationID,
-			TargetTeamSlug: &input.Team.Slug,
-			TargetUser:     &consoleUser.Email,
+		targets := []auditlogger.Target{
+			auditlogger.TeamTarget(input.Team.Slug),
+			auditlogger.UserTarget(consoleUser.Email),
 		}
-		r.auditLogger.Logf(ctx, fields, "added member %q to Azure group %q", consoleUser.Email, grp.MailNickname)
+		fields := auditlogger.Fields{
+			Action:        sqlc.AuditActionAzureGroupAddMember,
+			CorrelationID: input.CorrelationID,
+		}
+		r.auditLogger.Logf(ctx, targets, fields, "added member %q to Azure group %q", consoleUser.Email, grp.MailNickname)
 	}
 
 	return nil

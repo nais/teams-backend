@@ -48,6 +48,10 @@ models:
     model:
       - github.com/nais/console/pkg/sqlc.AuditAction
 
+  AuditLogsTargetType:
+    model:
+      - github.com/nais/console/pkg/sqlc.AuditLogsTargetType
+
   ReconcilerName:
     model:
       - github.com/nais/console/pkg/sqlc.ReconcilerName

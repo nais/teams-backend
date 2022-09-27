@@ -14,16 +14,16 @@ type MockAuditLogger struct {
 	mock.Mock
 }
 
-// Logf provides a mock function with given fields: ctx, entry, message, messageArgs
-func (_m *MockAuditLogger) Logf(ctx context.Context, entry Fields, message string, messageArgs ...interface{}) error {
+// Logf provides a mock function with given fields: ctx, targets, entry, message, messageArgs
+func (_m *MockAuditLogger) Logf(ctx context.Context, targets []Target, entry Fields, message string, messageArgs ...interface{}) error {
 	var _ca []interface{}
-	_ca = append(_ca, ctx, entry, message)
+	_ca = append(_ca, ctx, targets, entry, message)
 	_ca = append(_ca, messageArgs...)
 	ret := _m.Called(_ca...)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, Fields, string, ...interface{}) error); ok {
-		r0 = rf(ctx, entry, message, messageArgs...)
+	if rf, ok := ret.Get(0).(func(context.Context, []Target, Fields, string, ...interface{}) error); ok {
+		r0 = rf(ctx, targets, entry, message, messageArgs...)
 	} else {
 		r0 = ret.Error(0)
 	}

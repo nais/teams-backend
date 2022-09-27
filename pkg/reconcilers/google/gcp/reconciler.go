@@ -175,12 +175,14 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *rec
 		return nil, fmt.Errorf("unable to convert operation response to the created GCP project: %w", err)
 	}
 
-	fields := auditlogger.Fields{
-		Action:         sqlc.AuditActionGoogleGcpProjectCreateProject,
-		CorrelationID:  input.CorrelationID,
-		TargetTeamSlug: &input.Team.Slug,
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(input.Team.Slug),
 	}
-	r.auditLogger.Logf(ctx, fields, "created GCP project %q for team %q in environment %q", createdProject.ProjectId, input.Team.Slug, environment)
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGoogleGcpProjectCreateProject,
+		CorrelationID: input.CorrelationID,
+	}
+	r.auditLogger.Logf(ctx, targets, fields, "created GCP project %q for team %q in environment %q", createdProject.ProjectId, input.Team.Slug, environment)
 
 	return createdProject, nil
 }
@@ -228,12 +230,14 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 	}
 
 	// FIXME: No need to log if no changes are made
-	fields := auditlogger.Fields{
-		Action:         sqlc.AuditActionGoogleGcpProjectAssignPermissions,
-		CorrelationID:  input.CorrelationID,
-		TargetTeamSlug: &input.Team.Slug,
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(input.Team.Slug),
 	}
-	r.auditLogger.Logf(ctx, fields, "assigned GCP project IAM permissions for %q", project.ProjectId)
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGoogleGcpProjectAssignPermissions,
+		CorrelationID: input.CorrelationID,
+	}
+	r.auditLogger.Logf(ctx, targets, fields, "assigned GCP project IAM permissions for %q", project.ProjectId)
 
 	return nil
 }
@@ -259,12 +263,14 @@ func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.C
 		return nil, err
 	}
 
-	fields := auditlogger.Fields{
-		Action:         sqlc.AuditActionGoogleGcpProjectCreateCnrmServiceAccount,
-		CorrelationID:  input.CorrelationID,
-		TargetTeamSlug: &input.Team.Slug,
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(input.Team.Slug),
 	}
-	r.auditLogger.Logf(ctx, fields, "create CNRM service account for team %q in environment %q", input.Team.Slug, environment)
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGoogleGcpProjectCreateCnrmServiceAccount,
+		CorrelationID: input.CorrelationID,
+	}
+	r.auditLogger.Logf(ctx, targets, fields, "create CNRM service account for team %q in environment %q", input.Team.Slug, environment)
 
 	return serviceAccount, nil
 }
@@ -286,12 +292,14 @@ func (r *googleGcpReconciler) setTeamProjectBillingInfo(ctx context.Context, pro
 		return err
 	}
 
-	fields := auditlogger.Fields{
-		Action:         sqlc.AuditActionGoogleGcpProjectSetBillingInfo,
-		CorrelationID:  input.CorrelationID,
-		TargetTeamSlug: &input.Team.Slug,
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(input.Team.Slug),
 	}
-	r.auditLogger.Logf(ctx, fields, "set billing info for %q", project.ProjectId)
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGoogleGcpProjectSetBillingInfo,
+		CorrelationID: input.CorrelationID,
+	}
+	r.auditLogger.Logf(ctx, targets, fields, "set billing info for %q", project.ProjectId)
 
 	return nil
 }

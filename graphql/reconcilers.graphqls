@@ -62,6 +62,9 @@ type Reconciler {
 
     "The run order of the reconciler."
     runOrder: Int!
+
+    "Audit logs for this reconciler."
+    auditLogs: [AuditLog!]!
 }
 
 "Reconciler configuration type."

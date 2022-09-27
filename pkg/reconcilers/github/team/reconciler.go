@@ -119,12 +119,14 @@ func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconc
 		return nil, fmt.Errorf("unable to create GitHub team: %w", err)
 	}
 
-	fields := auditlogger.Fields{
-		Action:         sqlc.AuditActionGithubTeamCreate,
-		CorrelationID:  correlationID,
-		TargetTeamSlug: &team.Slug,
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(team.Slug),
 	}
-	r.auditLogger.Logf(ctx, fields, "created GitHub team %q", *githubTeam.Slug)
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGithubTeamCreate,
+		CorrelationID: correlationID,
+	}
+	r.auditLogger.Logf(ctx, targets, fields, "created GitHub team %q", *githubTeam.Slug)
 
 	return githubTeam, nil
 }
@@ -164,12 +166,14 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 			}
 		}
 
-		fields := auditlogger.Fields{
-			Action:         sqlc.AuditActionGithubTeamDeleteMember,
-			CorrelationID:  input.CorrelationID,
-			TargetTeamSlug: &input.Team.Slug,
+		targets := []auditlogger.Target{
+			auditlogger.TeamTarget(input.Team.Slug),
 		}
-		r.auditLogger.Logf(ctx, fields, "deleted member %q from GitHub team %q", username, *githubTeam.Slug)
+		fields := auditlogger.Fields{
+			Action:        sqlc.AuditActionGithubTeamDeleteMember,
+			CorrelationID: input.CorrelationID,
+		}
+		r.auditLogger.Logf(ctx, targets, fields, "deleted member %q from GitHub team %q", username, *githubTeam.Slug)
 	}
 
 	membersToAdd := localOnlyMembers(consoleUserWithGitHubUser, membersAccordingToGitHub)
@@ -181,13 +185,15 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 			continue
 		}
 
-		fields := auditlogger.Fields{
-			Action:         sqlc.AuditActionGithubTeamAddMember,
-			CorrelationID:  input.CorrelationID,
-			TargetTeamSlug: &input.Team.Slug,
-			TargetUser:     &consoleUser.Email,
+		targets := []auditlogger.Target{
+			auditlogger.TeamTarget(input.Team.Slug),
+			auditlogger.UserTarget(consoleUser.Email),
 		}
-		r.auditLogger.Logf(ctx, fields, "added member %q to GitHub team %q", username, *githubTeam.Slug)
+		fields := auditlogger.Fields{
+			Action:        sqlc.AuditActionGithubTeamAddMember,
+			CorrelationID: input.CorrelationID,
+		}
+		r.auditLogger.Logf(ctx, targets, fields, "added member %q to GitHub team %q", username, *githubTeam.Slug)
 	}
 
 	return nil

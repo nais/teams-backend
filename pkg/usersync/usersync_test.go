@@ -145,37 +145,37 @@ func TestSync(t *testing.T) {
 			Once()
 
 		auditLogger.
-			On("Logf", ctx, mock.MatchedBy(func(f auditlogger.Fields) bool {
-				return f.Action == sqlc.AuditActionUsersyncUpdate &&
-					*f.TargetUser == "user1@example.com"
-			}), "Local user updated: \"user1@example.com\"").
+			On("Logf", ctx, targetIdentifier("user1@example.com"), auditAction(sqlc.AuditActionUsersyncUpdate), "Local user updated: \"user1@example.com\"").
 			Return(nil).
 			Once()
 		auditLogger.
-			On("Logf", ctx, mock.MatchedBy(func(f auditlogger.Fields) bool {
-				return f.Action == sqlc.AuditActionUsersyncCreate &&
-					*f.TargetUser == "user2@example.com"
-			}), "Local user created: \"user2@example.com\"").
+			On("Logf", ctx, targetIdentifier("user2@example.com"), auditAction(sqlc.AuditActionUsersyncCreate), "Local user created: \"user2@example.com\"").
 			Return(nil).
 			Once()
 		auditLogger.
-			On("Logf", ctx, mock.MatchedBy(func(f auditlogger.Fields) bool {
-				return f.Action == sqlc.AuditActionUsersyncUpdate &&
-					*f.TargetUser == "user3@example.com"
-			}), "Local user updated: \"user3@example.com\"").
+			On("Logf", ctx, targetIdentifier("user3@example.com"), auditAction(sqlc.AuditActionUsersyncUpdate), "Local user updated: \"user3@example.com\"").
 			Return(nil).
 			Once()
 		auditLogger.
-			On("Logf", ctx, mock.MatchedBy(func(f auditlogger.Fields) bool {
-				return f.Action == sqlc.AuditActionUsersyncDelete &&
-					*f.TargetUser == "delete-me@example.com"
-			}), "Local user deleted: \"delete-me@example.com\"").
+			On("Logf", ctx, targetIdentifier("delete-me@example.com"), auditAction(sqlc.AuditActionUsersyncDelete), "Local user deleted: \"delete-me@example.com\"").
 			Return(nil).
 			Once()
 
 		usersync := usersync.New(database, auditLogger, domain, httpClient)
 		err := usersync.Sync(ctx)
 		assert.NoError(t, err)
+	})
+}
+
+func targetIdentifier(identifier string) interface{} {
+	return mock.MatchedBy(func(t []auditlogger.Target) bool {
+		return t[0].Identifier == identifier
+	})
+}
+
+func auditAction(action sqlc.AuditAction) interface{} {
+	return mock.MatchedBy(func(f auditlogger.Fields) bool {
+		return f.Action == action
 	})
 }
 

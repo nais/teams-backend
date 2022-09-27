@@ -154,12 +154,14 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 	}
 
 	for _, entry := range auditLogEntries {
+		targets := []auditlogger.Target{
+			auditlogger.UserTarget(entry.userEmail),
+		}
 		fields := auditlogger.Fields{
 			Action:        entry.action,
 			CorrelationID: correlationID,
-			TargetUser:    &entry.userEmail,
 		}
-		s.auditLogger.Logf(ctx, fields, entry.message)
+		s.auditLogger.Logf(ctx, targets, fields, entry.message)
 	}
 
 	return nil

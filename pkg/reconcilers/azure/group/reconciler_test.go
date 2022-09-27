@@ -116,30 +116,28 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Once()
 
 		auditLogger.
-			On("Logf", ctx, mock.MatchedBy(func(f auditlogger.Fields) bool {
-				return f.CorrelationID == correlationID &&
-					f.TargetTeamSlug.String() == teamSlug.String()
-			}), mock.Anything, mock.Anything).
-			Return(nil).
-			Once()
+			On("Logf", ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
+				return len(t) == 1 && t[0].Identifier == string(teamSlug)
+			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
+				return f.Action == sqlc.AuditActionAzureGroupCreate && f.CorrelationID == correlationID
+			}), mock.Anything, group).
+			Return(nil)
+
 		auditLogger.
-			On("Logf", ctx, mock.MatchedBy(func(f auditlogger.Fields) bool {
-				return f.Action == sqlc.AuditActionAzureGroupDeleteMember &&
-					f.CorrelationID == correlationID &&
-					f.TargetTeamSlug.String() == teamSlug.String() &&
-					*f.TargetUser == removeMember.Mail
+			On("Logf", ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
+				return len(t) == 2 && t[0].Identifier == string(teamSlug) && t[1].Identifier == removeMember.Mail
+			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
+				return f.Action == sqlc.AuditActionAzureGroupDeleteMember && f.CorrelationID == correlationID
 			}), mock.Anything, removeMember.Mail, group.MailNickname).
-			Return(nil).
-			Once()
+			Return(nil)
+
 		auditLogger.
-			On("Logf", ctx, mock.MatchedBy(func(f auditlogger.Fields) bool {
-				return f.Action == sqlc.AuditActionAzureGroupAddMember &&
-					f.CorrelationID == correlationID &&
-					f.TargetTeamSlug.String() == teamSlug.String() &&
-					*f.TargetUser == addUser.Email
+			On("Logf", ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
+				return len(t) == 2 && t[0].Identifier == string(teamSlug) && t[1].Identifier == addUser.Email
+			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
+				return f.Action == sqlc.AuditActionAzureGroupAddMember && f.CorrelationID == correlationID
 			}), mock.Anything, addUser.Email, group.MailNickname).
-			Return(nil).
-			Once()
+			Return(nil)
 
 		err := reconciler.Reconcile(ctx, input)
 
@@ -276,11 +274,10 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Once()
 
 		auditLogger.
-			On("Logf", ctx, mock.MatchedBy(func(f auditlogger.Fields) bool {
-				return f.Action == sqlc.AuditActionAzureGroupDeleteMember &&
-					f.CorrelationID == correlationID &&
-					f.TargetTeamSlug.String() == teamSlug.String() &&
-					*f.TargetUser == removeMember.Mail
+			On("Logf", ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
+				return t[0].Identifier == string(teamSlug) && t[1].Identifier == removeMember.Mail
+			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
+				return f.Action == sqlc.AuditActionAzureGroupDeleteMember && f.CorrelationID == correlationID
 			}), mock.Anything, removeMember.Mail, group.MailNickname).
 			Return(nil).
 			Once()
