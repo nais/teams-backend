@@ -46,6 +46,7 @@ type googleGcpReconciler struct {
 	auditLogger    auditlogger.AuditLogger
 	clusters       clusterInfo
 	gcpServices    *gcpServices
+	tenantName     string
 	domain         string
 	cnrmRoleName   string
 	billingAccount string
@@ -55,7 +56,7 @@ const (
 	Name = sqlc.SystemNameGoogleGcpProject
 )
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters clusterInfo, gcpServices *gcpServices, domain, cnrmRoleName, billingAccount string) *googleGcpReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters clusterInfo, gcpServices *gcpServices, tenantName, domain, cnrmRoleName, billingAccount string) *googleGcpReconciler {
 	return &googleGcpReconciler{
 		database:       database,
 		auditLogger:    auditLogger,
@@ -64,6 +65,7 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters clu
 		domain:         domain,
 		cnrmRoleName:   cnrmRoleName,
 		billingAccount: billingAccount,
+		tenantName:     tenantName,
 	}
 }
 
@@ -83,7 +85,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		return nil, fmt.Errorf("parse GCP cluster info: %w", err)
 	}
 
-	return New(database, auditLogger, clusters, gcpServices, cfg.TenantDomain, cfg.GCP.CnrmRole, cfg.GCP.BillingAccount), nil
+	return New(database, auditLogger, clusters, gcpServices, cfg.TenantName, cfg.TenantDomain, cfg.GCP.CnrmRole, cfg.GCP.BillingAccount), nil
 }
 
 func (r *googleGcpReconciler) Name() sqlc.SystemName {
@@ -127,6 +129,7 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 		err = r.ensureProjectHasLabels(ctx, project, map[string]string{
 			"team":        string(input.Team.Slug),
 			"environment": environment,
+			"tenant":      r.tenantName,
 		})
 		if err != nil {
 			return fmt.Errorf("unable to set project labels: %w", err)
