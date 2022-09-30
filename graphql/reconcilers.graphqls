@@ -69,6 +69,9 @@ type ReconcilerConfig {
     "Configuration key."
     key: String!
 
+    "The human-friendly name of the configuration key."
+    displayName: String!
+
     "Configuration description."
     description: String!
 

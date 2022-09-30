@@ -109,6 +109,7 @@ type ComplexityRoot struct {
 	ReconcilerConfig struct {
 		Configured  func(childComplexity int) int
 		Description func(childComplexity int) int
+		DisplayName func(childComplexity int) int
 		Key         func(childComplexity int) int
 	}
 
@@ -584,6 +585,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.ReconcilerConfig.Description(childComplexity), true
 
+	case "ReconcilerConfig.displayName":
+		if e.complexity.ReconcilerConfig.DisplayName == nil {
+			break
+		}
+
+		return e.complexity.ReconcilerConfig.DisplayName(childComplexity), true
+
 	case "ReconcilerConfig.key":
 		if e.complexity.ReconcilerConfig.Key == nil {
 			break
@@ -972,6 +980,9 @@ type Reconciler {
 type ReconcilerConfig {
     "Configuration key."
     key: String!
+
+    "The human-friendly name of the configuration key."
+    displayName: String!
 
     "Configuration description."
     description: String!
@@ -4212,6 +4223,8 @@ func (ec *executionContext) fieldContext_Reconciler_config(ctx context.Context, 
 			switch field.Name {
 			case "key":
 				return ec.fieldContext_ReconcilerConfig_key(ctx, field)
+			case "displayName":
+				return ec.fieldContext_ReconcilerConfig_displayName(ctx, field)
 			case "description":
 				return ec.fieldContext_ReconcilerConfig_description(ctx, field)
 			case "configured":
@@ -4343,6 +4356,50 @@ func (ec *executionContext) _ReconcilerConfig_key(ctx context.Context, field gra
 }
 
 func (ec *executionContext) fieldContext_ReconcilerConfig_key(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ReconcilerConfig",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ReconcilerConfig_displayName(ctx context.Context, field graphql.CollectedField, obj *db.ReconcilerConfig) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ReconcilerConfig_displayName(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DisplayName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ReconcilerConfig_displayName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ReconcilerConfig",
 		Field:      field,
@@ -8389,6 +8446,13 @@ func (ec *executionContext) _ReconcilerConfig(ctx context.Context, sel ast.Selec
 		case "key":
 
 			out.Values[i] = ec._ReconcilerConfig_key(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "displayName":
+
+			out.Values[i] = ec._ReconcilerConfig_displayName(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++

@@ -34,6 +34,6 @@ SET value = sqlc.arg(value)::TEXT
 WHERE reconciler = $1 AND key = $2;
 
 -- name: GetReconcilerConfig :many
-SELECT reconciler, key, description, (value IS NOT NULL)::BOOL AS configured
+SELECT reconciler, key, display_name, description, (value IS NOT NULL)::BOOL AS configured
 FROM reconciler_config
 WHERE reconciler = $1;

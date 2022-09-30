@@ -570,6 +570,7 @@ type Reconciler struct {
 type ReconcilerConfig struct {
 	Reconciler  ReconcilerName
 	Key         string
+	DisplayName string
 	Description string
 	Value       sql.NullString
 }

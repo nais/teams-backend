@@ -117,7 +117,7 @@ func (q *Queries) GetReconciler(ctx context.Context, name ReconcilerName) (*Reco
 }
 
 const getReconcilerConfig = `-- name: GetReconcilerConfig :many
-SELECT reconciler, key, description, (value IS NOT NULL)::BOOL AS configured
+SELECT reconciler, key, display_name, description, (value IS NOT NULL)::BOOL AS configured
 FROM reconciler_config
 WHERE reconciler = $1
 `
@@ -125,6 +125,7 @@ WHERE reconciler = $1
 type GetReconcilerConfigRow struct {
 	Reconciler  ReconcilerName
 	Key         string
+	DisplayName string
 	Description string
 	Configured  bool
 }
@@ -141,6 +142,7 @@ func (q *Queries) GetReconcilerConfig(ctx context.Context, reconciler Reconciler
 		if err := rows.Scan(
 			&i.Reconciler,
 			&i.Key,
+			&i.DisplayName,
 			&i.Description,
 			&i.Configured,
 		); err != nil {

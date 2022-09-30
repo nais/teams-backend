@@ -19,6 +19,7 @@ CREATE TABLE reconcilers (
 CREATE TABLE reconciler_config (
     reconciler reconciler_name NOT NULL REFERENCES reconcilers(name) ON DELETE CASCADE,
     key TEXT NOT NULL,
+    display_name TEXT NOT NULL,
     description TEXT NOT NULL,
     value TEXT,
     PRIMARY KEY(reconciler, key)
@@ -34,16 +35,16 @@ VALUES
 ;
 
 /* Add reconciler config that needs to be set by the tenant. Some reconciler options are provided via environment variables */
-INSERT INTO reconciler_config (reconciler, key, description)
+INSERT INTO reconciler_config (reconciler, key, display_name, description)
 VALUES
-    ('azure:group', 'azure:client_id',           'The client ID of the application registration that Console will use when communicating with the Azure AD APIs. The application must have the following API permissions: Group.Create, GroupMember.ReadWrite.All.'),
-    ('azure:group', 'azure:client_secret',       'The client secret of the application registration.'),
-    ('azure:group', 'azure:tenant_id',           'The ID of the Azure AD tenant.'),
+    ('azure:group', 'azure:client_id',     'Client ID',      'The client ID of the application registration that Console will use when communicating with the Azure AD APIs. The application must have the following API permissions: Group.Create, GroupMember.ReadWrite.All.'),
+    ('azure:group', 'azure:client_secret', 'Client secret',  'The client secret of the application registration.'),
+    ('azure:group', 'azure:tenant_id',     'Tenant ID',      'The ID of the Azure AD tenant.'),
 
-    ('github:team', 'github:org',                 'The slug of the GitHub organization.'),
-    ('github:team', 'github:app_id',              'The application ID of the GitHub Application that Console will use when communicating with the GitHub APIs. The application will need the following permissions: Organization administration (read-only), Organization members (read and write).'),
-    ('github:team', 'github:app_installation_id', 'The installation ID for the GitHub application when installed on the org.'),
-    ('github:team', 'github:app_private_key',     'The private key of the GitHub Application (PEM format).')
+    ('github:team', 'github:org',                 'Organization',        'The slug of the GitHub organization.'),
+    ('github:team', 'github:app_id',              'GitHub App ID',       'The application ID of the GitHub Application that Console will use when communicating with the GitHub APIs. The application will need the following permissions: Organization administration (read-only), Organization members (read and write).'),
+    ('github:team', 'github:app_installation_id', 'App installation ID', 'The installation ID for the GitHub application when installed on the org.'),
+    ('github:team', 'github:app_private_key',     'App private key',     'The private key of the GitHub Application (PEM format).')
 ;
 
 /* Must use IF NOT EXISTS, since the value can potentially exist */
