@@ -33,11 +33,12 @@ VALUES
     ('github:team',             'GitHub teams',           'Create and maintain GitHub teams for the Console teams',             5, false)
 ;
 
-/* Add reconciler config needs to be set by the tenant. Some reconciler options are provided via environment variables */
+/* Add reconciler config that needs to be set by the tenant. Some reconciler options are provided via environment variables */
 INSERT INTO reconciler_config (reconciler, key, description)
 VALUES
     ('azure:group',             'client_id',            'The client ID of the application registration that Console will use when communicating with the Azure AD APIs. The application must have the following API permissions: Group.Create, GroupMember.ReadWrite.All.'),
     ('azure:group',             'client_secret',        'The client secret of the application registration.'),
+    ('azure:group',             'tenant_id',            'The ID of the Azure AD tenant.'),
 
     ('github:team',             'org',                  'The slug of the GitHub organization.'),
     ('github:team',             'app_id',               'The application ID of the GitHub Application that Console will use when communicating with the GitHub APIs. The application will need the following permissions: Organization administration (read-only), Organization members (read and write).'),
