@@ -27,11 +27,11 @@ CREATE TABLE reconciler_config (
 
 INSERT INTO reconcilers (name, display_name, description, run_order, enabled)
 VALUES
-    ('google:workspace-admin',  'Google workspace group', 'Create and maintain Google workspace groups for the Console teams',  1, true),
-    ('google:gcp:project',      'GCP projects',           'Create GCP projects for the Console teams',                          2, false),
-    ('nais:namespace',          'NAIS namespace',         'Create NAIS namespaces for the Console teams',                       3, false),
-    ('azure:group',             'Azure AD groups',        'Create and maintain Azure AD security groups for the Console teams', 4, false),
-    ('github:team',             'GitHub teams',           'Create and maintain GitHub teams for the Console teams',             5, false)
+    ('google:workspace-admin',  'Google workspace group', 'Create and maintain Google workspace groups for the Console teams.',  1, true),
+    ('google:gcp:project',      'GCP projects',           'Create GCP projects for the Console teams.',                          2, false),
+    ('nais:namespace',          'NAIS namespace',         'Create NAIS namespaces for the Console teams.',                       3, false),
+    ('azure:group',             'Azure AD groups',        'Create and maintain Azure AD security groups for the Console teams.', 4, false),
+    ('github:team',             'GitHub teams',           'Create and maintain GitHub teams for the Console teams.',             5, false)
 ;
 
 /* Add reconciler config that needs to be set by the tenant. Some reconciler options are provided via environment variables */
