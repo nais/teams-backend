@@ -17,13 +17,6 @@ ALTER TABLE reconciler_errors RENAME COLUMN reconciler TO system_name;
 ALTER TABLE reconciler_errors RENAME TO reconcile_errors;
 
 ALTER TABLE reconciler_config ALTER COLUMN key TYPE TEXT;
-UPDATE reconciler_config SET key = 'client_id' WHERE reconciler = 'azure:group' AND key = 'azure:client_id';
-UPDATE reconciler_config SET key = 'client_secret' WHERE reconciler = 'azure:group' AND key = 'azure:client_secret';
-UPDATE reconciler_config SET key = 'tenant_id' WHERE reconciler = 'azure:group' AND key = 'azure:tenant_id';
-UPDATE reconciler_config SET key = 'org' WHERE reconciler = 'github:team' AND key = 'github:org';
-UPDATE reconciler_config SET key = 'app_id' WHERE reconciler = 'github:team' AND key = 'github:app_id';
-UPDATE reconciler_config SET key = 'app_installation_id' WHERE reconciler = 'github:team' AND key = 'github:app_installation_id';
-UPDATE reconciler_config SET key = 'app_private_key' WHERE reconciler = 'github:team' AND key = 'github:app_private_key';
 DROP TYPE reconciler_config_key;
 
 /* the audit log will be in a less than optimal state after this down migration, as the up migration split some rows
