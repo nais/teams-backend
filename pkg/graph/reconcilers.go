@@ -219,7 +219,25 @@ func (r *reconcilerResolver) AuditLogs(ctx context.Context, obj *db.Reconciler) 
 	return r.database.GetAuditLogsForReconciler(ctx, obj.Name)
 }
 
+// Value is the resolver for the value field.
+func (r *reconcilerConfigResolver) Value(ctx context.Context, obj *db.ReconcilerConfig) (*string, error) {
+	switch value := obj.Value.(type) {
+	case string:
+		return &value, nil
+	}
+
+	return nil, nil
+}
+
 // Reconciler returns generated.ReconcilerResolver implementation.
 func (r *Resolver) Reconciler() generated.ReconcilerResolver { return &reconcilerResolver{r} }
 
-type reconcilerResolver struct{ *Resolver }
+// ReconcilerConfig returns generated.ReconcilerConfigResolver implementation.
+func (r *Resolver) ReconcilerConfig() generated.ReconcilerConfigResolver {
+	return &reconcilerConfigResolver{r}
+}
+
+type (
+	reconcilerResolver       struct{ *Resolver }
+	reconcilerConfigResolver struct{ *Resolver }
+)

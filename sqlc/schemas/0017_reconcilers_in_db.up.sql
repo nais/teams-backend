@@ -26,7 +26,11 @@ CREATE TYPE reconciler_config_key AS ENUM (
     'github:app_private_key'
 );
 
-ALTER TABLE reconciler_config ALTER COLUMN key TYPE reconciler_config_key USING key::reconciler_config_key;
+ALTER TABLE reconciler_config
+    ALTER COLUMN key TYPE reconciler_config_key USING key::reconciler_config_key,
+    ADD COLUMN secret BOOL NOT NULL DEFAULT true;
+
+UPDATE reconciler_config SET secret = false WHERE key IN('azure:client_id', 'azure:tenant_id', 'github:org', 'github:app_id', 'github:app_installation_id');
 
 CREATE TYPE audit_logs_target_type AS ENUM (
     'user',

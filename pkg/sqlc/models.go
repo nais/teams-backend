@@ -701,6 +701,7 @@ type ReconcilerConfig struct {
 	DisplayName string
 	Description string
 	Value       sql.NullString
+	Secret      bool
 }
 
 type ReconcilerError struct {

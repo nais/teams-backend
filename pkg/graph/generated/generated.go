@@ -45,6 +45,7 @@ type ResolverRoot interface {
 	Mutation() MutationResolver
 	Query() QueryResolver
 	Reconciler() ReconcilerResolver
+	ReconcilerConfig() ReconcilerConfigResolver
 	Role() RoleResolver
 	ServiceAccount() ServiceAccountResolver
 	Team() TeamResolver
@@ -112,6 +113,8 @@ type ComplexityRoot struct {
 		Description func(childComplexity int) int
 		DisplayName func(childComplexity int) int
 		Key         func(childComplexity int) int
+		Secret      func(childComplexity int) int
+		Value       func(childComplexity int) int
 	}
 
 	Role struct {
@@ -200,6 +203,9 @@ type ReconcilerResolver interface {
 	Configured(ctx context.Context, obj *db.Reconciler) (bool, error)
 
 	AuditLogs(ctx context.Context, obj *db.Reconciler) ([]*db.AuditLog, error)
+}
+type ReconcilerConfigResolver interface {
+	Value(ctx context.Context, obj *db.ReconcilerConfig) (*string, error)
 }
 type RoleResolver interface {
 	TargetID(ctx context.Context, obj *db.Role) (*uuid.UUID, error)
@@ -608,6 +614,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.ReconcilerConfig.Key(childComplexity), true
 
+	case "ReconcilerConfig.secret":
+		if e.complexity.ReconcilerConfig.Secret == nil {
+			break
+		}
+
+		return e.complexity.ReconcilerConfig.Secret(childComplexity), true
+
+	case "ReconcilerConfig.value":
+		if e.complexity.ReconcilerConfig.Value == nil {
+			break
+		}
+
+		return e.complexity.ReconcilerConfig.Value(childComplexity), true
+
 	case "Role.isGlobal":
 		if e.complexity.Role.IsGlobal == nil {
 			break
@@ -1002,6 +1022,12 @@ type ReconcilerConfig {
 
     "Whether or not the configuration key has a value."
     configured: Boolean!
+
+    "Whether or not the configuration value is considered a secret. Secret values will not be exposed through the API."
+    secret: Boolean!
+
+    "Configuration value. This will be set to null if the value is considered a secret."
+    value: String
 }
 
 "Reconciler configuration input."
@@ -4273,6 +4299,10 @@ func (ec *executionContext) fieldContext_Reconciler_config(ctx context.Context, 
 				return ec.fieldContext_ReconcilerConfig_description(ctx, field)
 			case "configured":
 				return ec.fieldContext_ReconcilerConfig_configured(ctx, field)
+			case "secret":
+				return ec.fieldContext_ReconcilerConfig_secret(ctx, field)
+			case "value":
+				return ec.fieldContext_ReconcilerConfig_value(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ReconcilerConfig", field.Name)
 		},
@@ -4603,6 +4633,91 @@ func (ec *executionContext) fieldContext_ReconcilerConfig_configured(ctx context
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ReconcilerConfig_secret(ctx context.Context, field graphql.CollectedField, obj *db.ReconcilerConfig) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ReconcilerConfig_secret(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Secret, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ReconcilerConfig_secret(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ReconcilerConfig",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ReconcilerConfig_value(ctx context.Context, field graphql.CollectedField, obj *db.ReconcilerConfig) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ReconcilerConfig_value(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.ReconcilerConfig().Value(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ReconcilerConfig_value(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ReconcilerConfig",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -8605,29 +8720,53 @@ func (ec *executionContext) _ReconcilerConfig(ctx context.Context, sel ast.Selec
 			out.Values[i] = ec._ReconcilerConfig_key(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "displayName":
 
 			out.Values[i] = ec._ReconcilerConfig_displayName(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "description":
 
 			out.Values[i] = ec._ReconcilerConfig_description(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "configured":
 
 			out.Values[i] = ec._ReconcilerConfig_configured(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
+		case "secret":
+
+			out.Values[i] = ec._ReconcilerConfig_secret(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "value":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._ReconcilerConfig_value(ctx, field, obj)
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

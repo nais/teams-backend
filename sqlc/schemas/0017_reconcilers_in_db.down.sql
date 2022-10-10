@@ -16,7 +16,9 @@ ALTER TABLE reconciler_errors ALTER COLUMN reconciler TYPE system_name USING rec
 ALTER TABLE reconciler_errors RENAME COLUMN reconciler TO system_name;
 ALTER TABLE reconciler_errors RENAME TO reconcile_errors;
 
-ALTER TABLE reconciler_config ALTER COLUMN key TYPE TEXT;
+ALTER TABLE reconciler_config
+    ALTER COLUMN key TYPE TEXT,
+    DROP COLUMN secret;
 DROP TYPE reconciler_config_key;
 
 /* the audit log will be in a less than optimal state after this down migration, as the up migration split some rows

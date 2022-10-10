@@ -80,6 +80,12 @@ type ReconcilerConfig {
 
     "Whether or not the configuration key has a value."
     configured: Boolean!
+
+    "Whether or not the configuration value is considered a secret. Secret values will not be exposed through the API."
+    secret: Boolean!
+
+    "Configuration value. This will be set to null if the value is considered a secret."
+    value: String
 }
 
 "Reconciler configuration input."
