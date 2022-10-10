@@ -47,10 +47,6 @@ func (d *database) ConfigureReconciler(ctx context.Context, reconcilerName sqlc.
 			return err
 		}
 
-		if len(rows) == 0 {
-			return fmt.Errorf("reconciler %q does not have any configuration options", reconcilerName)
-		}
-
 		validOptions := make(map[sqlc.ReconcilerConfigKey]struct{})
 		for _, row := range rows {
 			validOptions[row.Key] = struct{}{}
