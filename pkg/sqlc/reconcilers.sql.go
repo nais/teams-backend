@@ -60,7 +60,7 @@ func (q *Queries) DangerousGetReconcilerConfigValues(ctx context.Context, reconc
 const disableReconciler = `-- name: DisableReconciler :one
 UPDATE reconcilers
 SET enabled = false
-WHERE name = $1 AND enabled = true
+WHERE name = $1
 RETURNING name, display_name, description, enabled, run_order
 `
 
@@ -80,7 +80,7 @@ func (q *Queries) DisableReconciler(ctx context.Context, name ReconcilerName) (*
 const enableReconciler = `-- name: EnableReconciler :one
 UPDATE reconcilers
 SET enabled = true
-WHERE name = $1 AND enabled = false
+WHERE name = $1
 RETURNING name, display_name, description, enabled, run_order
 `
 

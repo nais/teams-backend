@@ -31,10 +31,6 @@ func (r *mutationResolver) EnableReconciler(ctx context.Context, name sqlc.Recon
 			return err
 		}
 
-		if reconciler.Enabled {
-			return fmt.Errorf("reconciler is already enabled")
-		}
-
 		configs, err := dbtx.GetReconcilerConfig(ctx, name)
 		if err != nil {
 			return err
@@ -87,10 +83,6 @@ func (r *mutationResolver) DisableReconciler(ctx context.Context, name sqlc.Reco
 		reconciler, err = dbtx.GetReconciler(ctx, name)
 		if err != nil {
 			return err
-		}
-
-		if !reconciler.Enabled {
-			return fmt.Errorf("reconciler is already disabled")
 		}
 
 		reconciler, err = dbtx.DisableReconciler(ctx, name)

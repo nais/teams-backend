@@ -14,13 +14,13 @@ WHERE name = $1;
 -- name: EnableReconciler :one
 UPDATE reconcilers
 SET enabled = true
-WHERE name = $1 AND enabled = false
+WHERE name = $1
 RETURNING *;
 
 -- name: DisableReconciler :one
 UPDATE reconcilers
 SET enabled = false
-WHERE name = $1 AND enabled = true
+WHERE name = $1
 RETURNING *;
 
 -- name: ResetReconcilerConfig :exec
