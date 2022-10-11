@@ -208,6 +208,70 @@ func AllAuditActionValues() []AuditAction {
 	}
 }
 
+type AuditLogsTargetType string
+
+const (
+	AuditLogsTargetTypeUser           AuditLogsTargetType = "user"
+	AuditLogsTargetTypeTeam           AuditLogsTargetType = "team"
+	AuditLogsTargetTypeServiceAccount AuditLogsTargetType = "service_account"
+	AuditLogsTargetTypeReconciler     AuditLogsTargetType = "reconciler"
+)
+
+func (e *AuditLogsTargetType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = AuditLogsTargetType(s)
+	case string:
+		*e = AuditLogsTargetType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for AuditLogsTargetType: %T", src)
+	}
+	return nil
+}
+
+type NullAuditLogsTargetType struct {
+	AuditLogsTargetType AuditLogsTargetType
+	Valid               bool // Valid is true if String is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAuditLogsTargetType) Scan(value interface{}) error {
+	if value == nil {
+		ns.AuditLogsTargetType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.AuditLogsTargetType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAuditLogsTargetType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return ns.AuditLogsTargetType, nil
+}
+
+func (e AuditLogsTargetType) Valid() bool {
+	switch e {
+	case AuditLogsTargetTypeUser,
+		AuditLogsTargetTypeTeam,
+		AuditLogsTargetTypeServiceAccount,
+		AuditLogsTargetTypeReconciler:
+		return true
+	}
+	return false
+}
+
+func AllAuditLogsTargetTypeValues() []AuditLogsTargetType {
+	return []AuditLogsTargetType{
+		AuditLogsTargetTypeUser,
+		AuditLogsTargetTypeTeam,
+		AuditLogsTargetTypeServiceAccount,
+		AuditLogsTargetTypeReconciler,
+	}
+}
+
 type AuthzName string
 
 const (
@@ -305,6 +369,79 @@ func AllAuthzNameValues() []AuthzName {
 		AuthzNameTeamsUpdate,
 		AuthzNameUsersList,
 		AuthzNameUsersUpdate,
+	}
+}
+
+type ReconcilerConfigKey string
+
+const (
+	ReconcilerConfigKeyAzureClientID           ReconcilerConfigKey = "azure:client_id"
+	ReconcilerConfigKeyAzureClientSecret       ReconcilerConfigKey = "azure:client_secret"
+	ReconcilerConfigKeyAzureTenantID           ReconcilerConfigKey = "azure:tenant_id"
+	ReconcilerConfigKeyGithubOrg               ReconcilerConfigKey = "github:org"
+	ReconcilerConfigKeyGithubAppID             ReconcilerConfigKey = "github:app_id"
+	ReconcilerConfigKeyGithubAppInstallationID ReconcilerConfigKey = "github:app_installation_id"
+	ReconcilerConfigKeyGithubAppPrivateKey     ReconcilerConfigKey = "github:app_private_key"
+)
+
+func (e *ReconcilerConfigKey) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ReconcilerConfigKey(s)
+	case string:
+		*e = ReconcilerConfigKey(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ReconcilerConfigKey: %T", src)
+	}
+	return nil
+}
+
+type NullReconcilerConfigKey struct {
+	ReconcilerConfigKey ReconcilerConfigKey
+	Valid               bool // Valid is true if String is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullReconcilerConfigKey) Scan(value interface{}) error {
+	if value == nil {
+		ns.ReconcilerConfigKey, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ReconcilerConfigKey.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullReconcilerConfigKey) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return ns.ReconcilerConfigKey, nil
+}
+
+func (e ReconcilerConfigKey) Valid() bool {
+	switch e {
+	case ReconcilerConfigKeyAzureClientID,
+		ReconcilerConfigKeyAzureClientSecret,
+		ReconcilerConfigKeyAzureTenantID,
+		ReconcilerConfigKeyGithubOrg,
+		ReconcilerConfigKeyGithubAppID,
+		ReconcilerConfigKeyGithubAppInstallationID,
+		ReconcilerConfigKeyGithubAppPrivateKey:
+		return true
+	}
+	return false
+}
+
+func AllReconcilerConfigKeyValues() []ReconcilerConfigKey {
+	return []ReconcilerConfigKey{
+		ReconcilerConfigKeyAzureClientID,
+		ReconcilerConfigKeyAzureClientSecret,
+		ReconcilerConfigKeyAzureTenantID,
+		ReconcilerConfigKeyGithubOrg,
+		ReconcilerConfigKeyGithubAppID,
+		ReconcilerConfigKeyGithubAppInstallationID,
+		ReconcilerConfigKeyGithubAppPrivateKey,
 	}
 }
 
@@ -539,24 +676,15 @@ type ApiKey struct {
 }
 
 type AuditLog struct {
-	ID             uuid.UUID
-	CreatedAt      time.Time
-	CorrelationID  uuid.UUID
-	SystemName     SystemName
-	Actor          sql.NullString
-	TargetUser     sql.NullString
-	TargetTeamSlug *slug.Slug
-	Action         AuditAction
-	Message        string
-}
-
-type ReconcileError struct {
-	ID            int64
-	CorrelationID uuid.UUID
-	TeamID        uuid.UUID
-	SystemName    SystemName
-	CreatedAt     time.Time
-	ErrorMessage  string
+	ID               uuid.UUID
+	CreatedAt        time.Time
+	CorrelationID    uuid.UUID
+	SystemName       SystemName
+	Actor            sql.NullString
+	Action           AuditAction
+	Message          string
+	TargetType       AuditLogsTargetType
+	TargetIdentifier string
 }
 
 type Reconciler struct {
@@ -569,10 +697,26 @@ type Reconciler struct {
 
 type ReconcilerConfig struct {
 	Reconciler  ReconcilerName
-	Key         string
+	Key         ReconcilerConfigKey
 	DisplayName string
 	Description string
 	Value       sql.NullString
+	Secret      bool
+}
+
+type ReconcilerError struct {
+	ID            int64
+	CorrelationID uuid.UUID
+	TeamID        uuid.UUID
+	Reconciler    ReconcilerName
+	CreatedAt     time.Time
+	ErrorMessage  string
+}
+
+type ReconcilerState struct {
+	Reconciler ReconcilerName
+	TeamID     uuid.UUID
+	State      pgtype.JSONB
 }
 
 type RoleAuthz struct {
@@ -584,12 +728,6 @@ type Session struct {
 	ID      uuid.UUID
 	UserID  uuid.UUID
 	Expires time.Time
-}
-
-type SystemState struct {
-	SystemName SystemName
-	TeamID     uuid.UUID
-	State      pgtype.JSONB
 }
 
 type Team struct {

@@ -28,7 +28,6 @@ import (
 	"github.com/nais/console/pkg/middleware"
 	"github.com/nais/console/pkg/reconcilers"
 	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
-	console_reconciler "github.com/nais/console/pkg/reconcilers/console"
 	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
 	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
 	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
@@ -84,14 +83,7 @@ func run() error {
 	// Control channels for goroutine communication
 	const maxQueueSize = 4096
 	teamReconciler := make(chan reconcilers.Input, maxQueueSize)
-	auditLogger := auditlogger.New(database) // base audit logger
-
-	recs, err := initReconcilers(ctx, database, cfg, auditLogger)
-	if err != nil {
-		return err
-	}
-
-	log.Infof("Initialized %d reconcilers.", len(recs))
+	auditLogger := auditlogger.New(database)
 
 	authHandler, err := setupAuthHandler(cfg, database)
 	if err != nil {
@@ -184,7 +176,7 @@ func run() error {
 		case <-reconcileTimer.C:
 			log.Infof("Running reconcile of %d teams...", len(pendingTeams))
 
-			err = reconcileTeams(ctx, database, recs, &pendingTeams)
+			err = reconcileTeams(ctx, database, &pendingTeams, cfg, auditLogger)
 
 			if err != nil {
 				log.Error(err)
@@ -216,37 +208,42 @@ func run() error {
 	return nil
 }
 
-func reconcileTeams(ctx context.Context, database db.Database, recs []reconcilers.Reconciler, reconcileInputs *map[uuid.UUID]reconcilers.Input) error {
+func reconcileTeams(ctx context.Context, database db.Database, reconcileInputs *map[uuid.UUID]reconcilers.Input, cfg *config.Config, auditLogger auditlogger.AuditLogger) error {
 	const reconcileTimeout = 15 * time.Minute
-	errors := 0
+
+	reconcilers, err := initReconcilers(ctx, database, cfg, auditLogger)
+	if err != nil {
+		return err
+	}
 
 	ctx, cancel := context.WithTimeout(ctx, reconcileTimeout)
 	defer cancel()
 
+	errors := 0
 	for teamID, input := range *reconcileInputs {
 		teamErrors := 0
 
-		for _, reconciler := range recs {
-			systemName := reconciler.Name()
+		for _, reconciler := range reconcilers {
+			name := reconciler.Name()
 
-			log.Infof("Starting reconciler %q for team: %q", systemName, input.Team.Slug)
+			log.Infof("Starting reconciler %q for team: %q", name, input.Team.Slug)
 			err := reconciler.Reconcile(ctx, input)
 			if err != nil {
 				log.Error(err)
 				teamErrors++
-				err = database.SetTeamReconcileErrorForSystem(ctx, input.CorrelationID, input.Team.ID, systemName, err)
+				err = database.SetReconcilerErrorForTeam(ctx, input.CorrelationID, input.Team.ID, name, err)
 				if err != nil {
 					log.Errorf("Unable to add reconcile error to the database: %s", err)
 				}
 				continue
 			}
 
-			err = database.ClearTeamReconcileErrorForSystem(ctx, input.Team.ID, systemName)
+			err = database.ClearReconcilerErrorsForTeam(ctx, input.Team.ID, name)
 			if err != nil {
-				log.Errorf("Unable to purge reconcile errors for reconciler %q and team %q: %s", systemName, input.Team.Slug, err)
+				log.Errorf("Unable to purge reconcile errors for reconciler %q and team %q: %s", name, input.Team.Slug, err)
 			}
 
-			log.Infof("Successfully finished reconciler %q for team: %q", systemName, input.Team.Slug)
+			log.Infof("Successfully finished reconciler %q for team: %q", name, input.Team.Slug)
 		}
 
 		if teamErrors == 0 {
@@ -311,10 +308,8 @@ func setupDatabase(ctx context.Context, dbUrl string) (db.Database, error) {
 	return db.NewDatabase(queries), nil
 }
 
-func initReconcilers(ctx context.Context, database db.Database, cfg *config.Config, logger auditlogger.AuditLogger) ([]reconcilers.Reconciler, error) {
-	recs := make([]reconcilers.Reconciler, 0)
-	factories := map[sqlc.SystemName]reconcilers.ReconcilerFactory{
-		console_reconciler.Name:                console_reconciler.NewFromConfig,
+func initReconcilers(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) ([]reconcilers.Reconciler, error) {
+	factories := map[sqlc.ReconcilerName]reconcilers.ReconcilerFactory{
 		azure_group_reconciler.Name:            azure_group_reconciler.NewFromConfig,
 		github_team_reconciler.Name:            github_team_reconciler.NewFromConfig,
 		google_workspace_admin_reconciler.Name: google_workspace_admin_reconciler.NewFromConfig,
@@ -322,17 +317,29 @@ func initReconcilers(ctx context.Context, database db.Database, cfg *config.Conf
 		nais_namespace_reconciler.Name:         nais_namespace_reconciler.NewFromConfig,
 	}
 
-	for name, factory := range factories {
-		rec, err := factory(ctx, database, cfg, logger.WithSystemName(name))
-		switch err {
-		case reconcilers.ErrReconcilerNotEnabled:
-			log.Warnf("Reconciler %q is disabled through configuration", name)
-		case nil:
-			recs = append(recs, rec)
-			log.Infof("Reconciler initialized: %q -> %T", rec.Name(), rec)
-		default:
-			return nil, fmt.Errorf("reconciler %q: %w", name, err)
+	enabledReconcilers, err := database.GetEnabledReconcilers(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	recs := make([]reconcilers.Reconciler, 0)
+	for _, reconciler := range enabledReconcilers {
+		name := reconciler.Name
+
+		factory, exists := factories[name]
+		if !exists {
+			log.Errorf("reconciler missing factory entry: %q", name)
+			continue
 		}
+
+		rec, err := factory(ctx, database, cfg, auditLogger.WithSystemName(reconcilers.ReconcilerNameToSystemName(name)))
+		if err != nil {
+			log.WithError(err).Errorf("unable to create reconciler: %q", name)
+			continue
+		}
+
+		recs = append(recs, rec)
+		log.Infof("Reconciler initialized: %q -> %T", name, rec)
 	}
 
 	return recs, nil

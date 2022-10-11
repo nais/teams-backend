@@ -17,7 +17,7 @@ WHERE reconciler = $1 AND key = $2
 
 type ConfigureReconcilerParams struct {
 	Reconciler ReconcilerName
-	Key        string
+	Key        ReconcilerConfigKey
 	Value      string
 }
 
@@ -26,10 +26,41 @@ func (q *Queries) ConfigureReconciler(ctx context.Context, arg ConfigureReconcil
 	return err
 }
 
+const dangerousGetReconcilerConfigValues = `-- name: DangerousGetReconcilerConfigValues :many
+SELECT key, value::TEXT
+FROM reconciler_config
+WHERE reconciler = $1
+`
+
+type DangerousGetReconcilerConfigValuesRow struct {
+	Key   ReconcilerConfigKey
+	Value string
+}
+
+func (q *Queries) DangerousGetReconcilerConfigValues(ctx context.Context, reconciler ReconcilerName) ([]*DangerousGetReconcilerConfigValuesRow, error) {
+	rows, err := q.db.Query(ctx, dangerousGetReconcilerConfigValues, reconciler)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*DangerousGetReconcilerConfigValuesRow
+	for rows.Next() {
+		var i DangerousGetReconcilerConfigValuesRow
+		if err := rows.Scan(&i.Key, &i.Value); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const disableReconciler = `-- name: DisableReconciler :one
 UPDATE reconcilers
 SET enabled = false
-WHERE name = $1 AND enabled = true
+WHERE name = $1
 RETURNING name, display_name, description, enabled, run_order
 `
 
@@ -49,7 +80,7 @@ func (q *Queries) DisableReconciler(ctx context.Context, name ReconcilerName) (*
 const enableReconciler = `-- name: EnableReconciler :one
 UPDATE reconcilers
 SET enabled = true
-WHERE name = $1 AND enabled = false
+WHERE name = $1
 RETURNING name, display_name, description, enabled, run_order
 `
 
@@ -117,17 +148,20 @@ func (q *Queries) GetReconciler(ctx context.Context, name ReconcilerName) (*Reco
 }
 
 const getReconcilerConfig = `-- name: GetReconcilerConfig :many
-SELECT reconciler, key, display_name, description, (value IS NOT NULL)::BOOL AS configured
+SELECT reconciler, key, display_name, description, (value IS NOT NULL)::BOOL AS configured, (CASE WHEN secret = false THEN value ELSE NULL END) AS value, secret
 FROM reconciler_config
 WHERE reconciler = $1
+ORDER BY display_name ASC
 `
 
 type GetReconcilerConfigRow struct {
 	Reconciler  ReconcilerName
-	Key         string
+	Key         ReconcilerConfigKey
 	DisplayName string
 	Description string
 	Configured  bool
+	Value       interface{}
+	Secret      bool
 }
 
 func (q *Queries) GetReconcilerConfig(ctx context.Context, reconciler ReconcilerName) ([]*GetReconcilerConfigRow, error) {
@@ -145,6 +179,8 @@ func (q *Queries) GetReconcilerConfig(ctx context.Context, reconciler Reconciler
 			&i.DisplayName,
 			&i.Description,
 			&i.Configured,
+			&i.Value,
+			&i.Secret,
 		); err != nil {
 			return nil, err
 		}

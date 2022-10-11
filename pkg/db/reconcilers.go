@@ -35,7 +35,7 @@ func (d *database) GetEnabledReconcilers(ctx context.Context) ([]*Reconciler, er
 	return wrapReconcilers(rows), nil
 }
 
-func (d *database) ConfigureReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName, config map[string]string) (*Reconciler, error) {
+func (d *database) ConfigureReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName, config map[sqlc.ReconcilerConfigKey]string) (*Reconciler, error) {
 	reconciler, err := d.querier.GetReconciler(ctx, reconcilerName)
 	if err != nil {
 		return nil, err
@@ -47,11 +47,7 @@ func (d *database) ConfigureReconciler(ctx context.Context, reconcilerName sqlc.
 			return err
 		}
 
-		if len(rows) == 0 {
-			return fmt.Errorf("reconciler %q does not have any configuration options", reconcilerName)
-		}
-
-		validOptions := make(map[string]struct{})
+		validOptions := make(map[sqlc.ReconcilerConfigKey]struct{})
 		for _, row := range rows {
 			validOptions[row.Key] = struct{}{}
 		}
@@ -126,6 +122,20 @@ func (d *database) DisableReconciler(ctx context.Context, reconcilerName sqlc.Re
 	return &Reconciler{Reconciler: reconciler}, nil
 }
 
+func (d *database) DangerousGetReconcilerConfigValues(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*ReconcilerConfigValues, error) {
+	rows, err := d.querier.DangerousGetReconcilerConfigValues(ctx, reconcilerName)
+	if err != nil {
+		return nil, err
+	}
+
+	values := make(map[sqlc.ReconcilerConfigKey]string)
+	for _, row := range rows {
+		values[row.Key] = row.Value
+	}
+
+	return &ReconcilerConfigValues{values: values}, nil
+}
+
 func wrapReconcilers(rows []*sqlc.Reconciler) []*Reconciler {
 	reconcilers := make([]*Reconciler, 0, len(rows))
 	for _, row := range rows {
@@ -134,10 +144,10 @@ func wrapReconcilers(rows []*sqlc.Reconciler) []*Reconciler {
 	return reconcilers
 }
 
-func getKeys(values map[string]struct{}) []string {
+func getKeys(values map[sqlc.ReconcilerConfigKey]struct{}) []string {
 	keys := make([]string, 0, len(values))
 	for key := range values {
-		keys = append(keys, key)
+		keys = append(keys, string(key))
 	}
 	return keys
 }

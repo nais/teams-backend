@@ -24,8 +24,8 @@ extend type Mutation {
         "The name of the reconciler to configure."
         name: ReconcilerName!
 
-        "Configuration options as a key => value map."
-        config: Map!
+        "List of reconciler config inputs."
+        config: [ReconcilerConfigInput!]!
     ): Reconciler! @admin
 
     "Reset all reconciler configuration options to their initial state and disable the reconciler if it is currently enabled."
@@ -62,12 +62,15 @@ type Reconciler {
 
     "The run order of the reconciler."
     runOrder: Int!
+
+    "Audit logs for this reconciler."
+    auditLogs: [AuditLog!]!
 }
 
 "Reconciler configuration type."
 type ReconcilerConfig {
     "Configuration key."
-    key: String!
+    key: ReconcilerConfigKey!
 
     "The human-friendly name of the configuration key."
     displayName: String!
@@ -77,4 +80,19 @@ type ReconcilerConfig {
 
     "Whether or not the configuration key has a value."
     configured: Boolean!
+
+    "Whether or not the configuration value is considered a secret. Secret values will not be exposed through the API."
+    secret: Boolean!
+
+    "Configuration value. This will be set to null if the value is considered a secret."
+    value: String
+}
+
+"Reconciler configuration input."
+input ReconcilerConfigInput {
+    "Configuration key."
+    key: ReconcilerConfigKey!
+
+    "Configuration value."
+    value: String!
 }

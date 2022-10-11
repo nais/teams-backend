@@ -16,7 +16,7 @@ var ErrReconcilerNotEnabled = errors.New("reconciler not enabled")
 // Reconciler Interface for all reconcilers
 type Reconciler interface {
 	Reconcile(ctx context.Context, input Input) error
-	Name() sqlc.SystemName
+	Name() sqlc.ReconcilerName
 }
 
 // TeamNamePrefix Prefix that can be used for team-like objects in external systems
@@ -24,3 +24,20 @@ const TeamNamePrefix = "nais-team-"
 
 // ReconcilerFactory The constructor function for all reconcilers
 type ReconcilerFactory func(context.Context, db.Database, *config.Config, auditlogger.AuditLogger) (Reconciler, error)
+
+func ReconcilerNameToSystemName(name sqlc.ReconcilerName) sqlc.SystemName {
+	switch name {
+	case sqlc.ReconcilerNameAzureGroup:
+		return sqlc.SystemNameAzureGroup
+	case sqlc.ReconcilerNameGithubTeam:
+		return sqlc.SystemNameGithubTeam
+	case sqlc.ReconcilerNameGoogleGcpProject:
+		return sqlc.SystemNameGoogleGcpProject
+	case sqlc.ReconcilerNameGoogleWorkspaceAdmin:
+		return sqlc.SystemNameGoogleWorkspaceAdmin
+	case sqlc.ReconcilerNameNaisNamespace:
+		return sqlc.SystemNameNaisNamespace
+	}
+
+	return sqlc.SystemNameConsole
+}

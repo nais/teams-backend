@@ -46,13 +46,13 @@ func (_m *MockDatabase) AssignTargetedRoleToUser(ctx context.Context, userID uui
 	return r0
 }
 
-// ClearTeamReconcileErrorForSystem provides a mock function with given fields: ctx, teamID, systemName
-func (_m *MockDatabase) ClearTeamReconcileErrorForSystem(ctx context.Context, teamID uuid.UUID, systemName sqlc.SystemName) error {
-	ret := _m.Called(ctx, teamID, systemName)
+// ClearReconcilerErrorsForTeam provides a mock function with given fields: ctx, teamID, reconcilerName
+func (_m *MockDatabase) ClearReconcilerErrorsForTeam(ctx context.Context, teamID uuid.UUID, reconcilerName sqlc.ReconcilerName) error {
+	ret := _m.Called(ctx, teamID, reconcilerName)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, sqlc.SystemName) error); ok {
-		r0 = rf(ctx, teamID, systemName)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, sqlc.ReconcilerName) error); ok {
+		r0 = rf(ctx, teamID, reconcilerName)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -61,11 +61,11 @@ func (_m *MockDatabase) ClearTeamReconcileErrorForSystem(ctx context.Context, te
 }
 
 // ConfigureReconciler provides a mock function with given fields: ctx, reconcilerName, config
-func (_m *MockDatabase) ConfigureReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName, config map[string]string) (*Reconciler, error) {
+func (_m *MockDatabase) ConfigureReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName, config map[sqlc.ReconcilerConfigKey]string) (*Reconciler, error) {
 	ret := _m.Called(ctx, reconcilerName, config)
 
 	var r0 *Reconciler
-	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName, map[string]string) *Reconciler); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName, map[sqlc.ReconcilerConfigKey]string) *Reconciler); ok {
 		r0 = rf(ctx, reconcilerName, config)
 	} else {
 		if ret.Get(0) != nil {
@@ -74,7 +74,7 @@ func (_m *MockDatabase) ConfigureReconciler(ctx context.Context, reconcilerName 
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, sqlc.ReconcilerName, map[string]string) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, sqlc.ReconcilerName, map[sqlc.ReconcilerConfigKey]string) error); ok {
 		r1 = rf(ctx, reconcilerName, config)
 	} else {
 		r1 = ret.Error(1)
@@ -97,13 +97,13 @@ func (_m *MockDatabase) CreateAPIKey(ctx context.Context, apiKey string, service
 	return r0
 }
 
-// CreateAuditLogEntry provides a mock function with given fields: ctx, correlationID, systemName, actor, targetTeamSlug, targetUser, action, message
-func (_m *MockDatabase) CreateAuditLogEntry(ctx context.Context, correlationID uuid.UUID, systemName sqlc.SystemName, actor *string, targetTeamSlug *slug.Slug, targetUser *string, action sqlc.AuditAction, message string) error {
-	ret := _m.Called(ctx, correlationID, systemName, actor, targetTeamSlug, targetUser, action, message)
+// CreateAuditLogEntry provides a mock function with given fields: ctx, correlationID, systemName, actor, targetType, targetIdentifier, action, message
+func (_m *MockDatabase) CreateAuditLogEntry(ctx context.Context, correlationID uuid.UUID, systemName sqlc.SystemName, actor *string, targetType sqlc.AuditLogsTargetType, targetIdentifier string, action sqlc.AuditAction, message string) error {
+	ret := _m.Called(ctx, correlationID, systemName, actor, targetType, targetIdentifier, action, message)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, sqlc.SystemName, *string, *slug.Slug, *string, sqlc.AuditAction, string) error); ok {
-		r0 = rf(ctx, correlationID, systemName, actor, targetTeamSlug, targetUser, action, message)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, sqlc.SystemName, *string, sqlc.AuditLogsTargetType, string, sqlc.AuditAction, string) error); ok {
+		r0 = rf(ctx, correlationID, systemName, actor, targetType, targetIdentifier, action, message)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -196,6 +196,29 @@ func (_m *MockDatabase) CreateUser(ctx context.Context, name string, email strin
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, string, string, string) error); ok {
 		r1 = rf(ctx, name, email, externalID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DangerousGetReconcilerConfigValues provides a mock function with given fields: ctx, reconcilerName
+func (_m *MockDatabase) DangerousGetReconcilerConfigValues(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*ReconcilerConfigValues, error) {
+	ret := _m.Called(ctx, reconcilerName)
+
+	var r0 *ReconcilerConfigValues
+	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName) *ReconcilerConfigValues); ok {
+		r0 = rf(ctx, reconcilerName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ReconcilerConfigValues)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, sqlc.ReconcilerName) error); ok {
+		r1 = rf(ctx, reconcilerName)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -307,6 +330,29 @@ func (_m *MockDatabase) ExtendSession(ctx context.Context, sessionID uuid.UUID) 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
 		r1 = rf(ctx, sessionID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetAuditLogsForReconciler provides a mock function with given fields: ctx, reconcilerName
+func (_m *MockDatabase) GetAuditLogsForReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) ([]*AuditLog, error) {
+	ret := _m.Called(ctx, reconcilerName)
+
+	var r0 []*AuditLog
+	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName) []*AuditLog); ok {
+		r0 = rf(ctx, reconcilerName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*AuditLog)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, sqlc.ReconcilerName) error); ok {
+		r1 = rf(ctx, reconcilerName)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -613,16 +659,16 @@ func (_m *MockDatabase) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) (
 	return r0, r1
 }
 
-// GetTeamReconcileErrors provides a mock function with given fields: ctx, teamID
-func (_m *MockDatabase) GetTeamReconcileErrors(ctx context.Context, teamID uuid.UUID) ([]*ReconcileError, error) {
+// GetTeamReconcilerErrors provides a mock function with given fields: ctx, teamID
+func (_m *MockDatabase) GetTeamReconcilerErrors(ctx context.Context, teamID uuid.UUID) ([]*ReconcilerError, error) {
 	ret := _m.Called(ctx, teamID)
 
-	var r0 []*ReconcileError
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) []*ReconcileError); ok {
+	var r0 []*ReconcilerError
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) []*ReconcilerError); ok {
 		r0 = rf(ctx, teamID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*ReconcileError)
+			r0 = ret.Get(0).([]*ReconcilerError)
 		}
 	}
 
@@ -797,13 +843,13 @@ func (_m *MockDatabase) GetUsers(ctx context.Context) ([]*User, error) {
 	return r0, r1
 }
 
-// LoadSystemState provides a mock function with given fields: ctx, systemName, teamID, state
-func (_m *MockDatabase) LoadSystemState(ctx context.Context, systemName sqlc.SystemName, teamID uuid.UUID, state interface{}) error {
-	ret := _m.Called(ctx, systemName, teamID, state)
+// LoadReconcilerStateForTeam provides a mock function with given fields: ctx, reconcilerName, teamID, state
+func (_m *MockDatabase) LoadReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, teamID uuid.UUID, state interface{}) error {
+	ret := _m.Called(ctx, reconcilerName, teamID, state)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, sqlc.SystemName, uuid.UUID, interface{}) error); ok {
-		r0 = rf(ctx, systemName, teamID, state)
+	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName, uuid.UUID, interface{}) error); ok {
+		r0 = rf(ctx, reconcilerName, teamID, state)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -890,13 +936,27 @@ func (_m *MockDatabase) RevokeGlobalRoleFromUser(ctx context.Context, userID uui
 	return r0
 }
 
-// SetSystemState provides a mock function with given fields: ctx, systemName, teamID, state
-func (_m *MockDatabase) SetSystemState(ctx context.Context, systemName sqlc.SystemName, teamID uuid.UUID, state interface{}) error {
-	ret := _m.Called(ctx, systemName, teamID, state)
+// SetReconcilerErrorForTeam provides a mock function with given fields: ctx, correlationID, teamID, reconcilerName, err
+func (_m *MockDatabase) SetReconcilerErrorForTeam(ctx context.Context, correlationID uuid.UUID, teamID uuid.UUID, reconcilerName sqlc.ReconcilerName, err error) error {
+	ret := _m.Called(ctx, correlationID, teamID, reconcilerName, err)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, sqlc.SystemName, uuid.UUID, interface{}) error); ok {
-		r0 = rf(ctx, systemName, teamID, state)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, sqlc.ReconcilerName, error) error); ok {
+		r0 = rf(ctx, correlationID, teamID, reconcilerName, err)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// SetReconcilerStateForTeam provides a mock function with given fields: ctx, reconcilerName, teamID, state
+func (_m *MockDatabase) SetReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, teamID uuid.UUID, state interface{}) error {
+	ret := _m.Called(ctx, reconcilerName, teamID, state)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName, uuid.UUID, interface{}) error); ok {
+		r0 = rf(ctx, reconcilerName, teamID, state)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -925,20 +985,6 @@ func (_m *MockDatabase) SetTeamMetadata(ctx context.Context, teamID uuid.UUID, m
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, TeamMetadata) error); ok {
 		r0 = rf(ctx, teamID, metadata)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// SetTeamReconcileErrorForSystem provides a mock function with given fields: ctx, correlationID, teamID, systemName, err
-func (_m *MockDatabase) SetTeamReconcileErrorForSystem(ctx context.Context, correlationID uuid.UUID, teamID uuid.UUID, systemName sqlc.SystemName, err error) error {
-	ret := _m.Called(ctx, correlationID, teamID, systemName, err)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, sqlc.SystemName, error) error); ok {
-		r0 = rf(ctx, correlationID, teamID, systemName, err)
 	} else {
 		r0 = ret.Error(0)
 	}

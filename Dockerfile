@@ -1,4 +1,4 @@
-FROM golang:1.19.1-alpine as builder
+FROM golang:1.19-alpine as builder
 RUN apk add --no-cache git make curl build-base
 ENV GOOS=linux
 COPY . /src

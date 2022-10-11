@@ -26,7 +26,7 @@ func (l *auditLogger) WithSystemName(systemName sqlc.SystemName) AuditLogger {
 }
 
 type AuditLogger interface {
-	Logf(ctx context.Context, entry Fields, message string, messageArgs ...interface{}) error
+	Logf(ctx context.Context, targets []Target, entry Fields, message string, messageArgs ...interface{}) error
 	WithSystemName(systemName sqlc.SystemName) AuditLogger
 }
 
@@ -36,15 +36,30 @@ func New(database db.Database) AuditLogger {
 	}
 }
 
-type Fields struct {
-	Action         sqlc.AuditAction
-	CorrelationID  uuid.UUID
-	Actor          *string
-	TargetTeamSlug *slug.Slug
-	TargetUser     *string
+type Target struct {
+	Type       sqlc.AuditLogsTargetType
+	Identifier string
 }
 
-func (l *auditLogger) Logf(ctx context.Context, fields Fields, message string, messageArgs ...interface{}) error {
+func UserTarget(email string) Target {
+	return Target{Type: sqlc.AuditLogsTargetTypeUser, Identifier: email}
+}
+
+func TeamTarget(slug slug.Slug) Target {
+	return Target{Type: sqlc.AuditLogsTargetTypeTeam, Identifier: string(slug)}
+}
+
+func ReconcilerTarget(name sqlc.ReconcilerName) Target {
+	return Target{Type: sqlc.AuditLogsTargetTypeReconciler, Identifier: string(name)}
+}
+
+type Fields struct {
+	Action        sqlc.AuditAction
+	Actor         *string
+	CorrelationID uuid.UUID
+}
+
+func (l *auditLogger) Logf(ctx context.Context, targets []Target, fields Fields, message string, messageArgs ...interface{}) error {
 	if l.systemName == "" || !l.systemName.Valid() {
 		return fmt.Errorf("unable to create auditlog entry: missing or invalid systemName")
 	}
@@ -62,36 +77,35 @@ func (l *auditLogger) Logf(ctx context.Context, fields Fields, message string, m
 	}
 
 	message = fmt.Sprintf(message, messageArgs...)
-	err := l.database.CreateAuditLogEntry(
-		ctx,
-		fields.CorrelationID,
-		l.systemName,
-		fields.Actor,
-		fields.TargetTeamSlug,
-		fields.TargetUser,
-		fields.Action,
-		message,
-	)
-	if err != nil {
-		return fmt.Errorf("create audit log entry: %w", err)
-	}
 
-	logFields := log.Fields{
-		"action":         fields.Action,
-		"correlation_id": fields.CorrelationID,
-		"system_name":    l.systemName,
-	}
-	if fields.Actor != nil {
-		logFields["actor"] = str(fields.Actor)
-	}
-	if fields.TargetTeamSlug != nil {
-		logFields["target_team_slug"] = str(fields.TargetTeamSlug.StringP())
-	}
-	if fields.TargetUser != nil {
-		logFields["target_user"] = str(fields.TargetUser)
-	}
+	for _, target := range targets {
+		err := l.database.CreateAuditLogEntry(
+			ctx,
+			fields.CorrelationID,
+			l.systemName,
+			fields.Actor,
+			target.Type,
+			target.Identifier,
+			fields.Action,
+			message,
+		)
+		if err != nil {
+			return fmt.Errorf("create audit log entry: %w", err)
+		}
 
-	log.StandardLogger().WithFields(logFields).Infof(message)
+		logFields := log.Fields{
+			"action":            fields.Action,
+			"correlation_id":    fields.CorrelationID,
+			"system_name":       l.systemName,
+			"target_type":       target.Type,
+			"target_identifier": target.Identifier,
+		}
+		if fields.Actor != nil {
+			logFields["actor"] = str(fields.Actor)
+		}
+
+		log.StandardLogger().WithFields(logFields).Infof(message)
+	}
 
 	return nil
 }

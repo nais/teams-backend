@@ -14,7 +14,7 @@ import (
 type Querier interface {
 	AssignGlobalRoleToUser(ctx context.Context, arg AssignGlobalRoleToUserParams) error
 	AssignTargetedRoleToUser(ctx context.Context, arg AssignTargetedRoleToUserParams) error
-	ClearTeamReconcileErrorForSystem(ctx context.Context, arg ClearTeamReconcileErrorForSystemParams) error
+	ClearReconcilerErrorsForTeam(ctx context.Context, arg ClearReconcilerErrorsForTeamParams) error
 	ConfigureReconciler(ctx context.Context, arg ConfigureReconcilerParams) error
 	CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) error
 	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) error
@@ -22,15 +22,18 @@ type Querier interface {
 	CreateSession(ctx context.Context, arg CreateSessionParams) (*Session, error)
 	CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (*User, error)
+	DangerousGetReconcilerConfigValues(ctx context.Context, reconciler ReconcilerName) ([]*DangerousGetReconcilerConfigValuesRow, error)
 	DeleteServiceAccount(ctx context.Context, id uuid.UUID) error
 	DeleteSession(ctx context.Context, id uuid.UUID) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
 	DisableReconciler(ctx context.Context, name ReconcilerName) (*Reconciler, error)
 	EnableReconciler(ctx context.Context, name ReconcilerName) (*Reconciler, error)
-	GetAuditLogsForTeam(ctx context.Context, targetTeamSlug *slug.Slug) ([]*AuditLog, error)
+	GetAuditLogsForReconciler(ctx context.Context, targetIdentifier string) ([]*AuditLog, error)
+	GetAuditLogsForTeam(ctx context.Context, targetIdentifier string) ([]*AuditLog, error)
 	GetEnabledReconcilers(ctx context.Context) ([]*Reconciler, error)
 	GetReconciler(ctx context.Context, name ReconcilerName) (*Reconciler, error)
 	GetReconcilerConfig(ctx context.Context, reconciler ReconcilerName) ([]*GetReconcilerConfigRow, error)
+	GetReconcilerStateForTeam(ctx context.Context, arg GetReconcilerStateForTeamParams) (*ReconcilerState, error)
 	GetReconcilers(ctx context.Context) ([]*Reconciler, error)
 	GetRoleAuthorizations(ctx context.Context, roleName RoleName) ([]AuthzName, error)
 	GetServiceAccountByApiKey(ctx context.Context, apiKey string) (*User, error)
@@ -41,8 +44,7 @@ type Querier interface {
 	GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)
 	GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error)
 	GetTeamMetadata(ctx context.Context, teamID uuid.UUID) ([]*TeamMetadatum, error)
-	GetTeamReconcileErrors(ctx context.Context, teamID uuid.UUID) ([]*ReconcileError, error)
-	GetTeamSystemState(ctx context.Context, arg GetTeamSystemStateParams) (*SystemState, error)
+	GetTeamReconcilerErrors(ctx context.Context, teamID uuid.UUID) ([]*ReconcilerError, error)
 	GetTeams(ctx context.Context) ([]*Team, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
 	GetUserByExternalID(ctx context.Context, externalID string) (*User, error)
@@ -56,10 +58,10 @@ type Querier interface {
 	ResetReconcilerConfig(ctx context.Context, reconciler ReconcilerName) error
 	RevokeGlobalRoleFromUser(ctx context.Context, arg RevokeGlobalRoleFromUserParams) error
 	RevokeTargetedRoleFromUser(ctx context.Context, arg RevokeTargetedRoleFromUserParams) error
+	SetReconcilerErrorForTeam(ctx context.Context, arg SetReconcilerErrorForTeamParams) error
+	SetReconcilerStateForTeam(ctx context.Context, arg SetReconcilerStateForTeamParams) error
 	SetSessionExpires(ctx context.Context, arg SetSessionExpiresParams) (*Session, error)
 	SetTeamMetadata(ctx context.Context, arg SetTeamMetadataParams) error
-	SetTeamReconcileErrorForSystem(ctx context.Context, arg SetTeamReconcileErrorForSystemParams) error
-	SetTeamSystemState(ctx context.Context, arg SetTeamSystemStateParams) error
 	UpdateTeam(ctx context.Context, arg UpdateTeamParams) (*Team, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (*User, error)
 }

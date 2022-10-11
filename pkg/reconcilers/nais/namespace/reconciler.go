@@ -44,7 +44,7 @@ type naisNamespaceReconciler struct {
 	projectID       string
 }
 
-const Name = sqlc.SystemNameNaisNamespace
+const Name = sqlc.ReconcilerNameNaisNamespace
 
 func New(database db.Database, auditLogger auditlogger.AuditLogger, domain, credentialsFile, projectID string) *naisNamespaceReconciler {
 	return &naisNamespaceReconciler{
@@ -57,14 +57,10 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, domain, cred
 }
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
-	if !cfg.NaisNamespace.Enabled {
-		return nil, reconcilers.ErrReconcilerNotEnabled
-	}
-
 	return New(database, auditLogger, cfg.TenantDomain, cfg.Google.CredentialsFile, cfg.NaisNamespace.ProjectID), nil
 }
 
-func (r *naisNamespaceReconciler) Name() sqlc.SystemName {
+func (r *naisNamespaceReconciler) Name() sqlc.ReconcilerName {
 	return Name
 }
 
@@ -77,13 +73,13 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	namespaceState := &reconcilers.GoogleGcpNaisNamespaceState{
 		Namespaces: make(map[string]slug.Slug),
 	}
-	err = r.database.LoadSystemState(ctx, r.Name(), input.Team.ID, namespaceState)
+	err = r.database.LoadReconcilerStateForTeam(ctx, r.Name(), input.Team.ID, namespaceState)
 	if err != nil {
 		return fmt.Errorf("unable to load system state for team %q in system %q: %w", input.Team.Slug, r.Name(), err)
 	}
 
 	gcpProjectState := &reconcilers.GoogleGcpProjectState{}
-	err = r.database.LoadSystemState(ctx, google_gcp_reconciler.Name, input.Team.ID, gcpProjectState)
+	err = r.database.LoadReconcilerStateForTeam(ctx, google_gcp_reconciler.Name, input.Team.ID, gcpProjectState)
 	if err != nil {
 		return fmt.Errorf("unable to load system state for team %q in system %q: %w", input.Team.Slug, google_gcp_reconciler.Name, err)
 	}
@@ -93,7 +89,7 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	}
 
 	workspaceState := &reconcilers.GoogleWorkspaceState{}
-	err = r.database.LoadSystemState(ctx, google_workspace_admin_reconciler.Name, input.Team.ID, workspaceState)
+	err = r.database.LoadReconcilerStateForTeam(ctx, google_workspace_admin_reconciler.Name, input.Team.ID, workspaceState)
 	if err != nil || workspaceState.GroupEmail == nil {
 		return fmt.Errorf("no workspace admin state exists for team %q, or group email not set", input.Team.Slug)
 	}
@@ -105,17 +101,19 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 		}
 
 		if _, requested := namespaceState.Namespaces[environment]; !requested {
-			fields := auditlogger.Fields{
-				Action:         sqlc.AuditActionNaisNamespaceCreateNamespace,
-				CorrelationID:  input.CorrelationID,
-				TargetTeamSlug: &input.Team.Slug,
+			targets := []auditlogger.Target{
+				auditlogger.TeamTarget(input.Team.Slug),
 			}
-			r.auditLogger.Logf(ctx, fields, "request namespace creation for team %q in environment %q", input.Team.Slug, environment)
+			fields := auditlogger.Fields{
+				Action:        sqlc.AuditActionNaisNamespaceCreateNamespace,
+				CorrelationID: input.CorrelationID,
+			}
+			r.auditLogger.Logf(ctx, targets, fields, "request namespace creation for team %q in environment %q", input.Team.Slug, environment)
 			namespaceState.Namespaces[environment] = input.Team.Slug
 		}
 	}
 
-	err = r.database.SetSystemState(ctx, r.Name(), input.Team.ID, namespaceState)
+	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.ID, namespaceState)
 	if err != nil {
 		log.Errorf("system state not persisted: %s", err)
 	}

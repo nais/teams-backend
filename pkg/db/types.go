@@ -33,8 +33,19 @@ type ReconcilerConfig struct {
 	*sqlc.GetReconcilerConfigRow
 }
 
-type ReconcileError struct {
-	*sqlc.ReconcileError
+type ReconcilerConfigValues struct {
+	values map[sqlc.ReconcilerConfigKey]string
+}
+
+func (v ReconcilerConfigValues) GetValue(s sqlc.ReconcilerConfigKey) string {
+	if v, exists := v.values[s]; exists {
+		return v
+	}
+	return ""
+}
+
+type ReconcilerError struct {
+	*sqlc.ReconcilerError
 }
 
 type Role struct {
@@ -81,7 +92,7 @@ type database struct {
 }
 
 type Database interface {
-	CreateAuditLogEntry(ctx context.Context, correlationID uuid.UUID, systemName sqlc.SystemName, actor *string, targetTeamSlug *slug.Slug, targetUser *string, action sqlc.AuditAction, message string) error
+	CreateAuditLogEntry(ctx context.Context, correlationID uuid.UUID, systemName sqlc.SystemName, actor *string, targetType sqlc.AuditLogsTargetType, targetIdentifier string, action sqlc.AuditAction, message string) error
 	CreateUser(ctx context.Context, name, email, externalID string) (*User, error)
 	CreateServiceAccount(ctx context.Context, name string) (*ServiceAccount, error)
 	GetServiceAccountByName(ctx context.Context, name string) (*ServiceAccount, error)
@@ -111,12 +122,12 @@ type Database interface {
 	RemoveApiKeysFromServiceAccount(ctx context.Context, serviceAccountID uuid.UUID) error
 	GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*Role, error)
 	Transaction(ctx context.Context, fn DatabaseTransactionFunc) error
-	LoadSystemState(ctx context.Context, systemName sqlc.SystemName, teamID uuid.UUID, state interface{}) error
-	SetSystemState(ctx context.Context, systemName sqlc.SystemName, teamID uuid.UUID, state interface{}) error
+	LoadReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, teamID uuid.UUID, state interface{}) error
+	SetReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, teamID uuid.UUID, state interface{}) error
 	UpdateUser(ctx context.Context, userID uuid.UUID, name, email, externalID string) (*User, error)
-	SetTeamReconcileErrorForSystem(ctx context.Context, correlationID uuid.UUID, teamID uuid.UUID, systemName sqlc.SystemName, err error) error
-	GetTeamReconcileErrors(ctx context.Context, teamID uuid.UUID) ([]*ReconcileError, error)
-	ClearTeamReconcileErrorForSystem(ctx context.Context, teamID uuid.UUID, systemName sqlc.SystemName) error
+	SetReconcilerErrorForTeam(ctx context.Context, correlationID uuid.UUID, teamID uuid.UUID, reconcilerName sqlc.ReconcilerName, err error) error
+	GetTeamReconcilerErrors(ctx context.Context, teamID uuid.UUID) ([]*ReconcilerError, error)
+	ClearReconcilerErrorsForTeam(ctx context.Context, teamID uuid.UUID, reconcilerName sqlc.ReconcilerName) error
 	GetServiceAccounts(ctx context.Context) ([]*ServiceAccount, error)
 	DeleteServiceAccount(ctx context.Context, serviceAccountID uuid.UUID) error
 	GetUserByExternalID(ctx context.Context, externalID string) (*User, error)
@@ -127,11 +138,13 @@ type Database interface {
 	GetReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*Reconciler, error)
 	GetReconcilers(ctx context.Context) ([]*Reconciler, error)
 	GetEnabledReconcilers(ctx context.Context) ([]*Reconciler, error)
-	ConfigureReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName, config map[string]string) (*Reconciler, error)
+	ConfigureReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName, config map[sqlc.ReconcilerConfigKey]string) (*Reconciler, error)
 	GetReconcilerConfig(ctx context.Context, reconcilerName sqlc.ReconcilerName) ([]*ReconcilerConfig, error)
 	ResetReconcilerConfig(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*Reconciler, error)
 	EnableReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*Reconciler, error)
 	DisableReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*Reconciler, error)
+	DangerousGetReconcilerConfigValues(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*ReconcilerConfigValues, error)
+	GetAuditLogsForReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) ([]*AuditLog, error)
 }
 
 func (u User) GetID() uuid.UUID {

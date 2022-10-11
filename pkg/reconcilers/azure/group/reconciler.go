@@ -37,17 +37,37 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, client azure
 	}
 }
 
-const Name = sqlc.SystemNameAzureGroup
+const Name = sqlc.ReconcilerNameAzureGroup
 
-func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
-	if !cfg.Azure.Enabled {
-		return nil, reconcilers.ErrReconcilerNotEnabled
+type reconcilerConfig struct {
+	clientID     string
+	clientSecret string
+	tenantID     string
+}
+
+func convertDatabaseConfig(ctx context.Context, database db.Database) (*reconcilerConfig, error) {
+	config, err := database.DangerousGetReconcilerConfigValues(ctx, Name)
+	if err != nil {
+		return nil, err
 	}
 
-	endpoint := microsoft.AzureADEndpoint(cfg.Azure.TenantID)
+	return &reconcilerConfig{
+		clientSecret: config.GetValue(sqlc.ReconcilerConfigKeyAzureClientSecret),
+		clientID:     config.GetValue(sqlc.ReconcilerConfigKeyAzureClientID),
+		tenantID:     config.GetValue(sqlc.ReconcilerConfigKeyAzureTenantID),
+	}, nil
+}
+
+func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+	config, err := convertDatabaseConfig(ctx, database)
+	if err != nil {
+		return nil, err
+	}
+
+	endpoint := microsoft.AzureADEndpoint(config.tenantID)
 	conf := clientcredentials.Config{
-		ClientID:     cfg.Azure.ClientID,
-		ClientSecret: cfg.Azure.ClientSecret,
+		ClientID:     config.clientID,
+		ClientSecret: config.clientSecret,
 		TokenURL:     endpoint.TokenURL,
 		AuthStyle:    endpoint.AuthStyle,
 		Scopes: []string{
@@ -58,13 +78,13 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 	return New(database, auditLogger, azureclient.New(conf.Client(context.Background())), cfg.TenantDomain), nil
 }
 
-func (r *azureGroupReconciler) Name() sqlc.SystemName {
+func (r *azureGroupReconciler) Name() sqlc.ReconcilerName {
 	return Name
 }
 
 func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	state := &reconcilers.AzureState{}
-	err := r.database.LoadSystemState(ctx, r.Name(), input.Team.ID, state)
+	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), input.Team.ID, state)
 	if err != nil {
 		return fmt.Errorf("unable to load system state for team %q in system %q: %w", input.Team.Slug, r.Name(), err)
 	}
@@ -76,15 +96,17 @@ func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.
 	}
 
 	if created {
-		fields := auditlogger.Fields{
-			Action:         sqlc.AuditActionAzureGroupCreate,
-			CorrelationID:  input.CorrelationID,
-			TargetTeamSlug: &input.Team.Slug,
+		targets := []auditlogger.Target{
+			auditlogger.TeamTarget(input.Team.Slug),
 		}
-		r.auditLogger.Logf(ctx, fields, "created Azure AD group: %s", grp)
+		fields := auditlogger.Fields{
+			Action:        sqlc.AuditActionAzureGroupCreate,
+			CorrelationID: input.CorrelationID,
+		}
+		r.auditLogger.Logf(ctx, targets, fields, "created Azure AD group: %s", grp)
 
 		id, _ := uuid.Parse(grp.ID)
-		err = r.database.SetSystemState(ctx, r.Name(), input.Team.ID, reconcilers.AzureState{GroupID: &id})
+		err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.ID, reconcilers.AzureState{GroupID: &id})
 		if err != nil {
 			log.Errorf("system state not persisted: %s", err)
 		}
@@ -126,13 +148,15 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 			consoleUserMap[remoteEmail] = user
 		}
 
-		fields := auditlogger.Fields{
-			Action:         sqlc.AuditActionAzureGroupDeleteMember,
-			CorrelationID:  input.CorrelationID,
-			TargetTeamSlug: &input.Team.Slug,
-			TargetUser:     &remoteEmail,
+		targets := []auditlogger.Target{
+			auditlogger.TeamTarget(input.Team.Slug),
+			auditlogger.UserTarget(remoteEmail),
 		}
-		r.auditLogger.Logf(ctx, fields, "removed member %q from Azure group %q", remoteEmail, grp.MailNickname)
+		fields := auditlogger.Fields{
+			Action:        sqlc.AuditActionAzureGroupDeleteMember,
+			CorrelationID: input.CorrelationID,
+		}
+		r.auditLogger.Logf(ctx, targets, fields, "removed member %q from Azure group %q", remoteEmail, grp.MailNickname)
 	}
 
 	membersToAdd := localOnlyMembers(members, localMembers)
@@ -148,13 +172,15 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 			continue
 		}
 
-		fields := auditlogger.Fields{
-			Action:         sqlc.AuditActionAzureGroupAddMember,
-			CorrelationID:  input.CorrelationID,
-			TargetTeamSlug: &input.Team.Slug,
-			TargetUser:     &consoleUser.Email,
+		targets := []auditlogger.Target{
+			auditlogger.TeamTarget(input.Team.Slug),
+			auditlogger.UserTarget(consoleUser.Email),
 		}
-		r.auditLogger.Logf(ctx, fields, "added member %q to Azure group %q", consoleUser.Email, grp.MailNickname)
+		fields := auditlogger.Fields{
+			Action:        sqlc.AuditActionAzureGroupAddMember,
+			CorrelationID: input.CorrelationID,
+		}
+		r.auditLogger.Logf(ctx, targets, fields, "added member %q to Azure group %q", consoleUser.Email, grp.MailNickname)
 	}
 
 	return nil

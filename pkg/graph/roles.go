@@ -33,12 +33,14 @@ func (r *mutationResolver) AssignGlobalRoleToUser(ctx context.Context, role sqlc
 	}
 
 	actor := authz.ActorFromContext(ctx)
-	fields := auditlogger.Fields{
-		Action:     sqlc.AuditActionGraphqlApiRolesAssignGlobalRole,
-		Actor:      console.Strp(actor.User.Identity()),
-		TargetUser: &user.Email,
+	targets := []auditlogger.Target{
+		auditlogger.UserTarget(user.Email),
 	}
-	r.auditLogger.Logf(ctx, fields, "Assign global role %q to user", role)
+	fields := auditlogger.Fields{
+		Action: sqlc.AuditActionGraphqlApiRolesAssignGlobalRole,
+		Actor:  console.Strp(actor.User.Identity()),
+	}
+	r.auditLogger.Logf(ctx, targets, fields, "Assign global role %q to user", role)
 
 	return user, nil
 }
@@ -60,12 +62,14 @@ func (r *mutationResolver) RevokeGlobalRoleFromUser(ctx context.Context, role sq
 	}
 
 	actor := authz.ActorFromContext(ctx)
-	fields := auditlogger.Fields{
-		Action:     sqlc.AuditActionGraphqlApiRolesRevokeGlobalRole,
-		Actor:      console.Strp(actor.User.Identity()),
-		TargetUser: &user.Email,
+	targets := []auditlogger.Target{
+		auditlogger.UserTarget(user.Email),
 	}
-	r.auditLogger.Logf(ctx, fields, "Revoke global role %q from user", role)
+	fields := auditlogger.Fields{
+		Action: sqlc.AuditActionGraphqlApiRolesRevokeGlobalRole,
+		Actor:  console.Strp(actor.User.Identity()),
+	}
+	r.auditLogger.Logf(ctx, targets, fields, "Revoke global role %q from user", role)
 
 	return user, nil
 }

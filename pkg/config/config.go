@@ -4,36 +4,18 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
-type Azure struct {
-	Enabled      bool   `envconfig:"CONSOLE_AZURE_ENABLED"`
-	ClientID     string `envconfig:"CONSOLE_AZURE_CLIENT_ID"`
-	ClientSecret string `envconfig:"CONSOLE_AZURE_CLIENT_SECRET"`
-	TenantID     string `envconfig:"CONSOLE_AZURE_TENANT_ID"`
-}
-
-type GitHub struct {
-	Enabled           bool   `envconfig:"CONSOLE_GITHUB_ENABLED"`
-	AppID             int64  `envconfig:"CONSOLE_GITHUB_APP_ID"`
-	AppInstallationID int64  `envconfig:"CONSOLE_GITHUB_APP_INSTALLATION_ID"`
-	Organization      string `envconfig:"CONSOLE_GITHUB_ORGANIZATION"`
-	PrivateKeyPath    string `envconfig:"CONSOLE_GITHUB_PRIVATE_KEY_PATH"`
-}
-
 type Google struct {
-	Enabled         bool   `envconfig:"CONSOLE_GOOGLE_ENABLED"`
 	DelegatedUser   string `envconfig:"CONSOLE_GOOGLE_DELEGATED_USER"`
 	CredentialsFile string `envconfig:"CONSOLE_GOOGLE_CREDENTIALS_FILE"`
 }
 
 type GCP struct {
-	Enabled        bool   `envconfig:"CONSOLE_GCP_ENABLED"`
 	Clusters       string `envconfig:"CONSOLE_GCP_CLUSTERS"`
 	CnrmRole       string `envconfig:"CONSOLE_GCP_CNRM_ROLE"`
 	BillingAccount string `envconfig:"CONSOLE_GCP_BILLING_ACCOUNT"`
 }
 
 type NaisNamespace struct {
-	Enabled   bool   `envconfig:"CONSOLE_NAIS_NAMESPACE_ENABLED"`
 	ProjectID string `envconfig:"CONSOLE_NAIS_NAMESPACE_PROJECT_ID"`
 }
 
@@ -48,8 +30,6 @@ type OAuth struct {
 }
 
 type Config struct {
-	Azure                 Azure
-	GitHub                GitHub
 	Google                Google
 	GCP                   GCP
 	UserSync              UserSync
@@ -67,6 +47,14 @@ type Config struct {
 	StaticServiceAccounts string `envconfig:"CONSOLE_STATIC_SERVICE_ACCOUNTS"`
 }
 
+type ImporterConfig struct {
+	AzureClientID     string `envconfig:"CONSOLE_IMPORTER_AZURE_CLIENT_ID"`
+	AzureClientSecret string `envconfig:"CONSOLE_IMPORTER_AZURE_CLIENT_SECRET"`
+	AzureTenantID     string `envconfig:"CONSOLE_IMPORTER_AZURE_TENANT_ID"`
+	DatabaseURL       string `envconfig:"CONSOLE_DATABASE_URL"`
+	TenantDomain      string `envconfig:"CONSOLE_TENANT_DOMAIN"`
+}
+
 func Defaults() *Config {
 	return &Config{
 		DatabaseURL:   "postgres://console:console@localhost:3002/console?sslmode=disable",
@@ -82,6 +70,19 @@ func Defaults() *Config {
 func New() (*Config, error) {
 	cfg := Defaults()
 
+	err := envconfig.Process("", cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
+}
+
+func NewImporterConfig() (*ImporterConfig, error) {
+	cfg := &ImporterConfig{
+		DatabaseURL:  "postgres://console:console@localhost:3002/console?sslmode=disable",
+		TenantDomain: "example.com",
+	}
 	err := envconfig.Process("", cfg)
 	if err != nil {
 		return nil, err

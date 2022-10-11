@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/nais/console/pkg/slug"
@@ -23,7 +24,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const Name = sqlc.SystemNameGithubTeam
+const Name = sqlc.ReconcilerNameGithubTeam
 
 var errGitHubUserNotFound = errors.New("GitHub user does not exist")
 
@@ -39,15 +40,16 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, org, domain 
 }
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
-	if !cfg.GitHub.Enabled {
-		return nil, reconcilers.ErrReconcilerNotEnabled
+	config, err := convertDatabaseConfig(ctx, database)
+	if err != nil {
+		return nil, err
 	}
 
-	transport, err := ghinstallation.NewKeyFromFile(
+	transport, err := ghinstallation.New(
 		http.DefaultTransport,
-		cfg.GitHub.AppID,
-		cfg.GitHub.AppInstallationID,
-		cfg.GitHub.PrivateKeyPath,
+		config.appID,
+		config.installationID,
+		config.privateKey,
 	)
 	if err != nil {
 		return nil, err
@@ -61,16 +63,16 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 	restClient := github.NewClient(httpClient)
 	graphClient := githubv4.NewClient(httpClient)
 
-	return New(database, auditLogger, cfg.GitHub.Organization, cfg.TenantDomain, restClient.Teams, graphClient), nil
+	return New(database, auditLogger, config.org, cfg.TenantDomain, restClient.Teams, graphClient), nil
 }
 
-func (r *githubTeamReconciler) Name() sqlc.SystemName {
+func (r *githubTeamReconciler) Name() sqlc.ReconcilerName {
 	return Name
 }
 
 func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	state := &reconcilers.GitHubState{}
-	err := r.database.LoadSystemState(ctx, r.Name(), input.Team.ID, state)
+	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), input.Team.ID, state)
 	if err != nil {
 		return fmt.Errorf("unable to load system state for team %q in system %q: %w", input.Team.Slug, r.Name(), err)
 	}
@@ -81,7 +83,7 @@ func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.
 	}
 
 	slug := slug.Slug(*githubTeam.Slug)
-	err = r.database.SetSystemState(ctx, r.Name(), input.Team.ID, reconcilers.GitHubState{Slug: &slug})
+	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.ID, reconcilers.GitHubState{Slug: &slug})
 	if err != nil {
 		log.Errorf("system state not persisted: %s", err)
 	}
@@ -117,12 +119,14 @@ func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconc
 		return nil, fmt.Errorf("unable to create GitHub team: %w", err)
 	}
 
-	fields := auditlogger.Fields{
-		Action:         sqlc.AuditActionGithubTeamCreate,
-		CorrelationID:  correlationID,
-		TargetTeamSlug: &team.Slug,
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(team.Slug),
 	}
-	r.auditLogger.Logf(ctx, fields, "created GitHub team %q", *githubTeam.Slug)
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGithubTeamCreate,
+		CorrelationID: correlationID,
+	}
+	r.auditLogger.Logf(ctx, targets, fields, "created GitHub team %q", *githubTeam.Slug)
 
 	return githubTeam, nil
 }
@@ -162,12 +166,14 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 			}
 		}
 
-		fields := auditlogger.Fields{
-			Action:         sqlc.AuditActionGithubTeamDeleteMember,
-			CorrelationID:  input.CorrelationID,
-			TargetTeamSlug: &input.Team.Slug,
+		targets := []auditlogger.Target{
+			auditlogger.TeamTarget(input.Team.Slug),
 		}
-		r.auditLogger.Logf(ctx, fields, "deleted member %q from GitHub team %q", username, *githubTeam.Slug)
+		fields := auditlogger.Fields{
+			Action:        sqlc.AuditActionGithubTeamDeleteMember,
+			CorrelationID: input.CorrelationID,
+		}
+		r.auditLogger.Logf(ctx, targets, fields, "deleted member %q from GitHub team %q", username, *githubTeam.Slug)
 	}
 
 	membersToAdd := localOnlyMembers(consoleUserWithGitHubUser, membersAccordingToGitHub)
@@ -179,13 +185,15 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 			continue
 		}
 
-		fields := auditlogger.Fields{
-			Action:         sqlc.AuditActionGithubTeamAddMember,
-			CorrelationID:  input.CorrelationID,
-			TargetTeamSlug: &input.Team.Slug,
-			TargetUser:     &consoleUser.Email,
+		targets := []auditlogger.Target{
+			auditlogger.TeamTarget(input.Team.Slug),
+			auditlogger.UserTarget(consoleUser.Email),
 		}
-		r.auditLogger.Logf(ctx, fields, "added member %q to GitHub team %q", username, *githubTeam.Slug)
+		fields := auditlogger.Fields{
+			Action:        sqlc.AuditActionGithubTeamAddMember,
+			CorrelationID: input.CorrelationID,
+		}
+		r.auditLogger.Logf(ctx, targets, fields, "added member %q to GitHub team %q", username, *githubTeam.Slug)
 	}
 
 	return nil
@@ -309,6 +317,30 @@ func (r *githubTeamReconciler) getEmailFromGitHubUsername(ctx context.Context, u
 
 	email := strings.ToLower(string(nodes[0].SamlIdentity.Username))
 	return &email, nil
+}
+
+func convertDatabaseConfig(ctx context.Context, database db.Database) (*reconcilerConfig, error) {
+	config, err := database.DangerousGetReconcilerConfigValues(ctx, Name)
+	if err != nil {
+		return nil, err
+	}
+
+	appID, err := strconv.ParseInt(config.GetValue(sqlc.ReconcilerConfigKeyGithubAppID), 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("unable to convert app ID %q to an integer", config.GetValue(sqlc.ReconcilerConfigKeyGithubAppID))
+	}
+
+	installationID, err := strconv.ParseInt(config.GetValue(sqlc.ReconcilerConfigKeyGithubAppInstallationID), 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("unable to convert app installation ID %q to an integer", config.GetValue(sqlc.ReconcilerConfigKeyGithubAppInstallationID))
+	}
+
+	return &reconcilerConfig{
+		org:            config.GetValue(sqlc.ReconcilerConfigKeyGithubOrg),
+		appID:          appID,
+		installationID: installationID,
+		privateKey:     []byte(config.GetValue(sqlc.ReconcilerConfigKeyGithubAppPrivateKey)),
+	}, nil
 }
 
 // httpError Return an error if the response status code is not as expected, or if the passed err is already set to an

@@ -52,13 +52,15 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		return nil, err
 	}
 
-	fields := auditlogger.Fields{
-		Action:         sqlc.AuditActionGraphqlApiTeamCreate,
-		CorrelationID:  correlationID,
-		Actor:          console.Strp(actor.User.Identity()),
-		TargetTeamSlug: &team.Slug,
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(team.Slug),
 	}
-	r.auditLogger.Logf(ctx, fields, "Team created")
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGraphqlApiTeamCreate,
+		CorrelationID: correlationID,
+		Actor:         console.Strp(actor.User.Identity()),
+	}
+	r.auditLogger.Logf(ctx, targets, fields, "Team created")
 
 	r.reconcileTeam(ctx, correlationID, *team)
 
@@ -83,13 +85,15 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, in
 		return nil, fmt.Errorf("unable to update team: %w", err)
 	}
 
-	fields := auditlogger.Fields{
-		Action:         sqlc.AuditActionGraphqlApiTeamUpdate,
-		CorrelationID:  correlationID,
-		Actor:          console.Strp(actor.User.Identity()),
-		TargetTeamSlug: &team.Slug,
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(team.Slug),
 	}
-	r.auditLogger.Logf(ctx, fields, "Team updated")
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGraphqlApiTeamUpdate,
+		CorrelationID: correlationID,
+		Actor:         console.Strp(actor.User.Identity()),
+	}
+	r.auditLogger.Logf(ctx, targets, fields, "Team updated")
 
 	r.reconcileTeam(ctx, correlationID, *team)
 
@@ -137,14 +141,16 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 				return err
 			}
 
-			fields := auditlogger.Fields{
-				Action:         sqlc.AuditActionGraphqlApiTeamRemoveMember,
-				CorrelationID:  correlationID,
-				Actor:          console.Strp(actor.User.Identity()),
-				TargetTeamSlug: &team.Slug,
-				TargetUser:     &member.Email,
+			targets := []auditlogger.Target{
+				auditlogger.TeamTarget(team.Slug),
+				auditlogger.UserTarget(member.Email),
 			}
-			r.auditLogger.Logf(ctx, fields, "Removed user")
+			fields := auditlogger.Fields{
+				Action:        sqlc.AuditActionGraphqlApiTeamRemoveMember,
+				CorrelationID: correlationID,
+				Actor:         console.Strp(actor.User.Identity()),
+			}
+			r.auditLogger.Logf(ctx, targets, fields, "Removed user")
 		}
 		return nil
 	})
@@ -175,13 +181,15 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 		return nil, fmt.Errorf("unable to get team: %w", err)
 	}
 
-	fields := auditlogger.Fields{
-		Action:         sqlc.AuditActionGraphqlApiTeamSync,
-		CorrelationID:  correlationID,
-		Actor:          console.Strp(actor.User.Identity()),
-		TargetTeamSlug: &team.Slug,
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(team.Slug),
 	}
-	r.auditLogger.Logf(ctx, fields, "Synchronize team")
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGraphqlApiTeamSync,
+		CorrelationID: correlationID,
+		Actor:         console.Strp(actor.User.Identity()),
+	}
+	r.auditLogger.Logf(ctx, targets, fields, "Synchronize team")
 
 	r.reconcileTeam(ctx, correlationID, *team)
 
@@ -221,14 +229,16 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 				return err
 			}
 
-			fields := auditlogger.Fields{
-				Action:         sqlc.AuditActionGraphqlApiTeamAddMember,
-				CorrelationID:  correlationID,
-				Actor:          console.Strp(actor.User.Identity()),
-				TargetTeamSlug: &team.Slug,
-				TargetUser:     &user.Email,
+			targets := []auditlogger.Target{
+				auditlogger.TeamTarget(team.Slug),
+				auditlogger.UserTarget(user.Email),
 			}
-			r.auditLogger.Logf(ctx, fields, "Add team member")
+			fields := auditlogger.Fields{
+				Action:        sqlc.AuditActionGraphqlApiTeamAddMember,
+				CorrelationID: correlationID,
+				Actor:         console.Strp(actor.User.Identity()),
+			}
+			r.auditLogger.Logf(ctx, targets, fields, "Add team member")
 		}
 		return nil
 	})
@@ -271,14 +281,16 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 				return err
 			}
 
-			fields := auditlogger.Fields{
-				Action:         sqlc.AuditActionGraphqlApiTeamAddOwner,
-				CorrelationID:  correlationID,
-				Actor:          console.Strp(actor.User.Identity()),
-				TargetTeamSlug: &team.Slug,
-				TargetUser:     &user.Email,
+			targets := []auditlogger.Target{
+				auditlogger.TeamTarget(team.Slug),
+				auditlogger.UserTarget(user.Email),
 			}
-			r.auditLogger.Logf(ctx, fields, "Add team owner")
+			fields := auditlogger.Fields{
+				Action:        sqlc.AuditActionGraphqlApiTeamAddOwner,
+				CorrelationID: correlationID,
+				Actor:         console.Strp(actor.User.Identity()),
+			}
+			r.auditLogger.Logf(ctx, targets, fields, "Add team owner")
 		}
 		return nil
 	})
@@ -335,14 +347,16 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 		return nil, err
 	}
 
-	fields := auditlogger.Fields{
-		Action:         sqlc.AuditActionGraphqlApiTeamSetMemberRole,
-		CorrelationID:  correlationID,
-		Actor:          console.Strp(actor.User.Identity()),
-		TargetTeamSlug: &team.Slug,
-		TargetUser:     &member.Email,
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(team.Slug),
+		auditlogger.UserTarget(member.Email),
 	}
-	r.auditLogger.Logf(ctx, fields, "Set team member role to %q", desiredRole)
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGraphqlApiTeamSetMemberRole,
+		CorrelationID: correlationID,
+		Actor:         console.Strp(actor.User.Identity()),
+	}
+	r.auditLogger.Logf(ctx, targets, fields, "Set team member role to %q", desiredRole)
 
 	r.reconcileTeam(ctx, correlationID, *team)
 
@@ -453,7 +467,7 @@ func (r *teamResolver) SyncErrors(ctx context.Context, obj *db.Team) ([]*model.S
 		return nil, err
 	}
 
-	rows, err := r.database.GetTeamReconcileErrors(ctx, obj.ID)
+	rows, err := r.database.GetTeamReconcilerErrors(ctx, obj.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -461,9 +475,9 @@ func (r *teamResolver) SyncErrors(ctx context.Context, obj *db.Team) ([]*model.S
 	syncErrors := make([]*model.SyncError, 0)
 	for _, row := range rows {
 		syncErrors = append(syncErrors, &model.SyncError{
-			CreatedAt: row.CreatedAt,
-			System:    row.SystemName,
-			Error:     row.ErrorMessage,
+			CreatedAt:  row.CreatedAt,
+			Reconciler: row.Reconciler,
+			Error:      row.ErrorMessage,
 		})
 	}
 

@@ -53,7 +53,7 @@ type googleGcpReconciler struct {
 }
 
 const (
-	Name = sqlc.SystemNameGoogleGcpProject
+	Name = sqlc.ReconcilerNameGoogleGcpProject
 )
 
 func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters clusterInfo, gcpServices *gcpServices, tenantName, domain, cnrmRoleName, billingAccount string) *googleGcpReconciler {
@@ -70,10 +70,6 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters clu
 }
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
-	if !cfg.GCP.Enabled {
-		return nil, reconcilers.ErrReconcilerNotEnabled
-	}
-
 	gcpServices, err := createGcpServices(ctx, cfg.Google.CredentialsFile)
 	if err != nil {
 		return nil, err
@@ -88,7 +84,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 	return New(database, auditLogger, clusters, gcpServices, cfg.TenantName, cfg.TenantDomain, cfg.GCP.CnrmRole, cfg.GCP.BillingAccount), nil
 }
 
-func (r *googleGcpReconciler) Name() sqlc.SystemName {
+func (r *googleGcpReconciler) Name() sqlc.ReconcilerName {
 	return Name
 }
 
@@ -96,13 +92,13 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 	state := &reconcilers.GoogleGcpProjectState{
 		Projects: make(map[string]reconcilers.GoogleGcpEnvironmentProject),
 	}
-	err := r.database.LoadSystemState(ctx, r.Name(), input.Team.ID, state)
+	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), input.Team.ID, state)
 	if err != nil {
 		return fmt.Errorf("unable to load system state for team %q in system %q: %w", input.Team.Slug, r.Name(), err)
 	}
 
 	googleWorkspaceState := &reconcilers.GoogleWorkspaceState{}
-	err = r.database.LoadSystemState(ctx, google_workspace_admin_reconciler.Name, input.Team.ID, googleWorkspaceState)
+	err = r.database.SetReconcilerStateForTeam(ctx, google_workspace_admin_reconciler.Name, input.Team.ID, googleWorkspaceState)
 	if err != nil {
 		return fmt.Errorf("unable to load system state for team %q in system %q: %w", input.Team.Slug, google_workspace_admin_reconciler.Name, err)
 	}
@@ -121,7 +117,7 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 			ProjectName: project.Name,
 		}
 
-		err = r.database.SetSystemState(ctx, r.Name(), input.Team.ID, state)
+		err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.ID, state)
 		if err != nil {
 			log.Errorf("system state not persisted: %s", err)
 		}
@@ -179,12 +175,14 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *rec
 		return nil, fmt.Errorf("unable to convert operation response to the created GCP project: %w", err)
 	}
 
-	fields := auditlogger.Fields{
-		Action:         sqlc.AuditActionGoogleGcpProjectCreateProject,
-		CorrelationID:  input.CorrelationID,
-		TargetTeamSlug: &input.Team.Slug,
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(input.Team.Slug),
 	}
-	r.auditLogger.Logf(ctx, fields, "created GCP project %q for team %q in environment %q", createdProject.ProjectId, input.Team.Slug, environment)
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGoogleGcpProjectCreateProject,
+		CorrelationID: input.CorrelationID,
+	}
+	r.auditLogger.Logf(ctx, targets, fields, "created GCP project %q for team %q in environment %q", createdProject.ProjectId, input.Team.Slug, environment)
 
 	return createdProject, nil
 }
@@ -232,12 +230,14 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 	}
 
 	// FIXME: No need to log if no changes are made
-	fields := auditlogger.Fields{
-		Action:         sqlc.AuditActionGoogleGcpProjectAssignPermissions,
-		CorrelationID:  input.CorrelationID,
-		TargetTeamSlug: &input.Team.Slug,
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(input.Team.Slug),
 	}
-	r.auditLogger.Logf(ctx, fields, "assigned GCP project IAM permissions for %q", project.ProjectId)
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGoogleGcpProjectAssignPermissions,
+		CorrelationID: input.CorrelationID,
+	}
+	r.auditLogger.Logf(ctx, targets, fields, "assigned GCP project IAM permissions for %q", project.ProjectId)
 
 	return nil
 }
@@ -263,12 +263,14 @@ func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.C
 		return nil, err
 	}
 
-	fields := auditlogger.Fields{
-		Action:         sqlc.AuditActionGoogleGcpProjectCreateCnrmServiceAccount,
-		CorrelationID:  input.CorrelationID,
-		TargetTeamSlug: &input.Team.Slug,
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(input.Team.Slug),
 	}
-	r.auditLogger.Logf(ctx, fields, "create CNRM service account for team %q in environment %q", input.Team.Slug, environment)
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGoogleGcpProjectCreateCnrmServiceAccount,
+		CorrelationID: input.CorrelationID,
+	}
+	r.auditLogger.Logf(ctx, targets, fields, "create CNRM service account for team %q in environment %q", input.Team.Slug, environment)
 
 	return serviceAccount, nil
 }
@@ -290,12 +292,14 @@ func (r *googleGcpReconciler) setTeamProjectBillingInfo(ctx context.Context, pro
 		return err
 	}
 
-	fields := auditlogger.Fields{
-		Action:         sqlc.AuditActionGoogleGcpProjectSetBillingInfo,
-		CorrelationID:  input.CorrelationID,
-		TargetTeamSlug: &input.Team.Slug,
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(input.Team.Slug),
 	}
-	r.auditLogger.Logf(ctx, fields, "set billing info for %q", project.ProjectId)
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGoogleGcpProjectSetBillingInfo,
+		CorrelationID: input.CorrelationID,
+	}
+	r.auditLogger.Logf(ctx, targets, fields, "set billing info for %q", project.ProjectId)
 
 	return nil
 }

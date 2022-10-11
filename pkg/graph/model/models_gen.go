@@ -40,6 +40,14 @@ type CreateTeamInput struct {
 	Purpose *string `json:"purpose"`
 }
 
+// Reconciler configuration input.
+type ReconcilerConfigInput struct {
+	// Configuration key.
+	Key sqlc.ReconcilerConfigKey `json:"key"`
+	// Configuration value.
+	Value string `json:"value"`
+}
+
 // Input for removing users from a team.
 type RemoveUsersFromTeamInput struct {
 	// List of user IDs that should be removed from the team.
@@ -62,8 +70,8 @@ type SetTeamMemberRoleInput struct {
 type SyncError struct {
 	// Creation time of the error.
 	CreatedAt time.Time `json:"createdAt"`
-	// The name of the third party system as configured by Console.
-	System sqlc.SystemName `json:"system"`
+	// The name of the reconciler.
+	Reconciler sqlc.ReconcilerName `json:"reconciler"`
 	// Error message.
 	Error string `json:"error"`
 }
