@@ -98,7 +98,7 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 	}
 
 	googleWorkspaceState := &reconcilers.GoogleWorkspaceState{}
-	err = r.database.SetReconcilerStateForTeam(ctx, google_workspace_admin_reconciler.Name, input.Team.ID, googleWorkspaceState)
+	err = r.database.LoadReconcilerStateForTeam(ctx, google_workspace_admin_reconciler.Name, input.Team.ID, googleWorkspaceState)
 	if err != nil {
 		return fmt.Errorf("unable to load system state for team %q in system %q: %w", input.Team.Slug, google_workspace_admin_reconciler.Name, err)
 	}
