@@ -375,6 +375,11 @@ func (r *mutationResolver) DisableTeam(ctx context.Context, teamID *uuid.UUID) (
 		return nil, err
 	}
 
+	correlationID, err := uuid.NewUUID()
+	if err != nil {
+		return nil, fmt.Errorf("unable to create log correlation ID: %w", err)
+	}
+
 	team, err := r.database.DisableTeam(ctx, *teamID)
 	if err != nil {
 		return nil, fmt.Errorf("unable to disable team: %w", err)
@@ -384,10 +389,13 @@ func (r *mutationResolver) DisableTeam(ctx context.Context, teamID *uuid.UUID) (
 		auditlogger.TeamTarget(team.Slug),
 	}
 	fields := auditlogger.Fields{
-		Action: sqlc.AuditActionGraphqlApiTeamDisable,
-		Actor:  console.Strp(actor.User.Identity()),
+		Action:        sqlc.AuditActionGraphqlApiTeamDisable,
+		Actor:         console.Strp(actor.User.Identity()),
+		CorrelationID: correlationID,
 	}
 	r.auditLogger.Logf(ctx, targets, fields, "Disable team")
+
+	r.reconcileTeam(ctx, correlationID, *team)
 
 	return team, nil
 }

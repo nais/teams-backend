@@ -168,10 +168,9 @@ func run() error {
 				nextReconcile = time.Now().Add(immediateReconcile)
 				reconcileTimer.Reset(immediateReconcile)
 			}
-			if _, exists := pendingTeams[input.Team.ID]; !exists {
-				log.Infof("Scheduling team %q for reconciliation in %s", input.Team.Slug, time.Until(nextReconcile))
-				pendingTeams[input.Team.ID] = input
-			}
+
+			log.Infof("Scheduling team %q for reconciliation in %s", input.Team.Slug, time.Until(nextReconcile))
+			pendingTeams[input.Team.ID] = input
 
 		case <-reconcileTimer.C:
 			log.Infof("Running reconcile of %d teams...", len(pendingTeams))
