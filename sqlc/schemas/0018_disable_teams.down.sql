@@ -1,0 +1,5 @@
+BEGIN;
+
+ALTER TABLE teams DROP COLUMN disabled;
+
+COMMIT;

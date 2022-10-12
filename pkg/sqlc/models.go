@@ -731,10 +731,11 @@ type Session struct {
 }
 
 type Team struct {
-	ID      uuid.UUID
-	Slug    slug.Slug
-	Name    string
-	Purpose sql.NullString
+	ID       uuid.UUID
+	Slug     slug.Slug
+	Name     string
+	Purpose  sql.NullString
+	Disabled bool
 }
 
 type TeamMetadatum struct {

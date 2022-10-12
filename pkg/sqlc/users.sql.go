@@ -199,7 +199,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) 
 }
 
 const getUserTeams = `-- name: GetUserTeams :many
-SELECT teams.id, teams.slug, teams.name, teams.purpose FROM user_roles
+SELECT teams.id, teams.slug, teams.name, teams.purpose, teams.disabled FROM user_roles
 JOIN teams ON teams.id = user_roles.target_id
 JOIN users ON users.id = user_roles.user_id
 WHERE user_roles.user_id = $1 AND users.service_account = false
@@ -220,6 +220,7 @@ func (q *Queries) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, 
 			&i.Slug,
 			&i.Name,
 			&i.Purpose,
+			&i.Disabled,
 		); err != nil {
 			return nil, err
 		}

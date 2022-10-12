@@ -1,0 +1,5 @@
+BEGIN;
+
+ALTER TABLE teams ADD COLUMN disabled BOOL NOT NULL DEFAULT false;
+
+COMMIT;
