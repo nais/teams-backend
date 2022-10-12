@@ -113,8 +113,7 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 			return fmt.Errorf("unable to get or create a GCP project for team %q in environment %q: %w", input.Team.Slug, environment, err)
 		}
 		state.Projects[environment] = reconcilers.GoogleGcpEnvironmentProject{
-			ProjectID:   project.ProjectId,
-			ProjectName: project.Name,
+			ProjectID: project.ProjectId,
 		}
 
 		err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.ID, state)
@@ -147,9 +146,17 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 
 func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *reconcilers.GoogleGcpProjectState, environment string, parentFolderID int64, input reconcilers.Input) (*cloudresourcemanager.Project, error) {
 	if projectFromState, exists := state.Projects[environment]; exists {
-		project, err := r.gcpServices.cloudResourceManager.Projects.Get(projectFromState.ProjectName).Do()
-		if err == nil {
-			return project, nil
+		response, err := r.gcpServices.cloudResourceManager.Projects.Search().Query("id:" + projectFromState.ProjectID).Do()
+		if err != nil {
+			return nil, err
+		}
+
+		if len(response.Projects) == 1 {
+			return response.Projects[0], nil
+		}
+
+		if len(response.Projects) > 1 {
+			return nil, fmt.Errorf("multiple projects with id: %q found, unable to continue", projectFromState.ProjectID)
 		}
 	}
 

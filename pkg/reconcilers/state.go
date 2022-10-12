@@ -22,8 +22,7 @@ type GoogleGcpProjectState struct {
 }
 
 type GoogleGcpEnvironmentProject struct {
-	ProjectID   string `json:"projectId"`   // Unique of the project, for instance `my-project-123`
-	ProjectName string `json:"projectName"` // Unique project name, for instance `projects/<int>`
+	ProjectID string `json:"projectId"` // Unique of the project, for instance `my-project-123`
 }
 
 type GoogleGcpNaisNamespaceState struct {
