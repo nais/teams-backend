@@ -53,6 +53,7 @@ type ImporterConfig struct {
 	AzureTenantID     string `envconfig:"CONSOLE_IMPORTER_AZURE_TENANT_ID"`
 	DatabaseURL       string `envconfig:"CONSOLE_DATABASE_URL"`
 	TenantDomain      string `envconfig:"CONSOLE_TENANT_DOMAIN"`
+	GCPClusters       string `envconfig:"CONSOLE_GCP_CLUSTERS"`
 }
 
 func Defaults() *Config {

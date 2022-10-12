@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
@@ -23,9 +22,7 @@ type Team struct {
 	Description           string
 	SlackChannel          string `yaml:"slack-channel"`
 	PlatformAlertsChannel string `yaml:"platform-alerts-channel"`
-	AzureState            reconcilers.AzureState
-	GitHubState           reconcilers.GitHubState
-	GoogleWorkspaceState  reconcilers.GoogleWorkspaceState
+	AzureGroupID          uuid.UUID
 }
 
 func (t *Team) Convert() (*db.Team, db.TeamMetadata) {
@@ -51,7 +48,7 @@ func (t *Team) Convert() (*db.Team, db.TeamMetadata) {
 	}, meta
 }
 
-func ReadTeamFiles(ymlPath, jsonPath, tenantDomain string) (map[string]*Team, error) {
+func ReadTeamFiles(ymlPath, jsonPath string) (map[string]*Team, error) {
 	yf, err := os.Open(ymlPath)
 	if err != nil {
 		return nil, err
@@ -90,14 +87,7 @@ func ReadTeamFiles(ymlPath, jsonPath, tenantDomain string) (map[string]*Team, er
 			log.Errorf("no team for azure mapping (%q, %q)", name, azureID)
 			continue
 		}
-
-		azureGroupID := uuid.MustParse(azureID)
-		gitHubTeamSlug := slug.Slug(name)
-		googleWorkspaceGroupEmail := name + "@" + tenantDomain
-
-		teammap[name].AzureState = reconcilers.AzureState{GroupID: &azureGroupID}
-		teammap[name].GitHubState = reconcilers.GitHubState{Slug: &gitHubTeamSlug}
-		teammap[name].GoogleWorkspaceState = reconcilers.GoogleWorkspaceState{GroupEmail: &googleWorkspaceGroupEmail}
+		teammap[name].AzureGroupID = uuid.MustParse(azureID)
 	}
 
 	return teammap, nil

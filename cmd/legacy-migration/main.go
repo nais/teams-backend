@@ -2,20 +2,20 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 
 	"github.com/google/uuid"
-
-	"github.com/nais/console/pkg/auditlogger"
-
 	"github.com/jackc/pgx/v4/pgxpool"
-
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/sqlc"
-
+	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
+	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/legacy"
+	"github.com/nais/console/pkg/reconcilers"
+	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
+	"github.com/nais/console/pkg/slug"
+	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -38,6 +38,11 @@ func run() error {
 		panic(err)
 	}
 
+	clusters, err := google_gcp_reconciler.GetClusterInfoFromJson(cfg.GCPClusters)
+	if err != nil {
+		return fmt.Errorf("parse GCP cluster info: %w", err)
+	}
+
 	database, err := setupDatabase(ctx, cfg.DatabaseURL)
 	if err != nil {
 		panic(err)
@@ -48,7 +53,7 @@ func run() error {
 		panic(err)
 	}
 
-	teams, err := legacy.ReadTeamFiles(ymlpath, jsonpath, cfg.TenantDomain)
+	teams, err := legacy.ReadTeamFiles(ymlpath, jsonpath)
 	if err != nil {
 		panic(err)
 	}
@@ -64,7 +69,7 @@ func run() error {
 			teamMembers := make(map[string]*db.User, 0)
 
 			log.Infof("Fetch team administrators for %q...", yamlteam.Name)
-			owners, err := gimp.GroupOwners(yamlteam.AzureState.GroupID.String())
+			owners, err := gimp.GroupOwners(yamlteam.AzureGroupID.String())
 			if err != nil {
 				log.WithError(err).Errorf("Unable to get team owners for team: %q", yamlteam.Name)
 				continue
@@ -101,7 +106,7 @@ func run() error {
 			}
 
 			log.Infof("Fetch team members for %s...", yamlteam.Name)
-			members, err := gimp.GroupMembers(yamlteam.AzureState.GroupID.String())
+			members, err := gimp.GroupMembers(yamlteam.AzureGroupID.String())
 			if err != nil {
 				return err
 			}
@@ -226,17 +231,37 @@ func run() error {
 				}
 			}
 
-			err = dbtx.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameAzureGroup, team.ID, yamlteam.AzureState)
+			err = dbtx.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameAzureGroup, team.ID, reconcilers.AzureState{
+				GroupID: &yamlteam.AzureGroupID,
+			})
 			if err != nil {
 				return err
 			}
 
-			err = dbtx.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGithubTeam, team.ID, yamlteam.GitHubState)
+			err = dbtx.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGithubTeam, team.ID, reconcilers.GitHubState{
+				Slug: &team.Slug,
+			})
 			if err != nil {
 				return err
 			}
 
-			err = dbtx.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGoogleWorkspaceAdmin, team.ID, yamlteam.GoogleWorkspaceState)
+			googleWorkspaceGroupEmail := string(team.Slug) + "@" + cfg.TenantDomain
+			err = dbtx.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGoogleWorkspaceAdmin, team.ID, reconcilers.GoogleWorkspaceState{
+				GroupEmail: &googleWorkspaceGroupEmail,
+			})
+			if err != nil {
+				return err
+			}
+
+			// FIXME: Set GCP project state
+
+			naisNamespaces := make(map[string]slug.Slug)
+			for env := range clusters {
+				naisNamespaces[env] = team.Slug
+			}
+			err = dbtx.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameNaisNamespace, team.ID, reconcilers.GoogleGcpNaisNamespaceState{
+				Namespaces: naisNamespaces,
+			})
 			if err != nil {
 				return err
 			}

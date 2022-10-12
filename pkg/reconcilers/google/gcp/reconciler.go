@@ -28,12 +28,12 @@ import (
 	"google.golang.org/api/option"
 )
 
-type cluster struct {
+type Cluster struct {
 	TeamFolderID int64  `json:"team_folder_id"`
 	ProjectID    string `json:"cluster_project_id"`
 }
 
-type clusterInfo map[string]cluster
+type ClusterInfo map[string]Cluster
 
 type gcpServices struct {
 	cloudBilling         *cloudbilling.APIService
@@ -44,7 +44,7 @@ type gcpServices struct {
 type googleGcpReconciler struct {
 	database       db.Database
 	auditLogger    auditlogger.AuditLogger
-	clusters       clusterInfo
+	clusters       ClusterInfo
 	gcpServices    *gcpServices
 	tenantName     string
 	domain         string
@@ -56,7 +56,7 @@ const (
 	Name = sqlc.ReconcilerNameGoogleGcpProject
 )
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters clusterInfo, gcpServices *gcpServices, tenantName, domain, cnrmRoleName, billingAccount string) *googleGcpReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters ClusterInfo, gcpServices *gcpServices, tenantName, domain, cnrmRoleName, billingAccount string) *googleGcpReconciler {
 	return &googleGcpReconciler{
 		database:       database,
 		auditLogger:    auditLogger,
@@ -75,8 +75,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		return nil, err
 	}
 
-	clusters := clusterInfo{}
-	err = json.NewDecoder(strings.NewReader(cfg.GCP.Clusters)).Decode(&clusters)
+	clusters, err := GetClusterInfoFromJson(cfg.GCP.Clusters)
 	if err != nil {
 		return nil, fmt.Errorf("parse GCP cluster info: %w", err)
 	}
@@ -196,7 +195,7 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *rec
 
 // setProjectPermissions Give owner permissions to the team group. The group is created by the Google Workspace Admin
 // reconciler. projectName is in the "projects/{ProjectIdOrNumber}" format, and not the project ID
-func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project *cloudresourcemanager.Project, input reconcilers.Input, groupEmail, environment string, cluster cluster) error {
+func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project *cloudresourcemanager.Project, input reconcilers.Input, groupEmail, environment string, cluster Cluster) error {
 	cnrmServiceAccount, err := r.getOrCreateProjectCnrmServiceAccount(ctx, input, environment, cluster)
 	if err != nil {
 		return fmt.Errorf("unable to create CNRM service account for project %q for team %q in environment %q: %w", project.ProjectId, input.Team.Slug, environment, err)
@@ -251,7 +250,7 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 
 // getOrCreateProjectCnrmServiceAccount Get the CNRM service account for the project in this env. If the service account
 // does not exist, attempt to create it, and then return it.
-func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.Context, input reconcilers.Input, environment string, cluster cluster) (*iam.ServiceAccount, error) {
+func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.Context, input reconcilers.Input, environment string, cluster Cluster) (*iam.ServiceAccount, error) {
 	name, accountID := cnrmServiceAccountNameAndAccountID(input.Team.Slug, cluster.ProjectID)
 	serviceAccount, err := r.gcpServices.iam.Projects.ServiceAccounts.Get(name).Do()
 	if err == nil {
@@ -399,4 +398,13 @@ func GenerateProjectID(domain, environment string, slug slug.Slug) string {
 	parts[2] = console.Truncate(hex.EncodeToString(hasher.Sum(nil)), 4)
 
 	return strings.Join(parts, "-")
+}
+
+func GetClusterInfoFromJson(jsonData string) (ClusterInfo, error) {
+	clusters := ClusterInfo{}
+	err := json.NewDecoder(strings.NewReader(jsonData)).Decode(&clusters)
+	if err != nil {
+		return nil, fmt.Errorf("parse GCP cluster info: %w", err)
+	}
+	return clusters, nil
 }
