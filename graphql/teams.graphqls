@@ -111,7 +111,7 @@ extend type Mutation {
     ): Team! @auth
 
     """
-    Enable a team
+    Enable a previously disabled team
 
     The team will be returned on success.
     """
