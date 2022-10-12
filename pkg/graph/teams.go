@@ -363,6 +363,16 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 	return team, nil
 }
 
+// DisableTeam is the resolver for the disableTeam field.
+func (r *mutationResolver) DisableTeam(ctx context.Context, teamID *uuid.UUID) (*db.Team, error) {
+	panic(fmt.Errorf("not implemented: DisableTeam - disableTeam"))
+}
+
+// EnableTeam is the resolver for the enableTeam field.
+func (r *mutationResolver) EnableTeam(ctx context.Context, teamID *uuid.UUID) (*db.Team, error) {
+	panic(fmt.Errorf("not implemented: EnableTeam - enableTeam"))
+}
+
 // Teams is the resolver for the teams field.
 func (r *queryResolver) Teams(ctx context.Context) ([]*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
