@@ -27,7 +27,9 @@ type Querier interface {
 	DeleteSession(ctx context.Context, id uuid.UUID) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
 	DisableReconciler(ctx context.Context, name ReconcilerName) (*Reconciler, error)
+	DisableTeam(ctx context.Context, id uuid.UUID) (*Team, error)
 	EnableReconciler(ctx context.Context, name ReconcilerName) (*Reconciler, error)
+	EnableTeam(ctx context.Context, id uuid.UUID) (*Team, error)
 	GetAuditLogsForReconciler(ctx context.Context, targetIdentifier string) ([]*AuditLog, error)
 	GetAuditLogsForTeam(ctx context.Context, targetIdentifier string) ([]*AuditLog, error)
 	GetEnabledReconcilers(ctx context.Context) ([]*Reconciler, error)

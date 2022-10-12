@@ -145,6 +145,8 @@ type Database interface {
 	DisableReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*Reconciler, error)
 	DangerousGetReconcilerConfigValues(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*ReconcilerConfigValues, error)
 	GetAuditLogsForReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) ([]*AuditLog, error)
+	DisableTeam(ctx context.Context, teamID uuid.UUID) (*Team, error)
+	EnableTeam(ctx context.Context, teamID uuid.UUID) (*Team, error)
 }
 
 func (u User) GetID() uuid.UUID {

@@ -365,12 +365,60 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 
 // DisableTeam is the resolver for the disableTeam field.
 func (r *mutationResolver) DisableTeam(ctx context.Context, teamID *uuid.UUID) (*db.Team, error) {
-	panic(fmt.Errorf("not implemented: DisableTeam - disableTeam"))
+	actor := authz.ActorFromContext(ctx)
+	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *teamID)
+	if err != nil {
+		return nil, err
+	}
+
+	team, err := r.database.DisableTeam(ctx, *teamID)
+	if err != nil {
+		return nil, fmt.Errorf("unable to disable team: %w", err)
+	}
+
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(team.Slug),
+	}
+	fields := auditlogger.Fields{
+		Action: sqlc.AuditActionGraphqlApiTeamDisable,
+		Actor:  console.Strp(actor.User.Identity()),
+	}
+	r.auditLogger.Logf(ctx, targets, fields, "Disable team")
+
+	return team, nil
 }
 
 // EnableTeam is the resolver for the enableTeam field.
 func (r *mutationResolver) EnableTeam(ctx context.Context, teamID *uuid.UUID) (*db.Team, error) {
-	panic(fmt.Errorf("not implemented: EnableTeam - enableTeam"))
+	actor := authz.ActorFromContext(ctx)
+	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *teamID)
+	if err != nil {
+		return nil, err
+	}
+
+	correlationID, err := uuid.NewUUID()
+	if err != nil {
+		return nil, fmt.Errorf("unable to create log correlation ID: %w", err)
+	}
+
+	team, err := r.database.EnableTeam(ctx, *teamID)
+	if err != nil {
+		return nil, fmt.Errorf("unable to enable team: %w", err)
+	}
+
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(team.Slug),
+	}
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGraphqlApiTeamEnable,
+		Actor:         console.Strp(actor.User.Identity()),
+		CorrelationID: correlationID,
+	}
+	r.auditLogger.Logf(ctx, targets, fields, "Enable team")
+
+	r.reconcileTeam(ctx, correlationID, *team)
+
+	return team, nil
 }
 
 // Teams is the resolver for the teams field.

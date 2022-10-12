@@ -37,3 +37,15 @@ UPDATE teams
 SET name = COALESCE(sqlc.narg(name), name), purpose = COALESCE(sqlc.arg(purpose), purpose)
 WHERE id = sqlc.arg(id)
 RETURNING *;
+
+-- name: DisableTeam :one
+UPDATE teams
+SET disabled = true
+WHERE id = $1
+RETURNING *;
+
+-- name: EnableTeam :one
+UPDATE teams
+SET disabled = false
+WHERE id = $1
+RETURNING *;

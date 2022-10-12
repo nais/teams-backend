@@ -146,3 +146,21 @@ func (d *database) GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*Use
 
 	return members, nil
 }
+
+func (d *database) DisableTeam(ctx context.Context, teamID uuid.UUID) (*Team, error) {
+	team, err := d.querier.DisableTeam(ctx, teamID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Team{Team: team}, nil
+}
+
+func (d *database) EnableTeam(ctx context.Context, teamID uuid.UUID) (*Team, error) {
+	team, err := d.querier.EnableTeam(ctx, teamID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Team{Team: team}, nil
+}

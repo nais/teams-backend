@@ -38,6 +38,46 @@ func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, 
 	return &i, err
 }
 
+const disableTeam = `-- name: DisableTeam :one
+UPDATE teams
+SET disabled = true
+WHERE id = $1
+RETURNING id, slug, name, purpose, disabled
+`
+
+func (q *Queries) DisableTeam(ctx context.Context, id uuid.UUID) (*Team, error) {
+	row := q.db.QueryRow(ctx, disableTeam, id)
+	var i Team
+	err := row.Scan(
+		&i.ID,
+		&i.Slug,
+		&i.Name,
+		&i.Purpose,
+		&i.Disabled,
+	)
+	return &i, err
+}
+
+const enableTeam = `-- name: EnableTeam :one
+UPDATE teams
+SET disabled = false
+WHERE id = $1
+RETURNING id, slug, name, purpose, disabled
+`
+
+func (q *Queries) EnableTeam(ctx context.Context, id uuid.UUID) (*Team, error) {
+	row := q.db.QueryRow(ctx, enableTeam, id)
+	var i Team
+	err := row.Scan(
+		&i.ID,
+		&i.Slug,
+		&i.Name,
+		&i.Purpose,
+		&i.Disabled,
+	)
+	return &i, err
+}
+
 const getTeamByID = `-- name: GetTeamByID :one
 SELECT id, slug, name, purpose, disabled FROM teams
 WHERE id = $1

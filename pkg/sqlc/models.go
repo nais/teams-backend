@@ -65,6 +65,8 @@ const (
 	AuditActionGraphqlApiReconcilersDisable              AuditAction = "graphql-api:reconcilers:disable"
 	AuditActionGraphqlApiReconcilersEnable               AuditAction = "graphql-api:reconcilers:enable"
 	AuditActionGraphqlApiReconcilersReset                AuditAction = "graphql-api:reconcilers:reset"
+	AuditActionGraphqlApiTeamDisable                     AuditAction = "graphql-api:team:disable"
+	AuditActionGraphqlApiTeamEnable                      AuditAction = "graphql-api:team:enable"
 )
 
 func (e *AuditAction) Scan(src interface{}) error {
@@ -150,7 +152,9 @@ func (e AuditAction) Valid() bool {
 		AuditActionGraphqlApiReconcilersConfigure,
 		AuditActionGraphqlApiReconcilersDisable,
 		AuditActionGraphqlApiReconcilersEnable,
-		AuditActionGraphqlApiReconcilersReset:
+		AuditActionGraphqlApiReconcilersReset,
+		AuditActionGraphqlApiTeamDisable,
+		AuditActionGraphqlApiTeamEnable:
 		return true
 	}
 	return false
@@ -205,6 +209,8 @@ func AllAuditActionValues() []AuditAction {
 		AuditActionGraphqlApiReconcilersDisable,
 		AuditActionGraphqlApiReconcilersEnable,
 		AuditActionGraphqlApiReconcilersReset,
+		AuditActionGraphqlApiTeamDisable,
+		AuditActionGraphqlApiTeamEnable,
 	}
 }
 
