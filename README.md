@@ -76,10 +76,6 @@ is mentioned below.
 
 To create teams on GitHub and sync members you will need the following environment variables set:
 
-#### `CONSOLE_GITHUB_ENABLED`
-
-Set to `true` to enable the reconciler.
-
 #### `CONSOLE_GITHUB_ORGANIZATION`
 
 The slug of the organization the app is installed on.
@@ -106,10 +102,6 @@ Path to the private key file (PEM format).
 
 To create groups in Azure AD and sync members you will need the following environment variables set:
 
-#### `CONSOLE_AZURE_ENABLED`
-
-Set to `true` to enable the reconciler.
-
 #### `CONSOLE_AZURE_CLIENT_ID`
 
 The client ID of the application registration. The app needs the following API permissions:
@@ -131,10 +123,6 @@ The tenant ID.
 
 To create groups in Google Workspace and sync members you will need the following environment variables set:
 
-#### `CONSOLE_GOOGLE_ENABLED`
-
-Set to `true` to enable the reconciler.
-
 #### `CONSOLE_GOOGLE_DELEGATED_USER`
 
 A user account (email address) that has admin rights in the Google Workspace account.
@@ -146,10 +134,6 @@ JSON file that contains the private key of the service account.
 ### GCP Projects
 
 To create projects for the team in GCP you will need to set the following environment variables:
-
-#### `CONSOLE_GCP_ENABLED`
-
-Set to `true` to enable the reconciler.
 
 #### `CONSOLE_GCP_CLUSTERS`
 
@@ -182,10 +166,6 @@ The ID of the billing account that each team project will use.
 ### NAIS namespace
 
 To generate NAIS namespaces for a team the following environment variables must be set:
-
-#### `CONSOLE_NAIS_NAMESPACE_ENABLED`
-
-Set to `true` to enable the reconciler.
 
 #### `CONSOLE_NAIS_NAMESPACE_PROJECT_ID`
 
