@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
-	"github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
@@ -58,7 +57,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 	fields := auditlogger.Fields{
 		Action:        sqlc.AuditActionGraphqlApiTeamCreate,
 		CorrelationID: correlationID,
-		Actor:         console.Strp(actor.User.Identity()),
+		Actor:         actor,
 	}
 	r.auditLogger.Logf(ctx, targets, fields, "Team created")
 
@@ -91,7 +90,7 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, in
 	fields := auditlogger.Fields{
 		Action:        sqlc.AuditActionGraphqlApiTeamUpdate,
 		CorrelationID: correlationID,
-		Actor:         console.Strp(actor.User.Identity()),
+		Actor:         actor,
 	}
 	r.auditLogger.Logf(ctx, targets, fields, "Team updated")
 
@@ -148,7 +147,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 			fields := auditlogger.Fields{
 				Action:        sqlc.AuditActionGraphqlApiTeamRemoveMember,
 				CorrelationID: correlationID,
-				Actor:         console.Strp(actor.User.Identity()),
+				Actor:         actor,
 			}
 			r.auditLogger.Logf(ctx, targets, fields, "Removed user")
 		}
@@ -191,7 +190,7 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 	fields := auditlogger.Fields{
 		Action:        sqlc.AuditActionGraphqlApiTeamSync,
 		CorrelationID: correlationID,
-		Actor:         console.Strp(actor.User.Identity()),
+		Actor:         actor,
 	}
 	r.auditLogger.Logf(ctx, targets, fields, "Synchronize team")
 
@@ -240,7 +239,7 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 			fields := auditlogger.Fields{
 				Action:        sqlc.AuditActionGraphqlApiTeamAddMember,
 				CorrelationID: correlationID,
-				Actor:         console.Strp(actor.User.Identity()),
+				Actor:         actor,
 			}
 			r.auditLogger.Logf(ctx, targets, fields, "Add team member")
 		}
@@ -292,7 +291,7 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 			fields := auditlogger.Fields{
 				Action:        sqlc.AuditActionGraphqlApiTeamAddOwner,
 				CorrelationID: correlationID,
-				Actor:         console.Strp(actor.User.Identity()),
+				Actor:         actor,
 			}
 			r.auditLogger.Logf(ctx, targets, fields, "Add team owner")
 		}
@@ -358,7 +357,7 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 	fields := auditlogger.Fields{
 		Action:        sqlc.AuditActionGraphqlApiTeamSetMemberRole,
 		CorrelationID: correlationID,
-		Actor:         console.Strp(actor.User.Identity()),
+		Actor:         actor,
 	}
 	r.auditLogger.Logf(ctx, targets, fields, "Set team member role to %q", desiredRole)
 
@@ -390,7 +389,7 @@ func (r *mutationResolver) DisableTeam(ctx context.Context, teamID *uuid.UUID) (
 	}
 	fields := auditlogger.Fields{
 		Action:        sqlc.AuditActionGraphqlApiTeamDisable,
-		Actor:         console.Strp(actor.User.Identity()),
+		Actor:         actor,
 		CorrelationID: correlationID,
 	}
 	r.auditLogger.Logf(ctx, targets, fields, "Disable team")
@@ -423,7 +422,7 @@ func (r *mutationResolver) EnableTeam(ctx context.Context, teamID *uuid.UUID) (*
 	}
 	fields := auditlogger.Fields{
 		Action:        sqlc.AuditActionGraphqlApiTeamEnable,
-		Actor:         console.Strp(actor.User.Identity()),
+		Actor:         actor,
 		CorrelationID: correlationID,
 	}
 	r.auditLogger.Logf(ctx, targets, fields, "Enable team")

@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/nais/console/pkg/slug"
-
-	"github.com/nais/console/pkg/db"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/google/uuid"
+	"github.com/nais/console/pkg/authz"
+	"github.com/nais/console/pkg/console"
+	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
+	log "github.com/sirupsen/logrus"
 )
 
 type auditLogger struct {
@@ -55,7 +55,7 @@ func ReconcilerTarget(name sqlc.ReconcilerName) Target {
 
 type Fields struct {
 	Action        sqlc.AuditAction
-	Actor         *string
+	Actor         *authz.Actor
 	CorrelationID uuid.UUID
 }
 
@@ -79,11 +79,15 @@ func (l *auditLogger) Logf(ctx context.Context, targets []Target, fields Fields,
 	message = fmt.Sprintf(message, messageArgs...)
 
 	for _, target := range targets {
+		var actor *string
+		if fields.Actor != nil {
+			actor = console.Strp(fields.Actor.User.Identity())
+		}
 		err := l.database.CreateAuditLogEntry(
 			ctx,
 			fields.CorrelationID,
 			l.systemName,
-			fields.Actor,
+			actor,
 			target.Type,
 			target.Identifier,
 			fields.Action,
@@ -100,19 +104,12 @@ func (l *auditLogger) Logf(ctx context.Context, targets []Target, fields Fields,
 			"target_type":       target.Type,
 			"target_identifier": target.Identifier,
 		}
-		if fields.Actor != nil {
-			logFields["actor"] = str(fields.Actor)
+		if actor != nil {
+			logFields["actor"] = *actor
 		}
 
 		log.StandardLogger().WithFields(logFields).Infof(message)
 	}
 
 	return nil
-}
-
-func str(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
 }

@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
-	"github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/sqlc"
@@ -38,7 +37,7 @@ func (r *mutationResolver) AssignGlobalRoleToUser(ctx context.Context, role sqlc
 	}
 	fields := auditlogger.Fields{
 		Action: sqlc.AuditActionGraphqlApiRolesAssignGlobalRole,
-		Actor:  console.Strp(actor.User.Identity()),
+		Actor:  actor,
 	}
 	r.auditLogger.Logf(ctx, targets, fields, "Assign global role %q to user", role)
 
@@ -67,7 +66,7 @@ func (r *mutationResolver) RevokeGlobalRoleFromUser(ctx context.Context, role sq
 	}
 	fields := auditlogger.Fields{
 		Action: sqlc.AuditActionGraphqlApiRolesRevokeGlobalRole,
-		Actor:  console.Strp(actor.User.Identity()),
+		Actor:  actor,
 	}
 	r.auditLogger.Logf(ctx, targets, fields, "Revoke global role %q from user", role)
 

@@ -10,7 +10,6 @@ import (
 
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
-	"github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
@@ -64,7 +63,7 @@ func (r *mutationResolver) EnableReconciler(ctx context.Context, name sqlc.Recon
 	}
 	fields := auditlogger.Fields{
 		Action: sqlc.AuditActionGraphqlApiReconcilersEnable,
-		Actor:  console.Strp(actor.User.Identity()),
+		Actor:  actor,
 	}
 	r.auditLogger.Logf(ctx, targets, fields, "Enable reconciler: %q", name)
 
@@ -102,7 +101,7 @@ func (r *mutationResolver) DisableReconciler(ctx context.Context, name sqlc.Reco
 	}
 	fields := auditlogger.Fields{
 		Action: sqlc.AuditActionGraphqlApiReconcilersDisable,
-		Actor:  console.Strp(actor.User.Identity()),
+		Actor:  actor,
 	}
 	r.auditLogger.Logf(ctx, targets, fields, "Disable reconciler: %q", name)
 
@@ -131,7 +130,7 @@ func (r *mutationResolver) ConfigureReconciler(ctx context.Context, name sqlc.Re
 	}
 	fields := auditlogger.Fields{
 		Action: sqlc.AuditActionGraphqlApiReconcilersConfigure,
-		Actor:  console.Strp(actor.User.Identity()),
+		Actor:  actor,
 	}
 	r.auditLogger.Logf(ctx, targets, fields, "Configure reconciler: %q", name)
 
@@ -173,7 +172,7 @@ func (r *mutationResolver) ResetReconciler(ctx context.Context, name sqlc.Reconc
 	}
 	fields := auditlogger.Fields{
 		Action: sqlc.AuditActionGraphqlApiReconcilersReset,
-		Actor:  console.Strp(actor.User.Identity()),
+		Actor:  actor,
 	}
 	r.auditLogger.Logf(ctx, targets, fields, "Reset reconciler: %q", name)
 
