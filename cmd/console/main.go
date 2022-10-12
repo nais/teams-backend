@@ -221,6 +221,12 @@ func reconcileTeams(ctx context.Context, database db.Database, reconcileInputs *
 
 	errors := 0
 	for teamID, input := range *reconcileInputs {
+		if input.Team.Disabled {
+			log.Infof("Team %q is disabled, skipping and removing from queue", input.Team.Slug)
+			delete(*reconcileInputs, teamID)
+			continue
+		}
+
 		teamErrors := 0
 
 		for _, reconciler := range reconcilers {

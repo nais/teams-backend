@@ -181,6 +181,10 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 		return nil, fmt.Errorf("unable to get team: %w", err)
 	}
 
+	if team.Disabled {
+		return nil, fmt.Errorf("team is disabled, unable to synchronize")
+	}
+
 	targets := []auditlogger.Target{
 		auditlogger.TeamTarget(team.Slug),
 	}
