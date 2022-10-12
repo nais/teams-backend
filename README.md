@@ -72,53 +72,6 @@ Console uses reconcilers to sync team information to external systems, for insta
 must be enabled via environment variables, and require different settings to work as expected. All configuration values
 is mentioned below.
 
-### GitHub
-
-To create teams on GitHub and sync members you will need the following environment variables set:
-
-#### `CONSOLE_GITHUB_ORGANIZATION`
-
-The slug of the organization the app is installed on.
-
-#### `CONSOLE_GITHUB_APP_ID`
-
-The application ID of the GitHub Application that Console will use when communicating with the GitHub APIs. The 
-application will need the following permissions:
-
-| Permission                  | Access         |
-|-----------------------------|----------------|
-| Organization administration | Read-only      |
-| Organization members        | Read and write |
-
-#### `CONSOLE_GITHUB_APP_INSTALLATION_ID`
-
-The installation ID for the application when installed to the org.
-
-#### `CONSOLE_GITHUB_PRIVATE_KEY_PATH`
-
-Path to the private key file (PEM format).
-
-### Azure AD
-
-To create groups in Azure AD and sync members you will need the following environment variables set:
-
-#### `CONSOLE_AZURE_CLIENT_ID`
-
-The client ID of the application registration. The app needs the following API permissions:
-
-| Permission                | Type        |
-|---------------------------|-------------|
-| Group.Create              | Application |
-| GroupMember.ReadWrite.All | Application |
-
-#### `CONSOLE_AZURE_CLIENT_SECRET`
-
-The client secret.
-
-#### `CONSOLE_AZURE_TENANT_ID`
-
-The tenant ID.
-
 ### Google Workspace
 
 To create groups in Google Workspace and sync members you will need the following environment variables set:
