@@ -25,6 +25,7 @@ import (
 	"github.com/nais/console/pkg/fixtures"
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/graph/generated"
+	"github.com/nais/console/pkg/metrics"
 	"github.com/nais/console/pkg/middleware"
 	"github.com/nais/console/pkg/reconcilers"
 	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
@@ -35,6 +36,7 @@ import (
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/pkg/usersync"
 	"github.com/nais/console/pkg/version"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -230,10 +232,12 @@ func reconcileTeams(ctx context.Context, database db.Database, reconcileInputs *
 
 		for _, reconciler := range reconcilers {
 			name := reconciler.Name()
+			metrics.IncReconcilerCounter(name, metrics.ReconcilerStateStarted)
 
 			log.Infof("Starting reconciler %q for team: %q", name, input.Team.Slug)
-			err := reconciler.Reconcile(ctx, input)
+			err = reconciler.Reconcile(ctx, input)
 			if err != nil {
+				metrics.IncReconcilerCounter(name, metrics.ReconcilerStateFailed)
 				log.Error(err)
 				teamErrors++
 				err = database.SetReconcilerErrorForTeam(ctx, input.CorrelationID, input.Team.ID, name, err)
@@ -248,6 +252,7 @@ func reconcileTeams(ctx context.Context, database db.Database, reconcileInputs *
 				log.Errorf("Unable to purge reconcile errors for reconciler %q and team %q: %s", name, input.Team.Slug, err)
 			}
 
+			metrics.IncReconcilerCounter(name, metrics.ReconcilerStateSuccessful)
 			log.Infof("Successfully finished reconciler %q for team: %q", name, input.Team.Slug)
 		}
 
@@ -394,6 +399,7 @@ func corsConfig() cors.Options {
 func setupHTTPServer(cfg *config.Config, database db.Database, graphApi *graphql_handler.Server, authHandler *authn.Handler) (*http.Server, error) {
 	r := chi.NewRouter()
 
+	r.Handle("/metrics", promhttp.Handler())
 	r.Get("/healthz", func(_ http.ResponseWriter, _ *http.Request) {})
 
 	r.Get("/", playground.Handler("GraphQL playground", "/query"))
