@@ -28,35 +28,11 @@ import (
 	"google.golang.org/api/option"
 )
 
-type Cluster struct {
-	TeamFolderID int64  `json:"team_folder_id"`
-	ProjectID    string `json:"cluster_project_id"`
-}
-
-type ClusterInfo map[string]Cluster
-
-type gcpServices struct {
-	cloudBilling         *cloudbilling.APIService
-	cloudResourceManager *cloudresourcemanager.Service
-	iam                  *iam.Service
-}
-
-type googleGcpReconciler struct {
-	database       db.Database
-	auditLogger    auditlogger.AuditLogger
-	clusters       ClusterInfo
-	gcpServices    *gcpServices
-	tenantName     string
-	domain         string
-	cnrmRoleName   string
-	billingAccount string
-}
-
 const (
 	Name = sqlc.ReconcilerNameGoogleGcpProject
 )
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters ClusterInfo, gcpServices *gcpServices, tenantName, domain, cnrmRoleName, billingAccount string) *googleGcpReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters ClusterInfo, gcpServices *GcpServices, tenantName, domain, cnrmRoleName, billingAccount string) *googleGcpReconciler {
 	return &googleGcpReconciler{
 		database:       database,
 		auditLogger:    auditLogger,
@@ -145,7 +121,7 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 
 func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *reconcilers.GoogleGcpProjectState, environment string, parentFolderID int64, input reconcilers.Input) (*cloudresourcemanager.Project, error) {
 	if projectFromState, exists := state.Projects[environment]; exists {
-		response, err := r.gcpServices.cloudResourceManager.Projects.Search().Query("id:" + projectFromState.ProjectID).Do()
+		response, err := r.gcpServices.CloudResourceManagerProjectsService.Search().Query("id:" + projectFromState.ProjectID).Do()
 		if err != nil {
 			return nil, err
 		}
@@ -165,7 +141,7 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *rec
 		Parent:      "folders/" + strconv.FormatInt(parentFolderID, 10),
 		ProjectId:   projectID,
 	}
-	operation, err := r.gcpServices.cloudResourceManager.Projects.Create(project).Do()
+	operation, err := r.gcpServices.CloudResourceManagerProjectsService.Create(project).Do()
 	if err != nil {
 		return nil, fmt.Errorf("unable to create GCP project: %w", err)
 	}
@@ -193,8 +169,8 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *rec
 	return createdProject, nil
 }
 
-// setProjectPermissions Give owner permissions to the team group. The group is created by the Google Workspace Admin
-// reconciler. projectName is in the "projects/{ProjectIdOrNumber}" format, and not the project ID
+// setProjectPermissions Make sure that the project has the necessary permissions, and don't remove permissions we don't
+// control
 func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project *cloudresourcemanager.Project, input reconcilers.Input, groupEmail, environment string, cluster Cluster) error {
 	cnrmServiceAccount, err := r.getOrCreateProjectCnrmServiceAccount(ctx, input, environment, cluster)
 	if err != nil {
@@ -203,7 +179,7 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 
 	// Set workload identity role to the CNRM service account
 	member := fmt.Sprintf("serviceAccount:%s.svc.id.goog[cnrm-system/cnrm-controller-manager-%s]", cluster.ProjectID, input.Team.Slug)
-	_, err = r.gcpServices.iam.Projects.ServiceAccounts.SetIamPolicy(cnrmServiceAccount.Name, &iam.SetIamPolicyRequest{
+	_, err = r.gcpServices.IamProjectsServiceAccountsService.SetIamPolicy(cnrmServiceAccount.Name, &iam.SetIamPolicyRequest{
 		Policy: &iam.Policy{
 			Bindings: []*iam.Binding{
 				{
@@ -217,25 +193,28 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 		return fmt.Errorf("assign roles for CNRM service account: %w", err)
 	}
 
-	_, err = r.gcpServices.cloudResourceManager.Projects.SetIamPolicy(project.Name, &cloudresourcemanager.SetIamPolicyRequest{
-		Policy: &cloudresourcemanager.Policy{
-			Bindings: []*cloudresourcemanager.Binding{
-				{
-					Members: []string{"group:" + groupEmail},
-					Role:    "roles/owner",
-				},
-				{
-					Members: []string{"serviceAccount:" + cnrmServiceAccount.Email},
-					Role:    r.cnrmRoleName,
-				},
-			},
-		},
-	}).Do()
+	policy, err := r.gcpServices.CloudResourceManagerProjectsService.GetIamPolicy(project.Name, &cloudresourcemanager.GetIamPolicyRequest{}).Do()
 	if err != nil {
-		return fmt.Errorf("assign GCP project IAM permissions: %w", err)
+		return fmt.Errorf("unable to retrieve existing GCP project IAM policy: %w", err)
 	}
 
-	// FIXME: No need to log if no changes are made
+	newBindings, updated := calculateRoleBindings(policy.Bindings, map[string]string{
+		"roles/owner":  "group:" + groupEmail,
+		r.cnrmRoleName: "serviceAccount:" + cnrmServiceAccount.Email,
+	})
+
+	if !updated {
+		return nil
+	}
+
+	policy.Bindings = newBindings
+	_, err = r.gcpServices.CloudResourceManagerProjectsService.SetIamPolicy(project.Name, &cloudresourcemanager.SetIamPolicyRequest{
+		Policy: policy,
+	}).Do()
+	if err != nil {
+		return fmt.Errorf("assign GCP project IAM policy: %w", err)
+	}
+
 	targets := []auditlogger.Target{
 		auditlogger.TeamTarget(input.Team.Slug),
 	}
@@ -252,7 +231,7 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 // does not exist, attempt to create it, and then return it.
 func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.Context, input reconcilers.Input, environment string, cluster Cluster) (*iam.ServiceAccount, error) {
 	name, accountID := cnrmServiceAccountNameAndAccountID(input.Team.Slug, cluster.ProjectID)
-	serviceAccount, err := r.gcpServices.iam.Projects.ServiceAccounts.Get(name).Do()
+	serviceAccount, err := r.gcpServices.IamProjectsServiceAccountsService.Get(name).Do()
 	if err == nil {
 		return serviceAccount, nil
 	}
@@ -264,7 +243,7 @@ func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.C
 			Description: fmt.Sprintf("CNRM service account for team %q in environment %q", input.Team.Slug, environment),
 		},
 	}
-	serviceAccount, err = r.gcpServices.iam.Projects.ServiceAccounts.Create("projects/"+cluster.ProjectID, createServiceAccountRequest).Do()
+	serviceAccount, err = r.gcpServices.IamProjectsServiceAccountsService.Create("projects/"+cluster.ProjectID, createServiceAccountRequest).Do()
 	if err != nil {
 		return nil, err
 	}
@@ -282,7 +261,7 @@ func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.C
 }
 
 func (r *googleGcpReconciler) setTeamProjectBillingInfo(ctx context.Context, project *cloudresourcemanager.Project, input reconcilers.Input) error {
-	info, err := r.gcpServices.cloudBilling.Projects.GetBillingInfo(project.Name).Do()
+	info, err := r.gcpServices.CloudBillingProjectsService.GetBillingInfo(project.Name).Do()
 	if err != nil {
 		return err
 	}
@@ -291,7 +270,7 @@ func (r *googleGcpReconciler) setTeamProjectBillingInfo(ctx context.Context, pro
 		return nil
 	}
 
-	_, err = r.gcpServices.cloudBilling.Projects.UpdateBillingInfo(project.Name, &cloudbilling.ProjectBillingInfo{
+	_, err = r.gcpServices.CloudBillingProjectsService.UpdateBillingInfo(project.Name, &cloudbilling.ProjectBillingInfo{
 		BillingAccountName: r.billingAccount,
 	}).Do()
 	if err != nil {
@@ -314,7 +293,7 @@ func (r *googleGcpReconciler) getOperationResponse(operation *cloudresourcemanag
 	var err error
 	for !operation.Done {
 		time.Sleep(1 * time.Second) // Make sure not to hammer the Operation API
-		operation, err = r.gcpServices.cloudResourceManager.Operations.Get(operation.Name).Do()
+		operation, err = r.gcpServices.CloudResourceManagerOperationsService.Get(operation.Name).Do()
 		if err != nil {
 			return nil, fmt.Errorf("unable to poll operation: %w", err)
 		}
@@ -328,7 +307,7 @@ func (r *googleGcpReconciler) getOperationResponse(operation *cloudresourcemanag
 }
 
 func (r *googleGcpReconciler) ensureProjectHasLabels(_ context.Context, project *cloudresourcemanager.Project, labels map[string]string) error {
-	operation, err := r.gcpServices.cloudResourceManager.Projects.Patch(project.Name, &cloudresourcemanager.Project{
+	operation, err := r.gcpServices.CloudResourceManagerProjectsService.Patch(project.Name, &cloudresourcemanager.Project{
 		Labels: labels,
 	}).Do()
 	if err != nil {
@@ -348,7 +327,7 @@ func cnrmServiceAccountNameAndAccountID(slug slug.Slug, projectID string) (name,
 }
 
 // createGcpServices Creates the GCP services used by the reconciler
-func createGcpServices(ctx context.Context, credentialsFilePath string) (*gcpServices, error) {
+func createGcpServices(ctx context.Context, credentialsFilePath string) (*GcpServices, error) {
 	credentials, err := os.ReadFile(credentialsFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("read google credentials file: %w", err)
@@ -376,10 +355,11 @@ func createGcpServices(ctx context.Context, credentialsFilePath string) (*gcpSer
 		return nil, fmt.Errorf("retrieve cloud billing service: %w", err)
 	}
 
-	return &gcpServices{
-		cloudBilling:         cloudBillingService,
-		cloudResourceManager: cloudResourceManagerService,
-		iam:                  iamService,
+	return &GcpServices{
+		CloudBillingProjectsService:           cloudBillingService.Projects,
+		CloudResourceManagerProjectsService:   cloudResourceManagerService.Projects,
+		CloudResourceManagerOperationsService: cloudResourceManagerService.Operations,
+		IamProjectsServiceAccountsService:     iamService.Projects.ServiceAccounts,
 	}, nil
 }
 
@@ -407,4 +387,44 @@ func GetClusterInfoFromJson(jsonData string) (ClusterInfo, error) {
 		return nil, fmt.Errorf("parse GCP cluster info: %w", err)
 	}
 	return clusters, nil
+}
+
+// calculateRoleBindings Given a set of role bindings, make sure the ones in requiredRoleBindings are present
+func calculateRoleBindings(existingRoleBindings []*cloudresourcemanager.Binding, requiredRoleBindings map[string]string) ([]*cloudresourcemanager.Binding, bool) {
+	updated := false
+
+REQUIRED:
+	for role, member := range requiredRoleBindings {
+		for idx, binding := range existingRoleBindings {
+			if binding.Role != role {
+				continue
+			}
+
+			if !contains(binding.Members, member) {
+				existingRoleBindings[idx].Members = append(existingRoleBindings[idx].Members, member)
+				updated = true
+			}
+
+			continue REQUIRED
+		}
+
+		// the required role is missing altogether from the existing bindings
+		existingRoleBindings = append(existingRoleBindings, &cloudresourcemanager.Binding{
+			Members: []string{member},
+			Role:    role,
+		})
+		updated = true
+	}
+
+	return existingRoleBindings, updated
+}
+
+// contains Check if a specific value is in a slice of strings
+func contains(strings []string, contains string) bool {
+	for _, value := range strings {
+		if value == contains {
+			return true
+		}
+	}
+	return false
 }

@@ -1,11 +1,124 @@
 package google_gcp_reconciler_test
 
 import (
+	"context"
+	"fmt"
 	"testing"
 
+	"github.com/google/uuid"
+	"github.com/nais/console/pkg/auditlogger"
+	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/reconcilers/google/gcp"
+	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
+	"github.com/nais/console/pkg/sqlc"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
+
+func TestReconcile(t *testing.T) {
+	const (
+		env              = "prod"
+		teamFolderID     = 123
+		clusterProjectID = "some-project-123"
+		tenantName       = "example"
+		tenantDomain     = "example.com"
+		cnrmRoleName     = "organizations/123/roles/name"
+		billingAccount   = "billingAccounts/123"
+	)
+
+	clusters := google_gcp_reconciler.ClusterInfo{
+		env: {
+			TeamFolderID: teamFolderID,
+			ProjectID:    clusterProjectID,
+		},
+	}
+
+	teamID := uuid.New()
+	correlationID := uuid.New()
+	team := db.Team{Team: &sqlc.Team{ID: teamID}}
+	input := reconcilers.Input{
+		CorrelationID: correlationID,
+		Team:          team,
+	}
+
+	t.Run("fail early when unable to load reconciler state", func(t *testing.T) {
+		ctx := context.Background()
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		database := db.NewMockDatabase(t)
+		database.
+			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.ID, mock.Anything).
+			Return(fmt.Errorf("some error")).
+			Once()
+		gcpServices := &google_gcp_reconciler.GcpServices{}
+		reconciler := google_gcp_reconciler.New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount)
+
+		err := reconciler.Reconcile(ctx, input)
+		assert.ErrorContains(t, err, "unable to load system state")
+	})
+
+	t.Run("fail early when unable to load google workspace state", func(t *testing.T) {
+		ctx := context.Background()
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		database := db.NewMockDatabase(t)
+		database.
+			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.ID, mock.Anything).
+			Return(nil).
+			Once()
+		database.
+			On("LoadReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, team.ID, mock.Anything).
+			Return(fmt.Errorf("some error")).
+			Once()
+		gcpServices := &google_gcp_reconciler.GcpServices{}
+		reconciler := google_gcp_reconciler.New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount)
+
+		err := reconciler.Reconcile(ctx, input)
+		assert.ErrorContains(t, err, "unable to load system state")
+	})
+
+	t.Run("fail early when google workspace state is missing group email", func(t *testing.T) {
+		ctx := context.Background()
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		database := db.NewMockDatabase(t)
+		database.
+			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.ID, mock.Anything).
+			Return(nil).
+			Once()
+		database.
+			On("LoadReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, team.ID, mock.Anything).
+			Return(nil).
+			Once()
+		gcpServices := &google_gcp_reconciler.GcpServices{}
+		reconciler := google_gcp_reconciler.New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount)
+
+		err := reconciler.Reconcile(ctx, input)
+		assert.ErrorContains(t, err, "no Google Workspace group exists")
+	})
+
+	t.Run("no error when we have no clusters", func(t *testing.T) {
+		ctx := context.Background()
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		database := db.NewMockDatabase(t)
+		database.
+			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.ID, mock.Anything).
+			Return(nil).
+			Once()
+		database.
+			On("LoadReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, team.ID, mock.Anything).
+			Run(func(args mock.Arguments) {
+				email := "mail@example.com"
+				state := args.Get(3).(*reconcilers.GoogleWorkspaceState)
+				state.GroupEmail = &email
+			}).
+			Return(nil).
+			Once()
+		gcpServices := &google_gcp_reconciler.GcpServices{}
+		reconciler := google_gcp_reconciler.New(database, auditLogger, google_gcp_reconciler.ClusterInfo{}, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount)
+
+		err := reconciler.Reconcile(ctx, input)
+		assert.NoError(t, err)
+	})
+}
 
 func TestGenerateProjectID(t *testing.T) {
 	// different organization names don't show up in name, but are reflected in the hash
