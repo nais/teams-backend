@@ -1,3 +1,5 @@
+//go:build manual_legacy_test
+
 package legacy_test
 
 import (
