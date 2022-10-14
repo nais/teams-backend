@@ -82,6 +82,11 @@ func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.
 		return fmt.Errorf("unable to get or create a GitHub team for team %q in system %q: %w", input.Team.Slug, r.Name(), err)
 	}
 
+	err = r.removeTeamIDPSync(ctx, *githubTeam)
+	if err != nil {
+		return err
+	}
+
 	slug := slug.Slug(*githubTeam.Slug)
 	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.ID, reconcilers.GitHubState{Slug: &slug})
 	if err != nil {
@@ -89,6 +94,23 @@ func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.
 	}
 
 	return r.connectUsers(ctx, githubTeam, input)
+}
+
+func (r *githubTeamReconciler) removeTeamIDPSync(ctx context.Context, team github.Team) error {
+	idpList, resp, err := r.teamsService.CreateOrUpdateIDPGroupConnectionsBySlug(ctx, r.org, *team.Slug, github.IDPGroupList{})
+	if resp == nil && err != nil {
+		return fmt.Errorf("unable to delete IDP sync from GitHub team %q: %w", *team.Slug, err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unable to delete IDP sync for GitHub team %q: %s", *team.Slug, resp.Status)
+	}
+
+	if len(idpList.Groups) > 0 {
+		return fmt.Errorf("tried to delete IDP sync from GitHub team %q, but %d connections still remain", *team.Slug, len(idpList.Groups))
+	}
+
+	return nil
 }
 
 func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconcilers.GitHubState, correlationID uuid.UUID, team db.Team) (*github.Team, error) {
