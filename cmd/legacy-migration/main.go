@@ -13,7 +13,6 @@ import (
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/legacy"
 	"github.com/nais/console/pkg/reconcilers"
-	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
@@ -30,7 +29,7 @@ func main() {
 func run() error {
 	const ymlpath = "./local/teams.yml"
 	const jsonpath = "./local/teams.json"
-	const gcpJsonCacheTemplate = "./local/gcp-cache/%s.json"
+	const gcpJsonCacheTemplate = "./local/gcp-cache/%s-output.json"
 
 	ctx := context.Background()
 
@@ -39,10 +38,7 @@ func run() error {
 		panic(err)
 	}
 
-	clusters, err := google_gcp_reconciler.GetClusterInfoFromJson(cfg.GCPClusters)
-	if err != nil {
-		return fmt.Errorf("parse GCP cluster info: %w", err)
-	}
+	clusters := map[string]any{"dev": nil, "prod": nil}
 
 	database, err := setupDatabase(ctx, cfg.DatabaseURL)
 	if err != nil {
@@ -160,11 +156,11 @@ func run() error {
 			}
 
 			if len(teamOwners) == 0 && len(teamMembers) == 0 {
-				log.Errorf("The Azure Group %q has no members or administrators, skip creation of the team in Console", yamlteam.Name)
-				continue
+				log.Warnf("The Azure Group %q has no members or administrators.", yamlteam.Name)
+				//continue
 			}
 
-			if len(teamOwners) == 0 {
+			if len(teamOwners) == 0 && len(teamMembers) > 0 {
 				_, user := first(teamMembers)
 				log.Infof("The Azure Group %q has no administrators, setting the first member as owner for the Console team: %q", yamlteam.Name, user.Email)
 				teamOwners[user.Email] = user
