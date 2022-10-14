@@ -90,6 +90,8 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			).
 			Once()
 
+		configureDeleteTeamIDP(teamsService, org, teamSlug)
+
 		slug := slug.Slug(teamSlug)
 		auditLogger.
 			On("Logf", ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
@@ -136,6 +138,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 	})
 
 	t.Run("existing state, github team exists", func(t *testing.T) {
+		const existingSlug = "existing-slug"
 		database := db.NewMockDatabase(t)
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
@@ -144,7 +147,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		database.
 			On("LoadReconcilerStateForTeam", ctx, systemName, team.ID, mock.Anything).
 			Run(func(args mock.Arguments) {
-				slug := slug.Slug("existing-slug")
+				slug := slug.Slug(existingSlug)
 				state := args.Get(3).(*reconcilers.GitHubState)
 				state.Slug = &slug
 			}).
@@ -152,7 +155,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			Once()
 		database.
 			On("SetReconcilerStateForTeam", ctx, systemName, team.ID, mock.MatchedBy(func(state reconcilers.GitHubState) bool {
-				return *state.Slug == "existing-slug"
+				return *state.Slug == existingSlug
 			})).
 			Return(nil).
 			Once()
@@ -162,10 +165,10 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 				"GetTeamBySlug",
 				ctx,
 				org,
-				"existing-slug",
+				existingSlug,
 			).
 			Return(
-				&github.Team{Slug: helpers.Strp("existing-slug")},
+				&github.Team{Slug: helpers.Strp(existingSlug)},
 				&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
 				nil,
 			).
@@ -175,7 +178,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 				"ListTeamMembersBySlug",
 				mock.Anything,
 				org,
-				"existing-slug",
+				existingSlug,
 				mock.Anything,
 			).
 			Return(
@@ -184,6 +187,8 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 				nil,
 			).
 			Once()
+
+		configureDeleteTeamIDP(teamsService, org, existingSlug)
 
 		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, gitHubClient)
 		err := reconciler.Reconcile(ctx, input)
@@ -252,6 +257,8 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 				nil,
 			).
 			Once()
+
+		configureDeleteTeamIDP(teamsService, org, teamSlug)
 
 		slug := slug.Slug(teamSlug)
 		auditLogger.
@@ -345,6 +352,8 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		configureListTeamMembersBySlug(teamsService, org, teamName, keepLogin, removeLogin)
 		configureAddTeamMembershipBySlug(teamsService, org, teamName, createLogin)
 		configureRemoveTeamMembershipBySlug(teamsService, org, teamName, removeLogin)
+
+		configureDeleteTeamIDP(teamsService, org, teamName)
 
 		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, graphClient)
 		err := reconciler.Reconcile(ctx, input)
@@ -486,4 +495,19 @@ func configureCreateTeam(teamsService *github_team_reconciler.MockTeamsService, 
 			nil,
 		).
 		Once()
+}
+
+func configureDeleteTeamIDP(teamsService *github_team_reconciler.MockTeamsService, org, slug string) *mock.Call {
+	return teamsService.
+		On(
+			"CreateOrUpdateIDPGroupConnectionsBySlug",
+			mock.Anything,
+			org,
+			slug,
+			github.IDPGroupList{},
+		).
+		Return(&github.IDPGroupList{},
+			&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
+			nil,
+		).Once()
 }
