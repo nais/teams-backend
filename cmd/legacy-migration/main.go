@@ -30,6 +30,7 @@ func main() {
 func run() error {
 	const ymlpath = "./local/teams.yml"
 	const jsonpath = "./local/teams.json"
+	const gcpJsonCacheTemplate = "./local/gcp-cache/%s.json"
 
 	ctx := context.Background()
 
@@ -57,6 +58,18 @@ func run() error {
 	if err != nil {
 		panic(err)
 	}
+
+	gcpCacheDev, err := legacy.ReadGcpTeamCacheFile(fmt.Sprintf(gcpJsonCacheTemplate, "dev"))
+	if err != nil {
+		panic(err)
+	}
+
+	gcpCacheProd, err := legacy.ReadGcpTeamCacheFile(fmt.Sprintf(gcpJsonCacheTemplate, "prod"))
+	if err != nil {
+		panic(err)
+	}
+
+	gcpCache := legacy.MergeGcpTeamCacheFiles(gcpCacheDev, gcpCacheProd)
 
 	correlationID := uuid.New()
 
@@ -253,7 +266,21 @@ func run() error {
 				return err
 			}
 
-			// FIXME: Set GCP project state
+			// Set GCP project state
+			cachedMapping := gcpCache[string(team.Slug)]
+			if len(cachedMapping) != len(clusters) {
+				return fmt.Errorf("gcp team cache for %s has wrong size %d", team.Slug, len(cachedMapping))
+			}
+			projectMapping := make(map[string]reconcilers.GoogleGcpEnvironmentProject)
+			for env := range clusters {
+				projectMapping[env] = reconcilers.GoogleGcpEnvironmentProject{ProjectID: cachedMapping[env]}
+			}
+			err = dbtx.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGoogleGcpProject, team.ID, reconcilers.GoogleGcpProjectState{
+				Projects: projectMapping,
+			})
+			if err != nil {
+				return err
+			}
 
 			naisNamespaces := make(map[string]slug.Slug)
 			for env := range clusters {

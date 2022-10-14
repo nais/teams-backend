@@ -22,6 +22,7 @@ type Team struct {
 	Description           string
 	SlackChannel          string `yaml:"slack-channel"`
 	PlatformAlertsChannel string `yaml:"platform-alerts-channel"`
+	GCPProjectIDs         map[string]string
 	AzureGroupID          uuid.UUID
 }
 
