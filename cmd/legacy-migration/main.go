@@ -177,9 +177,11 @@ func run() error {
 					return err
 				}
 
-				err := dbtx.SetTeamMemberRole(ctx, owner.ID, team.ID, sqlc.RoleNameTeamowner)
-				if err != nil {
-					return err
+				if owner != nil {
+					err := dbtx.SetTeamMemberRole(ctx, owner.ID, team.ID, sqlc.RoleNameTeamowner)
+					if err != nil {
+						return err
+					}
 				}
 
 				err = dbtx.SetTeamMetadata(ctx, team.ID, metadata)
