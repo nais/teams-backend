@@ -291,8 +291,14 @@ func run() error {
 				return err
 			}
 
+			_, err = dbtx.DisableTeam(ctx, team.ID)
+			if err != nil {
+				return err
+			}
+
 			log.Infof("Created team %q with %d owners and %d members", team.Name, len(teamOwners), len(teamMembers))
 		}
+
 		return nil
 	})
 	if err != nil {
