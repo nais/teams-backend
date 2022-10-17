@@ -188,7 +188,7 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 // localUserIsOutdated Check if a local user is outdated when compared to the remote user
 func localUserIsOutdated(localUser *db.User, remoteUser *admin_directory_v1.User) bool {
 	return localUser.Name != remoteUser.Name.FullName ||
-		localUser.Email != remoteUser.PrimaryEmail ||
+		strings.ToLower(localUser.Email) != strings.ToLower(remoteUser.PrimaryEmail) ||
 		localUser.ExternalID != remoteUser.Id
 }
 
