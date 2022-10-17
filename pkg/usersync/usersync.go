@@ -13,6 +13,7 @@ import (
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/google_jwt"
 	"github.com/nais/console/pkg/sqlc"
+	log "github.com/sirupsen/logrus"
 	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/option"
 )
@@ -66,9 +67,13 @@ func getAllPaginatedUsers(ctx context.Context, svc *admin_directory_v1.UsersServ
 	var users = make([]*admin_directory_v1.User, 0)
 
 	callback := func(fragments *admin_directory_v1.Users) error {
+		log.Debugf("Got %d users, might be more...", len(fragments.Users))
 		users = append(users, fragments.Users...)
 		return nil
 	}
+
+	log.Debugf("Fetching all users from Google Admin directory...")
+
 	err := svc.
 		List().
 		Context(ctx).
@@ -76,6 +81,8 @@ func getAllPaginatedUsers(ctx context.Context, svc *admin_directory_v1.UsersServ
 		ShowDeleted("false").
 		Query("isSuspended=false").
 		Pages(ctx, callback)
+
+	log.Debugf("Finished fetching %d users from Google Admin directory.", len(users))
 
 	return users, err
 }
@@ -188,7 +195,7 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 // localUserIsOutdated Check if a local user is outdated when compared to the remote user
 func localUserIsOutdated(localUser *db.User, remoteUser *admin_directory_v1.User) bool {
 	return localUser.Name != remoteUser.Name.FullName ||
-		strings.ToLower(localUser.Email) != strings.ToLower(remoteUser.PrimaryEmail) ||
+		!strings.EqualFold(localUser.Email, remoteUser.PrimaryEmail) ||
 		localUser.ExternalID != remoteUser.Id
 }
 

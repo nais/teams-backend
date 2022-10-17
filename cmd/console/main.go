@@ -191,9 +191,12 @@ func run() error {
 			log.Infof("Reconciliation complete.")
 
 		case <-userSyncTimer.C:
+			const interval = time.Hour * 1
+			const timeout = time.Second * 30
+
 			log.Infof("Starting user synchronization...")
 
-			ctx, cancel := context.WithTimeout(ctx, time.Second*30)
+			ctx, cancel := context.WithTimeout(ctx, timeout)
 			err = userSyncer.Sync(ctx)
 			cancel()
 
@@ -201,8 +204,8 @@ func run() error {
 				log.Error(err)
 			}
 
-			userSyncTimer.Reset(30 * time.Second)
-			log.Infof("User synchronization complete.")
+			userSyncTimer.Reset(interval)
+			log.Infof("User synchronization complete; next run at %s", time.Now().Add(interval))
 		}
 	}
 
