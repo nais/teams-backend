@@ -32,7 +32,7 @@ func (q *Queries) CreateServiceAccount(ctx context.Context, name string) (*User,
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (name, email, service_account, external_id)
-VALUES ($1, $2::TEXT, false, $3::TEXT)
+VALUES ($1, LOWER($2::TEXT), false, $3::TEXT)
 RETURNING id, email, name, service_account, external_id
 `
 
@@ -146,7 +146,7 @@ func (q *Queries) GetServiceAccounts(ctx context.Context) ([]*User, error) {
 
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, email, name, service_account, external_id FROM users
-WHERE email = $1::TEXT AND service_account = false
+WHERE email = LOWER($1::TEXT) AND service_account = false
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (*User, error) {
@@ -266,7 +266,7 @@ func (q *Queries) GetUsers(ctx context.Context) ([]*User, error) {
 
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
-SET name = $1, email = $3::TEXT, external_id = $4::TEXT
+SET name = $1, email = LOWER($3::TEXT), external_id = $4::TEXT
 WHERE id = $2 AND service_account = false
 RETURNING id, email, name, service_account, external_id
 `

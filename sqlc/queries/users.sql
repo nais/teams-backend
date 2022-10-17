@@ -1,6 +1,6 @@
 -- name: CreateUser :one
 INSERT INTO users (name, email, service_account, external_id)
-VALUES ($1, sqlc.arg(email)::TEXT, false, sqlc.arg(external_id)::TEXT)
+VALUES ($1, LOWER(sqlc.arg(email)::TEXT), false, sqlc.arg(external_id)::TEXT)
 RETURNING *;
 
 -- name: CreateServiceAccount :one
@@ -32,7 +32,7 @@ WHERE name = $1 AND service_account = true;
 
 -- name: GetUserByEmail :one
 SELECT * FROM users
-WHERE email = sqlc.arg(email)::TEXT AND service_account = false;
+WHERE email = LOWER(sqlc.arg(email)::TEXT) AND service_account = false;
 
 -- name: GetServiceAccountByApiKey :one
 SELECT users.* FROM api_keys
@@ -48,7 +48,7 @@ ORDER BY teams.name ASC;
 
 -- name: UpdateUser :one
 UPDATE users
-SET name = $1, email = sqlc.arg(email)::TEXT, external_id = sqlc.arg(external_id)::TEXT
+SET name = $1, email = LOWER(sqlc.arg(email)::TEXT), external_id = sqlc.arg(external_id)::TEXT
 WHERE id = $2 AND service_account = false
 RETURNING *;
 
