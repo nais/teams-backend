@@ -62,6 +62,24 @@ type auditLogEntry struct {
 	message   string
 }
 
+func getAllPaginatedUsers(ctx context.Context, svc *admin_directory_v1.UsersService, domain string) ([]*admin_directory_v1.User, error) {
+	var users = make([]*admin_directory_v1.User, 0)
+
+	callback := func(fragments *admin_directory_v1.Users) error {
+		users = append(users, fragments.Users...)
+		return nil
+	}
+	err := svc.
+		List().
+		Context(ctx).
+		Domain(domain).
+		ShowDeleted("false").
+		Query("isSuspended=false").
+		Pages(ctx, callback)
+
+	return users, err
+}
+
 // Sync Fetch all users from the tenant and add them as local users in Console. If a user already exists in Console
 // the local user will get the name potentially updated. After all users have been upserted, local users that matches
 // the tenant domain that does not exist in the Google Directory will be removed.
@@ -71,7 +89,7 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 		return fmt.Errorf("retrieve directory client: %w", err)
 	}
 
-	resp, err := srv.Users.List().Context(ctx).Domain(s.tenantDomain).Do()
+	remoteUsers, err := getAllPaginatedUsers(ctx, srv.Users, s.tenantDomain)
 	if err != nil {
 		return fmt.Errorf("list remote users: %w", err)
 	}
@@ -86,7 +104,7 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 	err = s.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
 		userIDs := make(map[uuid.UUID]struct{})
 
-		for _, remoteUser := range resp.Users {
+		for _, remoteUser := range remoteUsers {
 			email := strings.ToLower(remoteUser.PrimaryEmail)
 			localUser, created, err := getOrCreateLocalUserFromRemoteUser(ctx, dbtx, remoteUser)
 			if err != nil {
