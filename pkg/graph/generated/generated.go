@@ -139,7 +139,7 @@ type ComplexityRoot struct {
 
 	Team struct {
 		AuditLogs  func(childComplexity int) int
-		Disabled   func(childComplexity int) int
+		Enabled    func(childComplexity int) int
 		ID         func(childComplexity int) int
 		Members    func(childComplexity int) int
 		Metadata   func(childComplexity int) int
@@ -727,12 +727,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Team.AuditLogs(childComplexity), true
 
-	case "Team.disabled":
-		if e.complexity.Team.Disabled == nil {
+	case "Team.enabled":
+		if e.complexity.Team.Enabled == nil {
 			break
 		}
 
-		return e.complexity.Team.Disabled(childComplexity), true
+		return e.complexity.Team.Enabled(childComplexity), true
 
 	case "Team.id":
 		if e.complexity.Team.ID == nil {
@@ -1343,8 +1343,8 @@ type Team {
     "Possible issues related to synchronization of the team to configured external systems. If there are no entries the team can be considered fully synchronized."
     syncErrors: [SyncError!]!
 
-    "Whether or not the team is disabled."
-    disabled: Boolean!
+    "Whether or not the team is enabled."
+    enabled: Boolean!
 }
 
 "Sync error type."
@@ -2859,8 +2859,8 @@ func (ec *executionContext) fieldContext_Mutation_createTeam(ctx context.Context
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "disabled":
-				return ec.fieldContext_Team_disabled(ctx, field)
+			case "enabled":
+				return ec.fieldContext_Team_enabled(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -2954,8 +2954,8 @@ func (ec *executionContext) fieldContext_Mutation_updateTeam(ctx context.Context
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "disabled":
-				return ec.fieldContext_Team_disabled(ctx, field)
+			case "enabled":
+				return ec.fieldContext_Team_enabled(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3049,8 +3049,8 @@ func (ec *executionContext) fieldContext_Mutation_removeUsersFromTeam(ctx contex
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "disabled":
-				return ec.fieldContext_Team_disabled(ctx, field)
+			case "enabled":
+				return ec.fieldContext_Team_enabled(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3225,8 +3225,8 @@ func (ec *executionContext) fieldContext_Mutation_addTeamMembers(ctx context.Con
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "disabled":
-				return ec.fieldContext_Team_disabled(ctx, field)
+			case "enabled":
+				return ec.fieldContext_Team_enabled(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3320,8 +3320,8 @@ func (ec *executionContext) fieldContext_Mutation_addTeamOwners(ctx context.Cont
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "disabled":
-				return ec.fieldContext_Team_disabled(ctx, field)
+			case "enabled":
+				return ec.fieldContext_Team_enabled(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3415,8 +3415,8 @@ func (ec *executionContext) fieldContext_Mutation_setTeamMemberRole(ctx context.
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "disabled":
-				return ec.fieldContext_Team_disabled(ctx, field)
+			case "enabled":
+				return ec.fieldContext_Team_enabled(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3510,8 +3510,8 @@ func (ec *executionContext) fieldContext_Mutation_disableTeam(ctx context.Contex
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "disabled":
-				return ec.fieldContext_Team_disabled(ctx, field)
+			case "enabled":
+				return ec.fieldContext_Team_enabled(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3605,8 +3605,8 @@ func (ec *executionContext) fieldContext_Mutation_enableTeam(ctx context.Context
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "disabled":
-				return ec.fieldContext_Team_disabled(ctx, field)
+			case "enabled":
+				return ec.fieldContext_Team_enabled(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3890,8 +3890,8 @@ func (ec *executionContext) fieldContext_Query_teams(ctx context.Context, field 
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "disabled":
-				return ec.fieldContext_Team_disabled(ctx, field)
+			case "enabled":
+				return ec.fieldContext_Team_enabled(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3974,8 +3974,8 @@ func (ec *executionContext) fieldContext_Query_team(ctx context.Context, field g
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "disabled":
-				return ec.fieldContext_Team_disabled(ctx, field)
+			case "enabled":
+				return ec.fieldContext_Team_enabled(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -5801,8 +5801,8 @@ func (ec *executionContext) fieldContext_Team_syncErrors(ctx context.Context, fi
 	return fc, nil
 }
 
-func (ec *executionContext) _Team_disabled(ctx context.Context, field graphql.CollectedField, obj *db.Team) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Team_disabled(ctx, field)
+func (ec *executionContext) _Team_enabled(ctx context.Context, field graphql.CollectedField, obj *db.Team) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Team_enabled(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -5815,7 +5815,7 @@ func (ec *executionContext) _Team_disabled(ctx context.Context, field graphql.Co
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Disabled, nil
+		return obj.Enabled, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5832,7 +5832,7 @@ func (ec *executionContext) _Team_disabled(ctx context.Context, field graphql.Co
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Team_disabled(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Team_enabled(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Team",
 		Field:      field,
@@ -6000,8 +6000,8 @@ func (ec *executionContext) fieldContext_TeamMembership_team(ctx context.Context
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "disabled":
-				return ec.fieldContext_Team_disabled(ctx, field)
+			case "enabled":
+				return ec.fieldContext_Team_enabled(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -6108,8 +6108,8 @@ func (ec *executionContext) fieldContext_TeamSync_team(ctx context.Context, fiel
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "disabled":
-				return ec.fieldContext_Team_disabled(ctx, field)
+			case "enabled":
+				return ec.fieldContext_Team_enabled(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -9415,9 +9415,9 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 				return innerFunc(ctx)
 
 			})
-		case "disabled":
+		case "enabled":
 
-			out.Values[i] = ec._Team_disabled(ctx, field, obj)
+			out.Values[i] = ec._Team_enabled(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)

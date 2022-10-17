@@ -40,12 +40,12 @@ RETURNING *;
 
 -- name: DisableTeam :one
 UPDATE teams
-SET disabled = true
+SET enabled = false
 WHERE id = $1
 RETURNING *;
 
 -- name: EnableTeam :one
 UPDATE teams
-SET disabled = false
+SET enabled = true
 WHERE id = $1
 RETURNING *;

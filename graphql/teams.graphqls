@@ -156,8 +156,8 @@ type Team {
     "Possible issues related to synchronization of the team to configured external systems. If there are no entries the team can be considered fully synchronized."
     syncErrors: [SyncError!]!
 
-    "Whether or not the team is disabled."
-    disabled: Boolean!
+    "Whether or not the team is enabled."
+    enabled: Boolean!
 }
 
 "Sync error type."

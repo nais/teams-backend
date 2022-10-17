@@ -16,7 +16,7 @@ import (
 const createTeam = `-- name: CreateTeam :one
 INSERT INTO teams (name, slug, purpose)
 VALUES ($1, $2, $3)
-RETURNING id, slug, name, purpose, disabled
+RETURNING id, slug, name, purpose, enabled
 `
 
 type CreateTeamParams struct {
@@ -33,16 +33,16 @@ func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, 
 		&i.Slug,
 		&i.Name,
 		&i.Purpose,
-		&i.Disabled,
+		&i.Enabled,
 	)
 	return &i, err
 }
 
 const disableTeam = `-- name: DisableTeam :one
 UPDATE teams
-SET disabled = true
+SET enabled = false
 WHERE id = $1
-RETURNING id, slug, name, purpose, disabled
+RETURNING id, slug, name, purpose, enabled
 `
 
 func (q *Queries) DisableTeam(ctx context.Context, id uuid.UUID) (*Team, error) {
@@ -53,16 +53,16 @@ func (q *Queries) DisableTeam(ctx context.Context, id uuid.UUID) (*Team, error) 
 		&i.Slug,
 		&i.Name,
 		&i.Purpose,
-		&i.Disabled,
+		&i.Enabled,
 	)
 	return &i, err
 }
 
 const enableTeam = `-- name: EnableTeam :one
 UPDATE teams
-SET disabled = false
+SET enabled = true
 WHERE id = $1
-RETURNING id, slug, name, purpose, disabled
+RETURNING id, slug, name, purpose, enabled
 `
 
 func (q *Queries) EnableTeam(ctx context.Context, id uuid.UUID) (*Team, error) {
@@ -73,13 +73,13 @@ func (q *Queries) EnableTeam(ctx context.Context, id uuid.UUID) (*Team, error) {
 		&i.Slug,
 		&i.Name,
 		&i.Purpose,
-		&i.Disabled,
+		&i.Enabled,
 	)
 	return &i, err
 }
 
 const getTeamByID = `-- name: GetTeamByID :one
-SELECT id, slug, name, purpose, disabled FROM teams
+SELECT id, slug, name, purpose, enabled FROM teams
 WHERE id = $1
 `
 
@@ -91,13 +91,13 @@ func (q *Queries) GetTeamByID(ctx context.Context, id uuid.UUID) (*Team, error) 
 		&i.Slug,
 		&i.Name,
 		&i.Purpose,
-		&i.Disabled,
+		&i.Enabled,
 	)
 	return &i, err
 }
 
 const getTeamBySlug = `-- name: GetTeamBySlug :one
-SELECT id, slug, name, purpose, disabled FROM teams
+SELECT id, slug, name, purpose, enabled FROM teams
 WHERE slug = $1
 `
 
@@ -109,7 +109,7 @@ func (q *Queries) GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, err
 		&i.Slug,
 		&i.Name,
 		&i.Purpose,
-		&i.Disabled,
+		&i.Enabled,
 	)
 	return &i, err
 }
@@ -174,7 +174,7 @@ func (q *Queries) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) ([]*Tea
 }
 
 const getTeams = `-- name: GetTeams :many
-SELECT id, slug, name, purpose, disabled FROM teams
+SELECT id, slug, name, purpose, enabled FROM teams
 ORDER BY name ASC
 `
 
@@ -192,7 +192,7 @@ func (q *Queries) GetTeams(ctx context.Context) ([]*Team, error) {
 			&i.Slug,
 			&i.Name,
 			&i.Purpose,
-			&i.Disabled,
+			&i.Enabled,
 		); err != nil {
 			return nil, err
 		}
@@ -226,7 +226,7 @@ const updateTeam = `-- name: UpdateTeam :one
 UPDATE teams
 SET name = COALESCE($1, name), purpose = COALESCE($2, purpose)
 WHERE id = $3
-RETURNING id, slug, name, purpose, disabled
+RETURNING id, slug, name, purpose, enabled
 `
 
 type UpdateTeamParams struct {
@@ -243,7 +243,7 @@ func (q *Queries) UpdateTeam(ctx context.Context, arg UpdateTeamParams) (*Team, 
 		&i.Slug,
 		&i.Name,
 		&i.Purpose,
-		&i.Disabled,
+		&i.Enabled,
 	)
 	return &i, err
 }
