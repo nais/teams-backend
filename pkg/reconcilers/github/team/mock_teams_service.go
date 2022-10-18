@@ -110,6 +110,38 @@ func (_m *MockTeamsService) CreateTeam(ctx context.Context, org string, team git
 	return r0, r1, r2
 }
 
+// EditTeamBySlug provides a mock function with given fields: ctx, org, slug, team, removeParent
+func (_m *MockTeamsService) EditTeamBySlug(ctx context.Context, org string, slug string, team github.NewTeam, removeParent bool) (*github.Team, *github.Response, error) {
+	ret := _m.Called(ctx, org, slug, team, removeParent)
+
+	var r0 *github.Team
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, github.NewTeam, bool) *github.Team); ok {
+		r0 = rf(ctx, org, slug, team, removeParent)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*github.Team)
+		}
+	}
+
+	var r1 *github.Response
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, github.NewTeam, bool) *github.Response); ok {
+		r1 = rf(ctx, org, slug, team, removeParent)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*github.Response)
+		}
+	}
+
+	var r2 error
+	if rf, ok := ret.Get(2).(func(context.Context, string, string, github.NewTeam, bool) error); ok {
+		r2 = rf(ctx, org, slug, team, removeParent)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
 // GetTeamBySlug provides a mock function with given fields: ctx, org, slug
 func (_m *MockTeamsService) GetTeamBySlug(ctx context.Context, org string, slug string) (*github.Team, *github.Response, error) {
 	ret := _m.Called(ctx, org, slug)

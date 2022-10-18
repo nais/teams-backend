@@ -102,26 +102,26 @@ func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.
 }
 
 func (r *githubTeamReconciler) syncTeamInfo(ctx context.Context, team db.Team, oldTeam github.Team) error {
-	var name string
+	var slug string
 
 	if team.Purpose.String == helpers.StringWithFallback(oldTeam.Description, "") {
 		return nil
 	}
 
-	name = helpers.StringWithFallback(oldTeam.Name, string(team.Slug))
+	slug = string(team.Slug)
 	newTeam := github.NewTeam{
-		Name:        name,
+		Name:        slug,
 		Description: &team.Purpose.String,
 	}
 
 	_, resp, err := r.teamsService.EditTeamBySlug(ctx, r.org, *oldTeam.Slug, newTeam, false)
 
 	if resp == nil && err != nil {
-		return fmt.Errorf("sync team info for GitHub team %q: %w", name, err)
+		return fmt.Errorf("sync team info for GitHub team %q: %w", slug, err)
 	}
 
 	if resp.StatusCode >= 300 {
-		return fmt.Errorf("sync team info for GitHub team %q: %s", name, resp.Status)
+		return fmt.Errorf("sync team info for GitHub team %q: %s", slug, resp.Status)
 	}
 
 	return nil
