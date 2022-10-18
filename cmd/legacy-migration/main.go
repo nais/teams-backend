@@ -104,7 +104,7 @@ func run() error {
 							Action:        sqlc.AuditActionLegacyImporterUserCreate,
 							CorrelationID: correlationID,
 						}
-						err = auditLogger.Logf(ctx, targets, fields, "created user")
+						err = auditLogger.Logf(ctx, targets, fields, "Imported user from Azure AD")
 						if err != nil {
 							return err
 						}
@@ -145,7 +145,7 @@ func run() error {
 							Action:        sqlc.AuditActionLegacyImporterUserCreate,
 							CorrelationID: correlationID,
 						}
-						err = auditLogger.Logf(ctx, targets, fields, "created user")
+						err = auditLogger.Logf(ctx, targets, fields, "Imported user from Azure AD")
 						if err != nil {
 							return err
 						}
@@ -196,7 +196,7 @@ func run() error {
 					Action:        sqlc.AuditActionLegacyImporterTeamCreate,
 					CorrelationID: correlationID,
 				}
-				err = auditLogger.Logf(ctx, targets, fields, "add team")
+				err = auditLogger.Logf(ctx, targets, fields, "Imported team from Azure AD")
 				if err != nil {
 					return err
 				}
@@ -216,7 +216,7 @@ func run() error {
 					Action:        sqlc.AuditActionLegacyImporterTeamAddOwner,
 					CorrelationID: correlationID,
 				}
-				err = auditLogger.Logf(ctx, targets, fields, "add team owner")
+				err = auditLogger.Logf(ctx, targets, fields, "Assign %s as team owner from Azure AD", user.Email)
 				if err != nil {
 					return err
 				}
@@ -236,7 +236,7 @@ func run() error {
 					Action:        sqlc.AuditActionLegacyImporterTeamAddMember,
 					CorrelationID: correlationID,
 				}
-				err = auditLogger.Logf(ctx, targets, fields, "add team member")
+				err = auditLogger.Logf(ctx, targets, fields, "Assign %s as team member from Azure AD", user.Email)
 				if err != nil {
 					return err
 				}

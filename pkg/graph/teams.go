@@ -92,7 +92,8 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, in
 		CorrelationID: correlationID,
 		Actor:         actor,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Team updated")
+
+	r.auditLogger.Logf(ctx, targets, fields, "Team configuration saved")
 
 	r.reconcileTeam(ctx, correlationID, *team)
 
@@ -359,7 +360,8 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 		CorrelationID: correlationID,
 		Actor:         actor,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Set team member role to %q", desiredRole)
+
+	r.auditLogger.Logf(ctx, targets, fields, "Assign %q to %s", desiredRole, member.Email)
 
 	r.reconcileTeam(ctx, correlationID, *team)
 
