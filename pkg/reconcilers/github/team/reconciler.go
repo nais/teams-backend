@@ -87,6 +87,11 @@ func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.
 		return err
 	}
 
+	err = r.syncTeamInfo(ctx, input.Team, *githubTeam)
+	if err != nil {
+		return err
+	}
+
 	slug := slug.Slug(*githubTeam.Slug)
 	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.ID, reconcilers.GitHubState{Slug: &slug})
 	if err != nil {
@@ -94,6 +99,32 @@ func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.
 	}
 
 	return r.connectUsers(ctx, githubTeam, input)
+}
+
+func (r *githubTeamReconciler) syncTeamInfo(ctx context.Context, team db.Team, oldTeam github.Team) error {
+	var name string
+
+	if team.Purpose.String == helpers.StringWithFallback(oldTeam.Description, "") {
+		return nil
+	}
+
+	name = helpers.StringWithFallback(oldTeam.Name, string(team.Slug))
+	newTeam := github.NewTeam{
+		Name:        name,
+		Description: &team.Purpose.String,
+	}
+
+	_, resp, err := r.teamsService.EditTeamBySlug(ctx, r.org, *oldTeam.Slug, newTeam, false)
+
+	if resp == nil && err != nil {
+		return fmt.Errorf("sync team info for GitHub team %q: %w", name, err)
+	}
+
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("sync team info for GitHub team %q: %s", name, resp.Status)
+	}
+
+	return nil
 }
 
 func (r *githubTeamReconciler) removeTeamIDPSync(ctx context.Context, team github.Team) error {

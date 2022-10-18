@@ -17,6 +17,7 @@ type TeamsService interface {
 	AddTeamMembershipBySlug(ctx context.Context, org, slug, user string, opts *github.TeamAddTeamMembershipOptions) (*github.Membership, *github.Response, error)
 	CreateTeam(ctx context.Context, org string, team github.NewTeam) (*github.Team, *github.Response, error)
 	GetTeamBySlug(ctx context.Context, org, slug string) (*github.Team, *github.Response, error)
+	EditTeamBySlug(ctx context.Context, org, slug string, team github.NewTeam, removeParent bool) (*github.Team, *github.Response, error)
 	ListTeamMembersBySlug(ctx context.Context, org, slug string, opts *github.TeamListTeamMembersOptions) ([]*github.User, *github.Response, error)
 	RemoveTeamMembershipBySlug(ctx context.Context, org, slug, user string) (*github.Response, error)
 	CreateOrUpdateIDPGroupConnectionsBySlug(ctx context.Context, org, team string, opts github.IDPGroupList) (*github.IDPGroupList, *github.Response, error)
