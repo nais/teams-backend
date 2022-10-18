@@ -144,8 +144,8 @@ type Team {
     "Purpose of the team."
     purpose: String
 
-    "Metadata attached to the team as a key => value map."
-    metadata: Map
+    "Metadata attached to the team."
+    metadata: [TeamMetadata!]!
 
     "Audit logs for this team."
     auditLogs: [AuditLog!]!
@@ -158,6 +158,15 @@ type Team {
 
     "Whether or not the team is enabled."
     enabled: Boolean!
+}
+
+"Team metadata type."
+type TeamMetadata {
+    "Metadata key."
+    key: String!
+
+    "Metadata value."
+    value: String
 }
 
 "Sync error type."

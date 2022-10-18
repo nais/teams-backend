@@ -683,15 +683,15 @@ func (_m *MockDatabase) GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([
 }
 
 // GetTeamMetadata provides a mock function with given fields: ctx, teamID
-func (_m *MockDatabase) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) (TeamMetadata, error) {
+func (_m *MockDatabase) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) ([]*TeamMetadata, error) {
 	ret := _m.Called(ctx, teamID)
 
-	var r0 TeamMetadata
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) TeamMetadata); ok {
+	var r0 []*TeamMetadata
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) []*TeamMetadata); ok {
 		r0 = rf(ctx, teamID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(TeamMetadata)
+			r0 = ret.Get(0).([]*TeamMetadata)
 		}
 	}
 
@@ -1025,11 +1025,11 @@ func (_m *MockDatabase) SetTeamMemberRole(ctx context.Context, userID uuid.UUID,
 }
 
 // SetTeamMetadata provides a mock function with given fields: ctx, teamID, metadata
-func (_m *MockDatabase) SetTeamMetadata(ctx context.Context, teamID uuid.UUID, metadata TeamMetadata) error {
+func (_m *MockDatabase) SetTeamMetadata(ctx context.Context, teamID uuid.UUID, metadata []TeamMetadata) error {
 	ret := _m.Called(ctx, teamID, metadata)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, TeamMetadata) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, []TeamMetadata) error); ok {
 		r0 = rf(ctx, teamID, metadata)
 	} else {
 		r0 = ret.Error(0)

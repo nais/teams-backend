@@ -9,27 +9,34 @@ import (
 	"github.com/nais/console/pkg/sqlc"
 )
 
-func (d *database) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) (TeamMetadata, error) {
+func (d *database) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) ([]*TeamMetadata, error) {
 	rows, err := d.querier.GetTeamMetadata(ctx, teamID)
 	if err != nil {
 		return nil, err
 	}
 
-	metadata := make(TeamMetadata)
+	metadata := make([]*TeamMetadata, 0, len(rows))
 	for _, row := range rows {
-		metadata[row.Key] = row.Value.String
+		var value *string
+		if row.Value.Valid {
+			value = &row.Value.String
+		}
+		metadata = append(metadata, &TeamMetadata{
+			Key:   row.Key,
+			Value: value,
+		})
 	}
 
 	return metadata, nil
 }
 
-func (d *database) SetTeamMetadata(ctx context.Context, teamID uuid.UUID, metadata TeamMetadata) error {
+func (d *database) SetTeamMetadata(ctx context.Context, teamID uuid.UUID, metadata []TeamMetadata) error {
 	return d.querier.Transaction(ctx, func(ctx context.Context, querier Querier) error {
-		for k, v := range metadata {
+		for _, entry := range metadata {
 			err := querier.SetTeamMetadata(ctx, sqlc.SetTeamMetadataParams{
 				TeamID: teamID,
-				Key:    k,
-				Value:  nullString(&v),
+				Key:    entry.Key,
+				Value:  nullString(entry.Value),
 			})
 			if err != nil {
 				return err

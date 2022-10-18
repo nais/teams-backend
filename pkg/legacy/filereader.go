@@ -26,19 +26,31 @@ type Team struct {
 	AzureGroupID          uuid.UUID
 }
 
-func (t *Team) Convert() (*db.Team, db.TeamMetadata) {
-	meta := make(db.TeamMetadata)
+func (t *Team) Convert() (*db.Team, []db.TeamMetadata) {
+	metadata := make([]db.TeamMetadata, 0)
 
 	if len(t.SlackChannel) > 0 {
-		meta["slack-channel-generic"] = t.SlackChannel
+		metadata = append(metadata, db.TeamMetadata{
+			Key:   "slack-channel-generic",
+			Value: &t.SlackChannel,
+		})
 	}
 
 	if len(t.PlatformAlertsChannel) > 0 {
-		meta["slack-channel-platform-alerts"] = t.PlatformAlertsChannel
+		metadata = append(metadata, db.TeamMetadata{
+			Key:   "slack-channel-platform-alerts",
+			Value: &t.PlatformAlertsChannel,
+		})
 	}
 
-	desc := sql.NullString{}
-	desc.Scan(t.Description)
+	desc := sql.NullString{
+		String: "Team created by NAIS console",
+		Valid:  true,
+	}
+
+	if t.Description != "" {
+		desc.String = t.Description
+	}
 
 	return &db.Team{
 		Team: &sqlc.Team{
@@ -46,7 +58,7 @@ func (t *Team) Convert() (*db.Team, db.TeamMetadata) {
 			Name:    t.Name,
 			Purpose: desc,
 		},
-	}, meta
+	}, metadata
 }
 
 func ReadTeamFiles(ymlPath, jsonPath string) (map[string]*Team, error) {

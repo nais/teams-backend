@@ -38,10 +38,3 @@ scalar ReconcilerName
 
 "String value representing a system name."
 scalar SystemName
-
-"""
-A collection of key => value pairs.
-
-If no entries exist in the collection an empty object is returned.
-"""
-scalar Map

@@ -159,6 +159,11 @@ type ComplexityRoot struct {
 		Team func(childComplexity int) int
 	}
 
+	TeamMetadata struct {
+		Key   func(childComplexity int) int
+		Value func(childComplexity int) int
+	}
+
 	TeamSync struct {
 		CorrelationID func(childComplexity int) int
 		Team          func(childComplexity int) int
@@ -220,7 +225,7 @@ type ServiceAccountResolver interface {
 }
 type TeamResolver interface {
 	Purpose(ctx context.Context, obj *db.Team) (*string, error)
-	Metadata(ctx context.Context, obj *db.Team) (map[string]interface{}, error)
+	Metadata(ctx context.Context, obj *db.Team) ([]*db.TeamMetadata, error)
 	AuditLogs(ctx context.Context, obj *db.Team) ([]*db.AuditLog, error)
 	Members(ctx context.Context, obj *db.Team) ([]*model.TeamMember, error)
 	SyncErrors(ctx context.Context, obj *db.Team) ([]*model.SyncError, error)
@@ -811,6 +816,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.TeamMembership.Team(childComplexity), true
 
+	case "TeamMetadata.key":
+		if e.complexity.TeamMetadata.Key == nil {
+			break
+		}
+
+		return e.complexity.TeamMetadata.Key(childComplexity), true
+
+	case "TeamMetadata.value":
+		if e.complexity.TeamMetadata.Value == nil {
+			break
+		}
+
+		return e.complexity.TeamMetadata.Value(childComplexity), true
+
 	case "TeamSync.correlationID":
 		if e.complexity.TeamSync.CorrelationID == nil {
 			break
@@ -1161,14 +1180,7 @@ scalar ReconcilerConfigKey
 scalar ReconcilerName
 
 "String value representing a system name."
-scalar SystemName
-
-"""
-A collection of key => value pairs.
-
-If no entries exist in the collection an empty object is returned.
-"""
-scalar Map`, BuiltIn: false},
+scalar SystemName`, BuiltIn: false},
 	{Name: "../../../graphql/schema.graphqls", Input: `"The query root of the Console GraphQL interface."
 type Query
 
@@ -1331,8 +1343,8 @@ type Team {
     "Purpose of the team."
     purpose: String
 
-    "Metadata attached to the team as a key => value map."
-    metadata: Map
+    "Metadata attached to the team."
+    metadata: [TeamMetadata!]!
 
     "Audit logs for this team."
     auditLogs: [AuditLog!]!
@@ -1345,6 +1357,15 @@ type Team {
 
     "Whether or not the team is enabled."
     enabled: Boolean!
+}
+
+"Team metadata type."
+type TeamMetadata {
+    "Metadata key."
+    key: String!
+
+    "Metadata value."
+    value: String
 }
 
 "Sync error type."
@@ -5615,11 +5636,14 @@ func (ec *executionContext) _Team_metadata(ctx context.Context, field graphql.Co
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(map[string]interface{})
+	res := resTmp.([]*db.TeamMetadata)
 	fc.Result = res
-	return ec.marshalOMap2map(ctx, field.Selections, res)
+	return ec.marshalNTeamMetadata2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐTeamMetadataᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Team_metadata(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -5629,7 +5653,13 @@ func (ec *executionContext) fieldContext_Team_metadata(ctx context.Context, fiel
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Map does not have child fields")
+			switch field.Name {
+			case "key":
+				return ec.fieldContext_TeamMetadata_key(ctx, field)
+			case "value":
+				return ec.fieldContext_TeamMetadata_value(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type TeamMetadata", field.Name)
 		},
 	}
 	return fc, nil
@@ -6048,6 +6078,91 @@ func (ec *executionContext) fieldContext_TeamMembership_role(ctx context.Context
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type TeamRole does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _TeamMetadata_key(ctx context.Context, field graphql.CollectedField, obj *db.TeamMetadata) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_TeamMetadata_key(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Key, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_TeamMetadata_key(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TeamMetadata",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _TeamMetadata_value(ctx context.Context, field graphql.CollectedField, obj *db.TeamMetadata) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_TeamMetadata_value(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Value, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_TeamMetadata_value(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TeamMetadata",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -9348,6 +9463,9 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 					}
 				}()
 				res = ec._Team_metadata(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
 				return res
 			}
 
@@ -9492,6 +9610,38 @@ func (ec *executionContext) _TeamMembership(ctx context.Context, sel ast.Selecti
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var teamMetadataImplementors = []string{"TeamMetadata"}
+
+func (ec *executionContext) _TeamMetadata(ctx context.Context, sel ast.SelectionSet, obj *db.TeamMetadata) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, teamMetadataImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("TeamMetadata")
+		case "key":
+
+			out.Values[i] = ec._TeamMetadata_key(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "value":
+
+			out.Values[i] = ec._TeamMetadata_value(ctx, field, obj)
+
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -10644,6 +10794,60 @@ func (ec *executionContext) marshalNTeamMembership2ᚖgithubᚗcomᚋnaisᚋcons
 	return ec._TeamMembership(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNTeamMetadata2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐTeamMetadataᚄ(ctx context.Context, sel ast.SelectionSet, v []*db.TeamMetadata) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNTeamMetadata2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐTeamMetadata(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNTeamMetadata2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐTeamMetadata(ctx context.Context, sel ast.SelectionSet, v *db.TeamMetadata) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._TeamMetadata(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNTeamRole2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamRole(ctx context.Context, v interface{}) (model.TeamRole, error) {
 	var res model.TeamRole
 	err := res.UnmarshalGQL(v)
@@ -11090,22 +11294,6 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 		return graphql.Null
 	}
 	res := graphql.MarshalBoolean(*v)
-	return res
-}
-
-func (ec *executionContext) unmarshalOMap2map(ctx context.Context, v interface{}) (map[string]interface{}, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := graphql.UnmarshalMap(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOMap2map(ctx context.Context, sel ast.SelectionSet, v map[string]interface{}) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	res := graphql.MarshalMap(v)
 	return res
 }
 

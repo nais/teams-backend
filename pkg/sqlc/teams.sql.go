@@ -151,6 +151,7 @@ func (q *Queries) GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User
 const getTeamMetadata = `-- name: GetTeamMetadata :many
 SELECT team_id, key, value FROM team_metadata
 WHERE team_id = $1
+ORDER BY key ASC
 `
 
 func (q *Queries) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) ([]*TeamMetadatum, error) {

@@ -24,7 +24,8 @@ ORDER BY users.name ASC;
 
 -- name: GetTeamMetadata :many
 SELECT * FROM team_metadata
-WHERE team_id = $1;
+WHERE team_id = $1
+ORDER BY key ASC;
 
 -- name: SetTeamMetadata :exec
 INSERT INTO team_metadata (team_id, key, value)

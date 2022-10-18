@@ -464,7 +464,7 @@ func (r *teamResolver) Purpose(ctx context.Context, obj *db.Team) (*string, erro
 }
 
 // Metadata is the resolver for the metadata field.
-func (r *teamResolver) Metadata(ctx context.Context, obj *db.Team) (map[string]interface{}, error) {
+func (r *teamResolver) Metadata(ctx context.Context, obj *db.Team) ([]*db.TeamMetadata, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireAuthorization(actor, sqlc.AuthzNameTeamsRead, obj.ID)
 	if err != nil {
@@ -476,12 +476,7 @@ func (r *teamResolver) Metadata(ctx context.Context, obj *db.Team) (map[string]i
 		return nil, err
 	}
 
-	result := make(map[string]interface{})
-	for k, v := range metadata {
-		result[k] = v
-	}
-
-	return result, nil
+	return metadata, nil
 }
 
 // AuditLogs is the resolver for the auditLogs field.
