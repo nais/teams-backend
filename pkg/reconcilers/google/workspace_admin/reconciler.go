@@ -8,7 +8,6 @@ import (
 
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
-	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/google_jwt"
 	"github.com/nais/console/pkg/reconcilers"
@@ -96,7 +95,7 @@ func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(ctx context.Context, s
 	newGroup := &admin_directory_v1.Group{
 		Email:       email,
 		Name:        input.Team.Name,
-		Description: helpers.TeamPurpose(&input.Team.Purpose.String),
+		Description: input.Team.Purpose.String,
 	}
 	group, err := r.adminService.Groups.Insert(newGroup).Do()
 	if err != nil {

@@ -9,7 +9,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	helpers "github.com/nais/console/pkg/console"
+	"github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/reconcilers"
 )
 
@@ -145,7 +145,7 @@ func (s *client) GetOrCreateGroup(ctx context.Context, state reconcilers.AzureSt
 	}
 
 	createdGroup, err := s.CreateGroup(ctx, &Group{
-		Description:     helpers.TeamPurpose(description),
+		Description:     console.StringWithFallback(description, ""),
 		DisplayName:     name,
 		GroupTypes:      nil,
 		MailEnabled:     false,

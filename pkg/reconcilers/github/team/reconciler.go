@@ -165,10 +165,9 @@ func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconc
 		}
 	}
 
-	description := helpers.TeamPurpose(&team.Purpose.String)
 	githubTeam, resp, err := r.teamsService.CreateTeam(ctx, r.org, github.NewTeam{
 		Name:        string(team.Slug),
-		Description: &description,
+		Description: &team.Purpose.String,
 	})
 	err = httpError(http.StatusCreated, *resp, err)
 	if err != nil {
