@@ -159,8 +159,7 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 		return fmt.Errorf("list existing members in GitHub team %q: %w", *githubTeam.Slug, err)
 	}
 
-	membersAccordingToConsole := helpers.DomainUsers(input.TeamMembers, r.domain)
-	consoleUserWithGitHubUser, err := r.mapSSOUsers(ctx, membersAccordingToConsole)
+	consoleUserWithGitHubUser, err := r.mapSSOUsers(ctx, input.TeamMembers)
 	if err != nil {
 		return err
 	}

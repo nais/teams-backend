@@ -2,10 +2,7 @@ package console
 
 import (
 	"fmt"
-	"strings"
 	"time"
-
-	"github.com/nais/console/pkg/db"
 )
 
 func Strp(s string) *string {
@@ -17,20 +14,6 @@ func StringWithFallback(strp *string, fallback string) string {
 		return fallback
 	}
 	return *strp
-}
-
-// DomainUsers Return users in a list of of user object that has an email address with the tenant domain as suffix
-func DomainUsers(users []*db.User, domain string) []*db.User {
-	domainUsers := make([]*db.User, 0)
-	suffix := "@" + domain
-
-	for _, user := range users {
-		if strings.HasSuffix(user.Email, suffix) {
-			domainUsers = append(domainUsers, user)
-		}
-	}
-
-	return domainUsers
 }
 
 // TeamPurpose Get a default team purpose

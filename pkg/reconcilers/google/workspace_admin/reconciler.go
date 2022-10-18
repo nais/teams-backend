@@ -140,9 +140,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 	}
 
 	consoleUserMap := make(map[string]*db.User)
-	localMembers := helpers.DomainUsers(input.TeamMembers, r.domain)
-
-	membersToRemove := remoteOnlyMembers(membersAccordingToGoogle, localMembers)
+	membersToRemove := remoteOnlyMembers(membersAccordingToGoogle, input.TeamMembers)
 	for _, member := range membersToRemove {
 		remoteMemberEmail := strings.ToLower(member.Email)
 		err = r.adminService.Members.Delete(grp.Id, member.Id).Do()
@@ -170,7 +168,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 		r.auditLogger.Logf(ctx, targets, fields, "deleted member %q from Google Directory group %q", member.Email, grp.Email)
 	}
 
-	membersToAdd := localOnlyMembers(membersAccordingToGoogle, localMembers)
+	membersToAdd := localOnlyMembers(membersAccordingToGoogle, input.TeamMembers)
 	for _, user := range membersToAdd {
 		member := &admin_directory_v1.Member{
 			Email: user.Email,

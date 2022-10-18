@@ -9,7 +9,6 @@ import (
 	"github.com/nais/console/pkg/slug"
 
 	"github.com/google/uuid"
-	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
 
@@ -121,16 +120,13 @@ func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.
 }
 
 func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclient.Group, input reconcilers.Input) error {
-	consoleTeamMembers := input.TeamMembers
 	members, err := r.client.ListGroupMembers(ctx, grp)
 	if err != nil {
 		return fmt.Errorf("list existing members in Azure group %q: %s", grp.MailNickname, err)
 	}
 
 	consoleUserMap := make(map[string]*db.User)
-	localMembers := helpers.DomainUsers(consoleTeamMembers, r.domain)
-
-	membersToRemove := remoteOnlyMembers(members, localMembers)
+	membersToRemove := remoteOnlyMembers(members, input.TeamMembers)
 	for _, member := range membersToRemove {
 		remoteEmail := strings.ToLower(member.Mail)
 		err = r.client.RemoveMemberFromGroup(ctx, grp, member)
@@ -159,7 +155,7 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 		r.auditLogger.Logf(ctx, targets, fields, "removed member %q from Azure group %q", remoteEmail, grp.MailNickname)
 	}
 
-	membersToAdd := localOnlyMembers(members, localMembers)
+	membersToAdd := localOnlyMembers(members, input.TeamMembers)
 	for _, consoleUser := range membersToAdd {
 		member, err := r.client.GetUser(ctx, consoleUser.Email)
 		if err != nil {
