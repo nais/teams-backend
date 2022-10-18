@@ -115,8 +115,26 @@ func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(ctx context.Context, s
 	return group, nil
 }
 
+// getGoogleGroupMembers Get all members of a Google Workspace Group
+func getGoogleGroupMembers(ctx context.Context, service *admin_directory_v1.MembersService, groupID string) ([]*admin_directory_v1.Member, error) {
+	members := make([]*admin_directory_v1.Member, 0)
+	callback := func(fragments *admin_directory_v1.Members) error {
+		members = append(members, fragments.Members...)
+		return nil
+	}
+	err := service.
+		List(groupID).
+		Context(ctx).
+		Pages(ctx, callback)
+	if err != nil {
+		return nil, fmt.Errorf("list existing members in Google Directory group: %w", err)
+	}
+
+	return members, nil
+}
+
 func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *admin_directory_v1.Group, input reconcilers.Input) error {
-	membersAccordingToGoogle, err := r.adminService.Members.List(grp.Id).Do()
+	membersAccordingToGoogle, err := getGoogleGroupMembers(ctx, r.adminService.Members, grp.Id)
 	if err != nil {
 		return fmt.Errorf("list existing members in Google Directory group: %w", err)
 	}
@@ -124,7 +142,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 	consoleUserMap := make(map[string]*db.User)
 	localMembers := helpers.DomainUsers(input.TeamMembers, r.domain)
 
-	membersToRemove := remoteOnlyMembers(membersAccordingToGoogle.Members, localMembers)
+	membersToRemove := remoteOnlyMembers(membersAccordingToGoogle, localMembers)
 	for _, member := range membersToRemove {
 		remoteMemberEmail := strings.ToLower(member.Email)
 		err = r.adminService.Members.Delete(grp.Id, member.Id).Do()
@@ -152,7 +170,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 		r.auditLogger.Logf(ctx, targets, fields, "deleted member %q from Google Directory group %q", member.Email, grp.Email)
 	}
 
-	membersToAdd := localOnlyMembers(membersAccordingToGoogle.Members, localMembers)
+	membersToAdd := localOnlyMembers(membersAccordingToGoogle, localMembers)
 	for _, user := range membersToAdd {
 		member := &admin_directory_v1.Member{
 			Email: user.Email,
