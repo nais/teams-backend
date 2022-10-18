@@ -69,6 +69,11 @@ func (r *googleWorkspaceAdminReconciler) Reconcile(ctx context.Context, input re
 		return fmt.Errorf("unable to get or create a Google Workspace group for team %q in system %q: %w", input.Team.Slug, r.Name(), err)
 	}
 
+	err = r.syncGroupInfo(ctx, input.Team, grp)
+	if err != nil {
+		return err
+	}
+
 	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.ID, reconcilers.GoogleWorkspaceState{GroupEmail: &grp.Email})
 	if err != nil {
 		log.Errorf("system state not persisted: %s", err)
@@ -216,6 +221,21 @@ func (r *googleWorkspaceAdminReconciler) addToGKESecurityGroup(ctx context.Conte
 		CorrelationID: input.CorrelationID,
 	}
 	r.auditLogger.Logf(ctx, targets, fields, "added group %q to GKE security group %q", member.Email, groupKey)
+
+	return nil
+}
+
+func (r *googleWorkspaceAdminReconciler) syncGroupInfo(ctx context.Context, team db.Team, group *admin_directory_v1.Group) error {
+	if team.Purpose.String == group.Description {
+		return nil
+	}
+
+	group.Description = team.Purpose.String
+	group.ForceSendFields = []string{"Description"}
+	_, err := r.adminService.Groups.Patch(group.Id, group).Context(ctx).Do()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
