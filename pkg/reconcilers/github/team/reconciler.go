@@ -97,7 +97,10 @@ func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.
 }
 
 func (r *githubTeamReconciler) removeTeamIDPSync(ctx context.Context, team github.Team) error {
-	idpList, resp, err := r.teamsService.CreateOrUpdateIDPGroupConnectionsBySlug(ctx, r.org, *team.Slug, github.IDPGroupList{})
+	grpList := github.IDPGroupList{
+		Groups: make([]*github.IDPGroup, 0),
+	}
+	idpList, resp, err := r.teamsService.CreateOrUpdateIDPGroupConnectionsBySlug(ctx, r.org, *team.Slug, grpList)
 	if resp == nil && err != nil {
 		return fmt.Errorf("unable to delete IDP sync from GitHub team %q: %w", *team.Slug, err)
 	}

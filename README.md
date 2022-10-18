@@ -175,9 +175,9 @@ bin/console
 
 ### Github
 * Set up single sign-on against tenant's IdP. SCIM is recommended, but not required.
-* Create GitHub application and obtain: private key, application ID, installation ID
-* Install GitHub application on organization and give scopes:
+* Create GitHub application in your organization, with all features disabled, and with scopes:
   * Organization Administration: `read`
   * Organization Members: `readwrite`
+* Install GitHub application on organization and obtain private key, application ID, and installation ID
 
-Important: do not share the same GitHub application between tenants.
+Important: do not share the same GitHub application between tenants!
