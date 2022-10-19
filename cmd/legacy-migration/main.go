@@ -157,7 +157,6 @@ func run() error {
 
 			if len(teamOwners) == 0 && len(teamMembers) == 0 {
 				log.Warnf("The Azure Group %q has no members or administrators.", yamlteam.Name)
-				//continue
 			}
 
 			if len(teamOwners) == 0 && len(teamMembers) > 0 {
@@ -172,7 +171,7 @@ func run() error {
 
 			team, err := dbtx.GetTeamBySlug(ctx, convertedTeam.Slug)
 			if err != nil {
-				team, err = dbtx.CreateTeam(ctx, convertedTeam.Name, convertedTeam.Slug, &convertedTeam.Purpose.String)
+				team, err = dbtx.CreateTeam(ctx, convertedTeam.Slug, convertedTeam.Name, convertedTeam.Purpose)
 				if err != nil {
 					return err
 				}

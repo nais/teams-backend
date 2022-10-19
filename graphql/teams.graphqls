@@ -142,7 +142,7 @@ type Team {
     name: String!
 
     "Purpose of the team."
-    purpose: String
+    purpose: String!
 
     "Metadata attached to the team."
     metadata: [TeamMetadata!]!
@@ -208,15 +208,15 @@ input CreateTeamInput {
     name: String!
 
     "Team purpose."
-    purpose: String
+    purpose: String!
 }
 
 "Input for updating an existing team."
 input UpdateTeamInput {
-    "Team name. Must contain a value when specified."
+    "Specify team name to update the existing value."
     name: String
 
-    "Team purpose. Set to an empty string to remove the existing team purpose."
+    "Specify team purpose to update the existing value."
     purpose: String
 }
 

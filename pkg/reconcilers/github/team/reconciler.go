@@ -104,14 +104,14 @@ func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.
 func (r *githubTeamReconciler) syncTeamInfo(ctx context.Context, team db.Team, oldTeam github.Team) error {
 	var slug string
 
-	if team.Purpose.String == helpers.StringWithFallback(oldTeam.Description, "") {
+	if team.Purpose == helpers.StringWithFallback(oldTeam.Description, "") {
 		return nil
 	}
 
 	slug = string(team.Slug)
 	newTeam := github.NewTeam{
 		Name:        slug,
-		Description: &team.Purpose.String,
+		Description: &team.Purpose,
 	}
 
 	_, resp, err := r.teamsService.EditTeamBySlug(ctx, r.org, *oldTeam.Slug, newTeam, false)
@@ -167,7 +167,7 @@ func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconc
 
 	githubTeam, resp, err := r.teamsService.CreateTeam(ctx, r.org, github.NewTeam{
 		Name:        string(team.Slug),
-		Description: &team.Purpose.String,
+		Description: &team.Purpose,
 	})
 	err = httpError(http.StatusCreated, *resp, err)
 	if err != nil {

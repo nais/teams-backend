@@ -740,7 +740,7 @@ type Team struct {
 	ID      uuid.UUID
 	Slug    slug.Slug
 	Name    string
-	Purpose sql.NullString
+	Purpose string
 	Enabled bool
 }
 

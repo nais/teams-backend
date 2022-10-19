@@ -22,7 +22,7 @@ RETURNING id, slug, name, purpose, enabled
 type CreateTeamParams struct {
 	Name    string
 	Slug    slug.Slug
-	Purpose sql.NullString
+	Purpose string
 }
 
 func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, error) {

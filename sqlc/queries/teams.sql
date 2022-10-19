@@ -35,7 +35,7 @@ ON CONFLICT (team_id, key) DO
 
 -- name: UpdateTeam :one
 UPDATE teams
-SET name = COALESCE(sqlc.narg(name), name), purpose = COALESCE(sqlc.arg(purpose), purpose)
+SET name = COALESCE(sqlc.narg(name), name), purpose = COALESCE(sqlc.narg(purpose), purpose)
 WHERE id = sqlc.arg(id)
 RETURNING *;
 

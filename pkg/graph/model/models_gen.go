@@ -37,7 +37,7 @@ type CreateTeamInput struct {
 	// Team name.
 	Name string `json:"name"`
 	// Team purpose.
-	Purpose *string `json:"purpose"`
+	Purpose string `json:"purpose"`
 }
 
 // Reconciler configuration input.
@@ -102,9 +102,9 @@ type TeamSync struct {
 
 // Input for updating an existing team.
 type UpdateTeamInput struct {
-	// Team name. Must contain a value when specified.
+	// Specify team name to update the existing value.
 	Name *string `json:"name"`
-	// Team purpose. Set to an empty string to remove the existing team purpose.
+	// Specify team purpose to update the existing value.
 	Purpose *string `json:"purpose"`
 }
 

@@ -1,7 +1,6 @@
 package legacy
 
 import (
-	"database/sql"
 	"encoding/json"
 	"os"
 
@@ -43,20 +42,11 @@ func (t *Team) Convert() (*db.Team, []db.TeamMetadata) {
 		})
 	}
 
-	desc := sql.NullString{
-		String: "Team created by NAIS console",
-		Valid:  true,
-	}
-
-	if t.Description != "" {
-		desc.String = t.Description
-	}
-
 	return &db.Team{
 		Team: &sqlc.Team{
 			Slug:    slug.Slug(t.Name),
 			Name:    t.Name,
-			Purpose: desc,
+			Purpose: t.Description,
 		},
 	}, metadata
 }

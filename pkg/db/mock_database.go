@@ -157,13 +157,13 @@ func (_m *MockDatabase) CreateSession(ctx context.Context, userID uuid.UUID) (*S
 	return r0, r1
 }
 
-// CreateTeam provides a mock function with given fields: ctx, name, _a2, purpose
-func (_m *MockDatabase) CreateTeam(ctx context.Context, name string, _a2 slug.Slug, purpose *string) (*Team, error) {
-	ret := _m.Called(ctx, name, _a2, purpose)
+// CreateTeam provides a mock function with given fields: ctx, _a1, name, purpose
+func (_m *MockDatabase) CreateTeam(ctx context.Context, _a1 slug.Slug, name string, purpose string) (*Team, error) {
+	ret := _m.Called(ctx, _a1, name, purpose)
 
 	var r0 *Team
-	if rf, ok := ret.Get(0).(func(context.Context, string, slug.Slug, *string) *Team); ok {
-		r0 = rf(ctx, name, _a2, purpose)
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug, string, string) *Team); ok {
+		r0 = rf(ctx, _a1, name, purpose)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*Team)
@@ -171,8 +171,8 @@ func (_m *MockDatabase) CreateTeam(ctx context.Context, name string, _a2 slug.Sl
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, slug.Slug, *string) error); ok {
-		r1 = rf(ctx, name, _a2, purpose)
+	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug, string, string) error); ok {
+		r1 = rf(ctx, _a1, name, purpose)
 	} else {
 		r1 = ret.Error(1)
 	}

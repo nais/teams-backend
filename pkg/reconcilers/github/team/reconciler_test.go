@@ -2,7 +2,6 @@ package github_team_reconciler_test
 
 import (
 	"context"
-	"database/sql"
 	"io"
 	"net/http"
 	"strings"
@@ -28,8 +27,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 	org := "org"
 	teamName := "Team Name"
 	teamSlug := "slug"
-	teamPurpose := sql.NullString{}
-	teamPurpose.Scan("purpose")
+	teamPurpose := "purpose"
 
 	ctx := context.Background()
 	correlationID := uuid.New()
@@ -67,7 +65,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 				"CreateTeam",
 				ctx,
 				org,
-				github.NewTeam{Name: teamSlug, Description: &teamPurpose.String},
+				github.NewTeam{Name: teamSlug, Description: &teamPurpose},
 			).
 			Return(
 				&github.Team{Slug: helpers.Strp(teamSlug)},
@@ -90,7 +88,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			).
 			Once()
 
-		configureSyncTeamInfo(teamsService, org, teamSlug, teamPurpose.String)
+		configureSyncTeamInfo(teamsService, org, teamSlug, teamPurpose)
 		configureDeleteTeamIDP(teamsService, org, teamSlug)
 
 		slug := slug.Slug(teamSlug)
@@ -124,7 +122,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 				"CreateTeam",
 				ctx,
 				org,
-				github.NewTeam{Name: teamSlug, Description: &teamPurpose.String},
+				github.NewTeam{Name: teamSlug, Description: &teamPurpose},
 			).
 			Return(
 				nil,
@@ -188,7 +186,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			).
 			Once()
 
-		configureSyncTeamInfo(teamsService, org, teamSlug, teamPurpose.String)
+		configureSyncTeamInfo(teamsService, org, teamSlug, teamPurpose)
 		configureDeleteTeamIDP(teamsService, org, teamSlug)
 
 		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, gitHubClient)
@@ -236,7 +234,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 				"CreateTeam",
 				ctx,
 				org,
-				github.NewTeam{Name: teamSlug, Description: &teamPurpose.String},
+				github.NewTeam{Name: teamSlug, Description: &teamPurpose},
 			).
 			Return(
 				&github.Team{Slug: helpers.Strp(teamSlug)},
@@ -259,7 +257,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			).
 			Once()
 
-		configureSyncTeamInfo(teamsService, org, teamSlug, teamPurpose.String)
+		configureSyncTeamInfo(teamsService, org, teamSlug, teamPurpose)
 		configureDeleteTeamIDP(teamsService, org, teamSlug)
 
 		slug := slug.Slug(teamSlug)
@@ -283,8 +281,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 	org := "my-organization"
 	teamName := "myteam"
 	teamSlug := slug.Slug("myteam")
-	teamPurpose := sql.NullString{}
-	teamPurpose.Scan("some purpose")
+	teamPurpose := "some purpose"
 
 	createLogin := "should-create"
 	createEmail := "should-create@example.com"
@@ -344,8 +341,8 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 			Return(&db.User{Email: removeEmail, Name: removeLogin}, nil).
 			Once()
 
-		configureCreateTeam(teamsService, org, teamName, teamPurpose.String)
-		configureSyncTeamInfo(teamsService, org, teamName, teamPurpose.String)
+		configureCreateTeam(teamsService, org, teamName, teamPurpose)
+		configureSyncTeamInfo(teamsService, org, teamName, teamPurpose)
 
 		configureLookupEmail(graphClient, org, removeLogin, removeEmail)
 
@@ -394,7 +391,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 	})
 }
 
-func configureRegisterLoginEmail(graphClient *github_team_reconciler.MockGraphClient, org string, email string, login string) *mock.Call {
+func configureRegisterLoginEmail(graphClient *github_team_reconciler.MockGraphClient, org, email, login string) *mock.Call {
 	return graphClient.
 		On("Query", mock.Anything, mock.Anything, map[string]interface{}{"org": githubv4.String(org), "username": githubv4.String(email)}).
 		Run(
@@ -413,7 +410,7 @@ func configureRegisterLoginEmail(graphClient *github_team_reconciler.MockGraphCl
 		Return(nil)
 }
 
-func configureLookupEmail(graphClient *github_team_reconciler.MockGraphClient, org string, login, email string) *mock.Call {
+func configureLookupEmail(graphClient *github_team_reconciler.MockGraphClient, org, login, email string) *mock.Call {
 	return graphClient.
 		On("Query", mock.Anything, mock.Anything, map[string]interface{}{"org": githubv4.String(org), "login": githubv4.String(login)}).
 		Run(
@@ -432,7 +429,7 @@ func configureLookupEmail(graphClient *github_team_reconciler.MockGraphClient, o
 		Return(nil)
 }
 
-func configureRemoveTeamMembershipBySlug(teamsService *github_team_reconciler.MockTeamsService, org string, teamName string, removeLogin string) *mock.Call {
+func configureRemoveTeamMembershipBySlug(teamsService *github_team_reconciler.MockTeamsService, org, teamName, removeLogin string) *mock.Call {
 	return teamsService.
 		On("RemoveTeamMembershipBySlug", mock.Anything, org, teamName, removeLogin, mock.Anything).
 		Return(
@@ -446,7 +443,7 @@ func configureRemoveTeamMembershipBySlug(teamsService *github_team_reconciler.Mo
 		Once()
 }
 
-func configureAddTeamMembershipBySlug(teamsService *github_team_reconciler.MockTeamsService, org string, teamName string, createLogin string) *mock.Call {
+func configureAddTeamMembershipBySlug(teamsService *github_team_reconciler.MockTeamsService, org, teamName, createLogin string) *mock.Call {
 	return teamsService.
 		On("AddTeamMembershipBySlug", mock.Anything, org, teamName, createLogin, mock.Anything).
 		Return(
@@ -465,7 +462,7 @@ func configureAddTeamMembershipBySlug(teamsService *github_team_reconciler.MockT
 		Once()
 }
 
-func configureListTeamMembersBySlug(teamsService *github_team_reconciler.MockTeamsService, org string, teamName string, keepLogin string, removeLogin string) *mock.Call {
+func configureListTeamMembersBySlug(teamsService *github_team_reconciler.MockTeamsService, org, teamName, keepLogin, removeLogin string) *mock.Call {
 	return teamsService.
 		On("ListTeamMembersBySlug", mock.Anything, org, teamName, mock.Anything).
 		Return(
@@ -483,7 +480,7 @@ func configureListTeamMembersBySlug(teamsService *github_team_reconciler.MockTea
 		Once()
 }
 
-func configureCreateTeam(teamsService *github_team_reconciler.MockTeamsService, org string, teamName string, description string) *mock.Call {
+func configureCreateTeam(teamsService *github_team_reconciler.MockTeamsService, org, teamName, description string) *mock.Call {
 	return teamsService.
 		On("CreateTeam", mock.Anything, org, github.NewTeam{Name: teamName, Description: helpers.Strp(description)}).
 		Return(

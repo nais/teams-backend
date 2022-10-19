@@ -31,7 +31,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 
 	var team *db.Team
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
-		team, err = dbtx.CreateTeam(ctx, input.Name, *input.Slug, input.Purpose)
+		team, err = dbtx.CreateTeam(ctx, *input.Slug, input.Name, input.Purpose)
 		if err != nil {
 			return err
 		}
@@ -454,15 +454,6 @@ func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*db.Team, erro
 	}
 
 	return r.database.GetTeamByID(ctx, *id)
-}
-
-// Purpose is the resolver for the purpose field.
-func (r *teamResolver) Purpose(ctx context.Context, obj *db.Team) (*string, error) {
-	var purpose *string
-	if obj.Purpose.String != "" {
-		purpose = &obj.Purpose.String
-	}
-	return purpose, nil
 }
 
 // Metadata is the resolver for the metadata field.

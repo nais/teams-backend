@@ -100,7 +100,7 @@ func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(ctx context.Context, s
 	newGroup := &admin_directory_v1.Group{
 		Email:       email,
 		Name:        input.Team.Name,
-		Description: input.Team.Purpose.String,
+		Description: input.Team.Purpose,
 	}
 	group, err := r.adminService.Groups.Insert(newGroup).Do()
 	if err != nil {
@@ -226,11 +226,11 @@ func (r *googleWorkspaceAdminReconciler) addToGKESecurityGroup(ctx context.Conte
 }
 
 func (r *googleWorkspaceAdminReconciler) syncGroupInfo(ctx context.Context, team db.Team, group *admin_directory_v1.Group) error {
-	if team.Purpose.String == group.Description {
+	if team.Purpose == group.Description {
 		return nil
 	}
 
-	group.Description = team.Purpose.String
+	group.Description = team.Purpose
 	group.ForceSendFields = []string{"Description"}
 	_, err := r.adminService.Groups.Patch(group.Id, group).Context(ctx).Do()
 	if err != nil {

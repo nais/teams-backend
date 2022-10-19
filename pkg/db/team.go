@@ -81,11 +81,11 @@ func (d *database) UpdateTeam(ctx context.Context, teamID uuid.UUID, name, purpo
 	return &Team{Team: team}, nil
 }
 
-func (d *database) CreateTeam(ctx context.Context, name string, slug slug.Slug, purpose *string) (*Team, error) {
+func (d *database) CreateTeam(ctx context.Context, slug slug.Slug, name, purpose string) (*Team, error) {
 	team, err := d.querier.CreateTeam(ctx, sqlc.CreateTeamParams{
 		Name:    name,
 		Slug:    slug,
-		Purpose: nullString(purpose),
+		Purpose: purpose,
 	})
 	if err != nil {
 		return nil, err
