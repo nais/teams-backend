@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/slug"
@@ -65,10 +64,6 @@ func (d *database) RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, tea
 }
 
 func (d *database) UpdateTeam(ctx context.Context, teamID uuid.UUID, name, purpose *string) (*Team, error) {
-	if name != nil && *name == "" {
-		return nil, fmt.Errorf("name can not be empty")
-	}
-
 	team, err := d.querier.UpdateTeam(ctx, sqlc.UpdateTeamParams{
 		ID:      teamID,
 		Name:    nullString(name),

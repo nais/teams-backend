@@ -6,6 +6,7 @@ package graph
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
@@ -27,6 +28,16 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 	correlationID, err := uuid.NewUUID()
 	if err != nil {
 		return nil, fmt.Errorf("unable to create log correlation ID: %w", err)
+	}
+
+	input.Name = strings.TrimSpace(input.Name)
+	if input.Name == "" {
+		return nil, fmt.Errorf("team name must not be empty")
+	}
+
+	input.Purpose = strings.TrimSpace(input.Purpose)
+	if input.Purpose == "" {
+		return nil, fmt.Errorf("team purpose must not be empty")
 	}
 
 	var team *db.Team
@@ -77,6 +88,20 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, in
 	correlationID, err := uuid.NewUUID()
 	if err != nil {
 		return nil, fmt.Errorf("unable to create log correlation ID: %w", err)
+	}
+
+	if input.Name != nil {
+		*input.Name = strings.TrimSpace(*input.Name)
+		if *input.Name == "" {
+			return nil, fmt.Errorf("team name must not be empty when specified")
+		}
+	}
+
+	if input.Purpose != nil {
+		*input.Purpose = strings.TrimSpace(*input.Purpose)
+		if *input.Purpose == "" {
+			return nil, fmt.Errorf("team purpose must not be empty when specified")
+		}
 	}
 
 	team, err := r.database.UpdateTeam(ctx, *teamID, input.Name, input.Purpose)
