@@ -2,6 +2,7 @@ package legacy
 
 import (
 	"context"
+	"strings"
 
 	"github.com/nais/console/pkg/azureclient"
 	"github.com/nais/console/pkg/config"
@@ -63,8 +64,8 @@ func dbUsers(members []*azureclient.Member) []*db.User {
 	users := make([]*db.User, 0, len(members))
 	for _, member := range members {
 		users = append(users, &db.User{
-			Email:      member.Mail,
-			ExternalID: member.Mail, // We don't have the external ID at this point, use the email instead and the user sync will automatically fix it
+			Email:      strings.ToLower(member.Mail),
+			ExternalID: strings.ToLower(member.Mail), // We don't have the external ID at this point, use the email instead and the user sync will automatically fix it
 			Name:       member.Name(),
 		})
 	}

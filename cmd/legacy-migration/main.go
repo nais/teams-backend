@@ -166,7 +166,6 @@ func run() error {
 				delete(teamMembers, user.Email)
 			}
 
-			_, owner := first(teamOwners)
 			convertedTeam, metadata := yamlteam.Convert()
 
 			team, err := dbtx.GetTeamBySlug(ctx, convertedTeam.Slug)
@@ -174,13 +173,6 @@ func run() error {
 				team, err = dbtx.CreateTeam(ctx, convertedTeam.Slug, convertedTeam.Name, convertedTeam.Purpose)
 				if err != nil {
 					return err
-				}
-
-				if owner != nil {
-					err := dbtx.SetTeamMemberRole(ctx, owner.ID, team.ID, sqlc.RoleNameTeamowner)
-					if err != nil {
-						return err
-					}
 				}
 
 				err = dbtx.SetTeamMetadata(ctx, team.ID, metadata)
