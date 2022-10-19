@@ -94,7 +94,6 @@ func (d *database) getUserRoles(ctx context.Context, userID uuid.UUID) ([]*Role,
 		userRoles = append(userRoles, &Role{
 			UserRole:       userRole,
 			Authorizations: authorizations,
-			Name:           userRole.RoleName,
 		})
 	}
 

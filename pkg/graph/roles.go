@@ -78,6 +78,11 @@ func (r *queryResolver) Roles(ctx context.Context) ([]sqlc.RoleName, error) {
 	return sqlc.AllRoleNameValues(), nil
 }
 
+// Name is the resolver for the name field.
+func (r *roleResolver) Name(ctx context.Context, obj *db.Role) (sqlc.RoleName, error) {
+	return obj.RoleName, nil
+}
+
 // TargetID is the resolver for the targetId field.
 func (r *roleResolver) TargetID(ctx context.Context, obj *db.Role) (*uuid.UUID, error) {
 	if obj.TargetID.Valid {

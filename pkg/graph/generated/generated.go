@@ -218,6 +218,8 @@ type ReconcilerConfigResolver interface {
 	Value(ctx context.Context, obj *db.ReconcilerConfig) (*string, error)
 }
 type RoleResolver interface {
+	Name(ctx context.Context, obj *db.Role) (sqlc.RoleName, error)
+
 	TargetID(ctx context.Context, obj *db.Role) (*uuid.UUID, error)
 }
 type ServiceAccountResolver interface {
@@ -5054,7 +5056,7 @@ func (ec *executionContext) _Role_name(ctx context.Context, field graphql.Collec
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Name, nil
+		return ec.resolvers.Role().Name(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5075,8 +5077,8 @@ func (ec *executionContext) fieldContext_Role_name(ctx context.Context, field gr
 	fc = &graphql.FieldContext{
 		Object:     "Role",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type RoleName does not have child fields")
 		},
@@ -9269,12 +9271,25 @@ func (ec *executionContext) _Role(ctx context.Context, sel ast.SelectionSet, obj
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Role")
 		case "name":
+			field := field
 
-			out.Values[i] = ec._Role_name(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Role_name(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
 			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
 		case "isGlobal":
 
 			out.Values[i] = ec._Role_isGlobal(ctx, field, obj)

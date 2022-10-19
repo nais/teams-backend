@@ -50,7 +50,6 @@ type ReconcilerError struct {
 
 type Role struct {
 	*sqlc.UserRole
-	Name           sqlc.RoleName
 	Authorizations []sqlc.AuthzName
 }
 
