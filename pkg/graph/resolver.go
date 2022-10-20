@@ -2,19 +2,15 @@ package graph
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
-	"github.com/99designs/gqlgen/graphql"
 	"github.com/google/uuid"
-	"github.com/jackc/pgconn"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
-	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
 // This file will not be regenerated automatically.
@@ -48,19 +44,6 @@ func (r *Resolver) reconcileTeam(ctx context.Context, correlationID uuid.UUID, t
 	}
 
 	r.teamReconciler <- reconcilerInput.WithCorrelationID(correlationID)
-}
-
-func GetErrorPresenter() graphql.ErrorPresenterFunc {
-	return func(ctx context.Context, e error) *gqlerror.Error {
-		err := graphql.DefaultErrorPresenter(ctx, e)
-		unwrappedError := errors.Unwrap(e)
-
-		if pgErr, ok := unwrappedError.(*pgconn.PgError); ok {
-			err.Message = pgErr.Detail
-		}
-
-		return err
-	}
 }
 
 func sqlcRoleFromTeamRole(teamRole model.TeamRole) (sqlc.RoleName, error) {

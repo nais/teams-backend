@@ -24,6 +24,7 @@ import (
 	"github.com/nais/console/pkg/directives"
 	"github.com/nais/console/pkg/fixtures"
 	"github.com/nais/console/pkg/graph"
+	"github.com/nais/console/pkg/graph/apierror"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/metrics"
 	"github.com/nais/console/pkg/middleware"
@@ -376,7 +377,7 @@ func setupGraphAPI(database db.Database, domain string, teamReconciler chan<- re
 			gc,
 		),
 	)
-	handler.SetErrorPresenter(graph.GetErrorPresenter())
+	handler.SetErrorPresenter(apierror.GetErrorPresenter())
 	handler.Use(extension.FixedComplexityLimit(1000))
 
 	return handler

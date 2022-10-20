@@ -201,7 +201,7 @@ type TeamMember {
 
 "Input for creating a new team."
 input CreateTeamInput {
-    "Team slug. This value immutable."
+    "Team slug. After creation, this value can not be changed."
     slug: Slug!
 
     "Team name."
