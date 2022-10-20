@@ -7,14 +7,14 @@ import (
 )
 
 // Slightly modified from database schema because Golang doesn't like Perl-flavored regexes.
-var teamSlugRegex = regexp.MustCompile("^[a-z](-?[a-z0-9]+){2,29}$")
+var teamSlugRegex = regexp.MustCompile("^[a-z](-?[a-z0-9]+)$")
 
 func ptr[T any](value T) *T {
 	return &value
 }
 
 func (input CreateTeamInput) Validate() error {
-	if input.Slug == nil || !teamSlugRegex.MatchString(input.Slug.String()) {
+	if input.Slug == nil || !teamSlugRegex.MatchString(input.Slug.String()) || len(*input.Slug) < 3 || len(*input.Slug) > 30 {
 		return apierror.ErrTeamSlug
 	}
 
