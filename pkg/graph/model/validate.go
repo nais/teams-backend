@@ -7,7 +7,7 @@ import (
 )
 
 // Slightly modified from database schema because Golang doesn't like Perl-flavored regexes.
-var teamSlugRegex = regexp.MustCompile("^[a-z](-?[a-z0-9]+)$")
+var teamSlugRegex = regexp.MustCompile("^[a-z](-?[a-z0-9]+)+$")
 
 func ptr[T any](value T) *T {
 	return &value
