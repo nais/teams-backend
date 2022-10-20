@@ -35,6 +35,9 @@ func TestCreateTeamInput_Validate_Slug(t *testing.T) {
 		"foo--bar",
 		"4chan",
 		"some-long-string-more-than-30-chars",
+		"you-aint-got-the-æøå",
+		"Uppercase",
+		"rollback()",
 	}
 
 	for _, s := range validSlugs {
