@@ -50,7 +50,7 @@ type ReconcilerConfigInput struct {
 type RemoveUsersFromTeamInput struct {
 	// List of user IDs that should be removed from the team.
 	UserIds []*uuid.UUID `json:"userIds"`
-	// Team ID that should receive new users.
+	// Team ID that users should be removed from.
 	TeamID *uuid.UUID `json:"teamId"`
 }
 
