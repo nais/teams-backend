@@ -197,11 +197,12 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		gitHubClient := github_team_reconciler.NewMockGraphClient(t)
+		const existingSlug = "existing-slug"
 
 		database.
 			On("LoadReconcilerStateForTeam", ctx, systemName, team.ID, mock.Anything).
 			Run(func(args mock.Arguments) {
-				slug := slug.Slug("existing-slug")
+				slug := slug.Slug(existingSlug)
 				state := args.Get(3).(*reconcilers.GitHubState)
 				state.Slug = &slug
 			}).
@@ -209,7 +210,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			Once()
 		database.
 			On("SetReconcilerStateForTeam", ctx, systemName, team.ID, mock.MatchedBy(func(state reconcilers.GitHubState) bool {
-				return *state.Slug == "slug"
+				return *state.Slug == existingSlug
 			})).
 			Return(nil).
 			Once()
@@ -219,7 +220,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 				"GetTeamBySlug",
 				ctx,
 				org,
-				"existing-slug",
+				existingSlug,
 			).
 			Return(
 				nil,
@@ -232,10 +233,10 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 				"CreateTeam",
 				ctx,
 				org,
-				github.NewTeam{Name: teamSlug, Description: &teamPurpose},
+				github.NewTeam{Name: existingSlug, Description: &teamPurpose},
 			).
 			Return(
-				&github.Team{Slug: helpers.Strp(teamSlug)},
+				&github.Team{Slug: helpers.Strp(existingSlug)},
 				&github.Response{Response: &http.Response{StatusCode: http.StatusCreated}},
 				nil,
 			).
@@ -245,7 +246,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 				"ListTeamMembersBySlug",
 				mock.Anything,
 				org,
-				teamSlug,
+				existingSlug,
 				mock.Anything,
 			).
 			Return(
@@ -255,8 +256,8 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			).
 			Once()
 
-		configureSyncTeamInfo(teamsService, org, teamSlug, teamPurpose)
-		configureDeleteTeamIDP(teamsService, org, teamSlug)
+		configureSyncTeamInfo(teamsService, org, existingSlug, teamPurpose)
+		configureDeleteTeamIDP(teamsService, org, existingSlug)
 
 		slug := slug.Slug(teamSlug)
 		auditLogger.
