@@ -5,7 +5,7 @@ RETURNING *;
 
 -- name: GetTeams :many
 SELECT * FROM teams
-ORDER BY name ASC;
+ORDER BY slug ASC;
 
 -- name: GetTeamByID :one
 SELECT * FROM teams

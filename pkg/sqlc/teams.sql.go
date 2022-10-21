@@ -170,7 +170,7 @@ func (q *Queries) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) ([]*Tea
 
 const getTeams = `-- name: GetTeams :many
 SELECT id, slug, purpose, enabled FROM teams
-ORDER BY name ASC
+ORDER BY slug ASC
 `
 
 func (q *Queries) GetTeams(ctx context.Context) ([]*Team, error) {

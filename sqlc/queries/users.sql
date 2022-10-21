@@ -44,7 +44,7 @@ SELECT teams.* FROM user_roles
 JOIN teams ON teams.id = user_roles.target_id
 JOIN users ON users.id = user_roles.user_id
 WHERE user_roles.user_id = $1 AND users.service_account = false
-ORDER BY teams.name ASC;
+ORDER BY teams.slug ASC;
 
 -- name: UpdateUser :one
 UPDATE users
