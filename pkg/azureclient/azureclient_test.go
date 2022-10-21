@@ -243,12 +243,9 @@ func Test_GetOrCreateGroupWhenGroupInStateDoesNotExist(t *testing.T) {
 	client := azureclient.New(httpClient)
 	group, created, err := client.GetOrCreateGroup(context.Background(), reconcilers.AzureState{GroupID: &groupId}, "slug", "description")
 
-	assert.NoError(t, err)
-	assert.Equal(t, "some-id", group.ID)
-	assert.Equal(t, "description", group.Description)
-	assert.Equal(t, "name", group.DisplayName)
-	assert.Equal(t, "mail", group.MailNickname)
-	assert.True(t, created)
+	assert.Nil(t, group)
+	assert.False(t, created)
+	assert.Error(t, err)
 }
 
 func Test_GetOrCreateGroupWhenGroupInStateExists(t *testing.T) {
