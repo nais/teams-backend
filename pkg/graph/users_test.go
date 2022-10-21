@@ -21,10 +21,10 @@ func TestQueryResolver_Users(t *testing.T) {
 	ch := make(chan reconcilers.Input, 100)
 	resolver := graph.NewResolver(database, "example.com", ch, auditLogger).Query()
 
-	t.Run("user without required authorization", func(t *testing.T) {
+	t.Run("unauthenticated user", func(t *testing.T) {
 		users, err := resolver.Users(ctx)
 		assert.Nil(t, users)
-		assert.ErrorIs(t, err, authz.ErrNotAuthorized)
+		assert.ErrorIs(t, err, authz.ErrNotAuthenticated)
 	})
 
 	t.Run("user with authorization", func(t *testing.T) {

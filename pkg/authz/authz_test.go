@@ -11,6 +11,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const authTeamCreateError = `required role: "teams:create"`
+const authTeamUpdateError = `required role: "teams:update"`
+
 func TestContextWithUser(t *testing.T) {
 	ctx := context.Background()
 	assert.Nil(t, authz.ActorFromContext(ctx))
@@ -34,12 +37,12 @@ func TestRequireGlobalAuthorization(t *testing.T) {
 	}
 
 	t.Run("Nil user", func(t *testing.T) {
-		assert.ErrorIs(t, authz.RequireGlobalAuthorization(nil, sqlc.AuthzNameTeamsCreate), authz.ErrNotAuthorized)
+		assert.ErrorIs(t, authz.RequireGlobalAuthorization(nil, sqlc.AuthzNameTeamsCreate), authz.ErrNotAuthenticated)
 	})
 
 	t.Run("User with no roles", func(t *testing.T) {
 		contextUser := authz.ActorFromContext(authz.ContextWithActor(context.Background(), user, []*db.Role{}))
-		assert.ErrorIs(t, authz.RequireGlobalAuthorization(contextUser, sqlc.AuthzNameTeamsCreate), authz.ErrNotAuthorized)
+		assert.EqualError(t, authz.RequireGlobalAuthorization(contextUser, sqlc.AuthzNameTeamsCreate), authTeamCreateError)
 	})
 
 	t.Run("User with insufficient roles", func(t *testing.T) {
@@ -54,7 +57,7 @@ func TestRequireGlobalAuthorization(t *testing.T) {
 			},
 		}
 		contextUser := authz.ActorFromContext(authz.ContextWithActor(context.Background(), user, roles))
-		assert.ErrorIs(t, authz.RequireGlobalAuthorization(contextUser, sqlc.AuthzNameTeamsCreate), authz.ErrNotAuthorized)
+		assert.EqualError(t, authz.RequireGlobalAuthorization(contextUser, sqlc.AuthzNameTeamsCreate), authTeamCreateError)
 	})
 
 	t.Run("User with sufficient role", func(t *testing.T) {
@@ -81,12 +84,12 @@ func TestRequireAuthorizationForTarget(t *testing.T) {
 	targetID := uuid.New()
 
 	t.Run("Nil user", func(t *testing.T) {
-		assert.ErrorIs(t, authz.RequireAuthorization(nil, sqlc.AuthzNameTeamsCreate, targetID), authz.ErrNotAuthorized)
+		assert.ErrorIs(t, authz.RequireAuthorization(nil, sqlc.AuthzNameTeamsCreate, targetID), authz.ErrNotAuthenticated)
 	})
 
 	t.Run("User with no roles", func(t *testing.T) {
 		contextUser := authz.ActorFromContext(authz.ContextWithActor(context.Background(), user, []*db.Role{}))
-		assert.ErrorIs(t, authz.RequireAuthorization(contextUser, sqlc.AuthzNameTeamsCreate, targetID), authz.ErrNotAuthorized)
+		assert.EqualError(t, authz.RequireAuthorization(contextUser, sqlc.AuthzNameTeamsCreate, targetID), authTeamCreateError)
 	})
 
 	t.Run("User with insufficient roles", func(t *testing.T) {
@@ -101,7 +104,7 @@ func TestRequireAuthorizationForTarget(t *testing.T) {
 			},
 		}
 		contextUser := authz.ActorFromContext(authz.ContextWithActor(context.Background(), user, roles))
-		assert.ErrorIs(t, authz.RequireAuthorization(contextUser, sqlc.AuthzNameTeamsUpdate, targetID), authz.ErrNotAuthorized)
+		assert.EqualError(t, authz.RequireAuthorization(contextUser, sqlc.AuthzNameTeamsUpdate, targetID), authTeamUpdateError)
 	})
 
 	t.Run("User with targeted role", func(t *testing.T) {
@@ -135,7 +138,7 @@ func TestRequireAuthorizationForTarget(t *testing.T) {
 			},
 		}
 		contextUser := authz.ActorFromContext(authz.ContextWithActor(context.Background(), user, roles))
-		assert.ErrorIs(t, authz.RequireAuthorization(contextUser, sqlc.AuthzNameTeamsUpdate, targetID), authz.ErrNotAuthorized)
+		assert.EqualError(t, authz.RequireAuthorization(contextUser, sqlc.AuthzNameTeamsUpdate, targetID), authTeamUpdateError)
 	})
 
 	t.Run("User with global role", func(t *testing.T) {

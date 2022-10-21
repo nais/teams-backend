@@ -3,7 +3,6 @@ package authz
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/nais/console/pkg/sqlc"
 
@@ -17,6 +16,10 @@ type Actor struct {
 	User  db.AuthenticatedUser
 	Roles []*db.Role
 }
+
+var (
+	ErrNotAuthenticated = errors.New("not authenticated")
+)
 
 func (u *Actor) Authenticated() bool {
 	if u == nil || u.User == nil {
@@ -44,7 +47,7 @@ func RequireRole(actor *Actor, requiredRoleName sqlc.RoleName) error {
 		}
 	}
 
-	return ErrNotAuthorized
+	return ErrNotAuthorized{role: string(requiredRoleName)}
 }
 
 // ActorFromContext Get the actor stored in the context. Requires that a middleware has stored an actor in the first
@@ -54,12 +57,10 @@ func ActorFromContext(ctx context.Context) *Actor {
 	return actor
 }
 
-var ErrNotAuthorized = errors.New("not authorized")
-
 // RequireGlobalAuthorization Require an actor to have a specific authorization through a globally assigned role.
 func RequireGlobalAuthorization(actor *Actor, requiredAuthzName sqlc.AuthzName) error {
 	if !actor.Authenticated() {
-		return ErrNotAuthorized
+		return ErrNotAuthenticated
 	}
 
 	authorizations := make(map[sqlc.AuthzName]struct{})
@@ -79,7 +80,7 @@ func RequireGlobalAuthorization(actor *Actor, requiredAuthzName sqlc.AuthzName) 
 // targeted role.
 func RequireAuthorization(actor *Actor, requiredAuthzName sqlc.AuthzName, target uuid.UUID) error {
 	if !actor.Authenticated() {
-		return ErrNotAuthorized
+		return ErrNotAuthenticated
 	}
 
 	authorizations := make(map[sqlc.AuthzName]struct{})
@@ -99,7 +100,7 @@ func RequireAuthorization(actor *Actor, requiredAuthzName sqlc.AuthzName, target
 // correctly targeted role. If the actor matches the target the action will be allowed.
 func RequireAuthorizationOrTargetMatch(actor *Actor, requiredAuthzName sqlc.AuthzName, target uuid.UUID) error {
 	if !actor.Authenticated() {
-		return ErrNotAuthorized
+		return ErrNotAuthenticated
 	}
 
 	if actor.User.GetID() == target {
@@ -117,5 +118,5 @@ func authorized(authorizations map[sqlc.AuthzName]struct{}, requiredAuthzName sq
 		}
 	}
 
-	return fmt.Errorf("missing authorization: %q, %w", requiredAuthzName, ErrNotAuthorized)
+	return ErrNotAuthorized{role: string(requiredAuthzName)}
 }

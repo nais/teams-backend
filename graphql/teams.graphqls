@@ -234,7 +234,7 @@ input RemoveUsersFromTeamInput {
     "List of user IDs that should be removed from the team."
     userIds: [UUID!]!
 
-    "Team ID that should receive new users."
+    "Team ID that users should be removed from."
     teamId: UUID!
 }
 

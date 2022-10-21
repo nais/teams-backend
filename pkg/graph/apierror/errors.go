@@ -2,20 +2,23 @@ package apierror
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/jackc/pgconn"
+	"github.com/nais/console/pkg/authz"
 	log "github.com/sirupsen/logrus"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
 var (
-	ErrTeamSlug    = Errorf("Your team identifier does not fit our requirements. Team identifiers must contain only lowercase alphanumeric characters or hyphens, contain at least 3 characters and at most 30 characters, start with an alphabetic character, end with an alphanumeric character, and not contain two hyphens in a row.")
-	ErrInternal    = Errorf("The server errored out while processing your request, and we didn't write a suitable error message. You might consider that a bug on our side. Please try again, and if the error persists, contact the NAIS team.")
-	ErrDatabase    = Errorf("The database system encountered an error while processing your request. This is probably a transient error, please try again. If the error persists, contact the NAIS team.")
-	ErrTeamPurpose = Errorf("You must specify the purpose for your team. This is a human-readable string which is used in external systems, and is important because other people might need to to understand what your team is all about.")
+	ErrTeamSlug     = Errorf("Your team identifier does not fit our requirements. Team identifiers must contain only lowercase alphanumeric characters or hyphens, contain at least 3 characters and at most 30 characters, start with an alphabetic character, end with an alphanumeric character, and not contain two hyphens in a row.")
+	ErrInternal     = Errorf("The server errored out while processing your request, and we didn't write a suitable error message. You might consider that a bug on our side. Please try again, and if the error persists, contact the NAIS team.")
+	ErrDatabase     = Errorf("The database system encountered an error while processing your request. This is probably a transient error, please try again. If the error persists, contact the NAIS team.")
+	ErrTeamPurpose  = Errorf("You must specify the purpose for your team. This is a human-readable string which is used in external systems, and is important because other people might need to to understand what your team is all about.")
+	ErrTeamNotExist = Errorf("The team you are referring to does not exist in our database.")
 )
 
 type Error struct {
@@ -44,6 +47,10 @@ func GetErrorPresenter() graphql.ErrorPresenterFunc {
 		switch originalError := unwrappedError.(type) {
 		case Error:
 			// Error is already formatted for end-user consumption.
+			return err
+		case authz.ErrNotAuthorized:
+			err.Message = "You are authenticated, but your account is not authorized to perform this action. Specifically, you need the %q role." + originalError.Role()
+			return err
 		case *pgconn.PgError:
 			err.Message = ErrDatabase.Error()
 			// Log error?
@@ -51,7 +58,16 @@ func GetErrorPresenter() graphql.ErrorPresenterFunc {
 			// err.Message = pgErr.Detail
 			return err
 		default:
-			log.Errorf("unhandled error: %s", originalError.Error())
+			break
+		}
+
+		switch unwrappedError {
+		case sql.ErrNoRows:
+			err.Message = "Object was not found in the database. This usually means you specified a non-existing team identifier or e-mail address."
+		case authz.ErrNotAuthenticated:
+			err.Message = "Valid user required. You are not logged in."
+		default:
+			log.Errorf("unhandled error: %s", err)
 			err.Message = ErrInternal.Error()
 		}
 

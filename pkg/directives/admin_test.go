@@ -22,7 +22,7 @@ func TestAdmin(t *testing.T) {
 			panic("Should not be executed")
 		}
 		_, err := directives.Admin()(context.Background(), obj, nextHandler)
-		assert.EqualError(t, err, "this endpoint requires an authenticated user")
+		assert.EqualError(t, err, "not authenticated")
 	})
 
 	t.Run("User with no admin role", func(t *testing.T) {

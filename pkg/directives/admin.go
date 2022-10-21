@@ -15,7 +15,7 @@ func Admin() DirectiveFunc {
 	return func(ctx context.Context, obj interface{}, next graphql.Resolver) (interface{}, error) {
 		actor := authz.ActorFromContext(ctx)
 		if !actor.Authenticated() {
-			return nil, fmt.Errorf("this endpoint requires an authenticated user")
+			return nil, authz.ErrNotAuthenticated
 		}
 
 		err := authz.RequireRole(actor, sqlc.RoleNameAdmin)
