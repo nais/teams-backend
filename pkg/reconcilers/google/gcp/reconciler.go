@@ -137,7 +137,7 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *rec
 
 	projectID := GenerateProjectID(r.domain, environment, input.Team.Slug)
 	project := &cloudresourcemanager.Project{
-		DisplayName: string(input.Team.Slug),
+		DisplayName: string(input.Team.Slug) + "-" + environment,
 		Parent:      "folders/" + strconv.FormatInt(parentFolderID, 10),
 		ProjectId:   projectID,
 	}

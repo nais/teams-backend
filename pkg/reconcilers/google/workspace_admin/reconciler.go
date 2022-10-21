@@ -89,10 +89,7 @@ func (r *googleWorkspaceAdminReconciler) Reconcile(ctx context.Context, input re
 
 func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(ctx context.Context, state *reconcilers.GoogleWorkspaceState, input reconcilers.Input) (*admin_directory_v1.Group, error) {
 	if state.GroupEmail != nil {
-		existingGroup, err := r.adminService.Groups.Get(*state.GroupEmail).Do()
-		if err == nil {
-			return existingGroup, nil
-		}
+		return r.adminService.Groups.Get(*state.GroupEmail).Do()
 	}
 
 	groupKey := reconcilers.TeamNamePrefix + input.Team.Slug

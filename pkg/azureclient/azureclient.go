@@ -138,9 +138,7 @@ func (s *client) CreateGroup(ctx context.Context, grp *Group) (*Group, error) {
 func (s *client) GetOrCreateGroup(ctx context.Context, state reconcilers.AzureState, name, description string) (*Group, bool, error) {
 	if state.GroupID != nil {
 		grp, err := s.GetGroupById(ctx, *state.GroupID)
-		if err == nil {
-			return grp, false, err
-		}
+		return grp, false, err
 	}
 
 	createdGroup, err := s.CreateGroup(ctx, &Group{
