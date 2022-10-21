@@ -99,7 +99,7 @@ func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(ctx context.Context, s
 	email := fmt.Sprintf("%s@%s", groupKey, r.domain)
 	newGroup := &admin_directory_v1.Group{
 		Email:       email,
-		Name:        input.Team.Name,
+		Name:        string(input.Team.Slug),
 		Description: input.Team.Purpose,
 	}
 	group, err := r.adminService.Groups.Insert(newGroup).Do()

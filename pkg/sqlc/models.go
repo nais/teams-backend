@@ -739,7 +739,6 @@ type Session struct {
 type Team struct {
 	ID      uuid.UUID
 	Slug    slug.Slug
-	Name    string
 	Purpose string
 	Enabled bool
 }

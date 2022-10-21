@@ -170,7 +170,7 @@ func run() error {
 
 			team, err := dbtx.GetTeamBySlug(ctx, convertedTeam.Slug)
 			if err != nil {
-				team, err = dbtx.CreateTeam(ctx, convertedTeam.Slug, convertedTeam.Name, convertedTeam.Purpose)
+				team, err = dbtx.CreateTeam(ctx, convertedTeam.Slug, convertedTeam.Purpose)
 				if err != nil {
 					return err
 				}
@@ -287,7 +287,7 @@ func run() error {
 				return err
 			}
 
-			log.Infof("Created team %q with %d owners and %d members", team.Name, len(teamOwners), len(teamMembers))
+			log.Infof("Created team %q with %d owners and %d members", team.Slug, len(teamOwners), len(teamMembers))
 		}
 
 		return nil

@@ -25,7 +25,6 @@ import (
 func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 	domain := "example.com"
 	org := "org"
-	teamName := "Team Name"
 	teamSlug := "slug"
 	teamPurpose := "purpose"
 
@@ -35,7 +34,6 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		Team: &sqlc.Team{
 			ID:      uuid.New(),
 			Slug:    slug.Slug(teamSlug),
-			Name:    teamName,
 			Purpose: teamPurpose,
 		},
 	}
@@ -298,7 +296,6 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		Team: &sqlc.Team{
 			ID:      uuid.New(),
 			Slug:    teamSlug,
-			Name:    teamName,
 			Purpose: teamPurpose,
 		},
 	}

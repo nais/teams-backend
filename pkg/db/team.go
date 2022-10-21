@@ -63,10 +63,9 @@ func (d *database) RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, tea
 	})
 }
 
-func (d *database) UpdateTeam(ctx context.Context, teamID uuid.UUID, name, purpose *string) (*Team, error) {
+func (d *database) UpdateTeam(ctx context.Context, teamID uuid.UUID, purpose *string) (*Team, error) {
 	team, err := d.querier.UpdateTeam(ctx, sqlc.UpdateTeamParams{
 		ID:      teamID,
-		Name:    nullString(name),
 		Purpose: nullString(purpose),
 	})
 	if err != nil {
@@ -76,9 +75,8 @@ func (d *database) UpdateTeam(ctx context.Context, teamID uuid.UUID, name, purpo
 	return &Team{Team: team}, nil
 }
 
-func (d *database) CreateTeam(ctx context.Context, slug slug.Slug, name, purpose string) (*Team, error) {
+func (d *database) CreateTeam(ctx context.Context, slug slug.Slug, purpose string) (*Team, error) {
 	team, err := d.querier.CreateTeam(ctx, sqlc.CreateTeamParams{
-		Name:    name,
 		Slug:    slug,
 		Purpose: purpose,
 	})

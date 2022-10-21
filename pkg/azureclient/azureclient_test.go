@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/nais/console/pkg/azureclient"
-	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -213,7 +212,7 @@ func Test_GetOrCreateGroupWithEmptyState(t *testing.T) {
 	)
 
 	client := azureclient.New(httpClient)
-	group, created, err := client.GetOrCreateGroup(context.Background(), reconcilers.AzureState{}, "slug", "name", helpers.Strp("description"))
+	group, created, err := client.GetOrCreateGroup(context.Background(), reconcilers.AzureState{}, "slug", "description")
 
 	assert.NoError(t, err)
 	assert.Equal(t, "group-id", group.ID)
@@ -242,7 +241,7 @@ func Test_GetOrCreateGroupWhenGroupInStateDoesNotExist(t *testing.T) {
 	)
 
 	client := azureclient.New(httpClient)
-	group, created, err := client.GetOrCreateGroup(context.Background(), reconcilers.AzureState{GroupID: &groupId}, "slug", "name", helpers.Strp("description"))
+	group, created, err := client.GetOrCreateGroup(context.Background(), reconcilers.AzureState{GroupID: &groupId}, "slug", "description")
 
 	assert.NoError(t, err)
 	assert.Equal(t, "some-id", group.ID)
@@ -272,7 +271,7 @@ func Test_GetOrCreateGroupWhenGroupInStateExists(t *testing.T) {
 	)
 
 	client := azureclient.New(httpClient)
-	group, created, err := client.GetOrCreateGroup(context.Background(), reconcilers.AzureState{GroupID: &groupId}, "slug", "name", helpers.Strp("description"))
+	group, created, err := client.GetOrCreateGroup(context.Background(), reconcilers.AzureState{GroupID: &groupId}, "slug", "description")
 
 	assert.NoError(t, err)
 	assert.Equal(t, "some-id", group.ID)

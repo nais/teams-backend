@@ -9,7 +9,6 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/reconcilers"
 )
 
@@ -21,7 +20,7 @@ type Client interface {
 	AddMemberToGroup(ctx context.Context, grp *Group, member *Member) error
 	CreateGroup(ctx context.Context, grp *Group) (*Group, error)
 	GetGroupById(ctx context.Context, id uuid.UUID) (*Group, error)
-	GetOrCreateGroup(ctx context.Context, state reconcilers.AzureState, slug, name string, description *string) (*Group, bool, error)
+	GetOrCreateGroup(ctx context.Context, state reconcilers.AzureState, name, description string) (*Group, bool, error)
 	GetUser(ctx context.Context, email string) (*Member, error)
 	ListGroupMembers(ctx context.Context, grp *Group) ([]*Member, error)
 	ListGroupOwners(ctx context.Context, grp *Group) ([]*Member, error)
@@ -136,7 +135,7 @@ func (s *client) CreateGroup(ctx context.Context, grp *Group) (*Group, error) {
 
 // GetOrCreateGroup Get or create a group fom the Graph API. The second return value informs if the group was
 // created or not.
-func (s *client) GetOrCreateGroup(ctx context.Context, state reconcilers.AzureState, mailNickname, name string, description *string) (*Group, bool, error) {
+func (s *client) GetOrCreateGroup(ctx context.Context, state reconcilers.AzureState, name, description string) (*Group, bool, error) {
 	if state.GroupID != nil {
 		grp, err := s.GetGroupById(ctx, *state.GroupID)
 		if err == nil {
@@ -145,11 +144,11 @@ func (s *client) GetOrCreateGroup(ctx context.Context, state reconcilers.AzureSt
 	}
 
 	createdGroup, err := s.CreateGroup(ctx, &Group{
-		Description:     console.StringWithFallback(description, ""),
+		Description:     description,
 		DisplayName:     name,
 		GroupTypes:      nil,
 		MailEnabled:     false,
-		MailNickname:    mailNickname,
+		MailNickname:    name,
 		SecurityEnabled: true,
 	})
 	if err != nil {
@@ -158,7 +157,6 @@ func (s *client) GetOrCreateGroup(ctx context.Context, state reconcilers.AzureSt
 	return createdGroup, true, nil
 }
 
-// https://docs.microsoft.com/en-us/graph/api/group-list-owners?view=graph-rest-1.0&tabs=http
 func (s *client) ListGroupOwners(ctx context.Context, grp *Group) ([]*Member, error) {
 	u := fmt.Sprintf("https://graph.microsoft.com/v1.0/groups/%s/owners", grp.ID)
 
@@ -189,7 +187,6 @@ func (s *client) ListGroupOwners(ctx context.Context, grp *Group) ([]*Member, er
 	return owners.Value, nil
 }
 
-// https://docs.microsoft.com/en-us/graph/api/group-list-members?view=graph-rest-1.0&tabs=http
 func (s *client) ListGroupMembers(ctx context.Context, grp *Group) ([]*Member, error) {
 	u := fmt.Sprintf("https://graph.microsoft.com/v1.0/groups/%s/members", grp.ID)
 

@@ -38,7 +38,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 
 	var team *db.Team
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
-		team, err = dbtx.CreateTeam(ctx, *input.Slug, input.Name, input.Purpose)
+		team, err = dbtx.CreateTeam(ctx, *input.Slug, input.Purpose)
 		if err != nil {
 			return err
 		}
@@ -92,7 +92,7 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, in
 		return nil, fmt.Errorf("unable to create log correlation ID: %w", err)
 	}
 
-	team, err := r.database.UpdateTeam(ctx, *teamID, input.Name, input.Purpose)
+	team, err := r.database.UpdateTeam(ctx, *teamID, input.Purpose)
 	if err != nil {
 		return nil, fmt.Errorf("unable to update team: %w", err)
 	}

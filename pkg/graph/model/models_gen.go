@@ -32,10 +32,8 @@ type AddTeamOwnersInput struct {
 
 // Input for creating a new team.
 type CreateTeamInput struct {
-	// Team slug. This value immutable.
+	// Team slug. After creation, this value can not be changed.
 	Slug *slug.Slug `json:"slug"`
-	// Team name.
-	Name string `json:"name"`
 	// Team purpose.
 	Purpose string `json:"purpose"`
 }
@@ -102,8 +100,6 @@ type TeamSync struct {
 
 // Input for updating an existing team.
 type UpdateTeamInput struct {
-	// Specify team name to update the existing value.
-	Name *string `json:"name"`
 	// Specify team purpose to update the existing value.
 	Purpose *string `json:"purpose"`
 }

@@ -26,7 +26,7 @@ func (e Error) Error() string {
 	return e.err.Error()
 }
 
-// Format an error message for API users.
+// Errorf Format an error message for API users.
 // This message will probably be read by a human being, format it accordingly and don't leak information!
 func Errorf(format string, args ...any) Error {
 	return Error{
@@ -34,7 +34,7 @@ func Errorf(format string, args ...any) Error {
 	}
 }
 
-// Make sure that errors that are not formatted for API users will not leak through.
+// GetErrorPresenter Make sure that errors that are not formatted for API users will not leak through.
 // All unspecified errors are logged.
 func GetErrorPresenter() graphql.ErrorPresenterFunc {
 	return func(ctx context.Context, e error) *gqlerror.Error {
@@ -48,7 +48,7 @@ func GetErrorPresenter() graphql.ErrorPresenterFunc {
 			err.Message = ErrDatabase.Error()
 			// Log error?
 			log.Errorf("database error %s: %s (%s)", originalError.Code, originalError.Message, originalError.Detail)
-			//err.Message = pgErr.Detail
+			// err.Message = pgErr.Detail
 			return err
 		default:
 			log.Errorf("unhandled error: %s", originalError.Error())

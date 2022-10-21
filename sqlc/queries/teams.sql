@@ -1,6 +1,6 @@
 -- name: CreateTeam :one
-INSERT INTO teams (name, slug, purpose)
-VALUES ($1, $2, $3)
+INSERT INTO teams (slug, purpose)
+VALUES ($1, $2)
 RETURNING *;
 
 -- name: GetTeams :many
@@ -35,7 +35,7 @@ ON CONFLICT (team_id, key) DO
 
 -- name: UpdateTeam :one
 UPDATE teams
-SET name = COALESCE(sqlc.narg(name), name), purpose = COALESCE(sqlc.narg(purpose), purpose)
+SET purpose = COALESCE(sqlc.narg(purpose), purpose)
 WHERE id = sqlc.arg(id)
 RETURNING *;
 

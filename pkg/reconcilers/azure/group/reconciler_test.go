@@ -22,7 +22,6 @@ import (
 
 func TestAzureReconciler_Reconcile(t *testing.T) {
 	domain := "example.com"
-	teamName := "myteam"
 	teamSlug := slug.Slug("slug")
 	teamPurpose := "My purpose"
 
@@ -58,7 +57,6 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		Team: &sqlc.Team{
 			ID:      uuid.New(),
 			Slug:    teamSlug,
-			Name:    teamName,
 			Purpose: teamPurpose,
 		},
 	}
@@ -91,9 +89,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Once()
 
 		mockClient.
-			On("GetOrCreateGroup", mock.Anything, mock.Anything, "nais-team-slug", teamName, mock.MatchedBy(func(purpose *string) bool {
-				return *purpose == teamPurpose
-			})).
+			On("GetOrCreateGroup", mock.Anything, mock.Anything, "nais-team-slug", teamPurpose).
 			Return(group, true, nil).
 			Once()
 		mockClient.
@@ -154,9 +150,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Once()
 
 		mockClient.
-			On("GetOrCreateGroup", mock.Anything, mock.Anything, "nais-team-slug", teamName, mock.MatchedBy(func(purpose *string) bool {
-				return *purpose == teamPurpose
-			})).
+			On("GetOrCreateGroup", mock.Anything, mock.Anything, "nais-team-slug", teamPurpose).
 			Return(nil, false, fmt.Errorf("GetOrCreateGroup failed")).
 			Once()
 
@@ -176,9 +170,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Once()
 
 		mockClient.
-			On("GetOrCreateGroup", mock.Anything, mock.Anything, "nais-team-slug", teamName, mock.MatchedBy(func(purpose *string) bool {
-				return *purpose == teamPurpose
-			})).
+			On("GetOrCreateGroup", mock.Anything, mock.Anything, "nais-team-slug", teamPurpose).
 			Return(group, false, nil).
 			Once()
 		mockClient.
@@ -201,7 +193,6 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Team: &sqlc.Team{
 				ID:      uuid.New(),
 				Slug:    teamSlug,
-				Name:    teamName,
 				Purpose: teamPurpose,
 			},
 		}
@@ -212,9 +203,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Once()
 
 		mockClient.
-			On("GetOrCreateGroup", mock.Anything, mock.Anything, "nais-team-slug", teamName, mock.MatchedBy(func(purpose *string) bool {
-				return *purpose == teamPurpose
-			})).
+			On("GetOrCreateGroup", mock.Anything, mock.Anything, "nais-team-slug", teamPurpose).
 			Return(group, false, nil).
 			Once()
 
@@ -255,7 +244,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Once()
 
 		mockClient.
-			On("GetOrCreateGroup", mock.Anything, mock.Anything, "nais-team-slug", teamName, mock.Anything).
+			On("GetOrCreateGroup", mock.Anything, mock.Anything, "nais-team-slug", mock.Anything).
 			Return(group, false, nil).
 			Once()
 		mockClient.
@@ -301,7 +290,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Once()
 
 		mockClient.
-			On("GetOrCreateGroup", mock.Anything, mock.Anything, "nais-team-slug", teamName, mock.Anything).
+			On("GetOrCreateGroup", mock.Anything, mock.Anything, "nais-team-slug", mock.Anything).
 			Return(group, false, nil).
 			Once()
 		mockClient.

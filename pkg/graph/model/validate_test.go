@@ -15,7 +15,6 @@ func ptr[T any](value T) *T {
 func TestCreateTeamInput_Validate_Slug(t *testing.T) {
 	tpl := model.CreateTeamInput{
 		Slug:    nil,
-		Name:    "valid name",
 		Purpose: "valid purpose",
 	}
 

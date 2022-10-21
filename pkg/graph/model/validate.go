@@ -14,13 +14,8 @@ func ptr[T any](value T) *T {
 }
 
 func (input CreateTeamInput) Validate() error {
-	if input.Slug == nil || !teamSlugRegex.MatchString(input.Slug.String()) || len(*input.Slug) < 3 || len(*input.Slug) > 30 {
+	if input.Slug == nil || !teamSlugRegex.MatchString(string(*input.Slug)) || len(*input.Slug) < 3 || len(*input.Slug) > 30 {
 		return apierror.ErrTeamSlug
-	}
-
-	if input.Name == "" {
-		// FIXME: remove this field altogether
-		return apierror.Errorf("You must specify a team name when creating a team.")
 	}
 
 	if input.Purpose == "" {
@@ -31,11 +26,6 @@ func (input CreateTeamInput) Validate() error {
 }
 
 func (input UpdateTeamInput) Validate() error {
-	if input.Name != nil && *input.Name == "" {
-		// FIXME: remove this field altogether
-		return apierror.Errorf("You must specify a team name.")
-	}
-
 	if input.Purpose != nil && *input.Purpose == "" {
 		return apierror.ErrTeamPurpose
 	}

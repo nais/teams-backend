@@ -45,7 +45,6 @@ func (t *Team) Convert() (*db.Team, []db.TeamMetadata) {
 	return &db.Team{
 		Team: &sqlc.Team{
 			Slug:    slug.Slug(t.Name),
-			Name:    t.Name,
 			Purpose: t.Description,
 		},
 	}, metadata

@@ -76,13 +76,13 @@ func (_m *MockClient) GetGroupById(ctx context.Context, id uuid.UUID) (*Group, e
 	return r0, r1
 }
 
-// GetOrCreateGroup provides a mock function with given fields: ctx, state, slug, name, description
-func (_m *MockClient) GetOrCreateGroup(ctx context.Context, state reconcilers.AzureState, slug string, name string, description *string) (*Group, bool, error) {
-	ret := _m.Called(ctx, state, slug, name, description)
+// GetOrCreateGroup provides a mock function with given fields: ctx, state, name, description
+func (_m *MockClient) GetOrCreateGroup(ctx context.Context, state reconcilers.AzureState, name string, description string) (*Group, bool, error) {
+	ret := _m.Called(ctx, state, name, description)
 
 	var r0 *Group
-	if rf, ok := ret.Get(0).(func(context.Context, reconcilers.AzureState, string, string, *string) *Group); ok {
-		r0 = rf(ctx, state, slug, name, description)
+	if rf, ok := ret.Get(0).(func(context.Context, reconcilers.AzureState, string, string) *Group); ok {
+		r0 = rf(ctx, state, name, description)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*Group)
@@ -90,15 +90,15 @@ func (_m *MockClient) GetOrCreateGroup(ctx context.Context, state reconcilers.Az
 	}
 
 	var r1 bool
-	if rf, ok := ret.Get(1).(func(context.Context, reconcilers.AzureState, string, string, *string) bool); ok {
-		r1 = rf(ctx, state, slug, name, description)
+	if rf, ok := ret.Get(1).(func(context.Context, reconcilers.AzureState, string, string) bool); ok {
+		r1 = rf(ctx, state, name, description)
 	} else {
 		r1 = ret.Get(1).(bool)
 	}
 
 	var r2 error
-	if rf, ok := ret.Get(2).(func(context.Context, reconcilers.AzureState, string, string, *string) error); ok {
-		r2 = rf(ctx, state, slug, name, description)
+	if rf, ok := ret.Get(2).(func(context.Context, reconcilers.AzureState, string, string) error); ok {
+		r2 = rf(ctx, state, name, description)
 	} else {
 		r2 = ret.Error(2)
 	}

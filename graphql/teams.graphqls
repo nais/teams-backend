@@ -25,7 +25,7 @@ extend type Mutation {
     """
     Update an existing team
 
-    This mutation can be used to update the team name and team purpose. It is not possible to update the team slug.
+    This mutation can be used to update the team purpose. It is not possible to update the team slug.
 
     The updated team will be returned on success.
     """
@@ -138,9 +138,6 @@ type Team {
     "Unique slug of the team."
     slug: Slug!
 
-    "Display name of the team."
-    name: String!
-
     "Purpose of the team."
     purpose: String!
 
@@ -204,18 +201,12 @@ input CreateTeamInput {
     "Team slug. After creation, this value can not be changed."
     slug: Slug!
 
-    "Team name."
-    name: String!
-
     "Team purpose."
     purpose: String!
 }
 
 "Input for updating an existing team."
 input UpdateTeamInput {
-    "Specify team name to update the existing value."
-    name: String
-
     "Specify team purpose to update the existing value."
     purpose: String
 }

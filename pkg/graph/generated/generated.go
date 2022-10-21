@@ -143,7 +143,6 @@ type ComplexityRoot struct {
 		ID         func(childComplexity int) int
 		Members    func(childComplexity int) int
 		Metadata   func(childComplexity int) int
-		Name       func(childComplexity int) int
 		Purpose    func(childComplexity int) int
 		Slug       func(childComplexity int) int
 		SyncErrors func(childComplexity int) int
@@ -761,13 +760,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Team.Metadata(childComplexity), true
 
-	case "Team.name":
-		if e.complexity.Team.Name == nil {
-			break
-		}
-
-		return e.complexity.Team.Name(childComplexity), true
-
 	case "Team.purpose":
 		if e.complexity.Team.Purpose == nil {
 			break
@@ -1225,7 +1217,7 @@ extend type Mutation {
     """
     Update an existing team
 
-    This mutation can be used to update the team name and team purpose. It is not possible to update the team slug.
+    This mutation can be used to update the team purpose. It is not possible to update the team slug.
 
     The updated team will be returned on success.
     """
@@ -1338,9 +1330,6 @@ type Team {
     "Unique slug of the team."
     slug: Slug!
 
-    "Display name of the team."
-    name: String!
-
     "Purpose of the team."
     purpose: String!
 
@@ -1401,11 +1390,8 @@ type TeamMember {
 
 "Input for creating a new team."
 input CreateTeamInput {
-    "Team slug. This value immutable."
+    "Team slug. After creation, this value can not be changed."
     slug: Slug!
-
-    "Team name."
-    name: String!
 
     "Team purpose."
     purpose: String!
@@ -1413,9 +1399,6 @@ input CreateTeamInput {
 
 "Input for updating an existing team."
 input UpdateTeamInput {
-    "Specify team name to update the existing value."
-    name: String
-
     "Specify team purpose to update the existing value."
     purpose: String
 }
@@ -2869,8 +2852,6 @@ func (ec *executionContext) fieldContext_Mutation_createTeam(ctx context.Context
 				return ec.fieldContext_Team_id(ctx, field)
 			case "slug":
 				return ec.fieldContext_Team_slug(ctx, field)
-			case "name":
-				return ec.fieldContext_Team_name(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
 			case "metadata":
@@ -2964,8 +2945,6 @@ func (ec *executionContext) fieldContext_Mutation_updateTeam(ctx context.Context
 				return ec.fieldContext_Team_id(ctx, field)
 			case "slug":
 				return ec.fieldContext_Team_slug(ctx, field)
-			case "name":
-				return ec.fieldContext_Team_name(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
 			case "metadata":
@@ -3059,8 +3038,6 @@ func (ec *executionContext) fieldContext_Mutation_removeUsersFromTeam(ctx contex
 				return ec.fieldContext_Team_id(ctx, field)
 			case "slug":
 				return ec.fieldContext_Team_slug(ctx, field)
-			case "name":
-				return ec.fieldContext_Team_name(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
 			case "metadata":
@@ -3235,8 +3212,6 @@ func (ec *executionContext) fieldContext_Mutation_addTeamMembers(ctx context.Con
 				return ec.fieldContext_Team_id(ctx, field)
 			case "slug":
 				return ec.fieldContext_Team_slug(ctx, field)
-			case "name":
-				return ec.fieldContext_Team_name(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
 			case "metadata":
@@ -3330,8 +3305,6 @@ func (ec *executionContext) fieldContext_Mutation_addTeamOwners(ctx context.Cont
 				return ec.fieldContext_Team_id(ctx, field)
 			case "slug":
 				return ec.fieldContext_Team_slug(ctx, field)
-			case "name":
-				return ec.fieldContext_Team_name(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
 			case "metadata":
@@ -3425,8 +3398,6 @@ func (ec *executionContext) fieldContext_Mutation_setTeamMemberRole(ctx context.
 				return ec.fieldContext_Team_id(ctx, field)
 			case "slug":
 				return ec.fieldContext_Team_slug(ctx, field)
-			case "name":
-				return ec.fieldContext_Team_name(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
 			case "metadata":
@@ -3520,8 +3491,6 @@ func (ec *executionContext) fieldContext_Mutation_disableTeam(ctx context.Contex
 				return ec.fieldContext_Team_id(ctx, field)
 			case "slug":
 				return ec.fieldContext_Team_slug(ctx, field)
-			case "name":
-				return ec.fieldContext_Team_name(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
 			case "metadata":
@@ -3615,8 +3584,6 @@ func (ec *executionContext) fieldContext_Mutation_enableTeam(ctx context.Context
 				return ec.fieldContext_Team_id(ctx, field)
 			case "slug":
 				return ec.fieldContext_Team_slug(ctx, field)
-			case "name":
-				return ec.fieldContext_Team_name(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
 			case "metadata":
@@ -3900,8 +3867,6 @@ func (ec *executionContext) fieldContext_Query_teams(ctx context.Context, field 
 				return ec.fieldContext_Team_id(ctx, field)
 			case "slug":
 				return ec.fieldContext_Team_slug(ctx, field)
-			case "name":
-				return ec.fieldContext_Team_name(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
 			case "metadata":
@@ -3984,8 +3949,6 @@ func (ec *executionContext) fieldContext_Query_team(ctx context.Context, field g
 				return ec.fieldContext_Team_id(ctx, field)
 			case "slug":
 				return ec.fieldContext_Team_slug(ctx, field)
-			case "name":
-				return ec.fieldContext_Team_name(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
 			case "metadata":
@@ -5531,50 +5494,6 @@ func (ec *executionContext) fieldContext_Team_slug(ctx context.Context, field gr
 	return fc, nil
 }
 
-func (ec *executionContext) _Team_name(ctx context.Context, field graphql.CollectedField, obj *db.Team) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Team_name(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Name, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Team_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Team",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Team_purpose(ctx context.Context, field graphql.CollectedField, obj *db.Team) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Team_purpose(ctx, field)
 	if err != nil {
@@ -6022,8 +5941,6 @@ func (ec *executionContext) fieldContext_TeamMembership_team(ctx context.Context
 				return ec.fieldContext_Team_id(ctx, field)
 			case "slug":
 				return ec.fieldContext_Team_slug(ctx, field)
-			case "name":
-				return ec.fieldContext_Team_name(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
 			case "metadata":
@@ -6215,8 +6132,6 @@ func (ec *executionContext) fieldContext_TeamSync_team(ctx context.Context, fiel
 				return ec.fieldContext_Team_id(ctx, field)
 			case "slug":
 				return ec.fieldContext_Team_slug(ctx, field)
-			case "name":
-				return ec.fieldContext_Team_name(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
 			case "metadata":
@@ -8366,7 +8281,7 @@ func (ec *executionContext) unmarshalInputCreateTeamInput(ctx context.Context, o
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"slug", "name", "purpose"}
+	fieldsInOrder := [...]string{"slug", "purpose"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -8378,14 +8293,6 @@ func (ec *executionContext) unmarshalInputCreateTeamInput(ctx context.Context, o
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
 			it.Slug, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-			it.Name, err = ec.unmarshalNString2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -8526,21 +8433,13 @@ func (ec *executionContext) unmarshalInputUpdateTeamInput(ctx context.Context, o
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "purpose"}
+	fieldsInOrder := [...]string{"purpose"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "name":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-			it.Name, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
 		case "purpose":
 			var err error
 
@@ -9442,13 +9341,6 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 		case "slug":
 
 			out.Values[i] = ec._Team_slug(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
-			}
-		case "name":
-
-			out.Values[i] = ec._Team_name(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
