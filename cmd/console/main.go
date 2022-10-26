@@ -383,18 +383,10 @@ func setupGraphAPI(database db.Database, domain string, teamReconciler chan<- re
 	return handler
 }
 
-func corsConfig() cors.Options {
-	// TODO: Specify a stricter CORS policy
+func corsConfig(frontendUrl string) cors.Options {
 	return cors.Options{
-		AllowedOrigins: []string{"http://localhost:*", "https://*"},
-		AllowedMethods: []string{
-			http.MethodHead,
-			http.MethodGet,
-			http.MethodPost,
-			http.MethodPut,
-			http.MethodPatch,
-			http.MethodDelete,
-		},
+		AllowedOrigins:   []string{frontendUrl},
+		AllowedMethods:   []string{"*"},
 		AllowedHeaders:   []string{"*"},
 		AllowCredentials: true,
 	}
@@ -409,7 +401,7 @@ func setupHTTPServer(cfg *config.Config, database db.Database, graphApi *graphql
 	r.Get("/", playground.Handler("GraphQL playground", "/query"))
 
 	middlewares := []func(http.Handler) http.Handler{
-		cors.New(corsConfig()).Handler,
+		cors.New(corsConfig(cfg.FrontendURL)).Handler,
 		middleware.ApiKeyAuthentication(database),
 		middleware.Oauth2Authentication(database),
 	}
