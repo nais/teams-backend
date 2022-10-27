@@ -75,9 +75,11 @@ func TestOauth2Authentication(t *testing.T) {
 		sessionID := uuid.New()
 		userID := uuid.New()
 		user := &db.User{
-			ID:    userID,
-			Email: "user@example.com",
-			Name:  "User Name",
+			User: &sqlc.User{
+				ID:    userID,
+				Email: "user@example.com",
+				Name:  "User Name",
+			},
 		}
 		roles := []*db.Role{
 			{UserRole: &sqlc.UserRole{RoleName: sqlc.RoleNameAdmin}},

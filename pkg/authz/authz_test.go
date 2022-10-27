@@ -11,16 +11,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const authTeamCreateError = `required role: "teams:create"`
-const authTeamUpdateError = `required role: "teams:update"`
+const (
+	authTeamCreateError = `required role: "teams:create"`
+	authTeamUpdateError = `required role: "teams:update"`
+)
 
 func TestContextWithUser(t *testing.T) {
 	ctx := context.Background()
 	assert.Nil(t, authz.ActorFromContext(ctx))
 
 	user := &db.User{
-		Name:  "User Name",
-		Email: "mail@example.com",
+		User: &sqlc.User{
+			Name:  "User Name",
+			Email: "mail@example.com",
+		},
 	}
 
 	roles := make([]*db.Role, 0)
@@ -32,8 +36,10 @@ func TestContextWithUser(t *testing.T) {
 
 func TestRequireGlobalAuthorization(t *testing.T) {
 	user := &db.User{
-		Name:  "User Name",
-		Email: "mail@example.com",
+		User: &sqlc.User{
+			Name:  "User Name",
+			Email: "mail@example.com",
+		},
 	}
 
 	t.Run("Nil user", func(t *testing.T) {
@@ -78,8 +84,10 @@ func TestRequireGlobalAuthorization(t *testing.T) {
 
 func TestRequireAuthorizationForTarget(t *testing.T) {
 	user := &db.User{
-		Name:  "User Name",
-		Email: "mail@example.com",
+		User: &sqlc.User{
+			Name:  "User Name",
+			Email: "mail@example.com",
+		},
 	}
 	targetID := uuid.New()
 

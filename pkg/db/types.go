@@ -54,8 +54,7 @@ type Role struct {
 }
 
 type ServiceAccount struct {
-	ID   uuid.UUID
-	Name string
+	*sqlc.ServiceAccount
 }
 
 type Session struct {
@@ -72,10 +71,7 @@ type Team struct {
 }
 
 type User struct {
-	ID         uuid.UUID
-	Email      string
-	ExternalID string
-	Name       string
+	*sqlc.User
 }
 
 type Querier interface {

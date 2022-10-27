@@ -18,7 +18,7 @@ type Querier interface {
 	ConfigureReconciler(ctx context.Context, arg ConfigureReconcilerParams) error
 	CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) error
 	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) error
-	CreateServiceAccount(ctx context.Context, name string) (*User, error)
+	CreateServiceAccount(ctx context.Context, name string) (*ServiceAccount, error)
 	CreateSession(ctx context.Context, arg CreateSessionParams) (*Session, error)
 	CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (*User, error)
@@ -38,9 +38,9 @@ type Querier interface {
 	GetReconcilerStateForTeam(ctx context.Context, arg GetReconcilerStateForTeamParams) (*ReconcilerState, error)
 	GetReconcilers(ctx context.Context) ([]*Reconciler, error)
 	GetRoleAuthorizations(ctx context.Context, roleName RoleName) ([]AuthzName, error)
-	GetServiceAccountByApiKey(ctx context.Context, apiKey string) (*User, error)
-	GetServiceAccountByName(ctx context.Context, name string) (*User, error)
-	GetServiceAccounts(ctx context.Context) ([]*User, error)
+	GetServiceAccountByApiKey(ctx context.Context, apiKey string) (*ServiceAccount, error)
+	GetServiceAccountByName(ctx context.Context, name string) (*ServiceAccount, error)
+	GetServiceAccounts(ctx context.Context) ([]*ServiceAccount, error)
 	GetSessionByID(ctx context.Context, id uuid.UUID) (*Session, error)
 	GetTeamByID(ctx context.Context, id uuid.UUID) (*Team, error)
 	GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)
@@ -55,7 +55,7 @@ type Querier interface {
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error)
 	GetUsers(ctx context.Context) ([]*User, error)
 	RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) error
-	RemoveApiKeysFromServiceAccount(ctx context.Context, userID uuid.UUID) error
+	RemoveApiKeysFromServiceAccount(ctx context.Context, serviceAccountID uuid.UUID) error
 	RemoveGlobalUserRole(ctx context.Context, arg RemoveGlobalUserRoleParams) error
 	ResetReconcilerConfig(ctx context.Context, reconciler ReconcilerName) error
 	RevokeGlobalRoleFromUser(ctx context.Context, arg RevokeGlobalRoleFromUserParams) error

@@ -48,8 +48,10 @@ func TestApiKeyAuthentication(t *testing.T) {
 
 	t.Run("Valid API key", func(t *testing.T) {
 		serviceAccount := &db.ServiceAccount{
-			ID:   uuid.New(),
-			Name: "User Name",
+			ServiceAccount: &sqlc.ServiceAccount{
+				ID:   uuid.New(),
+				Name: "User Name",
+			},
 		}
 		roles := []*db.Role{
 			{UserRole: &sqlc.UserRole{RoleName: sqlc.RoleNameAdmin}},

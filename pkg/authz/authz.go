@@ -17,9 +17,7 @@ type Actor struct {
 	Roles []*db.Role
 }
 
-var (
-	ErrNotAuthenticated = errors.New("not authenticated")
-)
+var ErrNotAuthenticated = errors.New("not authenticated")
 
 func (u *Actor) Authenticated() bool {
 	if u == nil || u.User == nil {

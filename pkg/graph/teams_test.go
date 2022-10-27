@@ -19,9 +19,11 @@ import (
 
 func TestMutationResolver_CreateTeam(t *testing.T) {
 	user := db.User{
-		ID:    uuid.New(),
-		Email: "user@example.com",
-		Name:  "User Name",
+		User: &sqlc.User{
+			ID:    uuid.New(),
+			Email: "user@example.com",
+			Name:  "User Name",
+		},
 	}
 	ctx := authz.ContextWithActor(context.Background(), user, []*db.Role{
 		{

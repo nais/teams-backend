@@ -176,7 +176,9 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 
 func serviceAccountWithName(name string) *db.ServiceAccount {
 	return &db.ServiceAccount{
-		ID:   uuid.New(),
-		Name: name,
+		ServiceAccount: &sqlc.ServiceAccount{
+			ID:   uuid.New(),
+			Name: name,
+		},
 	}
 }

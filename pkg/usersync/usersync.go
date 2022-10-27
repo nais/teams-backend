@@ -64,7 +64,7 @@ type auditLogEntry struct {
 }
 
 func getAllPaginatedUsers(ctx context.Context, svc *admin_directory_v1.UsersService, domain string) ([]*admin_directory_v1.User, error) {
-	var users = make([]*admin_directory_v1.User, 0)
+	users := make([]*admin_directory_v1.User, 0)
 
 	callback := func(fragments *admin_directory_v1.Users) error {
 		log.Debugf("Got %d users, might be more...", len(fragments.Users))

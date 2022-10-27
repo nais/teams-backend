@@ -141,7 +141,7 @@ func (d *database) GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*Use
 
 	members := make([]*User, 0)
 	for _, row := range rows {
-		members = append(members, userFromSqlcUser(row))
+		members = append(members, &User{User: row})
 	}
 
 	return members, nil
