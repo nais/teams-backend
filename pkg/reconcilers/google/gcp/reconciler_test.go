@@ -54,7 +54,7 @@ func TestReconcile(t *testing.T) {
 		reconciler := google_gcp_reconciler.New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount)
 
 		err := reconciler.Reconcile(ctx, input)
-		assert.ErrorContains(t, err, "unable to load system state")
+		assert.ErrorContains(t, err, "load system state")
 	})
 
 	t.Run("fail early when unable to load google workspace state", func(t *testing.T) {
@@ -73,7 +73,7 @@ func TestReconcile(t *testing.T) {
 		reconciler := google_gcp_reconciler.New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount)
 
 		err := reconciler.Reconcile(ctx, input)
-		assert.ErrorContains(t, err, "unable to load system state")
+		assert.ErrorContains(t, err, "load system state")
 	})
 
 	t.Run("fail early when google workspace state is missing group email", func(t *testing.T) {
@@ -149,8 +149,8 @@ func TestGetClusterInfoFromJson(t *testing.T) {
 
 	t.Run("JSON with clusters", func(t *testing.T) {
 		jsonData := `{
-			"env1": {"team_folder_id": 123, "cluster_project_id": "some-id-123"},
-			"env2": {"team_folder_id": 456, "cluster_project_id": "some-id-456"}
+			"env1": {"team_folder_id": 123, "project_id": "some-id-123"},
+			"env2": {"team_folder_id": 456, "project_id": "some-id-456"}
 		}`
 		info, err := google_gcp_reconciler.GetClusterInfoFromJson(jsonData)
 		assert.NoError(t, err)
