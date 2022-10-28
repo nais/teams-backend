@@ -735,6 +735,13 @@ type ServiceAccount struct {
 	Name string
 }
 
+type ServiceAccountRole struct {
+	ID               int32
+	RoleName         RoleName
+	ServiceAccountID uuid.UUID
+	TargetID         uuid.NullUUID
+}
+
 type Session struct {
 	ID      uuid.UUID
 	UserID  uuid.UUID

@@ -18,6 +18,20 @@ type MockDatabase struct {
 	mock.Mock
 }
 
+// AssignGlobalRoleToServiceAccount provides a mock function with given fields: ctx, serviceAccountID, roleName
+func (_m *MockDatabase) AssignGlobalRoleToServiceAccount(ctx context.Context, serviceAccountID uuid.UUID, roleName sqlc.RoleName) error {
+	ret := _m.Called(ctx, serviceAccountID, roleName)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, sqlc.RoleName) error); ok {
+		r0 = rf(ctx, serviceAccountID, roleName)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // AssignGlobalRoleToUser provides a mock function with given fields: ctx, userID, roleName
 func (_m *MockDatabase) AssignGlobalRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error {
 	ret := _m.Called(ctx, userID, roleName)
@@ -896,6 +910,20 @@ func (_m *MockDatabase) LoadReconcilerStateForTeam(ctx context.Context, reconcil
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName, uuid.UUID, interface{}) error); ok {
 		r0 = rf(ctx, reconcilerName, teamID, state)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// RemoveAllServiceAccountRoles provides a mock function with given fields: ctx, serviceAccountID
+func (_m *MockDatabase) RemoveAllServiceAccountRoles(ctx context.Context, serviceAccountID uuid.UUID) error {
+	ret := _m.Called(ctx, serviceAccountID)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
+		r0 = rf(ctx, serviceAccountID)
 	} else {
 		r0 = ret.Error(0)
 	}

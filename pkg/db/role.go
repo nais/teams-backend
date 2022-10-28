@@ -14,6 +14,13 @@ func (d *database) AssignGlobalRoleToUser(ctx context.Context, userID uuid.UUID,
 	})
 }
 
+func (d *database) AssignGlobalRoleToServiceAccount(ctx context.Context, serviceAccountID uuid.UUID, roleName sqlc.RoleName) error {
+	return d.querier.AssignGlobalRoleToServiceAccount(ctx, sqlc.AssignGlobalRoleToServiceAccountParams{
+		ServiceAccountID: serviceAccountID,
+		RoleName:         roleName,
+	})
+}
+
 func (d *database) RevokeGlobalRoleFromUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error {
 	return d.querier.RevokeGlobalRoleFromUser(ctx, sqlc.RevokeGlobalRoleFromUserParams{
 		UserID:   userID,

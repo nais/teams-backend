@@ -11,6 +11,21 @@ import (
 	"github.com/google/uuid"
 )
 
+const assignGlobalRoleToServiceAccount = `-- name: AssignGlobalRoleToServiceAccount :exec
+INSERT INTO service_account_roles (service_account_id, role_name)
+VALUES ($1, $2) ON CONFLICT DO NOTHING
+`
+
+type AssignGlobalRoleToServiceAccountParams struct {
+	ServiceAccountID uuid.UUID
+	RoleName         RoleName
+}
+
+func (q *Queries) AssignGlobalRoleToServiceAccount(ctx context.Context, arg AssignGlobalRoleToServiceAccountParams) error {
+	_, err := q.db.Exec(ctx, assignGlobalRoleToServiceAccount, arg.ServiceAccountID, arg.RoleName)
+	return err
+}
+
 const assignGlobalRoleToUser = `-- name: AssignGlobalRoleToUser :exec
 INSERT INTO user_roles (user_id, role_name)
 VALUES ($1, $2) ON CONFLICT DO NOTHING
@@ -96,6 +111,16 @@ func (q *Queries) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*UserRo
 		return nil, err
 	}
 	return items, nil
+}
+
+const removeAllServiceAccountRoles = `-- name: RemoveAllServiceAccountRoles :exec
+DELETE FROM service_account_roles
+WHERE service_account_id = $1
+`
+
+func (q *Queries) RemoveAllServiceAccountRoles(ctx context.Context, serviceAccountID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, removeAllServiceAccountRoles, serviceAccountID)
+	return err
 }
 
 const removeAllUserRoles = `-- name: RemoveAllUserRoles :exec

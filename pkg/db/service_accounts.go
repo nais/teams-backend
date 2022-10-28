@@ -50,3 +50,7 @@ func (d *database) GetServiceAccounts(ctx context.Context) ([]*ServiceAccount, e
 func (d *database) DeleteServiceAccount(ctx context.Context, serviceAccountID uuid.UUID) error {
 	return d.querier.DeleteServiceAccount(ctx, serviceAccountID)
 }
+
+func (d *database) RemoveAllServiceAccountRoles(ctx context.Context, serviceAccountID uuid.UUID) error {
+	return d.querier.RemoveAllServiceAccountRoles(ctx, serviceAccountID)
+}

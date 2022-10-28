@@ -37,7 +37,7 @@ func CreateAdminServiceAccount(ctx context.Context, database db.Database, adminA
 			return err
 		}
 
-		err = dbtx.AssignGlobalRoleToUser(ctx, admin.ID, sqlc.RoleNameAdmin)
+		err = dbtx.AssignGlobalRoleToServiceAccount(ctx, admin.ID, sqlc.RoleNameAdmin)
 		if err != nil {
 			return err
 		}
