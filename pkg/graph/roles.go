@@ -83,14 +83,6 @@ func (r *roleResolver) Name(ctx context.Context, obj *db.Role) (sqlc.RoleName, e
 	return obj.RoleName, nil
 }
 
-// TargetID is the resolver for the targetId field.
-func (r *roleResolver) TargetID(ctx context.Context, obj *db.Role) (*uuid.UUID, error) {
-	if obj.TargetID.Valid {
-		return &obj.TargetID.UUID, nil
-	}
-	return nil, nil
-}
-
 // Role returns generated.RoleResolver implementation.
 func (r *Resolver) Role() generated.RoleResolver { return &roleResolver{r} }
 

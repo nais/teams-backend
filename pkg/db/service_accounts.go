@@ -54,3 +54,21 @@ func (d *database) DeleteServiceAccount(ctx context.Context, serviceAccountID uu
 func (d *database) RemoveAllServiceAccountRoles(ctx context.Context, serviceAccountID uuid.UUID) error {
 	return d.querier.RemoveAllServiceAccountRoles(ctx, serviceAccountID)
 }
+
+func (d *database) GetServiceAccountRoles(ctx context.Context, serviceAccountID uuid.UUID) ([]*Role, error) {
+	serviceAccountRoles, err := d.querier.GetServiceAccountRoles(ctx, serviceAccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	roles := make([]*Role, 0, len(serviceAccountRoles))
+	for _, serviceAccountRole := range serviceAccountRoles {
+		role, err := d.roleFromRoleBinding(ctx, serviceAccountRole.RoleName, serviceAccountRole.TargetID)
+		if err != nil {
+			return nil, err
+		}
+		roles = append(roles, role)
+	}
+
+	return roles, nil
+}

@@ -82,7 +82,7 @@ func TestOauth2Authentication(t *testing.T) {
 			},
 		}
 		roles := []*db.Role{
-			{UserRole: &sqlc.UserRole{RoleName: sqlc.RoleNameAdmin}},
+			{RoleName: sqlc.RoleNameAdmin},
 		}
 		session := &db.Session{Session: &sqlc.Session{
 			ID:      sessionID,

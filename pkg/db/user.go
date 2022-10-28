@@ -51,28 +51,6 @@ func (d *database) GetUserByExternalID(ctx context.Context, externalID string) (
 	return &User{User: user}, nil
 }
 
-func (d *database) getUserRoles(ctx context.Context, userID uuid.UUID) ([]*Role, error) {
-	ur, err := d.querier.GetUserRoles(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-
-	userRoles := make([]*Role, 0)
-	for _, userRole := range ur {
-		authorizations, err := d.querier.GetRoleAuthorizations(ctx, userRole.RoleName)
-		if err != nil {
-			return nil, err
-		}
-
-		userRoles = append(userRoles, &Role{
-			UserRole:       userRole,
-			Authorizations: authorizations,
-		})
-	}
-
-	return userRoles, nil
-}
-
 func (d *database) RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) error {
 	return d.querier.RemoveAllUserRoles(ctx, userID)
 }
@@ -110,5 +88,19 @@ func (d *database) getUsers(users []*sqlc.User) ([]*User, error) {
 }
 
 func (d *database) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*Role, error) {
-	return d.getUserRoles(ctx, userID)
+	userRoles, err := d.querier.GetUserRoles(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	roles := make([]*Role, 0, len(userRoles))
+	for _, userRole := range userRoles {
+		role, err := d.roleFromRoleBinding(ctx, userRole.RoleName, userRole.TargetID)
+		if err != nil {
+			return nil, err
+		}
+		roles = append(roles, role)
+	}
+
+	return roles, nil
 }

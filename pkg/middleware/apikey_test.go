@@ -50,11 +50,11 @@ func TestApiKeyAuthentication(t *testing.T) {
 		serviceAccount := &db.ServiceAccount{
 			ServiceAccount: &sqlc.ServiceAccount{
 				ID:   uuid.New(),
-				Name: "User Name",
+				Name: "service-account",
 			},
 		}
 		roles := []*db.Role{
-			{UserRole: &sqlc.UserRole{RoleName: sqlc.RoleNameAdmin}},
+			{RoleName: sqlc.RoleNameAdmin},
 		}
 
 		database := db.NewMockDatabase(t)
@@ -63,7 +63,7 @@ func TestApiKeyAuthentication(t *testing.T) {
 			Return(serviceAccount, nil).
 			Once()
 		database.
-			On("GetUserRoles", mock.Anything, serviceAccount.ID).
+			On("GetServiceAccountRoles", mock.Anything, serviceAccount.ID).
 			Return(roles, nil).
 			Once()
 

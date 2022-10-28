@@ -27,7 +27,7 @@ func ApiKeyAuthentication(database db.Database) func(next http.Handler) http.Han
 				return
 			}
 
-			roles, err := database.GetUserRoles(ctx, serviceAccount.ID)
+			roles, err := database.GetServiceAccountRoles(ctx, serviceAccount.ID)
 			if err != nil {
 				next.ServeHTTP(w, r)
 				return

@@ -41,6 +41,7 @@ type Querier interface {
 	GetRoleAuthorizations(ctx context.Context, roleName RoleName) ([]AuthzName, error)
 	GetServiceAccountByApiKey(ctx context.Context, apiKey string) (*ServiceAccount, error)
 	GetServiceAccountByName(ctx context.Context, name string) (*ServiceAccount, error)
+	GetServiceAccountRoles(ctx context.Context, serviceAccountID uuid.UUID) ([]*ServiceAccountRole, error)
 	GetServiceAccounts(ctx context.Context) ([]*ServiceAccount, error)
 	GetSessionByID(ctx context.Context, id uuid.UUID) (*Session, error)
 	GetTeamByID(ctx context.Context, id uuid.UUID) (*Team, error)

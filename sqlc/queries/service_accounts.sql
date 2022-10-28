@@ -19,3 +19,7 @@ WHERE api_keys.api_key = $1;
 -- name: DeleteServiceAccount :exec
 DELETE FROM service_accounts
 WHERE id = $1;
+
+-- name: GetServiceAccountRoles :many
+SELECT * FROM service_account_roles
+WHERE service_account_id = $1;

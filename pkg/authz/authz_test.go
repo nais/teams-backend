@@ -54,11 +54,7 @@ func TestRequireGlobalAuthorization(t *testing.T) {
 	t.Run("User with insufficient roles", func(t *testing.T) {
 		roles := []*db.Role{
 			{
-				UserRole: &sqlc.UserRole{
-					RoleName: sqlc.RoleNameTeamviewer,
-					UserID:   user.ID,
-					TargetID: uuid.NullUUID{},
-				},
+				RoleName:       sqlc.RoleNameTeamviewer,
 				Authorizations: []sqlc.AuthzName{},
 			},
 		}
@@ -69,11 +65,7 @@ func TestRequireGlobalAuthorization(t *testing.T) {
 	t.Run("User with sufficient role", func(t *testing.T) {
 		roles := []*db.Role{
 			{
-				UserRole: &sqlc.UserRole{
-					RoleName: sqlc.RoleNameTeamcreator,
-					UserID:   user.ID,
-					TargetID: uuid.NullUUID{},
-				},
+				RoleName:       sqlc.RoleNameTeamcreator,
 				Authorizations: []sqlc.AuthzName{sqlc.AuthzNameTeamsCreate},
 			},
 		}
@@ -103,11 +95,6 @@ func TestRequireAuthorizationForTarget(t *testing.T) {
 	t.Run("User with insufficient roles", func(t *testing.T) {
 		roles := []*db.Role{
 			{
-				UserRole: &sqlc.UserRole{
-					RoleName: sqlc.RoleNameTeamviewer,
-					UserID:   user.ID,
-					TargetID: uuid.NullUUID{},
-				},
 				Authorizations: []sqlc.AuthzName{},
 			},
 		}
@@ -118,11 +105,7 @@ func TestRequireAuthorizationForTarget(t *testing.T) {
 	t.Run("User with targeted role", func(t *testing.T) {
 		roles := []*db.Role{
 			{
-				UserRole: &sqlc.UserRole{
-					RoleName: sqlc.RoleNameTeamowner,
-					UserID:   user.ID,
-					TargetID: uuid.NullUUID{},
-				},
+				TargetID:       &targetID,
 				Authorizations: []sqlc.AuthzName{sqlc.AuthzNameTeamsUpdate},
 			},
 		}
@@ -134,14 +117,7 @@ func TestRequireAuthorizationForTarget(t *testing.T) {
 		wrongID := uuid.New()
 		roles := []*db.Role{
 			{
-				UserRole: &sqlc.UserRole{
-					RoleName: sqlc.RoleNameTeamowner,
-					UserID:   user.ID,
-					TargetID: uuid.NullUUID{
-						UUID:  wrongID,
-						Valid: true,
-					},
-				},
+				TargetID:       &wrongID,
 				Authorizations: []sqlc.AuthzName{sqlc.AuthzNameTeamsUpdate},
 			},
 		}
@@ -152,10 +128,6 @@ func TestRequireAuthorizationForTarget(t *testing.T) {
 	t.Run("User with global role", func(t *testing.T) {
 		roles := []*db.Role{
 			{
-				UserRole: &sqlc.UserRole{
-					RoleName: sqlc.RoleNameTeamowner,
-					UserID:   user.ID,
-				},
 				Authorizations: []sqlc.AuthzName{sqlc.AuthzNameTeamsUpdate},
 			},
 		}

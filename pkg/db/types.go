@@ -49,8 +49,9 @@ type ReconcilerError struct {
 }
 
 type Role struct {
-	*sqlc.UserRole
 	Authorizations []sqlc.AuthzName
+	RoleName       sqlc.RoleName
+	TargetID       *uuid.UUID
 }
 
 type ServiceAccount struct {
@@ -121,6 +122,7 @@ type Database interface {
 	RemoveAllServiceAccountRoles(ctx context.Context, serviceAccountID uuid.UUID) error
 	RemoveApiKeysFromServiceAccount(ctx context.Context, serviceAccountID uuid.UUID) error
 	GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*Role, error)
+	GetServiceAccountRoles(ctx context.Context, serviceAccountID uuid.UUID) ([]*Role, error)
 	Transaction(ctx context.Context, fn DatabaseTransactionFunc) error
 	LoadReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, teamID uuid.UUID, state interface{}) error
 	SetReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, teamID uuid.UUID, state interface{}) error

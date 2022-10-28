@@ -59,6 +59,36 @@ func (q *Queries) GetServiceAccountByName(ctx context.Context, name string) (*Se
 	return &i, err
 }
 
+const getServiceAccountRoles = `-- name: GetServiceAccountRoles :many
+SELECT id, role_name, service_account_id, target_id FROM service_account_roles
+WHERE service_account_id = $1
+`
+
+func (q *Queries) GetServiceAccountRoles(ctx context.Context, serviceAccountID uuid.UUID) ([]*ServiceAccountRole, error) {
+	rows, err := q.db.Query(ctx, getServiceAccountRoles, serviceAccountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*ServiceAccountRole
+	for rows.Next() {
+		var i ServiceAccountRole
+		if err := rows.Scan(
+			&i.ID,
+			&i.RoleName,
+			&i.ServiceAccountID,
+			&i.TargetID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getServiceAccounts = `-- name: GetServiceAccounts :many
 SELECT id, name FROM service_accounts
 ORDER BY name ASC

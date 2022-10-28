@@ -27,10 +27,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 	}
 	ctx := authz.ContextWithActor(context.Background(), user, []*db.Role{
 		{
-			UserRole: &sqlc.UserRole{
-				RoleName: sqlc.RoleNameAdmin,
-				TargetID: uuid.NullUUID{},
-			},
+			RoleName: sqlc.RoleNameAdmin,
 			Authorizations: []sqlc.AuthzName{
 				sqlc.AuthzNameTeamsCreate,
 			},
