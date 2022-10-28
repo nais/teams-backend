@@ -13,7 +13,7 @@ import (
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (name, email, external_id)
-VALUES ($1, LOWER($2::TEXT), $3::TEXT)
+VALUES ($1, LOWER($2), $3)
 RETURNING id, email, name, external_id
 `
 
@@ -47,7 +47,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id uuid.UUID) error {
 
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, email, name, external_id FROM users
-WHERE email = LOWER($1::TEXT)
+WHERE email = LOWER($1)
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (*User, error) {
@@ -64,7 +64,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (*User, erro
 
 const getUserByExternalID = `-- name: GetUserByExternalID :one
 SELECT id, email, name, external_id FROM users
-WHERE external_id = $1::TEXT
+WHERE external_id = $1
 `
 
 func (q *Queries) GetUserByExternalID(ctx context.Context, externalID string) (*User, error) {
@@ -161,24 +161,24 @@ func (q *Queries) GetUsers(ctx context.Context) ([]*User, error) {
 
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
-SET name = $1, email = LOWER($3::TEXT), external_id = $4::TEXT
-WHERE id = $2
+SET name = $1, email = LOWER($4), external_id = $2
+WHERE id = $3
 RETURNING id, email, name, external_id
 `
 
 type UpdateUserParams struct {
 	Name       string
+	ExternalID string
 	ID         uuid.UUID
 	Email      string
-	ExternalID string
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (*User, error) {
 	row := q.db.QueryRow(ctx, updateUser,
 		arg.Name,
+		arg.ExternalID,
 		arg.ID,
 		arg.Email,
-		arg.ExternalID,
 	)
 	var i User
 	err := row.Scan(

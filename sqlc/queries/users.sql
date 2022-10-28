@@ -1,6 +1,6 @@
 -- name: CreateUser :one
 INSERT INTO users (name, email, external_id)
-VALUES ($1, LOWER(sqlc.arg(email)::TEXT), sqlc.arg(external_id)::TEXT)
+VALUES ($1, LOWER(sqlc.arg(email)), sqlc.arg(external_id))
 RETURNING *;
 
 -- name: GetUsers :many
@@ -13,11 +13,11 @@ WHERE id = $1;
 
 -- name: GetUserByExternalID :one
 SELECT * FROM users
-WHERE external_id = sqlc.arg(external_id)::TEXT;
+WHERE external_id = $1;
 
 -- name: GetUserByEmail :one
 SELECT * FROM users
-WHERE email = LOWER(sqlc.arg(email)::TEXT);
+WHERE email = LOWER(sqlc.arg(email));
 
 -- name: GetUserTeams :many
 SELECT teams.* FROM user_roles
@@ -28,8 +28,8 @@ ORDER BY teams.slug ASC;
 
 -- name: UpdateUser :one
 UPDATE users
-SET name = $1, email = LOWER(sqlc.arg(email)::TEXT), external_id = sqlc.arg(external_id)::TEXT
-WHERE id = $2
+SET name = $1, email = LOWER(sqlc.arg(email)), external_id = $2
+WHERE id = $3
 RETURNING *;
 
 -- name: DeleteUser :exec
