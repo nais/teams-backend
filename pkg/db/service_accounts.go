@@ -3,6 +3,8 @@ package db
 import (
 	"context"
 
+	"github.com/nais/console/pkg/sqlc"
+
 	"github.com/google/uuid"
 )
 
@@ -71,4 +73,15 @@ func (d *database) GetServiceAccountRoles(ctx context.Context, serviceAccountID 
 	}
 
 	return roles, nil
+}
+
+func (d *database) CreateAPIKey(ctx context.Context, apiKey string, serviceAccountID uuid.UUID) error {
+	return d.querier.CreateAPIKey(ctx, sqlc.CreateAPIKeyParams{
+		ApiKey:           apiKey,
+		ServiceAccountID: serviceAccountID,
+	})
+}
+
+func (d *database) RemoveApiKeysFromServiceAccount(ctx context.Context, serviceAccountID uuid.UUID) error {
+	return d.querier.RemoveApiKeysFromServiceAccount(ctx, serviceAccountID)
 }
