@@ -36,4 +36,22 @@ ALTER TABLE reconciler_states
     DROP COLUMN team_id,
     ADD PRIMARY KEY(reconciler, team_slug);
 
+/* reconciler_errors */
+
+ALTER TABLE reconciler_errors
+    ADD COLUMN team_slug TEXT;
+
+UPDATE reconciler_errors
+SET team_slug = (
+    SELECT slug
+    FROM teams
+    WHERE teams.id = reconciler_errors.team_id
+);
+
+ALTER TABLE reconciler_errors
+    ALTER COLUMN team_slug SET NOT NULL,
+    ADD CONSTRAINT reconciler_errors_team_slug_fkey FOREIGN KEY(team_slug) REFERENCES teams(slug) ON DELETE CASCADE,
+    DROP COLUMN team_id,
+    ADD CONSTRAINT reconciler_errors_team_id_reconciler_key UNIQUE(team_slug, reconciler);
+
 COMMIT;

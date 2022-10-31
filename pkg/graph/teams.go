@@ -548,7 +548,7 @@ func (r *teamResolver) SyncErrors(ctx context.Context, obj *db.Team) ([]*model.S
 		return nil, err
 	}
 
-	rows, err := r.database.GetTeamReconcilerErrors(ctx, obj.ID)
+	rows, err := r.database.GetTeamReconcilerErrors(ctx, obj.Slug)
 	if err != nil {
 		return nil, err
 	}

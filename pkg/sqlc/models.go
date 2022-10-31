@@ -713,10 +713,10 @@ type ReconcilerConfig struct {
 type ReconcilerError struct {
 	ID            int64
 	CorrelationID uuid.UUID
-	TeamID        uuid.UUID
 	Reconciler    ReconcilerName
 	CreatedAt     time.Time
 	ErrorMessage  string
+	TeamSlug      slug.Slug
 }
 
 type ReconcilerState struct {
