@@ -102,8 +102,8 @@ type Database interface {
 	GetUsers(ctx context.Context) ([]*User, error)
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error)
 	CreateTeam(ctx context.Context, slug slug.Slug, purpose string) (*Team, error)
-	SetTeamMetadata(ctx context.Context, teamID uuid.UUID, metadata []TeamMetadata) error
-	GetTeamMetadata(ctx context.Context, teamID uuid.UUID) ([]*TeamMetadata, error)
+	SetTeamMetadata(ctx context.Context, slug slug.Slug, metadata []TeamMetadata) error
+	GetTeamMetadata(ctx context.Context, slug slug.Slug) ([]*TeamMetadata, error)
 	UpdateTeam(ctx context.Context, teamID uuid.UUID, purpose *string) (*Team, error)
 	GetTeamByID(ctx context.Context, ID uuid.UUID) (*Team, error)
 	GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)

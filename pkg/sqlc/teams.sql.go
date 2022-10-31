@@ -142,13 +142,13 @@ func (q *Queries) GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User
 }
 
 const getTeamMetadata = `-- name: GetTeamMetadata :many
-SELECT team_id, key, value FROM team_metadata
-WHERE team_id = $1
+SELECT key, value, team_slug FROM team_metadata
+WHERE team_slug = $1
 ORDER BY key ASC
 `
 
-func (q *Queries) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) ([]*TeamMetadatum, error) {
-	rows, err := q.db.Query(ctx, getTeamMetadata, teamID)
+func (q *Queries) GetTeamMetadata(ctx context.Context, teamSlug slug.Slug) ([]*TeamMetadatum, error) {
+	rows, err := q.db.Query(ctx, getTeamMetadata, teamSlug)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +156,7 @@ func (q *Queries) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) ([]*Tea
 	var items []*TeamMetadatum
 	for rows.Next() {
 		var i TeamMetadatum
-		if err := rows.Scan(&i.TeamID, &i.Key, &i.Value); err != nil {
+		if err := rows.Scan(&i.Key, &i.Value, &i.TeamSlug); err != nil {
 			return nil, err
 		}
 		items = append(items, &i)
@@ -198,20 +198,20 @@ func (q *Queries) GetTeams(ctx context.Context) ([]*Team, error) {
 }
 
 const setTeamMetadata = `-- name: SetTeamMetadata :exec
-INSERT INTO team_metadata (team_id, key, value)
+INSERT INTO team_metadata (team_slug, key, value)
 VALUES ($1, $2, $3)
-ON CONFLICT (team_id, key) DO
+ON CONFLICT (team_slug, key) DO
     UPDATE SET value = $3
 `
 
 type SetTeamMetadataParams struct {
-	TeamID uuid.UUID
-	Key    string
-	Value  sql.NullString
+	TeamSlug slug.Slug
+	Key      string
+	Value    sql.NullString
 }
 
 func (q *Queries) SetTeamMetadata(ctx context.Context, arg SetTeamMetadataParams) error {
-	_, err := q.db.Exec(ctx, setTeamMetadata, arg.TeamID, arg.Key, arg.Value)
+	_, err := q.db.Exec(ctx, setTeamMetadata, arg.TeamSlug, arg.Key, arg.Value)
 	return err
 }
 

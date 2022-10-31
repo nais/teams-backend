@@ -24,13 +24,13 @@ ORDER BY users.name ASC;
 
 -- name: GetTeamMetadata :many
 SELECT * FROM team_metadata
-WHERE team_id = $1
+WHERE team_slug = $1
 ORDER BY key ASC;
 
 -- name: SetTeamMetadata :exec
-INSERT INTO team_metadata (team_id, key, value)
+INSERT INTO team_metadata (team_slug, key, value)
 VALUES ($1, $2, $3)
-ON CONFLICT (team_id, key) DO
+ON CONFLICT (team_slug, key) DO
     UPDATE SET value = $3;
 
 -- name: UpdateTeam :one

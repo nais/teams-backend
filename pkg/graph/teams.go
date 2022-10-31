@@ -488,7 +488,7 @@ func (r *teamResolver) Metadata(ctx context.Context, obj *db.Team) ([]*db.TeamMe
 		return nil, err
 	}
 
-	metadata, err := r.database.GetTeamMetadata(ctx, obj.ID)
+	metadata, err := r.database.GetTeamMetadata(ctx, obj.Slug)
 	if err != nil {
 		return nil, err
 	}

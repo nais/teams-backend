@@ -175,7 +175,7 @@ func run() error {
 					return err
 				}
 
-				err = dbtx.SetTeamMetadata(ctx, team.ID, metadata)
+				err = dbtx.SetTeamMetadata(ctx, team.Slug, metadata)
 				if err != nil {
 					return err
 				}

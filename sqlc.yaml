@@ -16,3 +16,5 @@ sql:
         overrides:
           - column: teams.slug
             go_type: github.com/nais/console/pkg/slug.Slug
+          - column: team_metadata.team_slug
+            go_type: github.com/nais/console/pkg/slug.Slug

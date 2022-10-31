@@ -8,8 +8,8 @@ import (
 	"github.com/nais/console/pkg/sqlc"
 )
 
-func (d *database) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) ([]*TeamMetadata, error) {
-	rows, err := d.querier.GetTeamMetadata(ctx, teamID)
+func (d *database) GetTeamMetadata(ctx context.Context, slug slug.Slug) ([]*TeamMetadata, error) {
+	rows, err := d.querier.GetTeamMetadata(ctx, slug)
 	if err != nil {
 		return nil, err
 	}
@@ -29,13 +29,13 @@ func (d *database) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) ([]*Te
 	return metadata, nil
 }
 
-func (d *database) SetTeamMetadata(ctx context.Context, teamID uuid.UUID, metadata []TeamMetadata) error {
+func (d *database) SetTeamMetadata(ctx context.Context, slug slug.Slug, metadata []TeamMetadata) error {
 	return d.querier.Transaction(ctx, func(ctx context.Context, querier Querier) error {
 		for _, entry := range metadata {
 			err := querier.SetTeamMetadata(ctx, sqlc.SetTeamMetadataParams{
-				TeamID: teamID,
-				Key:    entry.Key,
-				Value:  nullString(entry.Value),
+				TeamSlug: slug,
+				Key:      entry.Key,
+				Value:    nullString(entry.Value),
 			})
 			if err != nil {
 				return err

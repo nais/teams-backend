@@ -756,9 +756,9 @@ type Team struct {
 }
 
 type TeamMetadatum struct {
-	TeamID uuid.UUID
-	Key    string
-	Value  sql.NullString
+	Key      string
+	Value    sql.NullString
+	TeamSlug slug.Slug
 }
 
 type User struct {
