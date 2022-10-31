@@ -9,7 +9,7 @@ import (
 )
 
 type Cluster struct {
-	TeamFolderID int64  `json:"team_folder_id"`
+	TeamFolderID int64  `json:"teams_folder_id"`
 	ProjectID    string `json:"project_id"`
 }
 
