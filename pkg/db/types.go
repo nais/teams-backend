@@ -49,13 +49,13 @@ type ReconcilerError struct {
 }
 
 type Role struct {
-	*sqlc.UserRole
 	Authorizations []sqlc.AuthzName
+	RoleName       sqlc.RoleName
+	TargetID       *uuid.UUID
 }
 
 type ServiceAccount struct {
-	ID   uuid.UUID
-	Name string
+	*sqlc.ServiceAccount
 }
 
 type Session struct {
@@ -72,10 +72,7 @@ type Team struct {
 }
 
 type User struct {
-	ID         uuid.UUID
-	Email      string
-	ExternalID string
-	Name       string
+	*sqlc.User
 }
 
 type Querier interface {
@@ -116,13 +113,16 @@ type Database interface {
 	SetTeamMemberRole(ctx context.Context, userID uuid.UUID, teamID uuid.UUID, role sqlc.RoleName) error
 	GetAuditLogsForTeam(ctx context.Context, slug slug.Slug) ([]*AuditLog, error)
 	AssignGlobalRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error
+	AssignGlobalRoleToServiceAccount(ctx context.Context, serviceAccountID uuid.UUID, roleName sqlc.RoleName) error
 	RevokeGlobalRoleFromUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error
 	AssignTargetedRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName, targetID uuid.UUID) error
 	RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, teamID uuid.UUID) error
 	CreateAPIKey(ctx context.Context, apiKey string, serviceAccountID uuid.UUID) error
 	RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) error
+	RemoveAllServiceAccountRoles(ctx context.Context, serviceAccountID uuid.UUID) error
 	RemoveApiKeysFromServiceAccount(ctx context.Context, serviceAccountID uuid.UUID) error
 	GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*Role, error)
+	GetServiceAccountRoles(ctx context.Context, serviceAccountID uuid.UUID) ([]*Role, error)
 	Transaction(ctx context.Context, fn DatabaseTransactionFunc) error
 	LoadReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, teamID uuid.UUID, state interface{}) error
 	SetReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, teamID uuid.UUID, state interface{}) error

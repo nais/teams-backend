@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/db"
@@ -29,19 +28,20 @@ func TestQueryResolver_Users(t *testing.T) {
 
 	t.Run("user with authorization", func(t *testing.T) {
 		user := &db.User{
-			Email: "user@example.com",
-			Name:  "User Name",
+			User: &sqlc.User{
+				Email: "user@example.com",
+				Name:  "User Name",
+			},
 		}
 		ctx := authz.ContextWithActor(ctx, user, []*db.Role{
 			{
-				UserRole:       &sqlc.UserRole{TargetID: uuid.NullUUID{}},
 				Authorizations: []sqlc.AuthzName{sqlc.AuthzNameUsersList},
 			},
 		})
 
 		database.On("GetUsers", ctx).Return([]*db.User{
-			{Email: "user1@example.com"},
-			{Email: "user2@example.com"},
+			{User: &sqlc.User{Email: "user1@example.com"}},
+			{User: &sqlc.User{Email: "user2@example.com"}},
 		}, nil)
 
 		users, err := resolver.Users(ctx)

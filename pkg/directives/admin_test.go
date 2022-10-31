@@ -30,7 +30,7 @@ func TestAdmin(t *testing.T) {
 			panic("Should not be executed")
 		}
 		user := &db.User{}
-		ctx := authz.ContextWithActor(context.Background(), user, []*db.Role{{UserRole: &sqlc.UserRole{RoleName: sqlc.RoleNameTeamcreator}}})
+		ctx := authz.ContextWithActor(context.Background(), user, []*db.Role{{RoleName: sqlc.RoleNameTeamcreator}})
 		_, err := directives.Admin()(ctx, obj, nextHandler)
 		assert.EqualError(t, err, "this endpoint requires a user with the admin role")
 	})
@@ -40,7 +40,7 @@ func TestAdmin(t *testing.T) {
 			return "executed", nil
 		}
 		user := &db.User{}
-		ctx := authz.ContextWithActor(context.Background(), user, []*db.Role{{UserRole: &sqlc.UserRole{RoleName: sqlc.RoleNameAdmin}}})
+		ctx := authz.ContextWithActor(context.Background(), user, []*db.Role{{RoleName: sqlc.RoleNameAdmin}})
 		result, err := directives.Admin()(ctx, obj, nextHandler)
 		assert.NoError(t, err)
 		assert.Equal(t, "executed", result)

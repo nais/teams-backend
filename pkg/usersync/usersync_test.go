@@ -57,15 +57,15 @@ func TestSync(t *testing.T) {
 
 		numDefaultRoleNames := len(usersync.DefaultRoleNames)
 
-		localUserWithIncorrectName := &db.User{ID: serialUuid(1), Email: "user1@example.com", ExternalID: "123", Name: "Incorrect Name"}
-		localUserWithCorrectName := &db.User{ID: serialUuid(1), Email: "user1@example.com", ExternalID: "123", Name: "Correct Name"}
+		localUserWithIncorrectName := &db.User{User: &sqlc.User{ID: serialUuid(1), Email: "user1@example.com", ExternalID: "123", Name: "Incorrect Name"}}
+		localUserWithCorrectName := &db.User{User: &sqlc.User{ID: serialUuid(1), Email: "user1@example.com", ExternalID: "123", Name: "Correct Name"}}
 
-		localUserWithIncorrectEmail := &db.User{ID: serialUuid(2), Email: "user-123@example.com", Name: "Some Name"}
-		localUserWithCorrectEmail := &db.User{ID: serialUuid(2), Email: "user3@example.com", Name: "Some Name"}
+		localUserWithIncorrectEmail := &db.User{User: &sqlc.User{ID: serialUuid(2), Email: "user-123@example.com", Name: "Some Name"}}
+		localUserWithCorrectEmail := &db.User{User: &sqlc.User{ID: serialUuid(2), Email: "user3@example.com", Name: "Some Name"}}
 
-		localUserThatWillBeDeleted := &db.User{ID: serialUuid(3), Email: "delete-me@example.com", Name: "Delete Me"}
+		localUserThatWillBeDeleted := &db.User{User: &sqlc.User{ID: serialUuid(3), Email: "delete-me@example.com", Name: "Delete Me"}}
 
-		createdLocalUser := &db.User{ID: serialUuid(4), Email: "user2@example.com", ExternalID: "456", Name: "Create Me"}
+		createdLocalUser := &db.User{User: &sqlc.User{ID: serialUuid(4), Email: "user2@example.com", ExternalID: "456", Name: "Create Me"}}
 
 		httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
 			return test.Response("200 OK", `{"users":[`+

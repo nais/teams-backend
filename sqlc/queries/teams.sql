@@ -19,7 +19,7 @@ WHERE slug = $1;
 SELECT users.* FROM user_roles
 JOIN teams ON teams.id = user_roles.target_id
 JOIN users ON users.id = user_roles.user_id
-WHERE user_roles.target_id = sqlc.arg(team_id)::UUID AND users.service_account = false
+WHERE user_roles.target_id = sqlc.arg(team_id)::UUID
 ORDER BY users.name ASC;
 
 -- name: GetTeamMetadata :many

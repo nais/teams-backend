@@ -148,7 +148,7 @@ func (r *githubTeamReconciler) removeTeamIDPSync(ctx context.Context, slug strin
 }
 
 func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconcilers.GitHubState, correlationID uuid.UUID, team db.Team) (*github.Team, error) {
-	var slug = team.Slug.String()
+	slug := team.Slug.String()
 
 	if state.Slug != nil {
 		slug = state.Slug.String()

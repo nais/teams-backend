@@ -11,29 +11,10 @@ import (
 	"github.com/google/uuid"
 )
 
-const createServiceAccount = `-- name: CreateServiceAccount :one
-INSERT INTO users (name, service_account)
-VALUES ($1, true)
-RETURNING id, email, name, service_account, external_id
-`
-
-func (q *Queries) CreateServiceAccount(ctx context.Context, name string) (*User, error) {
-	row := q.db.QueryRow(ctx, createServiceAccount, name)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Email,
-		&i.Name,
-		&i.ServiceAccount,
-		&i.ExternalID,
-	)
-	return &i, err
-}
-
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (name, email, service_account, external_id)
-VALUES ($1, LOWER($2::TEXT), false, $3::TEXT)
-RETURNING id, email, name, service_account, external_id
+INSERT INTO users (name, email, external_id)
+VALUES ($1, LOWER($2), $3)
+RETURNING id, email, name, external_id
 `
 
 type CreateUserParams struct {
@@ -49,25 +30,14 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (*User, 
 		&i.ID,
 		&i.Email,
 		&i.Name,
-		&i.ServiceAccount,
 		&i.ExternalID,
 	)
 	return &i, err
 }
 
-const deleteServiceAccount = `-- name: DeleteServiceAccount :exec
-DELETE FROM users
-WHERE id = $1 AND service_account = true
-`
-
-func (q *Queries) DeleteServiceAccount(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deleteServiceAccount, id)
-	return err
-}
-
 const deleteUser = `-- name: DeleteUser :exec
 DELETE FROM users
-WHERE id = $1 AND service_account = false
+WHERE id = $1
 `
 
 func (q *Queries) DeleteUser(ctx context.Context, id uuid.UUID) error {
@@ -75,78 +45,9 @@ func (q *Queries) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
-const getServiceAccountByApiKey = `-- name: GetServiceAccountByApiKey :one
-SELECT users.id, users.email, users.name, users.service_account, users.external_id FROM api_keys
-JOIN users ON users.id = api_keys.user_id
-WHERE api_keys.api_key = $1 AND users.service_account = true
-`
-
-func (q *Queries) GetServiceAccountByApiKey(ctx context.Context, apiKey string) (*User, error) {
-	row := q.db.QueryRow(ctx, getServiceAccountByApiKey, apiKey)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Email,
-		&i.Name,
-		&i.ServiceAccount,
-		&i.ExternalID,
-	)
-	return &i, err
-}
-
-const getServiceAccountByName = `-- name: GetServiceAccountByName :one
-SELECT id, email, name, service_account, external_id FROM users
-WHERE name = $1 AND service_account = true
-`
-
-func (q *Queries) GetServiceAccountByName(ctx context.Context, name string) (*User, error) {
-	row := q.db.QueryRow(ctx, getServiceAccountByName, name)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Email,
-		&i.Name,
-		&i.ServiceAccount,
-		&i.ExternalID,
-	)
-	return &i, err
-}
-
-const getServiceAccounts = `-- name: GetServiceAccounts :many
-SELECT id, email, name, service_account, external_id FROM users
-WHERE service_account = true
-ORDER BY name ASC
-`
-
-func (q *Queries) GetServiceAccounts(ctx context.Context) ([]*User, error) {
-	rows, err := q.db.Query(ctx, getServiceAccounts)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []*User
-	for rows.Next() {
-		var i User
-		if err := rows.Scan(
-			&i.ID,
-			&i.Email,
-			&i.Name,
-			&i.ServiceAccount,
-			&i.ExternalID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, &i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, name, service_account, external_id FROM users
-WHERE email = LOWER($1::TEXT) AND service_account = false
+SELECT id, email, name, external_id FROM users
+WHERE email = LOWER($1)
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (*User, error) {
@@ -156,15 +57,14 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (*User, erro
 		&i.ID,
 		&i.Email,
 		&i.Name,
-		&i.ServiceAccount,
 		&i.ExternalID,
 	)
 	return &i, err
 }
 
 const getUserByExternalID = `-- name: GetUserByExternalID :one
-SELECT id, email, name, service_account, external_id FROM users
-WHERE external_id = $1::TEXT AND service_account = false
+SELECT id, email, name, external_id FROM users
+WHERE external_id = $1
 `
 
 func (q *Queries) GetUserByExternalID(ctx context.Context, externalID string) (*User, error) {
@@ -174,15 +74,14 @@ func (q *Queries) GetUserByExternalID(ctx context.Context, externalID string) (*
 		&i.ID,
 		&i.Email,
 		&i.Name,
-		&i.ServiceAccount,
 		&i.ExternalID,
 	)
 	return &i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, name, service_account, external_id FROM users
-WHERE id = $1 AND service_account = false
+SELECT id, email, name, external_id FROM users
+WHERE id = $1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
@@ -192,7 +91,6 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) 
 		&i.ID,
 		&i.Email,
 		&i.Name,
-		&i.ServiceAccount,
 		&i.ExternalID,
 	)
 	return &i, err
@@ -202,7 +100,7 @@ const getUserTeams = `-- name: GetUserTeams :many
 SELECT teams.id, teams.slug, teams.purpose, teams.enabled FROM user_roles
 JOIN teams ON teams.id = user_roles.target_id
 JOIN users ON users.id = user_roles.user_id
-WHERE user_roles.user_id = $1 AND users.service_account = false
+WHERE user_roles.user_id = $1
 ORDER BY teams.slug ASC
 `
 
@@ -232,8 +130,7 @@ func (q *Queries) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, 
 }
 
 const getUsers = `-- name: GetUsers :many
-SELECT id, email, name, service_account, external_id FROM users
-WHERE service_account = false
+SELECT id, email, name, external_id FROM users
 ORDER BY name ASC
 `
 
@@ -250,7 +147,6 @@ func (q *Queries) GetUsers(ctx context.Context) ([]*User, error) {
 			&i.ID,
 			&i.Email,
 			&i.Name,
-			&i.ServiceAccount,
 			&i.ExternalID,
 		); err != nil {
 			return nil, err
@@ -265,31 +161,30 @@ func (q *Queries) GetUsers(ctx context.Context) ([]*User, error) {
 
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
-SET name = $1, email = LOWER($3::TEXT), external_id = $4::TEXT
-WHERE id = $2 AND service_account = false
-RETURNING id, email, name, service_account, external_id
+SET name = $1, email = LOWER($4), external_id = $2
+WHERE id = $3
+RETURNING id, email, name, external_id
 `
 
 type UpdateUserParams struct {
 	Name       string
+	ExternalID string
 	ID         uuid.UUID
 	Email      string
-	ExternalID string
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (*User, error) {
 	row := q.db.QueryRow(ctx, updateUser,
 		arg.Name,
+		arg.ExternalID,
 		arg.ID,
 		arg.Email,
-		arg.ExternalID,
 	)
 	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
 		&i.Name,
-		&i.ServiceAccount,
 		&i.ExternalID,
 	)
 	return &i, err

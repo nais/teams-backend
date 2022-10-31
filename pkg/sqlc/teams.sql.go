@@ -109,10 +109,10 @@ func (q *Queries) GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, err
 }
 
 const getTeamMembers = `-- name: GetTeamMembers :many
-SELECT users.id, users.email, users.name, users.service_account, users.external_id FROM user_roles
+SELECT users.id, users.email, users.name, users.external_id FROM user_roles
 JOIN teams ON teams.id = user_roles.target_id
 JOIN users ON users.id = user_roles.user_id
-WHERE user_roles.target_id = $1::UUID AND users.service_account = false
+WHERE user_roles.target_id = $1::UUID
 ORDER BY users.name ASC
 `
 
@@ -129,7 +129,6 @@ func (q *Queries) GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User
 			&i.ID,
 			&i.Email,
 			&i.Name,
-			&i.ServiceAccount,
 			&i.ExternalID,
 		); err != nil {
 			return nil, err

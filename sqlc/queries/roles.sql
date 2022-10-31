@@ -11,6 +11,10 @@ WHERE user_id = $1;
 INSERT INTO user_roles (user_id, role_name)
 VALUES ($1, $2) ON CONFLICT DO NOTHING;
 
+-- name: AssignGlobalRoleToServiceAccount :exec
+INSERT INTO service_account_roles (service_account_id, role_name)
+VALUES ($1, $2) ON CONFLICT DO NOTHING;
+
 -- name: RevokeGlobalRoleFromUser :exec
 DELETE FROM user_roles
 WHERE user_id = $1 AND role_name = $2;
@@ -30,3 +34,7 @@ WHERE user_id = $1 AND target_id IS NULL AND role_name = $2;
 -- name: RemoveAllUserRoles :exec
 DELETE FROM user_roles
 WHERE user_id = $1;
+
+-- name: RemoveAllServiceAccountRoles :exec
+DELETE FROM service_account_roles
+WHERE service_account_id = $1;

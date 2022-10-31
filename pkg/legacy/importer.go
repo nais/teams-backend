@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/nais/console/pkg/sqlc"
+
 	"github.com/nais/console/pkg/azureclient"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
@@ -64,9 +66,11 @@ func dbUsers(members []*azureclient.Member) []*db.User {
 	users := make([]*db.User, 0, len(members))
 	for _, member := range members {
 		users = append(users, &db.User{
-			Email:      strings.ToLower(member.Mail),
-			ExternalID: strings.ToLower(member.Mail), // We don't have the external ID at this point, use the email instead and the user sync will automatically fix it
-			Name:       member.Name(),
+			User: &sqlc.User{
+				Email:      strings.ToLower(member.Mail),
+				Name:       member.Name(),
+				ExternalID: strings.ToLower(member.Mail), // We don't have the external ID at this point, use the email instead and the user sync will automatically fix it
+			},
 		})
 	}
 	return users

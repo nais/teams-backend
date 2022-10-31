@@ -21,7 +21,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 		assert.EqualError(t, err, "EOF")
 	})
 
-	t.Run("user with no roles", func(t *testing.T) {
+	t.Run("service account with no roles", func(t *testing.T) {
 		ctx := context.Background()
 		database := db.NewMockDatabase(t)
 		json := `[
@@ -48,7 +48,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 		assert.EqualError(t, err, `service account is missing an API key: "nais-service-account"`)
 	})
 
-	t.Run("user with invalid name", func(t *testing.T) {
+	t.Run("service account with invalid name", func(t *testing.T) {
 		ctx := context.Background()
 		database := db.NewMockDatabase(t)
 		json := `[
@@ -62,7 +62,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 		assert.EqualError(t, err, `service account is missing required "nais-" prefix: "service-account"`)
 	})
 
-	t.Run("user with invalid role", func(t *testing.T) {
+	t.Run("service account with invalid role", func(t *testing.T) {
 		ctx := context.Background()
 		database := db.NewMockDatabase(t)
 		json := `[
@@ -98,14 +98,14 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 		// First service account
 		dbtx.
 			On("GetServiceAccountByName", txCtx, "nais-service-account-1").
-			Return(nil, errors.New("user not found")).
+			Return(nil, errors.New("service account not found")).
 			Once()
 		dbtx.
 			On("CreateServiceAccount", txCtx, "nais-service-account-1").
 			Return(sa1, nil).
 			Once()
 		dbtx.
-			On("RemoveAllUserRoles", txCtx, sa1.ID).
+			On("RemoveAllServiceAccountRoles", txCtx, sa1.ID).
 			Return(nil).
 			Once()
 		dbtx.
@@ -113,11 +113,11 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 			Return(nil).
 			Once()
 		dbtx.
-			On("AssignGlobalRoleToUser", txCtx, sa1.ID, sqlc.RoleNameTeamcreator).
+			On("AssignGlobalRoleToServiceAccount", txCtx, sa1.ID, sqlc.RoleNameTeamcreator).
 			Return(nil).
 			Once()
 		dbtx.
-			On("AssignGlobalRoleToUser", txCtx, sa1.ID, sqlc.RoleNameTeamviewer).
+			On("AssignGlobalRoleToServiceAccount", txCtx, sa1.ID, sqlc.RoleNameTeamviewer).
 			Return(nil).
 			Once()
 		dbtx.
@@ -131,7 +131,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 			Return(sa2, nil).
 			Once()
 		dbtx.
-			On("RemoveAllUserRoles", txCtx, sa2.ID).
+			On("RemoveAllServiceAccountRoles", txCtx, sa2.ID).
 			Return(nil).
 			Once()
 		dbtx.
@@ -139,7 +139,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 			Return(nil).
 			Once()
 		dbtx.
-			On("AssignGlobalRoleToUser", txCtx, sa2.ID, sqlc.RoleNameAdmin).
+			On("AssignGlobalRoleToServiceAccount", txCtx, sa2.ID, sqlc.RoleNameAdmin).
 			Return(nil).
 			Once()
 		dbtx.
@@ -176,7 +176,9 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 
 func serviceAccountWithName(name string) *db.ServiceAccount {
 	return &db.ServiceAccount{
-		ID:   uuid.New(),
-		Name: name,
+		ServiceAccount: &sqlc.ServiceAccount{
+			ID:   uuid.New(),
+			Name: name,
+		},
 	}
 }

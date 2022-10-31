@@ -218,8 +218,6 @@ type ReconcilerConfigResolver interface {
 }
 type RoleResolver interface {
 	Name(ctx context.Context, obj *db.Role) (sqlc.RoleName, error)
-
-	TargetID(ctx context.Context, obj *db.Role) (*uuid.UUID, error)
 }
 type ServiceAccountResolver interface {
 	Roles(ctx context.Context, obj *db.ServiceAccount) ([]*db.Role, error)
@@ -5107,7 +5105,7 @@ func (ec *executionContext) _Role_targetId(ctx context.Context, field graphql.Co
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Role().TargetID(rctx, obj)
+		return obj.TargetID, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5125,8 +5123,8 @@ func (ec *executionContext) fieldContext_Role_targetId(ctx context.Context, fiel
 	fc = &graphql.FieldContext{
 		Object:     "Role",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type UUID does not have child fields")
 		},
@@ -9197,22 +9195,9 @@ func (ec *executionContext) _Role(ctx context.Context, sel ast.SelectionSet, obj
 				atomic.AddUint32(&invalids, 1)
 			}
 		case "targetId":
-			field := field
 
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Role_targetId(ctx, field, obj)
-				return res
-			}
+			out.Values[i] = ec._Role_targetId(ctx, field, obj)
 
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

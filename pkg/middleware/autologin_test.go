@@ -35,12 +35,14 @@ func TestAutologin(t *testing.T) {
 
 	t.Run("Valid email", func(t *testing.T) {
 		user := &db.User{
-			ID:    uuid.New(),
-			Email: "user@example.com",
-			Name:  "User Name",
+			User: &sqlc.User{
+				ID:    uuid.New(),
+				Email: "user@example.com",
+				Name:  "User Name",
+			},
 		}
 		roles := []*db.Role{
-			{UserRole: &sqlc.UserRole{RoleName: sqlc.RoleNameAdmin}},
+			{RoleName: sqlc.RoleNameAdmin},
 		}
 
 		database := db.NewMockDatabase(t)

@@ -14,6 +14,13 @@ func (d *database) AssignGlobalRoleToUser(ctx context.Context, userID uuid.UUID,
 	})
 }
 
+func (d *database) AssignGlobalRoleToServiceAccount(ctx context.Context, serviceAccountID uuid.UUID, roleName sqlc.RoleName) error {
+	return d.querier.AssignGlobalRoleToServiceAccount(ctx, sqlc.AssignGlobalRoleToServiceAccountParams{
+		ServiceAccountID: serviceAccountID,
+		RoleName:         roleName,
+	})
+}
+
 func (d *database) RevokeGlobalRoleFromUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error {
 	return d.querier.RevokeGlobalRoleFromUser(ctx, sqlc.RevokeGlobalRoleFromUserParams{
 		UserID:   userID,
@@ -31,12 +38,12 @@ func (d *database) AssignTargetedRoleToUser(ctx context.Context, userID uuid.UUI
 
 // IsGlobal Check if the role is globally assigned or not
 func (r Role) IsGlobal() bool {
-	return !r.TargetID.Valid
+	return r.TargetID == nil
 }
 
 // Targets Check if the role targets a specific ID
 func (r Role) Targets(targetID uuid.UUID) bool {
-	return r.TargetID.Valid && r.TargetID.UUID == targetID
+	return r.TargetID != nil && *r.TargetID == targetID
 }
 
 func (d *database) UserIsTeamOwner(ctx context.Context, userID, teamID uuid.UUID) (bool, error) {
@@ -85,4 +92,22 @@ func (d *database) SetTeamMemberRole(ctx context.Context, userID uuid.UUID, team
 
 		return nil
 	})
+}
+
+func (d *database) roleFromRoleBinding(ctx context.Context, roleName sqlc.RoleName, targetID uuid.NullUUID) (*Role, error) {
+	authorizations, err := d.querier.GetRoleAuthorizations(ctx, roleName)
+	if err != nil {
+		return nil, err
+	}
+
+	var id *uuid.UUID
+	if targetID.Valid {
+		id = &targetID.UUID
+	}
+
+	return &Role{
+		Authorizations: authorizations,
+		RoleName:       roleName,
+		TargetID:       id,
+	}, nil
 }

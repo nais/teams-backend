@@ -67,7 +67,7 @@ func SetupStaticServiceAccounts(ctx context.Context, database db.Database, servi
 				}
 			}
 
-			err = dbtx.RemoveAllUserRoles(ctx, serviceAccount.ID)
+			err = dbtx.RemoveAllServiceAccountRoles(ctx, serviceAccount.ID)
 			if err != nil {
 				return err
 			}
@@ -78,7 +78,7 @@ func SetupStaticServiceAccounts(ctx context.Context, database db.Database, servi
 			}
 
 			for _, roleName := range serviceAccountFromInput.Roles {
-				err = dbtx.AssignGlobalRoleToUser(ctx, serviceAccount.ID, sqlc.RoleName(roleName))
+				err = dbtx.AssignGlobalRoleToServiceAccount(ctx, serviceAccount.ID, sqlc.RoleName(roleName))
 				if err != nil {
 					return err
 				}

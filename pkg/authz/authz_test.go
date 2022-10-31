@@ -11,16 +11,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const authTeamCreateError = `required role: "teams:create"`
-const authTeamUpdateError = `required role: "teams:update"`
+const (
+	authTeamCreateError = `required role: "teams:create"`
+	authTeamUpdateError = `required role: "teams:update"`
+)
 
 func TestContextWithUser(t *testing.T) {
 	ctx := context.Background()
 	assert.Nil(t, authz.ActorFromContext(ctx))
 
 	user := &db.User{
-		Name:  "User Name",
-		Email: "mail@example.com",
+		User: &sqlc.User{
+			Name:  "User Name",
+			Email: "mail@example.com",
+		},
 	}
 
 	roles := make([]*db.Role, 0)
@@ -32,8 +36,10 @@ func TestContextWithUser(t *testing.T) {
 
 func TestRequireGlobalAuthorization(t *testing.T) {
 	user := &db.User{
-		Name:  "User Name",
-		Email: "mail@example.com",
+		User: &sqlc.User{
+			Name:  "User Name",
+			Email: "mail@example.com",
+		},
 	}
 
 	t.Run("Nil user", func(t *testing.T) {
@@ -48,11 +54,7 @@ func TestRequireGlobalAuthorization(t *testing.T) {
 	t.Run("User with insufficient roles", func(t *testing.T) {
 		roles := []*db.Role{
 			{
-				UserRole: &sqlc.UserRole{
-					RoleName: sqlc.RoleNameTeamviewer,
-					UserID:   user.ID,
-					TargetID: uuid.NullUUID{},
-				},
+				RoleName:       sqlc.RoleNameTeamviewer,
 				Authorizations: []sqlc.AuthzName{},
 			},
 		}
@@ -63,11 +65,7 @@ func TestRequireGlobalAuthorization(t *testing.T) {
 	t.Run("User with sufficient role", func(t *testing.T) {
 		roles := []*db.Role{
 			{
-				UserRole: &sqlc.UserRole{
-					RoleName: sqlc.RoleNameTeamcreator,
-					UserID:   user.ID,
-					TargetID: uuid.NullUUID{},
-				},
+				RoleName:       sqlc.RoleNameTeamcreator,
 				Authorizations: []sqlc.AuthzName{sqlc.AuthzNameTeamsCreate},
 			},
 		}
@@ -78,8 +76,10 @@ func TestRequireGlobalAuthorization(t *testing.T) {
 
 func TestRequireAuthorizationForTarget(t *testing.T) {
 	user := &db.User{
-		Name:  "User Name",
-		Email: "mail@example.com",
+		User: &sqlc.User{
+			Name:  "User Name",
+			Email: "mail@example.com",
+		},
 	}
 	targetID := uuid.New()
 
@@ -95,11 +95,6 @@ func TestRequireAuthorizationForTarget(t *testing.T) {
 	t.Run("User with insufficient roles", func(t *testing.T) {
 		roles := []*db.Role{
 			{
-				UserRole: &sqlc.UserRole{
-					RoleName: sqlc.RoleNameTeamviewer,
-					UserID:   user.ID,
-					TargetID: uuid.NullUUID{},
-				},
 				Authorizations: []sqlc.AuthzName{},
 			},
 		}
@@ -110,11 +105,7 @@ func TestRequireAuthorizationForTarget(t *testing.T) {
 	t.Run("User with targeted role", func(t *testing.T) {
 		roles := []*db.Role{
 			{
-				UserRole: &sqlc.UserRole{
-					RoleName: sqlc.RoleNameTeamowner,
-					UserID:   user.ID,
-					TargetID: uuid.NullUUID{},
-				},
+				TargetID:       &targetID,
 				Authorizations: []sqlc.AuthzName{sqlc.AuthzNameTeamsUpdate},
 			},
 		}
@@ -126,14 +117,7 @@ func TestRequireAuthorizationForTarget(t *testing.T) {
 		wrongID := uuid.New()
 		roles := []*db.Role{
 			{
-				UserRole: &sqlc.UserRole{
-					RoleName: sqlc.RoleNameTeamowner,
-					UserID:   user.ID,
-					TargetID: uuid.NullUUID{
-						UUID:  wrongID,
-						Valid: true,
-					},
-				},
+				TargetID:       &wrongID,
 				Authorizations: []sqlc.AuthzName{sqlc.AuthzNameTeamsUpdate},
 			},
 		}
@@ -144,10 +128,6 @@ func TestRequireAuthorizationForTarget(t *testing.T) {
 	t.Run("User with global role", func(t *testing.T) {
 		roles := []*db.Role{
 			{
-				UserRole: &sqlc.UserRole{
-					RoleName: sqlc.RoleNameTeamowner,
-					UserID:   user.ID,
-				},
 				Authorizations: []sqlc.AuthzName{sqlc.AuthzNameTeamsUpdate},
 			},
 		}

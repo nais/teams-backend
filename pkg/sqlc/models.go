@@ -677,8 +677,8 @@ func AllSystemNameValues() []SystemName {
 }
 
 type ApiKey struct {
-	ApiKey string
-	UserID uuid.UUID
+	ApiKey           string
+	ServiceAccountID uuid.UUID
 }
 
 type AuditLog struct {
@@ -730,6 +730,18 @@ type RoleAuthz struct {
 	RoleName  RoleName
 }
 
+type ServiceAccount struct {
+	ID   uuid.UUID
+	Name string
+}
+
+type ServiceAccountRole struct {
+	ID               int32
+	RoleName         RoleName
+	ServiceAccountID uuid.UUID
+	TargetID         uuid.NullUUID
+}
+
 type Session struct {
 	ID      uuid.UUID
 	UserID  uuid.UUID
@@ -750,11 +762,10 @@ type TeamMetadatum struct {
 }
 
 type User struct {
-	ID             uuid.UUID
-	Email          sql.NullString
-	Name           string
-	ServiceAccount bool
-	ExternalID     sql.NullString
+	ID         uuid.UUID
+	Email      string
+	Name       string
+	ExternalID string
 }
 
 type UserRole struct {
