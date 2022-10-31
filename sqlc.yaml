@@ -14,6 +14,8 @@ sql:
         emit_all_enum_values: true
         emit_enum_valid_method: true
         overrides:
+          - column: reconciler_states.team_slug
+            go_type: github.com/nais/console/pkg/slug.Slug
           - column: teams.slug
             go_type: github.com/nais/console/pkg/slug.Slug
           - column: team_metadata.team_slug

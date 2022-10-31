@@ -721,8 +721,8 @@ type ReconcilerError struct {
 
 type ReconcilerState struct {
 	Reconciler ReconcilerName
-	TeamID     uuid.UUID
 	State      pgtype.JSONB
+	TeamSlug   slug.Slug
 }
 
 type RoleAuthz struct {

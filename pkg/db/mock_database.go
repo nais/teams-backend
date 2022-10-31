@@ -926,13 +926,13 @@ func (_m *MockDatabase) GetUsers(ctx context.Context) ([]*User, error) {
 	return r0, r1
 }
 
-// LoadReconcilerStateForTeam provides a mock function with given fields: ctx, reconcilerName, teamID, state
-func (_m *MockDatabase) LoadReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, teamID uuid.UUID, state interface{}) error {
-	ret := _m.Called(ctx, reconcilerName, teamID, state)
+// LoadReconcilerStateForTeam provides a mock function with given fields: ctx, reconcilerName, _a2, state
+func (_m *MockDatabase) LoadReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, _a2 slug.Slug, state interface{}) error {
+	ret := _m.Called(ctx, reconcilerName, _a2, state)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName, uuid.UUID, interface{}) error); ok {
-		r0 = rf(ctx, reconcilerName, teamID, state)
+	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName, slug.Slug, interface{}) error); ok {
+		r0 = rf(ctx, reconcilerName, _a2, state)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1047,13 +1047,13 @@ func (_m *MockDatabase) SetReconcilerErrorForTeam(ctx context.Context, correlati
 	return r0
 }
 
-// SetReconcilerStateForTeam provides a mock function with given fields: ctx, reconcilerName, teamID, state
-func (_m *MockDatabase) SetReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, teamID uuid.UUID, state interface{}) error {
-	ret := _m.Called(ctx, reconcilerName, teamID, state)
+// SetReconcilerStateForTeam provides a mock function with given fields: ctx, reconcilerName, _a2, state
+func (_m *MockDatabase) SetReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, _a2 slug.Slug, state interface{}) error {
+	ret := _m.Called(ctx, reconcilerName, _a2, state)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName, uuid.UUID, interface{}) error); ok {
-		r0 = rf(ctx, reconcilerName, teamID, state)
+	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName, slug.Slug, interface{}) error); ok {
+		r0 = rf(ctx, reconcilerName, _a2, state)
 	} else {
 		r0 = ret.Error(0)
 	}

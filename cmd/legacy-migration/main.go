@@ -233,14 +233,14 @@ func run() error {
 				}
 			}
 
-			err = dbtx.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameAzureGroup, team.ID, reconcilers.AzureState{
+			err = dbtx.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameAzureGroup, team.Slug, reconcilers.AzureState{
 				GroupID: &yamlteam.AzureGroupID,
 			})
 			if err != nil {
 				return err
 			}
 
-			err = dbtx.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGithubTeam, team.ID, reconcilers.GitHubState{
+			err = dbtx.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGithubTeam, team.Slug, reconcilers.GitHubState{
 				Slug: &team.Slug,
 			})
 			if err != nil {
@@ -248,7 +248,7 @@ func run() error {
 			}
 
 			googleWorkspaceGroupEmail := string(team.Slug) + "@" + cfg.TenantDomain
-			err = dbtx.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGoogleWorkspaceAdmin, team.ID, reconcilers.GoogleWorkspaceState{
+			err = dbtx.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGoogleWorkspaceAdmin, team.Slug, reconcilers.GoogleWorkspaceState{
 				GroupEmail: &googleWorkspaceGroupEmail,
 			})
 			if err != nil {
@@ -264,7 +264,7 @@ func run() error {
 			for env := range clusters {
 				projectMapping[env] = reconcilers.GoogleGcpEnvironmentProject{ProjectID: cachedMapping[env]}
 			}
-			err = dbtx.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGoogleGcpProject, team.ID, reconcilers.GoogleGcpProjectState{
+			err = dbtx.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGoogleGcpProject, team.Slug, reconcilers.GoogleGcpProjectState{
 				Projects: projectMapping,
 			})
 			if err != nil {
@@ -275,7 +275,7 @@ func run() error {
 			for env := range clusters {
 				naisNamespaces[env] = team.Slug
 			}
-			err = dbtx.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameNaisNamespace, team.ID, reconcilers.GoogleGcpNaisNamespaceState{
+			err = dbtx.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameNaisNamespace, team.Slug, reconcilers.GoogleGcpNaisNamespaceState{
 				Namespaces: naisNamespaces,
 			})
 			if err != nil {
