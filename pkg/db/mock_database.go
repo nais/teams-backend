@@ -46,20 +46,6 @@ func (_m *MockDatabase) AssignGlobalRoleToUser(ctx context.Context, userID uuid.
 	return r0
 }
 
-// AssignTargetedRoleToUser provides a mock function with given fields: ctx, userID, roleName, targetID
-func (_m *MockDatabase) AssignTargetedRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName, targetID uuid.UUID) error {
-	ret := _m.Called(ctx, userID, roleName, targetID)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, sqlc.RoleName, uuid.UUID) error); ok {
-		r0 = rf(ctx, userID, roleName, targetID)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
 // ClearReconcilerErrorsForTeam provides a mock function with given fields: ctx, _a1, reconcilerName
 func (_m *MockDatabase) ClearReconcilerErrorsForTeam(ctx context.Context, _a1 slug.Slug, reconcilerName sqlc.ReconcilerName) error {
 	ret := _m.Called(ctx, _a1, reconcilerName)
@@ -696,13 +682,13 @@ func (_m *MockDatabase) GetTeamBySlug(ctx context.Context, _a1 slug.Slug) (*Team
 	return r0, r1
 }
 
-// GetTeamMembers provides a mock function with given fields: ctx, teamID
-func (_m *MockDatabase) GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error) {
-	ret := _m.Called(ctx, teamID)
+// GetTeamMembers provides a mock function with given fields: ctx, teamSlug
+func (_m *MockDatabase) GetTeamMembers(ctx context.Context, teamSlug slug.Slug) ([]*User, error) {
+	ret := _m.Called(ctx, teamSlug)
 
 	var r0 []*User
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) []*User); ok {
-		r0 = rf(ctx, teamID)
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug) []*User); ok {
+		r0 = rf(ctx, teamSlug)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*User)
@@ -710,8 +696,8 @@ func (_m *MockDatabase) GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
-		r1 = rf(ctx, teamID)
+	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug) error); ok {
+		r1 = rf(ctx, teamSlug)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -982,13 +968,13 @@ func (_m *MockDatabase) RemoveApiKeysFromServiceAccount(ctx context.Context, ser
 	return r0
 }
 
-// RemoveUserFromTeam provides a mock function with given fields: ctx, userID, teamID
-func (_m *MockDatabase) RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, teamID uuid.UUID) error {
-	ret := _m.Called(ctx, userID, teamID)
+// RemoveUserFromTeam provides a mock function with given fields: ctx, userID, teamSlug
+func (_m *MockDatabase) RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug) error {
+	ret := _m.Called(ctx, userID, teamSlug)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) error); ok {
-		r0 = rf(ctx, userID, teamID)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, slug.Slug) error); ok {
+		r0 = rf(ctx, userID, teamSlug)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1019,20 +1005,6 @@ func (_m *MockDatabase) ResetReconcilerConfig(ctx context.Context, reconcilerNam
 	return r0, r1
 }
 
-// RevokeGlobalRoleFromUser provides a mock function with given fields: ctx, userID, roleName
-func (_m *MockDatabase) RevokeGlobalRoleFromUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error {
-	ret := _m.Called(ctx, userID, roleName)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, sqlc.RoleName) error); ok {
-		r0 = rf(ctx, userID, roleName)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
 // SetReconcilerErrorForTeam provides a mock function with given fields: ctx, correlationID, _a2, reconcilerName, err
 func (_m *MockDatabase) SetReconcilerErrorForTeam(ctx context.Context, correlationID uuid.UUID, _a2 slug.Slug, reconcilerName sqlc.ReconcilerName, err error) error {
 	ret := _m.Called(ctx, correlationID, _a2, reconcilerName, err)
@@ -1061,13 +1033,13 @@ func (_m *MockDatabase) SetReconcilerStateForTeam(ctx context.Context, reconcile
 	return r0
 }
 
-// SetTeamMemberRole provides a mock function with given fields: ctx, userID, teamID, role
-func (_m *MockDatabase) SetTeamMemberRole(ctx context.Context, userID uuid.UUID, teamID uuid.UUID, role sqlc.RoleName) error {
-	ret := _m.Called(ctx, userID, teamID, role)
+// SetTeamMemberRole provides a mock function with given fields: ctx, userID, teamSlug, role
+func (_m *MockDatabase) SetTeamMemberRole(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug, role sqlc.RoleName) error {
+	ret := _m.Called(ctx, userID, teamSlug, role)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, sqlc.RoleName) error); ok {
-		r0 = rf(ctx, userID, teamID, role)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, slug.Slug, sqlc.RoleName) error); ok {
+		r0 = rf(ctx, userID, teamSlug, role)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1149,20 +1121,20 @@ func (_m *MockDatabase) UpdateUser(ctx context.Context, userID uuid.UUID, name s
 	return r0, r1
 }
 
-// UserIsTeamOwner provides a mock function with given fields: ctx, userID, teamID
-func (_m *MockDatabase) UserIsTeamOwner(ctx context.Context, userID uuid.UUID, teamID uuid.UUID) (bool, error) {
-	ret := _m.Called(ctx, userID, teamID)
+// UserIsTeamOwner provides a mock function with given fields: ctx, userID, teamSlug
+func (_m *MockDatabase) UserIsTeamOwner(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug) (bool, error) {
+	ret := _m.Called(ctx, userID, teamSlug)
 
 	var r0 bool
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) bool); ok {
-		r0 = rf(ctx, userID, teamID)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, slug.Slug) bool); ok {
+		r0 = rf(ctx, userID, teamSlug)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, uuid.UUID) error); ok {
-		r1 = rf(ctx, userID, teamID)
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, slug.Slug) error); ok {
+		r1 = rf(ctx, userID, teamSlug)
 	} else {
 		r1 = ret.Error(1)
 	}

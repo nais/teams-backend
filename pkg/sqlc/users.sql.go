@@ -98,7 +98,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) 
 
 const getUserTeams = `-- name: GetUserTeams :many
 SELECT teams.id, teams.slug, teams.purpose, teams.enabled FROM user_roles
-JOIN teams ON teams.id = user_roles.target_id
+JOIN teams ON teams.slug = user_roles.target_team_slug
 JOIN users ON users.id = user_roles.user_id
 WHERE user_roles.user_id = $1
 ORDER BY teams.slug ASC

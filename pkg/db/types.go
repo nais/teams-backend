@@ -49,9 +49,10 @@ type ReconcilerError struct {
 }
 
 type Role struct {
-	Authorizations []sqlc.AuthzName
-	RoleName       sqlc.RoleName
-	TargetID       *uuid.UUID
+	Authorizations         []sqlc.AuthzName
+	RoleName               sqlc.RoleName
+	TargetServiceAccountID *uuid.UUID
+	TargetTeamSlug         *slug.Slug
 }
 
 type ServiceAccount struct {
@@ -108,15 +109,13 @@ type Database interface {
 	GetTeamByID(ctx context.Context, ID uuid.UUID) (*Team, error)
 	GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)
 	GetTeams(ctx context.Context) ([]*Team, error)
-	GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error)
-	UserIsTeamOwner(ctx context.Context, userID, teamID uuid.UUID) (bool, error)
-	SetTeamMemberRole(ctx context.Context, userID uuid.UUID, teamID uuid.UUID, role sqlc.RoleName) error
+	GetTeamMembers(ctx context.Context, teamSlug slug.Slug) ([]*User, error)
+	UserIsTeamOwner(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug) (bool, error)
+	SetTeamMemberRole(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug, role sqlc.RoleName) error
 	GetAuditLogsForTeam(ctx context.Context, slug slug.Slug) ([]*AuditLog, error)
 	AssignGlobalRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error
 	AssignGlobalRoleToServiceAccount(ctx context.Context, serviceAccountID uuid.UUID, roleName sqlc.RoleName) error
-	RevokeGlobalRoleFromUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error
-	AssignTargetedRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName, targetID uuid.UUID) error
-	RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, teamID uuid.UUID) error
+	RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug) error
 	CreateAPIKey(ctx context.Context, apiKey string, serviceAccountID uuid.UUID) error
 	RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) error
 	RemoveAllServiceAccountRoles(ctx context.Context, serviceAccountID uuid.UUID) error

@@ -95,7 +95,7 @@ func (d *database) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*Role,
 
 	roles := make([]*Role, 0, len(userRoles))
 	for _, userRole := range userRoles {
-		role, err := d.roleFromRoleBinding(ctx, userRole.RoleName, userRole.TargetID)
+		role, err := d.roleFromRoleBinding(ctx, userRole.RoleName, userRole.TargetServiceAccountID, userRole.TargetTeamSlug)
 		if err != nil {
 			return nil, err
 		}

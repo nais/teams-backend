@@ -59,7 +59,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Return(createdTeam, nil).
 			Once()
 		dbtx.
-			On("SetTeamMemberRole", txCtx, user.ID, createdTeam.ID, sqlc.RoleNameTeamowner).
+			On("SetTeamMemberRole", txCtx, user.ID, createdTeam.Slug, sqlc.RoleNameTeamowner).
 			Return(nil).
 			Once()
 
@@ -72,7 +72,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Return(nil).
 			Once()
 		database.
-			On("GetTeamMembers", ctx, createdTeam.ID).
+			On("GetTeamMembers", ctx, createdTeam.Slug).
 			Return([]*db.User{&user}, nil).
 			Once()
 

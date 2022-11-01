@@ -46,20 +46,10 @@ func (d *database) SetTeamMetadata(ctx context.Context, slug slug.Slug, metadata
 	})
 }
 
-func (d *database) RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, teamID uuid.UUID) error {
-	err := d.querier.RevokeTargetedRoleFromUser(ctx, sqlc.RevokeTargetedRoleFromUserParams{
-		UserID:   userID,
-		TargetID: nullUUID(&teamID),
-		RoleName: sqlc.RoleNameTeammember,
-	})
-	if err != nil {
-		return err
-	}
-
-	return d.querier.RevokeTargetedRoleFromUser(ctx, sqlc.RevokeTargetedRoleFromUserParams{
-		UserID:   userID,
-		TargetID: nullUUID(&teamID),
-		RoleName: sqlc.RoleNameTeamowner,
+func (d *database) RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug) error {
+	return d.querier.RemoveUserFromTeam(ctx, sqlc.RemoveUserFromTeamParams{
+		UserID:         userID,
+		TargetTeamSlug: &teamSlug,
 	})
 }
 
@@ -133,8 +123,8 @@ func (d *database) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team,
 	return teams, nil
 }
 
-func (d *database) GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error) {
-	rows, err := d.querier.GetTeamMembers(ctx, teamID)
+func (d *database) GetTeamMembers(ctx context.Context, teamSlug slug.Slug) ([]*User, error) {
+	rows, err := d.querier.GetTeamMembers(ctx, &teamSlug)
 	if err != nil {
 		return nil, err
 	}

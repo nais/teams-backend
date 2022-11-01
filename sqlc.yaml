@@ -18,7 +18,11 @@ sql:
             go_type: github.com/nais/console/pkg/slug.Slug
           - column: reconciler_states.team_slug
             go_type: github.com/nais/console/pkg/slug.Slug
+          - column: service_account_roles.target_team_slug
+            go_type: "*github.com/nais/console/pkg/slug.Slug"
           - column: teams.slug
             go_type: github.com/nais/console/pkg/slug.Slug
           - column: team_metadata.team_slug
             go_type: github.com/nais/console/pkg/slug.Slug
+          - column: user_roles.target_team_slug
+            go_type: "*github.com/nais/console/pkg/slug.Slug"

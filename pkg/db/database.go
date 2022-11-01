@@ -7,7 +7,6 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
-	"github.com/google/uuid"
 	"github.com/nais/console/sqlc/schemas"
 )
 
@@ -50,15 +49,5 @@ func nullString(s *string) sql.NullString {
 	return sql.NullString{
 		String: *s,
 		Valid:  true,
-	}
-}
-
-func nullUUID(ID *uuid.UUID) uuid.NullUUID {
-	if ID == nil {
-		return uuid.NullUUID{}
-	}
-	return uuid.NullUUID{
-		UUID:  *ID,
-		Valid: true,
 	}
 }

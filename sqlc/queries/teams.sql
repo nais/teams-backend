@@ -17,9 +17,9 @@ WHERE slug = $1;
 
 -- name: GetTeamMembers :many
 SELECT users.* FROM user_roles
-JOIN teams ON teams.id = user_roles.target_id
+JOIN teams ON teams.slug = user_roles.target_team_slug
 JOIN users ON users.id = user_roles.user_id
-WHERE user_roles.target_id = sqlc.arg(team_id)::UUID
+WHERE user_roles.target_team_slug = $1
 ORDER BY users.name ASC;
 
 -- name: GetTeamMetadata :many
@@ -50,3 +50,7 @@ UPDATE teams
 SET enabled = true
 WHERE id = $1
 RETURNING *;
+
+-- name: RemoveUserFromTeam :exec
+DELETE FROM user_roles
+WHERE user_id = $1 AND target_team_slug = $2;

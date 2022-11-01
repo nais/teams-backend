@@ -60,7 +60,7 @@ func (q *Queries) GetServiceAccountByName(ctx context.Context, name string) (*Se
 }
 
 const getServiceAccountRoles = `-- name: GetServiceAccountRoles :many
-SELECT id, role_name, service_account_id, target_id FROM service_account_roles
+SELECT id, role_name, service_account_id, target_team_slug, target_service_account_id FROM service_account_roles
 WHERE service_account_id = $1
 `
 
@@ -77,7 +77,8 @@ func (q *Queries) GetServiceAccountRoles(ctx context.Context, serviceAccountID u
 			&i.ID,
 			&i.RoleName,
 			&i.ServiceAccountID,
-			&i.TargetID,
+			&i.TargetTeamSlug,
+			&i.TargetServiceAccountID,
 		); err != nil {
 			return nil, err
 		}

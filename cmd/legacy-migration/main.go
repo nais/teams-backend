@@ -194,7 +194,7 @@ func run() error {
 			}
 
 			for _, user := range teamOwners {
-				err := dbtx.SetTeamMemberRole(ctx, user.ID, team.ID, sqlc.RoleNameTeamowner)
+				err := dbtx.SetTeamMemberRole(ctx, user.ID, team.Slug, sqlc.RoleNameTeamowner)
 				if err != nil {
 					return err
 				}
@@ -214,7 +214,7 @@ func run() error {
 			}
 
 			for _, user := range teamMembers {
-				err := dbtx.SetTeamMemberRole(ctx, user.ID, team.ID, sqlc.RoleNameTeammember)
+				err := dbtx.SetTeamMemberRole(ctx, user.ID, team.Slug, sqlc.RoleNameTeammember)
 				if err != nil {
 					return err
 				}

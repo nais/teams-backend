@@ -15,12 +15,12 @@ import (
 // Roles is the resolver for the roles field.
 func (r *serviceAccountResolver) Roles(ctx context.Context, obj *db.ServiceAccount) ([]*db.Role, error) {
 	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireAuthorizationOrTargetMatch(actor, sqlc.AuthzNameUsersUpdate, obj.ID)
-	if err != nil {
+	err := authz.RequireRole(actor, sqlc.RoleNameAdmin)
+	if err != nil && actor.User.GetID() != obj.ID {
 		return nil, err
 	}
 
-	return r.database.GetUserRoles(ctx, obj.ID)
+	return r.database.GetServiceAccountRoles(ctx, obj.ID)
 }
 
 // ServiceAccount returns generated.ServiceAccountResolver implementation.

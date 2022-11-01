@@ -736,10 +736,11 @@ type ServiceAccount struct {
 }
 
 type ServiceAccountRole struct {
-	ID               int32
-	RoleName         RoleName
-	ServiceAccountID uuid.UUID
-	TargetID         uuid.NullUUID
+	ID                     int32
+	RoleName               RoleName
+	ServiceAccountID       uuid.UUID
+	TargetTeamSlug         *slug.Slug
+	TargetServiceAccountID uuid.NullUUID
 }
 
 type Session struct {
@@ -769,8 +770,9 @@ type User struct {
 }
 
 type UserRole struct {
-	ID       int32
-	RoleName RoleName
-	UserID   uuid.UUID
-	TargetID uuid.NullUUID
+	ID                     int32
+	RoleName               RoleName
+	UserID                 uuid.UUID
+	TargetTeamSlug         *slug.Slug
+	TargetServiceAccountID uuid.NullUUID
 }

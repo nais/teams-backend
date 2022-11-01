@@ -54,4 +54,38 @@ ALTER TABLE reconciler_errors
     DROP COLUMN team_id,
     ADD CONSTRAINT reconciler_errors_team_id_reconciler_key UNIQUE(team_slug, reconciler);
 
+/* user_roles */
+
+ALTER TABLE user_roles
+    ADD COLUMN target_team_slug TEXT REFERENCES teams(slug) ON DELETE CASCADE,
+    ADD COLUMN target_service_account_id UUID REFERENCES service_accounts(id) ON DELETE CASCADE;
+
+UPDATE user_roles SET target_team_slug = (SELECT slug FROM teams WHERE id = user_roles.target_id) WHERE target_id IS NOT NULL;
+UPDATE user_roles SET target_service_account_id = (SELECT id FROM service_accounts WHERE id = user_roles.target_id) WHERE target_id IS NOT NULL;
+
+ALTER TABLE user_roles
+    DROP COLUMN target_id;
+
+/* service_account_roles */
+
+ALTER TABLE service_account_roles
+    ADD COLUMN target_team_slug TEXT REFERENCES teams(slug) ON DELETE CASCADE,
+    ADD COLUMN target_service_account_id UUID REFERENCES service_accounts(id) ON DELETE CASCADE;
+
+UPDATE service_account_roles SET target_team_slug = (SELECT slug FROM teams WHERE id = service_account_roles.target_id) WHERE target_id IS NOT NULL;
+UPDATE service_account_roles SET target_service_account_id = (SELECT id FROM service_accounts WHERE id = service_account_roles.target_id) WHERE target_id IS NOT NULL;
+
+ALTER TABLE service_account_roles
+    DROP COLUMN target_id;
+
+/* teams */
+/*
+ALTER TABLE teams
+    DROP COLUMN id,
+    ADD PRIMARY KEY(slug);
+
+
+ */
+
+
 COMMIT;

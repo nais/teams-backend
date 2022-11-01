@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/nais/console/pkg/slug"
 )
 
 const assignGlobalRoleToServiceAccount = `-- name: AssignGlobalRoleToServiceAccount :exec
@@ -41,19 +42,19 @@ func (q *Queries) AssignGlobalRoleToUser(ctx context.Context, arg AssignGlobalRo
 	return err
 }
 
-const assignTargetedRoleToUser = `-- name: AssignTargetedRoleToUser :exec
-INSERT INTO user_roles (user_id, role_name, target_id)
+const assignTeamRoleToUser = `-- name: AssignTeamRoleToUser :exec
+INSERT INTO user_roles (user_id, role_name, target_team_slug)
 VALUES ($1, $2, $3) ON CONFLICT DO NOTHING
 `
 
-type AssignTargetedRoleToUserParams struct {
-	UserID   uuid.UUID
-	RoleName RoleName
-	TargetID uuid.NullUUID
+type AssignTeamRoleToUserParams struct {
+	UserID         uuid.UUID
+	RoleName       RoleName
+	TargetTeamSlug *slug.Slug
 }
 
-func (q *Queries) AssignTargetedRoleToUser(ctx context.Context, arg AssignTargetedRoleToUserParams) error {
-	_, err := q.db.Exec(ctx, assignTargetedRoleToUser, arg.UserID, arg.RoleName, arg.TargetID)
+func (q *Queries) AssignTeamRoleToUser(ctx context.Context, arg AssignTeamRoleToUserParams) error {
+	_, err := q.db.Exec(ctx, assignTeamRoleToUser, arg.UserID, arg.RoleName, arg.TargetTeamSlug)
 	return err
 }
 
@@ -84,7 +85,7 @@ func (q *Queries) GetRoleAuthorizations(ctx context.Context, roleName RoleName) 
 }
 
 const getUserRoles = `-- name: GetUserRoles :many
-SELECT id, role_name, user_id, target_id FROM user_roles
+SELECT id, role_name, user_id, target_team_slug, target_service_account_id FROM user_roles
 WHERE user_id = $1
 `
 
@@ -101,7 +102,8 @@ func (q *Queries) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*UserRo
 			&i.ID,
 			&i.RoleName,
 			&i.UserID,
-			&i.TargetID,
+			&i.TargetTeamSlug,
+			&i.TargetServiceAccountID,
 		); err != nil {
 			return nil, err
 		}
@@ -135,7 +137,10 @@ func (q *Queries) RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) erro
 
 const removeGlobalUserRole = `-- name: RemoveGlobalUserRole :exec
 DELETE FROM user_roles
-WHERE user_id = $1 AND target_id IS NULL AND role_name = $2
+WHERE user_id = $1
+AND target_team_slug IS NULL
+AND target_service_account_id IS NULL
+AND role_name = $2
 `
 
 type RemoveGlobalUserRoleParams struct {
@@ -145,36 +150,5 @@ type RemoveGlobalUserRoleParams struct {
 
 func (q *Queries) RemoveGlobalUserRole(ctx context.Context, arg RemoveGlobalUserRoleParams) error {
 	_, err := q.db.Exec(ctx, removeGlobalUserRole, arg.UserID, arg.RoleName)
-	return err
-}
-
-const revokeGlobalRoleFromUser = `-- name: RevokeGlobalRoleFromUser :exec
-DELETE FROM user_roles
-WHERE user_id = $1 AND role_name = $2
-`
-
-type RevokeGlobalRoleFromUserParams struct {
-	UserID   uuid.UUID
-	RoleName RoleName
-}
-
-func (q *Queries) RevokeGlobalRoleFromUser(ctx context.Context, arg RevokeGlobalRoleFromUserParams) error {
-	_, err := q.db.Exec(ctx, revokeGlobalRoleFromUser, arg.UserID, arg.RoleName)
-	return err
-}
-
-const revokeTargetedRoleFromUser = `-- name: RevokeTargetedRoleFromUser :exec
-DELETE FROM user_roles
-WHERE user_id = $1 AND target_id = $2 AND role_name = $3
-`
-
-type RevokeTargetedRoleFromUserParams struct {
-	UserID   uuid.UUID
-	TargetID uuid.NullUUID
-	RoleName RoleName
-}
-
-func (q *Queries) RevokeTargetedRoleFromUser(ctx context.Context, arg RevokeTargetedRoleFromUserParams) error {
-	_, err := q.db.Exec(ctx, revokeTargetedRoleFromUser, arg.UserID, arg.TargetID, arg.RoleName)
 	return err
 }

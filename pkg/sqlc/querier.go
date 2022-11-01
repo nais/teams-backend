@@ -14,7 +14,7 @@ import (
 type Querier interface {
 	AssignGlobalRoleToServiceAccount(ctx context.Context, arg AssignGlobalRoleToServiceAccountParams) error
 	AssignGlobalRoleToUser(ctx context.Context, arg AssignGlobalRoleToUserParams) error
-	AssignTargetedRoleToUser(ctx context.Context, arg AssignTargetedRoleToUserParams) error
+	AssignTeamRoleToUser(ctx context.Context, arg AssignTeamRoleToUserParams) error
 	ClearReconcilerErrorsForTeam(ctx context.Context, arg ClearReconcilerErrorsForTeamParams) error
 	ConfigureReconciler(ctx context.Context, arg ConfigureReconcilerParams) error
 	CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) error
@@ -46,7 +46,7 @@ type Querier interface {
 	GetSessionByID(ctx context.Context, id uuid.UUID) (*Session, error)
 	GetTeamByID(ctx context.Context, id uuid.UUID) (*Team, error)
 	GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)
-	GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error)
+	GetTeamMembers(ctx context.Context, targetTeamSlug *slug.Slug) ([]*User, error)
 	GetTeamMetadata(ctx context.Context, teamSlug slug.Slug) ([]*TeamMetadatum, error)
 	GetTeamReconcilerErrors(ctx context.Context, teamSlug slug.Slug) ([]*ReconcilerError, error)
 	GetTeams(ctx context.Context) ([]*Team, error)
@@ -60,9 +60,8 @@ type Querier interface {
 	RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) error
 	RemoveApiKeysFromServiceAccount(ctx context.Context, serviceAccountID uuid.UUID) error
 	RemoveGlobalUserRole(ctx context.Context, arg RemoveGlobalUserRoleParams) error
+	RemoveUserFromTeam(ctx context.Context, arg RemoveUserFromTeamParams) error
 	ResetReconcilerConfig(ctx context.Context, reconciler ReconcilerName) error
-	RevokeGlobalRoleFromUser(ctx context.Context, arg RevokeGlobalRoleFromUserParams) error
-	RevokeTargetedRoleFromUser(ctx context.Context, arg RevokeTargetedRoleFromUserParams) error
 	SetReconcilerErrorForTeam(ctx context.Context, arg SetReconcilerErrorForTeamParams) error
 	SetReconcilerStateForTeam(ctx context.Context, arg SetReconcilerStateForTeamParams) error
 	SetSessionExpires(ctx context.Context, arg SetSessionExpiresParams) (*Session, error)

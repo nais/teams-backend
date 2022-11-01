@@ -62,7 +62,7 @@ func (r *userResolver) Teams(ctx context.Context, obj *db.User) ([]*model.TeamMe
 
 	userTeams := make([]*model.TeamMembership, 0, len(teams))
 	for _, team := range teams {
-		isOwner, err := r.database.UserIsTeamOwner(ctx, obj.ID, team.ID)
+		isOwner, err := r.database.UserIsTeamOwner(ctx, obj.ID, team.Slug)
 		if err != nil {
 			return nil, err
 		}
@@ -84,8 +84,8 @@ func (r *userResolver) Teams(ctx context.Context, obj *db.User) ([]*model.TeamMe
 // Roles is the resolver for the roles field.
 func (r *userResolver) Roles(ctx context.Context, obj *db.User) ([]*db.Role, error) {
 	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireAuthorizationOrTargetMatch(actor, sqlc.AuthzNameUsersUpdate, obj.ID)
-	if err != nil {
+	err := authz.RequireRole(actor, sqlc.RoleNameAdmin)
+	if err != nil && actor.User.GetID() != obj.ID {
 		return nil, err
 	}
 

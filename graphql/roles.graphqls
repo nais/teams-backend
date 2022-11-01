@@ -11,6 +11,9 @@ type Role {
     "Whether or not the role is global."
     isGlobal: Boolean!
 
-    "Optional target of the role binding."
-    targetId: UUID
+    "Optional service account ID if the role binding targets a service account."
+    targetServiceAccountID: UUID
+
+    "Optional team slug if the role binding targets a team."
+    targetTeamSlug: Slug
 }

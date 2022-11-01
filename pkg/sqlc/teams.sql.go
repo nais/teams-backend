@@ -110,14 +110,14 @@ func (q *Queries) GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, err
 
 const getTeamMembers = `-- name: GetTeamMembers :many
 SELECT users.id, users.email, users.name, users.external_id FROM user_roles
-JOIN teams ON teams.id = user_roles.target_id
+JOIN teams ON teams.slug = user_roles.target_team_slug
 JOIN users ON users.id = user_roles.user_id
-WHERE user_roles.target_id = $1::UUID
+WHERE user_roles.target_team_slug = $1
 ORDER BY users.name ASC
 `
 
-func (q *Queries) GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error) {
-	rows, err := q.db.Query(ctx, getTeamMembers, teamID)
+func (q *Queries) GetTeamMembers(ctx context.Context, targetTeamSlug *slug.Slug) ([]*User, error) {
+	rows, err := q.db.Query(ctx, getTeamMembers, targetTeamSlug)
 	if err != nil {
 		return nil, err
 	}
@@ -195,6 +195,21 @@ func (q *Queries) GetTeams(ctx context.Context) ([]*Team, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const removeUserFromTeam = `-- name: RemoveUserFromTeam :exec
+DELETE FROM user_roles
+WHERE user_id = $1 AND target_team_slug = $2
+`
+
+type RemoveUserFromTeamParams struct {
+	UserID         uuid.UUID
+	TargetTeamSlug *slug.Slug
+}
+
+func (q *Queries) RemoveUserFromTeam(ctx context.Context, arg RemoveUserFromTeamParams) error {
+	_, err := q.db.Exec(ctx, removeUserFromTeam, arg.UserID, arg.TargetTeamSlug)
+	return err
 }
 
 const setTeamMetadata = `-- name: SetTeamMetadata :exec
