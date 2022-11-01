@@ -381,10 +381,25 @@ func GenerateProjectID(domain, environment string, slug slug.Slug) string {
 }
 
 func GetClusterInfoFromJson(jsonData string) (ClusterInfo, error) {
+	type stringClusterInfo = map[string]struct {
+		TeamFolderID string `json:"teams_folder_id"`
+		ProjectID    string `json:"project_id"`
+	}
+	tmpClusters := make(stringClusterInfo)
 	clusters := ClusterInfo{}
-	err := json.NewDecoder(strings.NewReader(jsonData)).Decode(&clusters)
+	err := json.NewDecoder(strings.NewReader(jsonData)).Decode(&tmpClusters)
 	if err != nil {
 		return nil, fmt.Errorf("parse GCP cluster info: %w", err)
+	}
+	for k, v := range tmpClusters {
+		folderID, err := strconv.ParseInt(v.TeamFolderID, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("parse GCP cluster info's folder ID: %w", err)
+		}
+		clusters[k] = Cluster{
+			TeamFolderID: folderID,
+			ProjectID:    v.ProjectID,
+		}
 	}
 	return clusters, nil
 }

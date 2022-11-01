@@ -149,8 +149,8 @@ func TestGetClusterInfoFromJson(t *testing.T) {
 
 	t.Run("JSON with clusters", func(t *testing.T) {
 		jsonData := `{
-			"env1": {"teams_folder_id": 123, "project_id": "some-id-123"},
-			"env2": {"teams_folder_id": 456, "project_id": "some-id-456"}
+			"env1": {"teams_folder_id": "123", "project_id": "some-id-123"},
+			"env2": {"teams_folder_id": "456", "project_id": "some-id-456"}
 		}`
 		info, err := google_gcp_reconciler.GetClusterInfoFromJson(jsonData)
 		assert.NoError(t, err)
