@@ -6,11 +6,11 @@ import (
 )
 
 const (
-	Slug    = "nais"
-	Purpose = "A place for NAIS to run non-critical workloads"
+	Slug    = "nais-verification"
+	Purpose = "A place for NAIS to run verification workloads"
 )
 
-func CreateNaisTeam(ctx context.Context, database db.Database) error {
+func CreateNaisVerification(ctx context.Context, database db.Database) error {
 	_, err := database.CreateTeam(ctx, Slug, Purpose)
 	if err != nil {
 		return err

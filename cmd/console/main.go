@@ -76,7 +76,7 @@ func run() error {
 		return err
 	}
 
-	err = fixtures.CreateNaisTeam(ctx, database)
+	err = fixtures.CreateNaisVerification(ctx, database)
 	if err != nil {
 		return err
 	}
