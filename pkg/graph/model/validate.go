@@ -2,6 +2,7 @@ package model
 
 import (
 	"regexp"
+	"strings"
 
 	"github.com/nais/console/pkg/graph/apierror"
 )
@@ -20,6 +21,16 @@ func (input CreateTeamInput) Validate() error {
 
 	if input.Purpose == "" {
 		return apierror.ErrTeamPurpose
+	}
+
+	slug := input.Slug.String()
+
+	if strings.HasPrefix(slug, "nais") {
+		return apierror.ErrTeamPrefixReserved
+	}
+
+	if strings.HasPrefix(slug, "team") {
+		return apierror.ErrTeamPrefixRedundant
 	}
 
 	return nil
