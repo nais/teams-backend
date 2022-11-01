@@ -2,6 +2,7 @@ package fixtures
 
 import (
 	"context"
+	"github.com/jackc/pgx/v4"
 	"github.com/nais/console/pkg/db"
 )
 
@@ -11,9 +12,12 @@ const (
 )
 
 func CreateNaisVerification(ctx context.Context, database db.Database) error {
-	_, err := database.CreateTeam(ctx, Slug, Purpose)
-	if err != nil {
-		return err
+	_, err := database.GetTeamBySlug(ctx, Slug)
+	if err != nil && err == pgx.ErrNoRows {
+		_, err = database.CreateTeam(ctx, Slug, Purpose)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
