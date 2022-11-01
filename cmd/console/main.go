@@ -76,6 +76,11 @@ func run() error {
 		return err
 	}
 
+	err = fixtures.CreateNaisTeam(ctx, database)
+	if err != nil {
+		return err
+	}
+
 	if cfg.StaticServiceAccounts != "" {
 		err = fixtures.SetupStaticServiceAccounts(ctx, database, cfg.StaticServiceAccounts)
 		if err != nil {
