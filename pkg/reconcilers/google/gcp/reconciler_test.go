@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/nais/console/pkg/slug"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/db"
@@ -34,9 +36,9 @@ func TestReconcile(t *testing.T) {
 		},
 	}
 
-	teamID := uuid.New()
+	teamSlug := slug.Slug("slug")
 	correlationID := uuid.New()
-	team := db.Team{Team: &sqlc.Team{ID: teamID}}
+	team := db.Team{Team: &sqlc.Team{Slug: teamSlug}}
 	input := reconcilers.Input{
 		CorrelationID: correlationID,
 		Team:          team,

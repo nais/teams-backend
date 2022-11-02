@@ -53,9 +53,9 @@ func (d *database) RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, tea
 	})
 }
 
-func (d *database) UpdateTeam(ctx context.Context, teamID uuid.UUID, purpose *string) (*Team, error) {
+func (d *database) UpdateTeam(ctx context.Context, teamSlug slug.Slug, purpose *string) (*Team, error) {
 	team, err := d.querier.UpdateTeam(ctx, sqlc.UpdateTeamParams{
-		ID:      teamID,
+		Slug:    teamSlug,
 		Purpose: nullString(purpose),
 	})
 	if err != nil {
@@ -128,8 +128,8 @@ func (d *database) GetTeamMembers(ctx context.Context, teamSlug slug.Slug) ([]*U
 	return members, nil
 }
 
-func (d *database) DisableTeam(ctx context.Context, teamID uuid.UUID) (*Team, error) {
-	team, err := d.querier.DisableTeam(ctx, teamID)
+func (d *database) DisableTeam(ctx context.Context, teamSlug slug.Slug) (*Team, error) {
+	team, err := d.querier.DisableTeam(ctx, teamSlug)
 	if err != nil {
 		return nil, err
 	}
@@ -137,8 +137,8 @@ func (d *database) DisableTeam(ctx context.Context, teamID uuid.UUID) (*Team, er
 	return &Team{Team: team}, nil
 }
 
-func (d *database) EnableTeam(ctx context.Context, teamID uuid.UUID) (*Team, error) {
-	team, err := d.querier.EnableTeam(ctx, teamID)
+func (d *database) EnableTeam(ctx context.Context, teamSlug slug.Slug) (*Team, error) {
+	team, err := d.querier.EnableTeam(ctx, teamSlug)
 	if err != nil {
 		return nil, err
 	}

@@ -49,7 +49,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 
 	t.Run("create team", func(t *testing.T) {
 		createdTeam := &db.Team{
-			Team: &sqlc.Team{Slug: teamSlug, ID: uuid.New()},
+			Team: &sqlc.Team{Slug: teamSlug},
 		}
 		txCtx := context.Background()
 		dbtx := db.NewMockDatabase(t)
@@ -90,9 +90,9 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Purpose: " some purpose ",
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, createdTeam.ID, returnedTeam.ID)
+		assert.Equal(t, createdTeam.Slug, returnedTeam.Slug)
 
 		input := <-reconcilers
-		assert.Equal(t, createdTeam.ID, input.Team.ID)
+		assert.Equal(t, createdTeam.Slug, input.Team.Slug)
 	})
 }

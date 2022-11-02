@@ -55,7 +55,6 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 	correlationID := uuid.New()
 	team := db.Team{
 		Team: &sqlc.Team{
-			ID:      uuid.New(),
 			Slug:    teamSlug,
 			Purpose: teamPurpose,
 		},
@@ -191,7 +190,6 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 
 		team := db.Team{
 			Team: &sqlc.Team{
-				ID:      uuid.New(),
 				Slug:    teamSlug,
 				Purpose: teamPurpose,
 			},

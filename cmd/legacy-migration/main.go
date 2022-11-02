@@ -282,7 +282,7 @@ func run() error {
 				return err
 			}
 
-			_, err = dbtx.DisableTeam(ctx, team.ID)
+			_, err = dbtx.DisableTeam(ctx, team.Slug)
 			if err != nil {
 				return err
 			}

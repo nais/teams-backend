@@ -32,19 +32,19 @@ ON CONFLICT (team_slug, key) DO
 -- name: UpdateTeam :one
 UPDATE teams
 SET purpose = COALESCE(sqlc.narg(purpose), purpose)
-WHERE id = sqlc.arg(id)
+WHERE slug = sqlc.arg(slug)
 RETURNING *;
 
 -- name: DisableTeam :one
 UPDATE teams
 SET enabled = false
-WHERE id = $1
+WHERE slug = $1
 RETURNING *;
 
 -- name: EnableTeam :one
 UPDATE teams
 SET enabled = true
-WHERE id = $1
+WHERE slug = $1
 RETURNING *;
 
 -- name: RemoveUserFromTeam :exec

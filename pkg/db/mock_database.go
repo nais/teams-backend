@@ -291,13 +291,13 @@ func (_m *MockDatabase) DisableReconciler(ctx context.Context, reconcilerName sq
 	return r0, r1
 }
 
-// DisableTeam provides a mock function with given fields: ctx, teamID
-func (_m *MockDatabase) DisableTeam(ctx context.Context, teamID uuid.UUID) (*Team, error) {
-	ret := _m.Called(ctx, teamID)
+// DisableTeam provides a mock function with given fields: ctx, teamSlug
+func (_m *MockDatabase) DisableTeam(ctx context.Context, teamSlug slug.Slug) (*Team, error) {
+	ret := _m.Called(ctx, teamSlug)
 
 	var r0 *Team
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) *Team); ok {
-		r0 = rf(ctx, teamID)
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug) *Team); ok {
+		r0 = rf(ctx, teamSlug)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*Team)
@@ -305,8 +305,8 @@ func (_m *MockDatabase) DisableTeam(ctx context.Context, teamID uuid.UUID) (*Tea
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
-		r1 = rf(ctx, teamID)
+	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug) error); ok {
+		r1 = rf(ctx, teamSlug)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -337,13 +337,13 @@ func (_m *MockDatabase) EnableReconciler(ctx context.Context, reconcilerName sql
 	return r0, r1
 }
 
-// EnableTeam provides a mock function with given fields: ctx, teamID
-func (_m *MockDatabase) EnableTeam(ctx context.Context, teamID uuid.UUID) (*Team, error) {
-	ret := _m.Called(ctx, teamID)
+// EnableTeam provides a mock function with given fields: ctx, teamSlug
+func (_m *MockDatabase) EnableTeam(ctx context.Context, teamSlug slug.Slug) (*Team, error) {
+	ret := _m.Called(ctx, teamSlug)
 
 	var r0 *Team
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) *Team); ok {
-		r0 = rf(ctx, teamID)
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug) *Team); ok {
+		r0 = rf(ctx, teamSlug)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*Team)
@@ -351,8 +351,8 @@ func (_m *MockDatabase) EnableTeam(ctx context.Context, teamID uuid.UUID) (*Team
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
-		r1 = rf(ctx, teamID)
+	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug) error); ok {
+		r1 = rf(ctx, teamSlug)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1052,13 +1052,13 @@ func (_m *MockDatabase) Transaction(ctx context.Context, fn DatabaseTransactionF
 	return r0
 }
 
-// UpdateTeam provides a mock function with given fields: ctx, teamID, purpose
-func (_m *MockDatabase) UpdateTeam(ctx context.Context, teamID uuid.UUID, purpose *string) (*Team, error) {
-	ret := _m.Called(ctx, teamID, purpose)
+// UpdateTeam provides a mock function with given fields: ctx, teamSlug, purpose
+func (_m *MockDatabase) UpdateTeam(ctx context.Context, teamSlug slug.Slug, purpose *string) (*Team, error) {
+	ret := _m.Called(ctx, teamSlug, purpose)
 
 	var r0 *Team
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, *string) *Team); ok {
-		r0 = rf(ctx, teamID, purpose)
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug, *string) *Team); ok {
+		r0 = rf(ctx, teamSlug, purpose)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*Team)
@@ -1066,8 +1066,8 @@ func (_m *MockDatabase) UpdateTeam(ctx context.Context, teamID uuid.UUID, purpos
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, *string) error); ok {
-		r1 = rf(ctx, teamID, purpose)
+	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug, *string) error); ok {
+		r1 = rf(ctx, teamSlug, purpose)
 	} else {
 		r1 = ret.Error(1)
 	}

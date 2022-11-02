@@ -101,7 +101,7 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, slug *slug.Slug, inpu
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	team, err = r.database.UpdateTeam(ctx, team.ID, input.Purpose)
+	team, err = r.database.UpdateTeam(ctx, team.Slug, input.Purpose)
 	if err != nil {
 		return nil, err
 	}
@@ -418,7 +418,7 @@ func (r *mutationResolver) DisableTeam(ctx context.Context, slug *slug.Slug) (*d
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	team, err = r.database.DisableTeam(ctx, team.ID)
+	team, err = r.database.DisableTeam(ctx, team.Slug)
 	if err != nil {
 		return nil, fmt.Errorf("disable team: %w", err)
 	}
@@ -457,7 +457,7 @@ func (r *mutationResolver) EnableTeam(ctx context.Context, slug *slug.Slug) (*db
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	team, err = r.database.EnableTeam(ctx, team.ID)
+	team, err = r.database.EnableTeam(ctx, team.Slug)
 	if err != nil {
 		return nil, fmt.Errorf("enable team: %w", err)
 	}

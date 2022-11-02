@@ -60,8 +60,21 @@ ALTER TABLE user_roles
     ADD COLUMN target_team_slug TEXT REFERENCES teams(slug) ON DELETE CASCADE,
     ADD COLUMN target_service_account_id UUID REFERENCES service_accounts(id) ON DELETE CASCADE;
 
-UPDATE user_roles SET target_team_slug = (SELECT slug FROM teams WHERE id = user_roles.target_id) WHERE target_id IS NOT NULL;
-UPDATE user_roles SET target_service_account_id = (SELECT id FROM service_accounts WHERE id = user_roles.target_id) WHERE target_id IS NOT NULL;
+UPDATE user_roles
+SET target_team_slug = (
+    SELECT slug
+    FROM teams
+    WHERE id = user_roles.target_id
+)
+WHERE target_id IS NOT NULL;
+
+UPDATE user_roles
+SET target_service_account_id = (
+    SELECT id
+    FROM service_accounts
+    WHERE id = user_roles.target_id
+)
+WHERE target_id IS NOT NULL;
 
 ALTER TABLE user_roles
     DROP COLUMN target_id;
@@ -72,8 +85,21 @@ ALTER TABLE service_account_roles
     ADD COLUMN target_team_slug TEXT REFERENCES teams(slug) ON DELETE CASCADE,
     ADD COLUMN target_service_account_id UUID REFERENCES service_accounts(id) ON DELETE CASCADE;
 
-UPDATE service_account_roles SET target_team_slug = (SELECT slug FROM teams WHERE id = service_account_roles.target_id) WHERE target_id IS NOT NULL;
-UPDATE service_account_roles SET target_service_account_id = (SELECT id FROM service_accounts WHERE id = service_account_roles.target_id) WHERE target_id IS NOT NULL;
+UPDATE service_account_roles
+SET target_team_slug = (
+    SELECT slug
+    FROM teams
+    WHERE id = service_account_roles.target_id
+)
+WHERE target_id IS NOT NULL;
+
+UPDATE service_account_roles
+SET target_service_account_id = (
+    SELECT id
+    FROM service_accounts
+    WHERE id = service_account_roles.target_id
+)
+WHERE target_id IS NOT NULL;
 
 ALTER TABLE service_account_roles
     DROP COLUMN target_id;
@@ -81,7 +107,26 @@ ALTER TABLE service_account_roles
 /* teams */
 
 ALTER TABLE teams
-    DROP CONSTRAINT teams_pkey,
-    ADD PRIMARY KEY(slug);
+    DROP COLUMN id,
+    ADD PRIMARY KEY(slug),
+    DROP CONSTRAINT teams_slug_key CASCADE; /* superflous unique constraint */
+
+
+/* add new constraints that will refer to the primary key instead of the old unique constrant */
+
+ALTER TABLE team_metadata
+    ADD CONSTRAINT team_metadata_team_slug_fkey FOREIGN KEY(team_slug) REFERENCES teams(slug) ON DELETE CASCADE;
+
+ALTER TABLE reconciler_states
+    ADD CONSTRAINT reconciler_states_team_slug_fkey FOREIGN KEY(team_slug) REFERENCES teams(slug) ON DELETE CASCADE;
+
+ALTER TABLE reconciler_errors
+    ADD CONSTRAINT reconciler_errors_team_slug_fkey FOREIGN KEY(team_slug) REFERENCES teams(slug) ON DELETE CASCADE;
+
+ALTER TABLE service_account_roles
+    ADD CONSTRAINT service_account_roles_target_team_slug_fkey FOREIGN KEY(target_team_slug) REFERENCES teams(slug) ON DELETE CASCADE;
+
+ALTER TABLE user_roles
+    ADD CONSTRAINT user_roles_target_team_slug_fkey FOREIGN KEY(target_team_slug) REFERENCES teams(slug) ON DELETE CASCADE;
 
 COMMIT;

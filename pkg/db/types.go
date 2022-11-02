@@ -105,7 +105,7 @@ type Database interface {
 	CreateTeam(ctx context.Context, slug slug.Slug, purpose string) (*Team, error)
 	SetTeamMetadata(ctx context.Context, slug slug.Slug, metadata []TeamMetadata) error
 	GetTeamMetadata(ctx context.Context, slug slug.Slug) ([]*TeamMetadata, error)
-	UpdateTeam(ctx context.Context, teamID uuid.UUID, purpose *string) (*Team, error)
+	UpdateTeam(ctx context.Context, teamSlug slug.Slug, purpose *string) (*Team, error)
 	GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)
 	GetTeams(ctx context.Context) ([]*Team, error)
 	GetTeamMembers(ctx context.Context, teamSlug slug.Slug) ([]*User, error)
@@ -145,8 +145,8 @@ type Database interface {
 	DisableReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*Reconciler, error)
 	DangerousGetReconcilerConfigValues(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*ReconcilerConfigValues, error)
 	GetAuditLogsForReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) ([]*AuditLog, error)
-	DisableTeam(ctx context.Context, teamID uuid.UUID) (*Team, error)
-	EnableTeam(ctx context.Context, teamID uuid.UUID) (*Team, error)
+	DisableTeam(ctx context.Context, teamSlug slug.Slug) (*Team, error)
+	EnableTeam(ctx context.Context, teamSlug slug.Slug) (*Team, error)
 }
 
 func (u User) GetID() uuid.UUID {
