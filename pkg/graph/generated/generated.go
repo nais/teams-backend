@@ -76,21 +76,21 @@ type ComplexityRoot struct {
 		ConfigureReconciler func(childComplexity int, name sqlc.ReconcilerName, config []*model.ReconcilerConfigInput) int
 		CreateTeam          func(childComplexity int, input model.CreateTeamInput) int
 		DisableReconciler   func(childComplexity int, name sqlc.ReconcilerName) int
-		DisableTeam         func(childComplexity int, teamID *uuid.UUID) int
+		DisableTeam         func(childComplexity int, slug *slug.Slug) int
 		EnableReconciler    func(childComplexity int, name sqlc.ReconcilerName) int
-		EnableTeam          func(childComplexity int, teamID *uuid.UUID) int
+		EnableTeam          func(childComplexity int, slug *slug.Slug) int
 		RemoveUsersFromTeam func(childComplexity int, input model.RemoveUsersFromTeamInput) int
 		ResetReconciler     func(childComplexity int, name sqlc.ReconcilerName) int
 		SetTeamMemberRole   func(childComplexity int, input model.SetTeamMemberRoleInput) int
-		SynchronizeTeam     func(childComplexity int, teamID *uuid.UUID) int
-		UpdateTeam          func(childComplexity int, teamID *uuid.UUID, input model.UpdateTeamInput) int
+		SynchronizeTeam     func(childComplexity int, slug *slug.Slug) int
+		UpdateTeam          func(childComplexity int, slug *slug.Slug, input model.UpdateTeamInput) int
 	}
 
 	Query struct {
 		Me          func(childComplexity int) int
 		Reconcilers func(childComplexity int) int
 		Roles       func(childComplexity int) int
-		Team        func(childComplexity int, id *uuid.UUID) int
+		Team        func(childComplexity int, slug *slug.Slug) int
 		Teams       func(childComplexity int) int
 		User        func(childComplexity int, id *uuid.UUID) int
 		UserByEmail func(childComplexity int, email string) int
@@ -139,7 +139,6 @@ type ComplexityRoot struct {
 	Team struct {
 		AuditLogs  func(childComplexity int) int
 		Enabled    func(childComplexity int) int
-		ID         func(childComplexity int) int
 		Members    func(childComplexity int) int
 		Metadata   func(childComplexity int) int
 		Purpose    func(childComplexity int) int
@@ -185,21 +184,21 @@ type MutationResolver interface {
 	ConfigureReconciler(ctx context.Context, name sqlc.ReconcilerName, config []*model.ReconcilerConfigInput) (*db.Reconciler, error)
 	ResetReconciler(ctx context.Context, name sqlc.ReconcilerName) (*db.Reconciler, error)
 	CreateTeam(ctx context.Context, input model.CreateTeamInput) (*db.Team, error)
-	UpdateTeam(ctx context.Context, teamID *uuid.UUID, input model.UpdateTeamInput) (*db.Team, error)
+	UpdateTeam(ctx context.Context, slug *slug.Slug, input model.UpdateTeamInput) (*db.Team, error)
 	RemoveUsersFromTeam(ctx context.Context, input model.RemoveUsersFromTeamInput) (*db.Team, error)
-	SynchronizeTeam(ctx context.Context, teamID *uuid.UUID) (*model.TeamSync, error)
+	SynchronizeTeam(ctx context.Context, slug *slug.Slug) (*model.TeamSync, error)
 	AddTeamMembers(ctx context.Context, input model.AddTeamMembersInput) (*db.Team, error)
 	AddTeamOwners(ctx context.Context, input model.AddTeamOwnersInput) (*db.Team, error)
 	SetTeamMemberRole(ctx context.Context, input model.SetTeamMemberRoleInput) (*db.Team, error)
-	DisableTeam(ctx context.Context, teamID *uuid.UUID) (*db.Team, error)
-	EnableTeam(ctx context.Context, teamID *uuid.UUID) (*db.Team, error)
+	DisableTeam(ctx context.Context, slug *slug.Slug) (*db.Team, error)
+	EnableTeam(ctx context.Context, slug *slug.Slug) (*db.Team, error)
 }
 type QueryResolver interface {
 	Me(ctx context.Context) (db.AuthenticatedUser, error)
 	Reconcilers(ctx context.Context) ([]*db.Reconciler, error)
 	Roles(ctx context.Context) ([]sqlc.RoleName, error)
 	Teams(ctx context.Context) ([]*db.Team, error)
-	Team(ctx context.Context, id *uuid.UUID) (*db.Team, error)
+	Team(ctx context.Context, slug *slug.Slug) (*db.Team, error)
 	Users(ctx context.Context) ([]*db.User, error)
 	User(ctx context.Context, id *uuid.UUID) (*db.User, error)
 	UserByEmail(ctx context.Context, email string) (*db.User, error)
@@ -378,7 +377,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.DisableTeam(childComplexity, args["teamId"].(*uuid.UUID)), true
+		return e.complexity.Mutation.DisableTeam(childComplexity, args["slug"].(*slug.Slug)), true
 
 	case "Mutation.enableReconciler":
 		if e.complexity.Mutation.EnableReconciler == nil {
@@ -402,7 +401,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.EnableTeam(childComplexity, args["teamId"].(*uuid.UUID)), true
+		return e.complexity.Mutation.EnableTeam(childComplexity, args["slug"].(*slug.Slug)), true
 
 	case "Mutation.removeUsersFromTeam":
 		if e.complexity.Mutation.RemoveUsersFromTeam == nil {
@@ -450,7 +449,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.SynchronizeTeam(childComplexity, args["teamId"].(*uuid.UUID)), true
+		return e.complexity.Mutation.SynchronizeTeam(childComplexity, args["slug"].(*slug.Slug)), true
 
 	case "Mutation.updateTeam":
 		if e.complexity.Mutation.UpdateTeam == nil {
@@ -462,7 +461,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UpdateTeam(childComplexity, args["teamId"].(*uuid.UUID), args["input"].(model.UpdateTeamInput)), true
+		return e.complexity.Mutation.UpdateTeam(childComplexity, args["slug"].(*slug.Slug), args["input"].(model.UpdateTeamInput)), true
 
 	case "Query.me":
 		if e.complexity.Query.Me == nil {
@@ -495,7 +494,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Team(childComplexity, args["id"].(*uuid.UUID)), true
+		return e.complexity.Query.Team(childComplexity, args["slug"].(*slug.Slug)), true
 
 	case "Query.teams":
 		if e.complexity.Query.Teams == nil {
@@ -716,13 +715,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Team.Enabled(childComplexity), true
-
-	case "Team.id":
-		if e.complexity.Team.ID == nil {
-			break
-		}
-
-		return e.complexity.Team.ID(childComplexity), true
 
 	case "Team.members":
 		if e.complexity.Team.Members == nil {
@@ -1145,8 +1137,8 @@ type ServiceAccount {
 
     "Get a specific team."
     team(
-        "ID of the team."
-        id: UUID!
+        "Slug of the team."
+        slug: Slug!
     ): Team! @auth
 }
 
@@ -1171,8 +1163,8 @@ extend type Mutation {
     The updated team will be returned on success.
     """
     updateTeam(
-        "ID of the team to update."
-        teamId: UUID!
+        "Slug of the team to update."
+        slug: Slug!
 
         "Input for updating the team."
         input: UpdateTeamInput!
@@ -1197,8 +1189,8 @@ extend type Mutation {
     The team will be returned.
     """
     synchronizeTeam(
-        "The ID of the team to synchronize."
-        teamId: UUID!
+        "The slug of the team to synchronize."
+        slug: Slug!
     ): TeamSync! @auth
 
     """
@@ -1247,8 +1239,8 @@ extend type Mutation {
     The team will be returned on success.
     """
     disableTeam(
-        "The ID of the team to disable."
-        teamId: UUID!
+        "The slug of the team to disable."
+        slug: Slug!
     ): Team! @auth
 
     """
@@ -1257,8 +1249,8 @@ extend type Mutation {
     The team will be returned on success.
     """
     enableTeam(
-        "The ID of the team to enable."
-        teamId: UUID!
+        "The slug of the team to enable."
+        slug: Slug!
     ): Team! @auth
 }
 
@@ -1273,9 +1265,6 @@ type TeamSync {
 
 "Team type."
 type Team {
-    "ID of the team."
-    id: UUID!
-
     "Unique slug of the team."
     slug: Slug!
 
@@ -1354,8 +1343,8 @@ input UpdateTeamInput {
 
 "Input for adding users to a team as members."
 input AddTeamMembersInput {
-    "ID of the team that should receive new members."
-    teamId: UUID!
+    "Slug of the team that should receive new members."
+    slug: Slug!
 
     "List of user IDs that should be added to the team as members."
     userIds: [UUID!]!
@@ -1363,8 +1352,8 @@ input AddTeamMembersInput {
 
 "Input for adding users to a team as owners."
 input AddTeamOwnersInput {
-    "ID of the team that should receive new owners."
-    teamId: UUID!
+    "Slug of the team that should receive new owners."
+    slug: Slug!
 
     "List of user IDs that should be added to the team as owners."
     userIds: [UUID!]!
@@ -1372,17 +1361,17 @@ input AddTeamOwnersInput {
 
 "Input for removing users from a team."
 input RemoveUsersFromTeamInput {
+    "Team slug that users should be removed from."
+    slug: Slug!
+
     "List of user IDs that should be removed from the team."
     userIds: [UUID!]!
-
-    "Team ID that users should be removed from."
-    teamId: UUID!
 }
 
 "Input for setting team member role."
 input SetTeamMemberRoleInput {
-    "The ID of the team."
-    teamId: UUID!
+    "The slug of the team."
+    slug: Slug!
 
     "The ID of the user."
     userId: UUID!
@@ -1527,15 +1516,15 @@ func (ec *executionContext) field_Mutation_disableReconciler_args(ctx context.Co
 func (ec *executionContext) field_Mutation_disableTeam_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *uuid.UUID
-	if tmp, ok := rawArgs["teamId"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamId"))
-		arg0, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
+	var arg0 *slug.Slug
+	if tmp, ok := rawArgs["slug"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
+		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["teamId"] = arg0
+	args["slug"] = arg0
 	return args, nil
 }
 
@@ -1557,15 +1546,15 @@ func (ec *executionContext) field_Mutation_enableReconciler_args(ctx context.Con
 func (ec *executionContext) field_Mutation_enableTeam_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *uuid.UUID
-	if tmp, ok := rawArgs["teamId"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamId"))
-		arg0, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
+	var arg0 *slug.Slug
+	if tmp, ok := rawArgs["slug"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
+		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["teamId"] = arg0
+	args["slug"] = arg0
 	return args, nil
 }
 
@@ -1617,30 +1606,30 @@ func (ec *executionContext) field_Mutation_setTeamMemberRole_args(ctx context.Co
 func (ec *executionContext) field_Mutation_synchronizeTeam_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *uuid.UUID
-	if tmp, ok := rawArgs["teamId"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamId"))
-		arg0, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
+	var arg0 *slug.Slug
+	if tmp, ok := rawArgs["slug"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
+		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["teamId"] = arg0
+	args["slug"] = arg0
 	return args, nil
 }
 
 func (ec *executionContext) field_Mutation_updateTeam_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *uuid.UUID
-	if tmp, ok := rawArgs["teamId"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamId"))
-		arg0, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
+	var arg0 *slug.Slug
+	if tmp, ok := rawArgs["slug"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
+		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["teamId"] = arg0
+	args["slug"] = arg0
 	var arg1 model.UpdateTeamInput
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
@@ -1671,15 +1660,15 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 func (ec *executionContext) field_Query_team_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *uuid.UUID
-	if tmp, ok := rawArgs["id"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
+	var arg0 *slug.Slug
+	if tmp, ok := rawArgs["slug"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
+		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["id"] = arg0
+	args["slug"] = arg0
 	return args, nil
 }
 
@@ -2575,8 +2564,6 @@ func (ec *executionContext) fieldContext_Mutation_createTeam(ctx context.Context
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Team_id(ctx, field)
 			case "slug":
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
@@ -2624,7 +2611,7 @@ func (ec *executionContext) _Mutation_updateTeam(ctx context.Context, field grap
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().UpdateTeam(rctx, fc.Args["teamId"].(*uuid.UUID), fc.Args["input"].(model.UpdateTeamInput))
+			return ec.resolvers.Mutation().UpdateTeam(rctx, fc.Args["slug"].(*slug.Slug), fc.Args["input"].(model.UpdateTeamInput))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -2668,8 +2655,6 @@ func (ec *executionContext) fieldContext_Mutation_updateTeam(ctx context.Context
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Team_id(ctx, field)
 			case "slug":
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
@@ -2761,8 +2746,6 @@ func (ec *executionContext) fieldContext_Mutation_removeUsersFromTeam(ctx contex
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Team_id(ctx, field)
 			case "slug":
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
@@ -2810,7 +2793,7 @@ func (ec *executionContext) _Mutation_synchronizeTeam(ctx context.Context, field
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().SynchronizeTeam(rctx, fc.Args["teamId"].(*uuid.UUID))
+			return ec.resolvers.Mutation().SynchronizeTeam(rctx, fc.Args["slug"].(*slug.Slug))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -2935,8 +2918,6 @@ func (ec *executionContext) fieldContext_Mutation_addTeamMembers(ctx context.Con
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Team_id(ctx, field)
 			case "slug":
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
@@ -3028,8 +3009,6 @@ func (ec *executionContext) fieldContext_Mutation_addTeamOwners(ctx context.Cont
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Team_id(ctx, field)
 			case "slug":
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
@@ -3121,8 +3100,6 @@ func (ec *executionContext) fieldContext_Mutation_setTeamMemberRole(ctx context.
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Team_id(ctx, field)
 			case "slug":
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
@@ -3170,7 +3147,7 @@ func (ec *executionContext) _Mutation_disableTeam(ctx context.Context, field gra
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().DisableTeam(rctx, fc.Args["teamId"].(*uuid.UUID))
+			return ec.resolvers.Mutation().DisableTeam(rctx, fc.Args["slug"].(*slug.Slug))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -3214,8 +3191,6 @@ func (ec *executionContext) fieldContext_Mutation_disableTeam(ctx context.Contex
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Team_id(ctx, field)
 			case "slug":
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
@@ -3263,7 +3238,7 @@ func (ec *executionContext) _Mutation_enableTeam(ctx context.Context, field grap
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().EnableTeam(rctx, fc.Args["teamId"].(*uuid.UUID))
+			return ec.resolvers.Mutation().EnableTeam(rctx, fc.Args["slug"].(*slug.Slug))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -3307,8 +3282,6 @@ func (ec *executionContext) fieldContext_Mutation_enableTeam(ctx context.Context
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Team_id(ctx, field)
 			case "slug":
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
@@ -3590,8 +3563,6 @@ func (ec *executionContext) fieldContext_Query_teams(ctx context.Context, field 
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Team_id(ctx, field)
 			case "slug":
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
@@ -3628,7 +3599,7 @@ func (ec *executionContext) _Query_team(ctx context.Context, field graphql.Colle
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Team(rctx, fc.Args["id"].(*uuid.UUID))
+			return ec.resolvers.Query().Team(rctx, fc.Args["slug"].(*slug.Slug))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -3672,8 +3643,6 @@ func (ec *executionContext) fieldContext_Query_team(ctx context.Context, field g
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Team_id(ctx, field)
 			case "slug":
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
@@ -5176,50 +5145,6 @@ func (ec *executionContext) fieldContext_SyncError_error(ctx context.Context, fi
 	return fc, nil
 }
 
-func (ec *executionContext) _Team_id(ctx context.Context, field graphql.CollectedField, obj *db.Team) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Team_id(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ID, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(uuid.UUID)
-	fc.Result = res
-	return ec.marshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Team_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Team",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type UUID does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Team_slug(ctx context.Context, field graphql.CollectedField, obj *db.Team) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Team_slug(ctx, field)
 	if err != nil {
@@ -5707,8 +5632,6 @@ func (ec *executionContext) fieldContext_TeamMembership_team(ctx context.Context
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Team_id(ctx, field)
 			case "slug":
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
@@ -5898,8 +5821,6 @@ func (ec *executionContext) fieldContext_TeamSync_team(ctx context.Context, fiel
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Team_id(ctx, field)
 			case "slug":
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
@@ -7981,18 +7902,18 @@ func (ec *executionContext) unmarshalInputAddTeamMembersInput(ctx context.Contex
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"teamId", "userIds"}
+	fieldsInOrder := [...]string{"slug", "userIds"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "teamId":
+		case "slug":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamId"))
-			it.TeamID, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
+			it.Slug, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -8017,18 +7938,18 @@ func (ec *executionContext) unmarshalInputAddTeamOwnersInput(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"teamId", "userIds"}
+	fieldsInOrder := [...]string{"slug", "userIds"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "teamId":
+		case "slug":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamId"))
-			it.TeamID, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
+			it.Slug, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -8125,26 +8046,26 @@ func (ec *executionContext) unmarshalInputRemoveUsersFromTeamInput(ctx context.C
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"userIds", "teamId"}
+	fieldsInOrder := [...]string{"slug", "userIds"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
+		case "slug":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
+			it.Slug, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		case "userIds":
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userIds"))
 			it.UserIds, err = ec.unmarshalNUUID2ᚕᚖgithubᚗcomᚋgoogleᚋuuidᚐUUIDᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "teamId":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamId"))
-			it.TeamID, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -8161,18 +8082,18 @@ func (ec *executionContext) unmarshalInputSetTeamMemberRoleInput(ctx context.Con
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"teamId", "userId", "role"}
+	fieldsInOrder := [...]string{"slug", "userId", "role"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "teamId":
+		case "slug":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamId"))
-			it.TeamID, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
+			it.Slug, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -9076,13 +8997,6 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Team")
-		case "id":
-
-			out.Values[i] = ec._Team_id(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
-			}
 		case "slug":
 
 			out.Values[i] = ec._Team_slug(ctx, field, obj)

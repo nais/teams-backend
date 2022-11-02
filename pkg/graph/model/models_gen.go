@@ -16,16 +16,16 @@ import (
 
 // Input for adding users to a team as members.
 type AddTeamMembersInput struct {
-	// ID of the team that should receive new members.
-	TeamID *uuid.UUID `json:"teamId"`
+	// Slug of the team that should receive new members.
+	Slug *slug.Slug `json:"slug"`
 	// List of user IDs that should be added to the team as members.
 	UserIds []*uuid.UUID `json:"userIds"`
 }
 
 // Input for adding users to a team as owners.
 type AddTeamOwnersInput struct {
-	// ID of the team that should receive new owners.
-	TeamID *uuid.UUID `json:"teamId"`
+	// Slug of the team that should receive new owners.
+	Slug *slug.Slug `json:"slug"`
 	// List of user IDs that should be added to the team as owners.
 	UserIds []*uuid.UUID `json:"userIds"`
 }
@@ -48,16 +48,16 @@ type ReconcilerConfigInput struct {
 
 // Input for removing users from a team.
 type RemoveUsersFromTeamInput struct {
+	// Team slug that users should be removed from.
+	Slug *slug.Slug `json:"slug"`
 	// List of user IDs that should be removed from the team.
 	UserIds []*uuid.UUID `json:"userIds"`
-	// Team ID that users should be removed from.
-	TeamID *uuid.UUID `json:"teamId"`
 }
 
 // Input for setting team member role.
 type SetTeamMemberRoleInput struct {
-	// The ID of the team.
-	TeamID *uuid.UUID `json:"teamId"`
+	// The slug of the team.
+	Slug *slug.Slug `json:"slug"`
 	// The ID of the user.
 	UserID *uuid.UUID `json:"userId"`
 	// The team role to set.

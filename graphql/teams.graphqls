@@ -4,8 +4,8 @@ extend type Query {
 
     "Get a specific team."
     team(
-        "ID of the team."
-        id: UUID!
+        "Slug of the team."
+        slug: Slug!
     ): Team! @auth
 }
 
@@ -30,8 +30,8 @@ extend type Mutation {
     The updated team will be returned on success.
     """
     updateTeam(
-        "ID of the team to update."
-        teamId: UUID!
+        "Slug of the team to update."
+        slug: Slug!
 
         "Input for updating the team."
         input: UpdateTeamInput!
@@ -56,8 +56,8 @@ extend type Mutation {
     The team will be returned.
     """
     synchronizeTeam(
-        "The ID of the team to synchronize."
-        teamId: UUID!
+        "The slug of the team to synchronize."
+        slug: Slug!
     ): TeamSync! @auth
 
     """
@@ -106,8 +106,8 @@ extend type Mutation {
     The team will be returned on success.
     """
     disableTeam(
-        "The ID of the team to disable."
-        teamId: UUID!
+        "The slug of the team to disable."
+        slug: Slug!
     ): Team! @auth
 
     """
@@ -116,8 +116,8 @@ extend type Mutation {
     The team will be returned on success.
     """
     enableTeam(
-        "The ID of the team to enable."
-        teamId: UUID!
+        "The slug of the team to enable."
+        slug: Slug!
     ): Team! @auth
 }
 
@@ -132,9 +132,6 @@ type TeamSync {
 
 "Team type."
 type Team {
-    "ID of the team."
-    id: UUID!
-
     "Unique slug of the team."
     slug: Slug!
 
@@ -213,8 +210,8 @@ input UpdateTeamInput {
 
 "Input for adding users to a team as members."
 input AddTeamMembersInput {
-    "ID of the team that should receive new members."
-    teamId: UUID!
+    "Slug of the team that should receive new members."
+    slug: Slug!
 
     "List of user IDs that should be added to the team as members."
     userIds: [UUID!]!
@@ -222,8 +219,8 @@ input AddTeamMembersInput {
 
 "Input for adding users to a team as owners."
 input AddTeamOwnersInput {
-    "ID of the team that should receive new owners."
-    teamId: UUID!
+    "Slug of the team that should receive new owners."
+    slug: Slug!
 
     "List of user IDs that should be added to the team as owners."
     userIds: [UUID!]!
@@ -231,17 +228,17 @@ input AddTeamOwnersInput {
 
 "Input for removing users from a team."
 input RemoveUsersFromTeamInput {
+    "Team slug that users should be removed from."
+    slug: Slug!
+
     "List of user IDs that should be removed from the team."
     userIds: [UUID!]!
-
-    "Team ID that users should be removed from."
-    teamId: UUID!
 }
 
 "Input for setting team member role."
 input SetTeamMemberRoleInput {
-    "The ID of the team."
-    teamId: UUID!
+    "The slug of the team."
+    slug: Slug!
 
     "The ID of the user."
     userId: UUID!

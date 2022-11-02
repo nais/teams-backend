@@ -79,13 +79,9 @@ ALTER TABLE service_account_roles
     DROP COLUMN target_id;
 
 /* teams */
-/*
+
 ALTER TABLE teams
-    DROP COLUMN id,
+    DROP CONSTRAINT teams_pkey,
     ADD PRIMARY KEY(slug);
-
-
- */
-
 
 COMMIT;

@@ -14,6 +14,7 @@ import (
 	"github.com/nais/console/pkg/graph/apierror"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
 )
@@ -76,17 +77,17 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 }
 
 // UpdateTeam is the resolver for the updateTeam field.
-func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, input model.UpdateTeamInput) (*db.Team, error) {
-	team, err := r.database.GetTeamByID(ctx, *teamID)
-	if err != nil {
-		log.Errorf("get team %q: %s", *teamID, err)
-		return nil, apierror.ErrTeamNotExist
-	}
-
+func (r *mutationResolver) UpdateTeam(ctx context.Context, slug *slug.Slug, input model.UpdateTeamInput) (*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
-	err = authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, team.Slug)
+	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *slug)
 	if err != nil {
 		return nil, err
+	}
+
+	team, err := r.database.GetTeamBySlug(ctx, *slug)
+	if err != nil {
+		log.Errorf("get team %q: %s", *slug, err)
+		return nil, apierror.ErrTeamNotExist
 	}
 
 	input = input.Sanitize()
@@ -123,16 +124,16 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, teamID *uuid.UUID, in
 
 // RemoveUsersFromTeam is the resolver for the removeUsersFromTeam field.
 func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.RemoveUsersFromTeamInput) (*db.Team, error) {
-	team, err := r.database.GetTeamByID(ctx, *input.TeamID)
-	if err != nil {
-		log.Errorf("get team %q: %s", *input.TeamID, err)
-		return nil, apierror.ErrTeamNotExist
-	}
-
 	actor := authz.ActorFromContext(ctx)
-	err = authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, team.Slug)
+	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *input.Slug)
 	if err != nil {
 		return nil, err
+	}
+
+	team, err := r.database.GetTeamBySlug(ctx, *input.Slug)
+	if err != nil {
+		log.Errorf("get team %q: %s", *input.Slug, err)
+		return nil, apierror.ErrTeamNotExist
 	}
 
 	correlationID, err := uuid.NewUUID()
@@ -143,7 +144,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
 		members, err := dbtx.GetTeamMembers(ctx, team.Slug)
 		if err != nil {
-			return fmt.Errorf("get team members of %q: %w", *input.TeamID, err)
+			return fmt.Errorf("get team members of %q: %w", *input.Slug, err)
 		}
 
 		memberFromUserID := func(userId uuid.UUID) *db.User {
@@ -158,7 +159,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 		for _, userID := range input.UserIds {
 			member := memberFromUserID(*userID)
 			if member == nil {
-				return apierror.Errorf("The user %q is not a member of team %q.", *userID, *input.TeamID)
+				return apierror.Errorf("The user %q is not a member of team %q.", *userID, *input.Slug)
 			}
 
 			err = dbtx.RemoveUserFromTeam(ctx, *userID, team.Slug)
@@ -190,17 +191,17 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 }
 
 // SynchronizeTeam is the resolver for the synchronizeTeam field.
-func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUID) (*model.TeamSync, error) {
-	team, err := r.database.GetTeamByID(ctx, *teamID)
-	if err != nil {
-		log.Errorf("get team %q: %s", teamID, err)
-		return nil, apierror.ErrTeamNotExist
-	}
-
+func (r *mutationResolver) SynchronizeTeam(ctx context.Context, slug *slug.Slug) (*model.TeamSync, error) {
 	actor := authz.ActorFromContext(ctx)
-	err = authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, team.Slug)
+	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *slug)
 	if err != nil {
 		return nil, err
+	}
+
+	team, err := r.database.GetTeamBySlug(ctx, *slug)
+	if err != nil {
+		log.Errorf("get team %q: %s", *slug, err)
+		return nil, apierror.ErrTeamNotExist
 	}
 
 	correlationID, err := uuid.NewUUID()
@@ -232,16 +233,16 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, teamID *uuid.UUI
 
 // AddTeamMembers is the resolver for the addTeamMembers field.
 func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTeamMembersInput) (*db.Team, error) {
-	team, err := r.database.GetTeamByID(ctx, *input.TeamID)
-	if err != nil {
-		log.Errorf("get team %q: %s", *input.TeamID, err)
-		return nil, apierror.ErrTeamNotExist
-	}
-
 	actor := authz.ActorFromContext(ctx)
-	err = authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, team.Slug)
+	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *input.Slug)
 	if err != nil {
 		return nil, err
+	}
+
+	team, err := r.database.GetTeamBySlug(ctx, *input.Slug)
+	if err != nil {
+		log.Errorf("get team %q: %s", *input.Slug, err)
+		return nil, apierror.ErrTeamNotExist
 	}
 
 	correlationID, err := uuid.NewUUID()
@@ -285,16 +286,16 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 
 // AddTeamOwners is the resolver for the addTeamOwners field.
 func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTeamOwnersInput) (*db.Team, error) {
-	team, err := r.database.GetTeamByID(ctx, *input.TeamID)
-	if err != nil {
-		log.Errorf("get team %q: %s", *input.TeamID, err)
-		return nil, apierror.ErrTeamNotExist
-	}
-
 	actor := authz.ActorFromContext(ctx)
-	err = authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, team.Slug)
+	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *input.Slug)
 	if err != nil {
 		return nil, err
+	}
+
+	team, err := r.database.GetTeamBySlug(ctx, *input.Slug)
+	if err != nil {
+		log.Errorf("get team %q: %s", *input.Slug, err)
+		return nil, apierror.ErrTeamNotExist
 	}
 
 	correlationID, err := uuid.NewUUID()
@@ -338,16 +339,16 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 
 // SetTeamMemberRole is the resolver for the setTeamMemberRole field.
 func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.SetTeamMemberRoleInput) (*db.Team, error) {
-	team, err := r.database.GetTeamByID(ctx, *input.TeamID)
-	if err != nil {
-		log.Errorf("get team %q: %s", *input.TeamID, err)
-		return nil, apierror.ErrTeamNotExist
-	}
-
 	actor := authz.ActorFromContext(ctx)
-	err = authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, team.Slug)
+	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *input.Slug)
 	if err != nil {
 		return nil, err
+	}
+
+	team, err := r.database.GetTeamBySlug(ctx, *input.Slug)
+	if err != nil {
+		log.Errorf("get team %q: %s", *input.Slug, err)
+		return nil, apierror.ErrTeamNotExist
 	}
 
 	correlationID, err := uuid.NewUUID()
@@ -368,7 +369,7 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 		}
 	}
 	if member == nil {
-		return nil, fmt.Errorf("user %q not in team %q", *input.UserID, *input.TeamID)
+		return nil, fmt.Errorf("user %q not in team %q", *input.UserID, *input.Slug)
 	}
 
 	desiredRole, err := sqlcRoleFromTeamRole(input.Role)
@@ -399,17 +400,17 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 }
 
 // DisableTeam is the resolver for the disableTeam field.
-func (r *mutationResolver) DisableTeam(ctx context.Context, teamID *uuid.UUID) (*db.Team, error) {
-	team, err := r.database.GetTeamByID(ctx, *teamID)
-	if err != nil {
-		log.Errorf("get team %q: %s", *teamID, err)
-		return nil, apierror.ErrTeamNotExist
-	}
-
+func (r *mutationResolver) DisableTeam(ctx context.Context, slug *slug.Slug) (*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
-	err = authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, team.Slug)
+	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *slug)
 	if err != nil {
 		return nil, err
+	}
+
+	team, err := r.database.GetTeamBySlug(ctx, *slug)
+	if err != nil {
+		log.Errorf("get team %q: %s", *slug, err)
+		return nil, apierror.ErrTeamNotExist
 	}
 
 	correlationID, err := uuid.NewUUID()
@@ -417,7 +418,7 @@ func (r *mutationResolver) DisableTeam(ctx context.Context, teamID *uuid.UUID) (
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	team, err = r.database.DisableTeam(ctx, *teamID)
+	team, err = r.database.DisableTeam(ctx, team.ID)
 	if err != nil {
 		return nil, fmt.Errorf("disable team: %w", err)
 	}
@@ -438,17 +439,17 @@ func (r *mutationResolver) DisableTeam(ctx context.Context, teamID *uuid.UUID) (
 }
 
 // EnableTeam is the resolver for the enableTeam field.
-func (r *mutationResolver) EnableTeam(ctx context.Context, teamID *uuid.UUID) (*db.Team, error) {
-	team, err := r.database.GetTeamByID(ctx, *teamID)
-	if err != nil {
-		log.Errorf("get team %q: %s", *teamID, err)
-		return nil, apierror.ErrTeamNotExist
-	}
-
+func (r *mutationResolver) EnableTeam(ctx context.Context, slug *slug.Slug) (*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
-	err = authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, team.Slug)
+	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *slug)
 	if err != nil {
 		return nil, err
+	}
+
+	team, err := r.database.GetTeamBySlug(ctx, *slug)
+	if err != nil {
+		log.Errorf("get team %q: %s", *slug, err)
+		return nil, apierror.ErrTeamNotExist
 	}
 
 	correlationID, err := uuid.NewUUID()
@@ -456,7 +457,7 @@ func (r *mutationResolver) EnableTeam(ctx context.Context, teamID *uuid.UUID) (*
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	team, err = r.database.EnableTeam(ctx, *teamID)
+	team, err = r.database.EnableTeam(ctx, team.ID)
 	if err != nil {
 		return nil, fmt.Errorf("enable team: %w", err)
 	}
@@ -488,17 +489,17 @@ func (r *queryResolver) Teams(ctx context.Context) ([]*db.Team, error) {
 }
 
 // Team is the resolver for the team field.
-func (r *queryResolver) Team(ctx context.Context, id *uuid.UUID) (*db.Team, error) {
-	team, err := r.database.GetTeamByID(ctx, *id)
-	if err != nil {
-		log.Errorf("get team %q: %s", *id, err)
-		return nil, apierror.ErrTeamNotExist
-	}
-
+func (r *queryResolver) Team(ctx context.Context, slug *slug.Slug) (*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
-	err = authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsRead, team.Slug)
+	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsRead, *slug)
 	if err != nil {
 		return nil, err
+	}
+
+	team, err := r.database.GetTeamBySlug(ctx, *slug)
+	if err != nil {
+		log.Errorf("get team %q: %s", *slug, err)
+		return nil, apierror.ErrTeamNotExist
 	}
 
 	return team, nil
