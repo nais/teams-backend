@@ -106,7 +106,6 @@ type Database interface {
 	SetTeamMetadata(ctx context.Context, slug slug.Slug, metadata []TeamMetadata) error
 	GetTeamMetadata(ctx context.Context, slug slug.Slug) ([]*TeamMetadata, error)
 	UpdateTeam(ctx context.Context, teamID uuid.UUID, purpose *string) (*Team, error)
-	GetTeamByID(ctx context.Context, ID uuid.UUID) (*Team, error)
 	GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)
 	GetTeams(ctx context.Context) ([]*Team, error)
 	GetTeamMembers(ctx context.Context, teamSlug slug.Slug) ([]*User, error)

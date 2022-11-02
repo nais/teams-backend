@@ -86,15 +86,6 @@ func (d *database) GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, er
 	return &Team{Team: team}, nil
 }
 
-func (d *database) GetTeamByID(ctx context.Context, id uuid.UUID) (*Team, error) {
-	team, err := d.querier.GetTeamByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Team{Team: team}, nil
-}
-
 func (d *database) GetTeams(ctx context.Context) ([]*Team, error) {
 	teams, err := d.querier.GetTeams(ctx)
 	if err != nil {

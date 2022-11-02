@@ -7,10 +7,6 @@ RETURNING *;
 SELECT * FROM teams
 ORDER BY slug ASC;
 
--- name: GetTeamByID :one
-SELECT * FROM teams
-WHERE id = $1;
-
 -- name: GetTeamBySlug :one
 SELECT * FROM teams
 WHERE slug = $1;

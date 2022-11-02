@@ -636,29 +636,6 @@ func (_m *MockDatabase) GetSessionByID(ctx context.Context, sessionID uuid.UUID)
 	return r0, r1
 }
 
-// GetTeamByID provides a mock function with given fields: ctx, ID
-func (_m *MockDatabase) GetTeamByID(ctx context.Context, ID uuid.UUID) (*Team, error) {
-	ret := _m.Called(ctx, ID)
-
-	var r0 *Team
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) *Team); ok {
-		r0 = rf(ctx, ID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*Team)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
-		r1 = rf(ctx, ID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // GetTeamBySlug provides a mock function with given fields: ctx, _a1
 func (_m *MockDatabase) GetTeamBySlug(ctx context.Context, _a1 slug.Slug) (*Team, error) {
 	ret := _m.Called(ctx, _a1)

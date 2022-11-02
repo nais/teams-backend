@@ -74,23 +74,6 @@ func (q *Queries) EnableTeam(ctx context.Context, id uuid.UUID) (*Team, error) {
 	return &i, err
 }
 
-const getTeamByID = `-- name: GetTeamByID :one
-SELECT id, slug, purpose, enabled FROM teams
-WHERE id = $1
-`
-
-func (q *Queries) GetTeamByID(ctx context.Context, id uuid.UUID) (*Team, error) {
-	row := q.db.QueryRow(ctx, getTeamByID, id)
-	var i Team
-	err := row.Scan(
-		&i.ID,
-		&i.Slug,
-		&i.Purpose,
-		&i.Enabled,
-	)
-	return &i, err
-}
-
 const getTeamBySlug = `-- name: GetTeamBySlug :one
 SELECT id, slug, purpose, enabled FROM teams
 WHERE slug = $1
