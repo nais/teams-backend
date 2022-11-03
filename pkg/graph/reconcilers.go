@@ -11,6 +11,7 @@ import (
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/graph/apierror"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/sqlc"
@@ -19,7 +20,7 @@ import (
 // EnableReconciler is the resolver for the enableReconciler field.
 func (r *mutationResolver) EnableReconciler(ctx context.Context, name sqlc.ReconcilerName) (*db.Reconciler, error) {
 	if !name.Valid() {
-		return nil, fmt.Errorf("%q is not a valid name", name)
+		return nil, apierror.Errorf("%q is not a valid name", name)
 	}
 
 	var reconciler *db.Reconciler
@@ -73,7 +74,7 @@ func (r *mutationResolver) EnableReconciler(ctx context.Context, name sqlc.Recon
 // DisableReconciler is the resolver for the disableReconciler field.
 func (r *mutationResolver) DisableReconciler(ctx context.Context, name sqlc.ReconcilerName) (*db.Reconciler, error) {
 	if !name.Valid() {
-		return nil, fmt.Errorf("%q is not a valid name", name)
+		return nil, apierror.Errorf("%q is not a valid name", name)
 	}
 
 	var reconciler *db.Reconciler
@@ -111,7 +112,7 @@ func (r *mutationResolver) DisableReconciler(ctx context.Context, name sqlc.Reco
 // ConfigureReconciler is the resolver for the configureReconciler field.
 func (r *mutationResolver) ConfigureReconciler(ctx context.Context, name sqlc.ReconcilerName, config []*model.ReconcilerConfigInput) (*db.Reconciler, error) {
 	if !name.Valid() {
-		return nil, fmt.Errorf("%q is not a valid name", name)
+		return nil, apierror.Errorf("%q is not a valid name", name)
 	}
 
 	reconcilerConfig := make(map[sqlc.ReconcilerConfigKey]string)
