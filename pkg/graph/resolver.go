@@ -46,6 +46,25 @@ func (r *Resolver) reconcileTeam(ctx context.Context, correlationID uuid.UUID, t
 	r.teamReconciler <- reconcilerInput.WithCorrelationID(correlationID)
 }
 
+// reconcileAllTeams Trigger reconcilers for all teams
+func (r *Resolver) reconcileAllTeams(ctx context.Context, correlationID uuid.UUID) {
+	teams, err := r.database.GetTeams(ctx)
+	if err != nil {
+		log.Errorf("unable to get teams for reconcile loop: %s", err)
+		return
+	}
+
+	for _, team := range teams {
+		input, err := reconcilers.CreateReconcilerInput(ctx, r.database, *team)
+		if err != nil {
+			log.Errorf("unable to create input for team %q for reconcile loop: %s", team.Slug, err)
+			return
+		}
+
+		r.teamReconciler <- input.WithCorrelationID(correlationID)
+	}
+}
+
 func sqlcRoleFromTeamRole(teamRole model.TeamRole) (sqlc.RoleName, error) {
 	switch teamRole {
 	case model.TeamRoleMember:

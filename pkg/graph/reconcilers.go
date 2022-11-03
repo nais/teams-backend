@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/db"
@@ -23,8 +24,12 @@ func (r *mutationResolver) EnableReconciler(ctx context.Context, name sqlc.Recon
 		return nil, apierror.Errorf("%q is not a valid name", name)
 	}
 
+	correlationID, err := uuid.NewUUID()
+	if err != nil {
+		return nil, fmt.Errorf("create log correlation ID: %w", err)
+	}
+
 	var reconciler *db.Reconciler
-	var err error
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
 		reconciler, err = dbtx.GetReconciler(ctx, name)
 		if err != nil {
@@ -63,10 +68,12 @@ func (r *mutationResolver) EnableReconciler(ctx context.Context, name sqlc.Recon
 		auditlogger.ReconcilerTarget(name),
 	}
 	fields := auditlogger.Fields{
-		Action: sqlc.AuditActionGraphqlApiReconcilersEnable,
-		Actor:  actor,
+		Action:        sqlc.AuditActionGraphqlApiReconcilersEnable,
+		Actor:         actor,
+		CorrelationID: correlationID,
 	}
 	r.auditLogger.Logf(ctx, targets, fields, "Enable reconciler: %q", name)
+	r.reconcileAllTeams(ctx, correlationID)
 
 	return reconciler, nil
 }
