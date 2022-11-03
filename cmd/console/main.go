@@ -223,7 +223,7 @@ func run() error {
 func reconcileTeams(ctx context.Context, database db.Database, reconcileInputs *map[slug.Slug]reconcilers.Input, cfg *config.Config, auditLogger auditlogger.AuditLogger) error {
 	const reconcileTimeout = 15 * time.Minute
 
-	reconcilers, err := initReconcilers(ctx, database, cfg, auditLogger)
+	enabledReconcilers, err := initReconcilers(ctx, database, cfg, auditLogger)
 	if err != nil {
 		return err
 	}
@@ -241,7 +241,7 @@ func reconcileTeams(ctx context.Context, database db.Database, reconcileInputs *
 
 		teamErrors := 0
 
-		for _, reconciler := range reconcilers {
+		for _, reconciler := range enabledReconcilers {
 			name := reconciler.Name()
 			metrics.IncReconcilerCounter(name, metrics.ReconcilerStateStarted)
 
@@ -268,6 +268,9 @@ func reconcileTeams(ctx context.Context, database db.Database, reconcileInputs *
 		}
 
 		if teamErrors == 0 {
+			if err = database.SetLastSuccessfulSyncForTeam(ctx, teamSlug); err != nil {
+				log.Errorf("Unable to update last successful sync timestamp for team %q", teamSlug)
+			}
 			delete(*reconcileInputs, teamSlug)
 		}
 		errors += teamErrors

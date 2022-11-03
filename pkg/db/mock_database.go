@@ -982,6 +982,20 @@ func (_m *MockDatabase) ResetReconcilerConfig(ctx context.Context, reconcilerNam
 	return r0, r1
 }
 
+// SetLastSuccessfulSyncForTeam provides a mock function with given fields: ctx, teamSlug
+func (_m *MockDatabase) SetLastSuccessfulSyncForTeam(ctx context.Context, teamSlug slug.Slug) error {
+	ret := _m.Called(ctx, teamSlug)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug) error); ok {
+		r0 = rf(ctx, teamSlug)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // SetReconcilerErrorForTeam provides a mock function with given fields: ctx, correlationID, _a2, reconcilerName, err
 func (_m *MockDatabase) SetReconcilerErrorForTeam(ctx context.Context, correlationID uuid.UUID, _a2 slug.Slug, reconcilerName sqlc.ReconcilerName, err error) error {
 	ret := _m.Called(ctx, correlationID, _a2, reconcilerName, err)

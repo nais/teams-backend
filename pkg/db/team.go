@@ -145,3 +145,7 @@ func (d *database) EnableTeam(ctx context.Context, teamSlug slug.Slug) (*Team, e
 
 	return &Team{Team: team}, nil
 }
+
+func (d *database) SetLastSuccessfulSyncForTeam(ctx context.Context, teamSlug slug.Slug) error {
+	return d.querier.SetLastSuccessfulSyncForTeam(ctx, teamSlug)
+}

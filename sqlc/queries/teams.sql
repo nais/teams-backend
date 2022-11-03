@@ -50,3 +50,7 @@ RETURNING *;
 -- name: RemoveUserFromTeam :exec
 DELETE FROM user_roles
 WHERE user_id = $1 AND target_team_slug = $2;
+
+-- name: SetLastSuccessfulSyncForTeam :exec
+UPDATE teams SET last_successful_sync = NOW()
+WHERE slug = $1;

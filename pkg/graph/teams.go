@@ -6,6 +6,7 @@ package graph
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
@@ -588,6 +589,14 @@ func (r *teamResolver) SyncErrors(ctx context.Context, obj *db.Team) ([]*model.S
 	}
 
 	return syncErrors, nil
+}
+
+// LastSuccessfulSync is the resolver for the lastSuccessfulSync field.
+func (r *teamResolver) LastSuccessfulSync(ctx context.Context, obj *db.Team) (*time.Time, error) {
+	if !obj.LastSuccessfulSync.Valid {
+		return nil, nil
+	}
+	return &obj.LastSuccessfulSync.Time, nil
 }
 
 // Team returns generated.TeamResolver implementation.

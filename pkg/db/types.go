@@ -147,6 +147,7 @@ type Database interface {
 	GetAuditLogsForReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) ([]*AuditLog, error)
 	DisableTeam(ctx context.Context, teamSlug slug.Slug) (*Team, error)
 	EnableTeam(ctx context.Context, teamSlug slug.Slug) (*Team, error)
+	SetLastSuccessfulSyncForTeam(ctx context.Context, teamSlug slug.Slug) error
 }
 
 func (u User) GetID() uuid.UUID {

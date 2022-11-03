@@ -167,6 +167,9 @@ type Team {
 
     "Whether or not the team is enabled."
     enabled: Boolean!
+
+    "Timestamp of the last successful synchronization of the team."
+    lastSuccessfulSync: Time
 }
 
 "Team metadata type."

@@ -750,9 +750,10 @@ type Session struct {
 }
 
 type Team struct {
-	Slug    slug.Slug
-	Purpose string
-	Enabled bool
+	Slug               slug.Slug
+	Purpose            string
+	Enabled            bool
+	LastSuccessfulSync sql.NullTime
 }
 
 type TeamMetadatum struct {
