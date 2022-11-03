@@ -129,7 +129,7 @@ CREATE UNIQUE INDEX unique_service_account_service_account_role_idx ON service_a
 ALTER TABLE teams
     DROP COLUMN id,
     ADD PRIMARY KEY(slug),
-    DROP CONSTRAINT teams_slug_key CASCADE; /* superflous unique constraint */
+    DROP CONSTRAINT teams_slug_key CASCADE; /* superfluous unique constraint */
 
 
 /* add new constraints that will refer to the primary key instead of the old unique constrant */
