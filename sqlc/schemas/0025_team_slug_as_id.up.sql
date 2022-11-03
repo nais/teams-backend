@@ -77,7 +77,17 @@ SET target_service_account_id = (
 WHERE target_id IS NOT NULL;
 
 ALTER TABLE user_roles
-    DROP COLUMN target_id;
+    DROP COLUMN target_id,
+    ADD CONSTRAINT team_or_service_account CHECK (target_team_slug IS NULL OR target_service_account_id IS NULL);
+
+CREATE UNIQUE INDEX unique_global_user_role_idx ON user_roles (user_id, role_name)
+    WHERE target_team_slug IS NULL AND target_service_account_id IS NULL;
+
+CREATE UNIQUE INDEX unique_team_user_role_idx ON user_roles (user_id, role_name)
+    WHERE target_team_slug IS NOT NULL;
+
+CREATE UNIQUE INDEX unique_service_account_user_role_idx ON user_roles (user_id, role_name)
+    WHERE target_service_account_id IS NOT NULL;
 
 /* service_account_roles */
 
@@ -102,7 +112,17 @@ SET target_service_account_id = (
 WHERE target_id IS NOT NULL;
 
 ALTER TABLE service_account_roles
-    DROP COLUMN target_id;
+    DROP COLUMN target_id,
+    ADD CONSTRAINT team_or_service_account CHECK (target_team_slug IS NULL OR target_service_account_id IS NULL);
+
+CREATE UNIQUE INDEX unique_global_service_account_role_idx ON service_account_roles (service_account_id, role_name)
+    WHERE target_team_slug IS NULL AND target_service_account_id IS NULL;
+
+CREATE UNIQUE INDEX unique_team_service_account_role_idx ON service_account_roles (service_account_id, role_name)
+    WHERE target_team_slug IS NOT NULL;
+
+CREATE UNIQUE INDEX unique_service_account_service_account_role_idx ON service_account_roles (service_account_id, role_name)
+    WHERE target_service_account_id IS NOT NULL;
 
 /* teams */
 
