@@ -71,17 +71,17 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddTeamMembers      func(childComplexity int, input model.AddTeamMembersInput) int
-		AddTeamOwners       func(childComplexity int, input model.AddTeamOwnersInput) int
+		AddTeamMembers      func(childComplexity int, slug *slug.Slug, userIds []*uuid.UUID) int
+		AddTeamOwners       func(childComplexity int, slug *slug.Slug, userIds []*uuid.UUID) int
 		ConfigureReconciler func(childComplexity int, name sqlc.ReconcilerName, config []*model.ReconcilerConfigInput) int
 		CreateTeam          func(childComplexity int, input model.CreateTeamInput) int
 		DisableReconciler   func(childComplexity int, name sqlc.ReconcilerName) int
 		DisableTeam         func(childComplexity int, slug *slug.Slug) int
 		EnableReconciler    func(childComplexity int, name sqlc.ReconcilerName) int
 		EnableTeam          func(childComplexity int, slug *slug.Slug) int
-		RemoveUsersFromTeam func(childComplexity int, input model.RemoveUsersFromTeamInput) int
+		RemoveUsersFromTeam func(childComplexity int, slug *slug.Slug, userIds []*uuid.UUID) int
 		ResetReconciler     func(childComplexity int, name sqlc.ReconcilerName) int
-		SetTeamMemberRole   func(childComplexity int, input model.SetTeamMemberRoleInput) int
+		SetTeamMemberRole   func(childComplexity int, slug *slug.Slug, userID *uuid.UUID, role model.TeamRole) int
 		SynchronizeTeam     func(childComplexity int, slug *slug.Slug) int
 		UpdateTeam          func(childComplexity int, slug *slug.Slug, input model.UpdateTeamInput) int
 	}
@@ -185,11 +185,11 @@ type MutationResolver interface {
 	ResetReconciler(ctx context.Context, name sqlc.ReconcilerName) (*db.Reconciler, error)
 	CreateTeam(ctx context.Context, input model.CreateTeamInput) (*db.Team, error)
 	UpdateTeam(ctx context.Context, slug *slug.Slug, input model.UpdateTeamInput) (*db.Team, error)
-	RemoveUsersFromTeam(ctx context.Context, input model.RemoveUsersFromTeamInput) (*db.Team, error)
+	RemoveUsersFromTeam(ctx context.Context, slug *slug.Slug, userIds []*uuid.UUID) (*db.Team, error)
 	SynchronizeTeam(ctx context.Context, slug *slug.Slug) (*model.TeamSync, error)
-	AddTeamMembers(ctx context.Context, input model.AddTeamMembersInput) (*db.Team, error)
-	AddTeamOwners(ctx context.Context, input model.AddTeamOwnersInput) (*db.Team, error)
-	SetTeamMemberRole(ctx context.Context, input model.SetTeamMemberRoleInput) (*db.Team, error)
+	AddTeamMembers(ctx context.Context, slug *slug.Slug, userIds []*uuid.UUID) (*db.Team, error)
+	AddTeamOwners(ctx context.Context, slug *slug.Slug, userIds []*uuid.UUID) (*db.Team, error)
+	SetTeamMemberRole(ctx context.Context, slug *slug.Slug, userID *uuid.UUID, role model.TeamRole) (*db.Team, error)
 	DisableTeam(ctx context.Context, slug *slug.Slug) (*db.Team, error)
 	EnableTeam(ctx context.Context, slug *slug.Slug) (*db.Team, error)
 }
@@ -317,7 +317,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.AddTeamMembers(childComplexity, args["input"].(model.AddTeamMembersInput)), true
+		return e.complexity.Mutation.AddTeamMembers(childComplexity, args["slug"].(*slug.Slug), args["userIds"].([]*uuid.UUID)), true
 
 	case "Mutation.addTeamOwners":
 		if e.complexity.Mutation.AddTeamOwners == nil {
@@ -329,7 +329,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.AddTeamOwners(childComplexity, args["input"].(model.AddTeamOwnersInput)), true
+		return e.complexity.Mutation.AddTeamOwners(childComplexity, args["slug"].(*slug.Slug), args["userIds"].([]*uuid.UUID)), true
 
 	case "Mutation.configureReconciler":
 		if e.complexity.Mutation.ConfigureReconciler == nil {
@@ -413,7 +413,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.RemoveUsersFromTeam(childComplexity, args["input"].(model.RemoveUsersFromTeamInput)), true
+		return e.complexity.Mutation.RemoveUsersFromTeam(childComplexity, args["slug"].(*slug.Slug), args["userIds"].([]*uuid.UUID)), true
 
 	case "Mutation.resetReconciler":
 		if e.complexity.Mutation.ResetReconciler == nil {
@@ -437,7 +437,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.SetTeamMemberRole(childComplexity, args["input"].(model.SetTeamMemberRoleInput)), true
+		return e.complexity.Mutation.SetTeamMemberRole(childComplexity, args["slug"].(*slug.Slug), args["userId"].(*uuid.UUID), args["role"].(model.TeamRole)), true
 
 	case "Mutation.synchronizeTeam":
 		if e.complexity.Mutation.SynchronizeTeam == nil {
@@ -850,12 +850,8 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	rc := graphql.GetOperationContext(ctx)
 	ec := executionContext{rc, e}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
-		ec.unmarshalInputAddTeamMembersInput,
-		ec.unmarshalInputAddTeamOwnersInput,
 		ec.unmarshalInputCreateTeamInput,
 		ec.unmarshalInputReconcilerConfigInput,
-		ec.unmarshalInputRemoveUsersFromTeamInput,
-		ec.unmarshalInputSetTeamMemberRoleInput,
 		ec.unmarshalInputUpdateTeamInput,
 	)
 	first := true
@@ -1176,8 +1172,11 @@ extend type Mutation {
     The updated team will be returned on success.
     """
     removeUsersFromTeam(
-        "Input for removing users from a team."
-        input: RemoveUsersFromTeamInput!
+        "Team slug that users should be removed from."
+        slug: Slug!
+
+        "List of user IDs that should be removed from the team."
+        userIds: [UUID!]!
     ): Team! @auth
 
     """
@@ -1202,8 +1201,11 @@ extend type Mutation {
     The updated team will be returned on success.
     """
     addTeamMembers(
-        "Input for adding users to a team as members."
-        input: AddTeamMembersInput!
+        "Slug of the team that should receive new members."
+        slug: Slug!
+
+        "List of user IDs that should be added to the team as members."
+        userIds: [UUID!]!
     ): Team! @auth
 
     """
@@ -1215,8 +1217,11 @@ extend type Mutation {
     The updated team will be returned on success.
     """
     addTeamOwners(
-        "Input for adding users to a team as owners."
-        input: AddTeamOwnersInput!
+        "Slug of the team that should receive new owners."
+        slug: Slug!
+
+        "List of user IDs that should be added to the team as owners."
+        userIds: [UUID!]!
     ): Team! @auth
 
     """
@@ -1227,8 +1232,14 @@ extend type Mutation {
     The team will be returned on success.
     """
     setTeamMemberRole(
-        "Input for setting the team member role."
-        input: SetTeamMemberRoleInput!
+        "The slug of the team."
+        slug: Slug!
+
+        "The ID of the user."
+        userId: UUID!
+
+        "The team role to set."
+        role: TeamRole!
     ): Team! @auth
 
     """
@@ -1341,45 +1352,6 @@ input UpdateTeamInput {
     purpose: String
 }
 
-"Input for adding users to a team as members."
-input AddTeamMembersInput {
-    "Slug of the team that should receive new members."
-    slug: Slug!
-
-    "List of user IDs that should be added to the team as members."
-    userIds: [UUID!]!
-}
-
-"Input for adding users to a team as owners."
-input AddTeamOwnersInput {
-    "Slug of the team that should receive new owners."
-    slug: Slug!
-
-    "List of user IDs that should be added to the team as owners."
-    userIds: [UUID!]!
-}
-
-"Input for removing users from a team."
-input RemoveUsersFromTeamInput {
-    "Team slug that users should be removed from."
-    slug: Slug!
-
-    "List of user IDs that should be removed from the team."
-    userIds: [UUID!]!
-}
-
-"Input for setting team member role."
-input SetTeamMemberRoleInput {
-    "The slug of the team."
-    slug: Slug!
-
-    "The ID of the user."
-    userId: UUID!
-
-    "The team role to set."
-    role: TeamRole!
-}
-
 "Available team roles."
 enum TeamRole {
     "Regular member, read only access."
@@ -1432,30 +1404,48 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 func (ec *executionContext) field_Mutation_addTeamMembers_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.AddTeamMembersInput
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNAddTeamMembersInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAddTeamMembersInput(ctx, tmp)
+	var arg0 *slug.Slug
+	if tmp, ok := rawArgs["slug"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
+		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
+	args["slug"] = arg0
+	var arg1 []*uuid.UUID
+	if tmp, ok := rawArgs["userIds"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userIds"))
+		arg1, err = ec.unmarshalNUUID2ᚕᚖgithubᚗcomᚋgoogleᚋuuidᚐUUIDᚄ(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["userIds"] = arg1
 	return args, nil
 }
 
 func (ec *executionContext) field_Mutation_addTeamOwners_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.AddTeamOwnersInput
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNAddTeamOwnersInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAddTeamOwnersInput(ctx, tmp)
+	var arg0 *slug.Slug
+	if tmp, ok := rawArgs["slug"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
+		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
+	args["slug"] = arg0
+	var arg1 []*uuid.UUID
+	if tmp, ok := rawArgs["userIds"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userIds"))
+		arg1, err = ec.unmarshalNUUID2ᚕᚖgithubᚗcomᚋgoogleᚋuuidᚐUUIDᚄ(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["userIds"] = arg1
 	return args, nil
 }
 
@@ -1561,15 +1551,24 @@ func (ec *executionContext) field_Mutation_enableTeam_args(ctx context.Context, 
 func (ec *executionContext) field_Mutation_removeUsersFromTeam_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.RemoveUsersFromTeamInput
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNRemoveUsersFromTeamInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRemoveUsersFromTeamInput(ctx, tmp)
+	var arg0 *slug.Slug
+	if tmp, ok := rawArgs["slug"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
+		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
+	args["slug"] = arg0
+	var arg1 []*uuid.UUID
+	if tmp, ok := rawArgs["userIds"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userIds"))
+		arg1, err = ec.unmarshalNUUID2ᚕᚖgithubᚗcomᚋgoogleᚋuuidᚐUUIDᚄ(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["userIds"] = arg1
 	return args, nil
 }
 
@@ -1591,15 +1590,33 @@ func (ec *executionContext) field_Mutation_resetReconciler_args(ctx context.Cont
 func (ec *executionContext) field_Mutation_setTeamMemberRole_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.SetTeamMemberRoleInput
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNSetTeamMemberRoleInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSetTeamMemberRoleInput(ctx, tmp)
+	var arg0 *slug.Slug
+	if tmp, ok := rawArgs["slug"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
+		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
+	args["slug"] = arg0
+	var arg1 *uuid.UUID
+	if tmp, ok := rawArgs["userId"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
+		arg1, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["userId"] = arg1
+	var arg2 model.TeamRole
+	if tmp, ok := rawArgs["role"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("role"))
+		arg2, err = ec.unmarshalNTeamRole2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamRole(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["role"] = arg2
 	return args, nil
 }
 
@@ -2702,7 +2719,7 @@ func (ec *executionContext) _Mutation_removeUsersFromTeam(ctx context.Context, f
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().RemoveUsersFromTeam(rctx, fc.Args["input"].(model.RemoveUsersFromTeamInput))
+			return ec.resolvers.Mutation().RemoveUsersFromTeam(rctx, fc.Args["slug"].(*slug.Slug), fc.Args["userIds"].([]*uuid.UUID))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -2874,7 +2891,7 @@ func (ec *executionContext) _Mutation_addTeamMembers(ctx context.Context, field 
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().AddTeamMembers(rctx, fc.Args["input"].(model.AddTeamMembersInput))
+			return ec.resolvers.Mutation().AddTeamMembers(rctx, fc.Args["slug"].(*slug.Slug), fc.Args["userIds"].([]*uuid.UUID))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -2965,7 +2982,7 @@ func (ec *executionContext) _Mutation_addTeamOwners(ctx context.Context, field g
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().AddTeamOwners(rctx, fc.Args["input"].(model.AddTeamOwnersInput))
+			return ec.resolvers.Mutation().AddTeamOwners(rctx, fc.Args["slug"].(*slug.Slug), fc.Args["userIds"].([]*uuid.UUID))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -3056,7 +3073,7 @@ func (ec *executionContext) _Mutation_setTeamMemberRole(ctx context.Context, fie
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().SetTeamMemberRole(rctx, fc.Args["input"].(model.SetTeamMemberRoleInput))
+			return ec.resolvers.Mutation().SetTeamMemberRole(rctx, fc.Args["slug"].(*slug.Slug), fc.Args["userId"].(*uuid.UUID), fc.Args["role"].(model.TeamRole))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -7895,78 +7912,6 @@ func (ec *executionContext) fieldContext___Type_specifiedByURL(ctx context.Conte
 
 // region    **************************** input.gotpl *****************************
 
-func (ec *executionContext) unmarshalInputAddTeamMembersInput(ctx context.Context, obj interface{}) (model.AddTeamMembersInput, error) {
-	var it model.AddTeamMembersInput
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"slug", "userIds"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "slug":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-			it.Slug, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "userIds":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userIds"))
-			it.UserIds, err = ec.unmarshalNUUID2ᚕᚖgithubᚗcomᚋgoogleᚋuuidᚐUUIDᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputAddTeamOwnersInput(ctx context.Context, obj interface{}) (model.AddTeamOwnersInput, error) {
-	var it model.AddTeamOwnersInput
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"slug", "userIds"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "slug":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-			it.Slug, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "userIds":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userIds"))
-			it.UserIds, err = ec.unmarshalNUUID2ᚕᚖgithubᚗcomᚋgoogleᚋuuidᚐUUIDᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
 func (ec *executionContext) unmarshalInputCreateTeamInput(ctx context.Context, obj interface{}) (model.CreateTeamInput, error) {
 	var it model.CreateTeamInput
 	asMap := map[string]interface{}{}
@@ -8030,86 +7975,6 @@ func (ec *executionContext) unmarshalInputReconcilerConfigInput(ctx context.Cont
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("value"))
 			it.Value, err = ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputRemoveUsersFromTeamInput(ctx context.Context, obj interface{}) (model.RemoveUsersFromTeamInput, error) {
-	var it model.RemoveUsersFromTeamInput
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"slug", "userIds"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "slug":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-			it.Slug, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "userIds":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userIds"))
-			it.UserIds, err = ec.unmarshalNUUID2ᚕᚖgithubᚗcomᚋgoogleᚋuuidᚐUUIDᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputSetTeamMemberRoleInput(ctx context.Context, obj interface{}) (model.SetTeamMemberRoleInput, error) {
-	var it model.SetTeamMemberRoleInput
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"slug", "userId", "role"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "slug":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-			it.Slug, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "userId":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
-			it.UserID, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "role":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("role"))
-			it.Role, err = ec.unmarshalNTeamRole2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamRole(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -9646,16 +9511,6 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 
 // region    ***************************** type.gotpl *****************************
 
-func (ec *executionContext) unmarshalNAddTeamMembersInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAddTeamMembersInput(ctx context.Context, v interface{}) (model.AddTeamMembersInput, error) {
-	res, err := ec.unmarshalInputAddTeamMembersInput(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalNAddTeamOwnersInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐAddTeamOwnersInput(ctx context.Context, v interface{}) (model.AddTeamOwnersInput, error) {
-	res, err := ec.unmarshalInputAddTeamOwnersInput(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
 func (ec *executionContext) unmarshalNAuditAction2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐAuditAction(ctx context.Context, v interface{}) (sqlc.AuditAction, error) {
 	tmp, err := graphql.UnmarshalString(v)
 	res := sqlc.AuditAction(tmp)
@@ -9953,11 +9808,6 @@ func (ec *executionContext) marshalNReconcilerName2githubᚗcomᚋnaisᚋconsole
 	return res
 }
 
-func (ec *executionContext) unmarshalNRemoveUsersFromTeamInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐRemoveUsersFromTeamInput(ctx context.Context, v interface{}) (model.RemoveUsersFromTeamInput, error) {
-	res, err := ec.unmarshalInputRemoveUsersFromTeamInput(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
 func (ec *executionContext) marshalNRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐRoleᚄ(ctx context.Context, sel ast.SelectionSet, v []*db.Role) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -10058,11 +9908,6 @@ func (ec *executionContext) marshalNRoleName2ᚕgithubᚗcomᚋnaisᚋconsoleᚋ
 	}
 
 	return ret
-}
-
-func (ec *executionContext) unmarshalNSetTeamMemberRoleInput2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSetTeamMemberRoleInput(ctx context.Context, v interface{}) (model.SetTeamMemberRoleInput, error) {
-	res, err := ec.unmarshalInputSetTeamMemberRoleInput(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNSlug2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx context.Context, v interface{}) (slug.Slug, error) {

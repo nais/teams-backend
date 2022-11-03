@@ -123,16 +123,16 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, slug *slug.Slug, inpu
 }
 
 // RemoveUsersFromTeam is the resolver for the removeUsersFromTeam field.
-func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.RemoveUsersFromTeamInput) (*db.Team, error) {
+func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, slug *slug.Slug, userIds []*uuid.UUID) (*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *input.Slug)
+	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *slug)
 	if err != nil {
 		return nil, err
 	}
 
-	team, err := r.database.GetTeamBySlug(ctx, *input.Slug)
+	team, err := r.database.GetTeamBySlug(ctx, *slug)
 	if err != nil {
-		log.Errorf("get team %q: %s", *input.Slug, err)
+		log.Errorf("get team %q: %s", *slug, err)
 		return nil, apierror.ErrTeamNotExist
 	}
 
@@ -144,7 +144,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
 		members, err := dbtx.GetTeamMembers(ctx, team.Slug)
 		if err != nil {
-			return fmt.Errorf("get team members of %q: %w", *input.Slug, err)
+			return fmt.Errorf("get team members of %q: %w", *slug, err)
 		}
 
 		memberFromUserID := func(userId uuid.UUID) *db.User {
@@ -156,10 +156,10 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, input model.
 			return nil
 		}
 
-		for _, userID := range input.UserIds {
+		for _, userID := range userIds {
 			member := memberFromUserID(*userID)
 			if member == nil {
-				return apierror.Errorf("The user %q is not a member of team %q.", *userID, *input.Slug)
+				return apierror.Errorf("The user %q is not a member of team %q.", *userID, *slug)
 			}
 
 			err = dbtx.RemoveUserFromTeam(ctx, *userID, team.Slug)
@@ -232,16 +232,16 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, slug *slug.Slug)
 }
 
 // AddTeamMembers is the resolver for the addTeamMembers field.
-func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTeamMembersInput) (*db.Team, error) {
+func (r *mutationResolver) AddTeamMembers(ctx context.Context, slug *slug.Slug, userIds []*uuid.UUID) (*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *input.Slug)
+	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *slug)
 	if err != nil {
 		return nil, err
 	}
 
-	team, err := r.database.GetTeamBySlug(ctx, *input.Slug)
+	team, err := r.database.GetTeamBySlug(ctx, *slug)
 	if err != nil {
-		log.Errorf("get team %q: %s", *input.Slug, err)
+		log.Errorf("get team %q: %s", *slug, err)
 		return nil, apierror.ErrTeamNotExist
 	}
 
@@ -251,7 +251,7 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 	}
 
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
-		for _, userID := range input.UserIds {
+		for _, userID := range userIds {
 			user, err := dbtx.GetUserByID(ctx, *userID)
 			if err != nil {
 				return err
@@ -285,16 +285,16 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, input model.AddTe
 }
 
 // AddTeamOwners is the resolver for the addTeamOwners field.
-func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTeamOwnersInput) (*db.Team, error) {
+func (r *mutationResolver) AddTeamOwners(ctx context.Context, slug *slug.Slug, userIds []*uuid.UUID) (*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *input.Slug)
+	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *slug)
 	if err != nil {
 		return nil, err
 	}
 
-	team, err := r.database.GetTeamBySlug(ctx, *input.Slug)
+	team, err := r.database.GetTeamBySlug(ctx, *slug)
 	if err != nil {
-		log.Errorf("get team %q: %s", *input.Slug, err)
+		log.Errorf("get team %q: %s", *slug, err)
 		return nil, apierror.ErrTeamNotExist
 	}
 
@@ -304,7 +304,7 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 	}
 
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
-		for _, userID := range input.UserIds {
+		for _, userID := range userIds {
 			user, err := dbtx.GetUserByID(ctx, *userID)
 			if err != nil {
 				return err
@@ -338,16 +338,16 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, input model.AddTea
 }
 
 // SetTeamMemberRole is the resolver for the setTeamMemberRole field.
-func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.SetTeamMemberRoleInput) (*db.Team, error) {
+func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, slug *slug.Slug, userID *uuid.UUID, role model.TeamRole) (*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *input.Slug)
+	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *slug)
 	if err != nil {
 		return nil, err
 	}
 
-	team, err := r.database.GetTeamBySlug(ctx, *input.Slug)
+	team, err := r.database.GetTeamBySlug(ctx, *slug)
 	if err != nil {
-		log.Errorf("get team %q: %s", *input.Slug, err)
+		log.Errorf("get team %q: %s", *slug, err)
 		return nil, apierror.ErrTeamNotExist
 	}
 
@@ -363,21 +363,21 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, input model.Se
 
 	var member *db.User = nil
 	for _, m := range members {
-		if m.ID == *input.UserID {
+		if m.ID == *userID {
 			member = m
 			break
 		}
 	}
 	if member == nil {
-		return nil, fmt.Errorf("user %q not in team %q", *input.UserID, *input.Slug)
+		return nil, fmt.Errorf("user %q not in team %q", *userID, *slug)
 	}
 
-	desiredRole, err := sqlcRoleFromTeamRole(input.Role)
+	desiredRole, err := sqlcRoleFromTeamRole(role)
 	if err != nil {
 		return nil, err
 	}
 
-	err = r.database.SetTeamMemberRole(ctx, *input.UserID, team.Slug, desiredRole)
+	err = r.database.SetTeamMemberRole(ctx, *userID, team.Slug, desiredRole)
 	if err != nil {
 		return nil, err
 	}

@@ -14,22 +14,6 @@ import (
 	"github.com/nais/console/pkg/sqlc"
 )
 
-// Input for adding users to a team as members.
-type AddTeamMembersInput struct {
-	// Slug of the team that should receive new members.
-	Slug *slug.Slug `json:"slug"`
-	// List of user IDs that should be added to the team as members.
-	UserIds []*uuid.UUID `json:"userIds"`
-}
-
-// Input for adding users to a team as owners.
-type AddTeamOwnersInput struct {
-	// Slug of the team that should receive new owners.
-	Slug *slug.Slug `json:"slug"`
-	// List of user IDs that should be added to the team as owners.
-	UserIds []*uuid.UUID `json:"userIds"`
-}
-
 // Input for creating a new team.
 type CreateTeamInput struct {
 	// Team slug. After creation, this value can not be changed.
@@ -44,24 +28,6 @@ type ReconcilerConfigInput struct {
 	Key sqlc.ReconcilerConfigKey `json:"key"`
 	// Configuration value.
 	Value string `json:"value"`
-}
-
-// Input for removing users from a team.
-type RemoveUsersFromTeamInput struct {
-	// Team slug that users should be removed from.
-	Slug *slug.Slug `json:"slug"`
-	// List of user IDs that should be removed from the team.
-	UserIds []*uuid.UUID `json:"userIds"`
-}
-
-// Input for setting team member role.
-type SetTeamMemberRoleInput struct {
-	// The slug of the team.
-	Slug *slug.Slug `json:"slug"`
-	// The ID of the user.
-	UserID *uuid.UUID `json:"userId"`
-	// The team role to set.
-	Role TeamRole `json:"role"`
 }
 
 // Sync error type.
