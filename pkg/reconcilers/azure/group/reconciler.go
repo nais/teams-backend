@@ -83,7 +83,7 @@ func (r *azureGroupReconciler) Name() sqlc.ReconcilerName {
 
 func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	state := &reconcilers.AzureState{}
-	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), input.Team.ID, state)
+	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, state)
 	if err != nil {
 		return fmt.Errorf("unable to load system state for team %q in system %q: %w", input.Team.Slug, r.Name(), err)
 	}
@@ -105,7 +105,7 @@ func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.
 		r.auditLogger.Logf(ctx, targets, fields, "created Azure AD group: %s", grp)
 
 		id, _ := uuid.Parse(grp.ID)
-		err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.ID, reconcilers.AzureState{GroupID: &id})
+		err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, reconcilers.AzureState{GroupID: &id})
 		if err != nil {
 			log.Errorf("system state not persisted: %s", err)
 		}

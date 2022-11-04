@@ -32,7 +32,6 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 	correlationID := uuid.New()
 	team := db.Team{
 		Team: &sqlc.Team{
-			ID:      uuid.New(),
 			Slug:    slug.Slug(teamSlug),
 			Purpose: teamPurpose,
 		},
@@ -50,11 +49,11 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		gitHubClient := github_team_reconciler.NewMockGraphClient(t)
 
 		database.
-			On("LoadReconcilerStateForTeam", ctx, systemName, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, systemName, team.Slug, mock.Anything).
 			Return(nil).
 			Once()
 		database.
-			On("SetReconcilerStateForTeam", ctx, systemName, team.ID, mock.Anything).
+			On("SetReconcilerStateForTeam", ctx, systemName, team.Slug, mock.Anything).
 			Return(nil).
 			Once()
 
@@ -111,7 +110,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		gitHubClient := github_team_reconciler.NewMockGraphClient(t)
 
 		database.
-			On("LoadReconcilerStateForTeam", ctx, systemName, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, systemName, team.Slug, mock.Anything).
 			Return(nil).
 			Once()
 
@@ -141,7 +140,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		gitHubClient := github_team_reconciler.NewMockGraphClient(t)
 
 		database.
-			On("LoadReconcilerStateForTeam", ctx, systemName, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, systemName, team.Slug, mock.Anything).
 			Run(func(args mock.Arguments) {
 				slug := slug.Slug(teamSlug)
 				state := args.Get(3).(*reconcilers.GitHubState)
@@ -150,7 +149,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			Return(nil).
 			Once()
 		database.
-			On("SetReconcilerStateForTeam", ctx, systemName, team.ID, mock.MatchedBy(func(state reconcilers.GitHubState) bool {
+			On("SetReconcilerStateForTeam", ctx, systemName, team.Slug, mock.MatchedBy(func(state reconcilers.GitHubState) bool {
 				return string(*state.Slug) == teamSlug
 			})).
 			Return(nil).
@@ -200,7 +199,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		const existingSlug = "existing-slug"
 
 		database.
-			On("LoadReconcilerStateForTeam", ctx, systemName, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, systemName, team.Slug, mock.Anything).
 			Run(func(args mock.Arguments) {
 				slug := slug.Slug(existingSlug)
 				state := args.Get(3).(*reconcilers.GitHubState)
@@ -209,7 +208,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			Return(nil).
 			Once()
 		database.
-			On("SetReconcilerStateForTeam", ctx, systemName, team.ID, mock.MatchedBy(func(state reconcilers.GitHubState) bool {
+			On("SetReconcilerStateForTeam", ctx, systemName, team.Slug, mock.MatchedBy(func(state reconcilers.GitHubState) bool {
 				return *state.Slug == existingSlug
 			})).
 			Return(nil).
@@ -295,7 +294,6 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 
 	team := db.Team{
 		Team: &sqlc.Team{
-			ID:      uuid.New(),
 			Slug:    teamSlug,
 			Purpose: teamPurpose,
 		},
@@ -325,11 +323,11 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		graphClient := github_team_reconciler.NewMockGraphClient(t)
 
 		database.
-			On("LoadReconcilerStateForTeam", ctx, systemName, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, systemName, team.Slug, mock.Anything).
 			Return(nil).
 			Once()
 		database.
-			On("SetReconcilerStateForTeam", ctx, systemName, team.ID, mock.MatchedBy(func(state reconcilers.GitHubState) bool {
+			On("SetReconcilerStateForTeam", ctx, systemName, team.Slug, mock.MatchedBy(func(state reconcilers.GitHubState) bool {
 				return *state.Slug == teamSlug
 			})).
 			Return(nil).
@@ -364,7 +362,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 
 		database.
-			On("LoadReconcilerStateForTeam", ctx, systemName, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, systemName, team.Slug, mock.Anything).
 			Run(func(args mock.Arguments) {
 				slug := slug.Slug("slug-from-state")
 				state := args.Get(3).(*reconcilers.GitHubState)

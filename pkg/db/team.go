@@ -8,8 +8,8 @@ import (
 	"github.com/nais/console/pkg/sqlc"
 )
 
-func (d *database) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) ([]*TeamMetadata, error) {
-	rows, err := d.querier.GetTeamMetadata(ctx, teamID)
+func (d *database) GetTeamMetadata(ctx context.Context, slug slug.Slug) ([]*TeamMetadata, error) {
+	rows, err := d.querier.GetTeamMetadata(ctx, slug)
 	if err != nil {
 		return nil, err
 	}
@@ -29,13 +29,13 @@ func (d *database) GetTeamMetadata(ctx context.Context, teamID uuid.UUID) ([]*Te
 	return metadata, nil
 }
 
-func (d *database) SetTeamMetadata(ctx context.Context, teamID uuid.UUID, metadata []TeamMetadata) error {
+func (d *database) SetTeamMetadata(ctx context.Context, slug slug.Slug, metadata []TeamMetadata) error {
 	return d.querier.Transaction(ctx, func(ctx context.Context, querier Querier) error {
 		for _, entry := range metadata {
 			err := querier.SetTeamMetadata(ctx, sqlc.SetTeamMetadataParams{
-				TeamID: teamID,
-				Key:    entry.Key,
-				Value:  nullString(entry.Value),
+				TeamSlug: slug,
+				Key:      entry.Key,
+				Value:    nullString(entry.Value),
 			})
 			if err != nil {
 				return err
@@ -46,26 +46,16 @@ func (d *database) SetTeamMetadata(ctx context.Context, teamID uuid.UUID, metada
 	})
 }
 
-func (d *database) RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, teamID uuid.UUID) error {
-	err := d.querier.RevokeTargetedRoleFromUser(ctx, sqlc.RevokeTargetedRoleFromUserParams{
-		UserID:   userID,
-		TargetID: nullUUID(&teamID),
-		RoleName: sqlc.RoleNameTeammember,
-	})
-	if err != nil {
-		return err
-	}
-
-	return d.querier.RevokeTargetedRoleFromUser(ctx, sqlc.RevokeTargetedRoleFromUserParams{
-		UserID:   userID,
-		TargetID: nullUUID(&teamID),
-		RoleName: sqlc.RoleNameTeamowner,
+func (d *database) RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug) error {
+	return d.querier.RemoveUserFromTeam(ctx, sqlc.RemoveUserFromTeamParams{
+		UserID:         userID,
+		TargetTeamSlug: &teamSlug,
 	})
 }
 
-func (d *database) UpdateTeam(ctx context.Context, teamID uuid.UUID, purpose *string) (*Team, error) {
+func (d *database) UpdateTeam(ctx context.Context, teamSlug slug.Slug, purpose *string) (*Team, error) {
 	team, err := d.querier.UpdateTeam(ctx, sqlc.UpdateTeamParams{
-		ID:      teamID,
+		Slug:    teamSlug,
 		Purpose: nullString(purpose),
 	})
 	if err != nil {
@@ -89,15 +79,6 @@ func (d *database) CreateTeam(ctx context.Context, slug slug.Slug, purpose strin
 
 func (d *database) GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error) {
 	team, err := d.querier.GetTeamBySlug(ctx, slug)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Team{Team: team}, nil
-}
-
-func (d *database) GetTeamByID(ctx context.Context, id uuid.UUID) (*Team, error) {
-	team, err := d.querier.GetTeamByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -133,8 +114,8 @@ func (d *database) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team,
 	return teams, nil
 }
 
-func (d *database) GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error) {
-	rows, err := d.querier.GetTeamMembers(ctx, teamID)
+func (d *database) GetTeamMembers(ctx context.Context, teamSlug slug.Slug) ([]*User, error) {
+	rows, err := d.querier.GetTeamMembers(ctx, &teamSlug)
 	if err != nil {
 		return nil, err
 	}
@@ -147,8 +128,8 @@ func (d *database) GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*Use
 	return members, nil
 }
 
-func (d *database) DisableTeam(ctx context.Context, teamID uuid.UUID) (*Team, error) {
-	team, err := d.querier.DisableTeam(ctx, teamID)
+func (d *database) DisableTeam(ctx context.Context, teamSlug slug.Slug) (*Team, error) {
+	team, err := d.querier.DisableTeam(ctx, teamSlug)
 	if err != nil {
 		return nil, err
 	}
@@ -156,11 +137,15 @@ func (d *database) DisableTeam(ctx context.Context, teamID uuid.UUID) (*Team, er
 	return &Team{Team: team}, nil
 }
 
-func (d *database) EnableTeam(ctx context.Context, teamID uuid.UUID) (*Team, error) {
-	team, err := d.querier.EnableTeam(ctx, teamID)
+func (d *database) EnableTeam(ctx context.Context, teamSlug slug.Slug) (*Team, error) {
+	team, err := d.querier.EnableTeam(ctx, teamSlug)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Team{Team: team}, nil
+}
+
+func (d *database) SetLastSuccessfulSyncForTeam(ctx context.Context, teamSlug slug.Slug) error {
+	return d.querier.SetLastSuccessfulSyncForTeam(ctx, teamSlug)
 }

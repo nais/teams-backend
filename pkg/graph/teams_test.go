@@ -49,7 +49,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 
 	t.Run("create team", func(t *testing.T) {
 		createdTeam := &db.Team{
-			Team: &sqlc.Team{Slug: teamSlug, ID: uuid.New()},
+			Team: &sqlc.Team{Slug: teamSlug},
 		}
 		txCtx := context.Background()
 		dbtx := db.NewMockDatabase(t)
@@ -59,7 +59,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Return(createdTeam, nil).
 			Once()
 		dbtx.
-			On("SetTeamMemberRole", txCtx, user.ID, createdTeam.ID, sqlc.RoleNameTeamowner).
+			On("SetTeamMemberRole", txCtx, user.ID, createdTeam.Slug, sqlc.RoleNameTeamowner).
 			Return(nil).
 			Once()
 
@@ -72,7 +72,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Return(nil).
 			Once()
 		database.
-			On("GetTeamMembers", ctx, createdTeam.ID).
+			On("GetTeamMembers", ctx, createdTeam.Slug).
 			Return([]*db.User{&user}, nil).
 			Once()
 
@@ -90,9 +90,9 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Purpose: " some purpose ",
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, createdTeam.ID, returnedTeam.ID)
+		assert.Equal(t, createdTeam.Slug, returnedTeam.Slug)
 
 		input := <-reconcilers
-		assert.Equal(t, createdTeam.ID, input.Team.ID)
+		assert.Equal(t, createdTeam.Slug, input.Team.Slug)
 	})
 }

@@ -49,9 +49,10 @@ type ReconcilerError struct {
 }
 
 type Role struct {
-	Authorizations []sqlc.AuthzName
-	RoleName       sqlc.RoleName
-	TargetID       *uuid.UUID
+	Authorizations         []sqlc.AuthzName
+	RoleName               sqlc.RoleName
+	TargetServiceAccountID *uuid.UUID
+	TargetTeamSlug         *slug.Slug
 }
 
 type ServiceAccount struct {
@@ -102,21 +103,18 @@ type Database interface {
 	GetUsers(ctx context.Context) ([]*User, error)
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error)
 	CreateTeam(ctx context.Context, slug slug.Slug, purpose string) (*Team, error)
-	SetTeamMetadata(ctx context.Context, teamID uuid.UUID, metadata []TeamMetadata) error
-	GetTeamMetadata(ctx context.Context, teamID uuid.UUID) ([]*TeamMetadata, error)
-	UpdateTeam(ctx context.Context, teamID uuid.UUID, purpose *string) (*Team, error)
-	GetTeamByID(ctx context.Context, ID uuid.UUID) (*Team, error)
+	SetTeamMetadata(ctx context.Context, slug slug.Slug, metadata []TeamMetadata) error
+	GetTeamMetadata(ctx context.Context, slug slug.Slug) ([]*TeamMetadata, error)
+	UpdateTeam(ctx context.Context, teamSlug slug.Slug, purpose *string) (*Team, error)
 	GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)
 	GetTeams(ctx context.Context) ([]*Team, error)
-	GetTeamMembers(ctx context.Context, teamID uuid.UUID) ([]*User, error)
-	UserIsTeamOwner(ctx context.Context, userID, teamID uuid.UUID) (bool, error)
-	SetTeamMemberRole(ctx context.Context, userID uuid.UUID, teamID uuid.UUID, role sqlc.RoleName) error
+	GetTeamMembers(ctx context.Context, teamSlug slug.Slug) ([]*User, error)
+	UserIsTeamOwner(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug) (bool, error)
+	SetTeamMemberRole(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug, role sqlc.RoleName) error
 	GetAuditLogsForTeam(ctx context.Context, slug slug.Slug) ([]*AuditLog, error)
 	AssignGlobalRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error
 	AssignGlobalRoleToServiceAccount(ctx context.Context, serviceAccountID uuid.UUID, roleName sqlc.RoleName) error
-	RevokeGlobalRoleFromUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error
-	AssignTargetedRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName, targetID uuid.UUID) error
-	RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, teamID uuid.UUID) error
+	RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug) error
 	CreateAPIKey(ctx context.Context, apiKey string, serviceAccountID uuid.UUID) error
 	RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) error
 	RemoveAllServiceAccountRoles(ctx context.Context, serviceAccountID uuid.UUID) error
@@ -124,12 +122,12 @@ type Database interface {
 	GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*Role, error)
 	GetServiceAccountRoles(ctx context.Context, serviceAccountID uuid.UUID) ([]*Role, error)
 	Transaction(ctx context.Context, fn DatabaseTransactionFunc) error
-	LoadReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, teamID uuid.UUID, state interface{}) error
-	SetReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, teamID uuid.UUID, state interface{}) error
+	LoadReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, slug slug.Slug, state interface{}) error
+	SetReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, slug slug.Slug, state interface{}) error
 	UpdateUser(ctx context.Context, userID uuid.UUID, name, email, externalID string) (*User, error)
-	SetReconcilerErrorForTeam(ctx context.Context, correlationID uuid.UUID, teamID uuid.UUID, reconcilerName sqlc.ReconcilerName, err error) error
-	GetTeamReconcilerErrors(ctx context.Context, teamID uuid.UUID) ([]*ReconcilerError, error)
-	ClearReconcilerErrorsForTeam(ctx context.Context, teamID uuid.UUID, reconcilerName sqlc.ReconcilerName) error
+	SetReconcilerErrorForTeam(ctx context.Context, correlationID uuid.UUID, slug slug.Slug, reconcilerName sqlc.ReconcilerName, err error) error
+	GetTeamReconcilerErrors(ctx context.Context, slug slug.Slug) ([]*ReconcilerError, error)
+	ClearReconcilerErrorsForTeam(ctx context.Context, slug slug.Slug, reconcilerName sqlc.ReconcilerName) error
 	GetServiceAccounts(ctx context.Context) ([]*ServiceAccount, error)
 	DeleteServiceAccount(ctx context.Context, serviceAccountID uuid.UUID) error
 	GetUserByExternalID(ctx context.Context, externalID string) (*User, error)
@@ -147,8 +145,9 @@ type Database interface {
 	DisableReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*Reconciler, error)
 	DangerousGetReconcilerConfigValues(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*ReconcilerConfigValues, error)
 	GetAuditLogsForReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) ([]*AuditLog, error)
-	DisableTeam(ctx context.Context, teamID uuid.UUID) (*Team, error)
-	EnableTeam(ctx context.Context, teamID uuid.UUID) (*Team, error)
+	DisableTeam(ctx context.Context, teamSlug slug.Slug) (*Team, error)
+	EnableTeam(ctx context.Context, teamSlug slug.Slug) (*Team, error)
+	SetLastSuccessfulSyncForTeam(ctx context.Context, teamSlug slug.Slug) error
 }
 
 func (u User) GetID() uuid.UUID {

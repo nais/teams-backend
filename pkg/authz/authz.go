@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 
+	"github.com/nais/console/pkg/slug"
+
 	"github.com/nais/console/pkg/sqlc"
 
-	"github.com/google/uuid"
 	"github.com/nais/console/pkg/db"
 )
 
@@ -74,9 +75,9 @@ func RequireGlobalAuthorization(actor *Actor, requiredAuthzName sqlc.AuthzName) 
 	return authorized(authorizations, requiredAuthzName)
 }
 
-// RequireAuthorization Require an actor to have a specific authorization through a globally assigned or a correctly
+// RequireTeamAuthorization Require an actor to have a specific authorization through a globally assigned or a correctly
 // targeted role.
-func RequireAuthorization(actor *Actor, requiredAuthzName sqlc.AuthzName, target uuid.UUID) error {
+func RequireTeamAuthorization(actor *Actor, requiredAuthzName sqlc.AuthzName, targetTeamSlug slug.Slug) error {
 	if !actor.Authenticated() {
 		return ErrNotAuthenticated
 	}
@@ -84,7 +85,7 @@ func RequireAuthorization(actor *Actor, requiredAuthzName sqlc.AuthzName, target
 	authorizations := make(map[sqlc.AuthzName]struct{})
 
 	for _, role := range actor.Roles {
-		if role.IsGlobal() || role.Targets(target) {
+		if role.IsGlobal() || role.TargetsTeam(targetTeamSlug) {
 			for _, authorization := range role.Authorizations {
 				authorizations[authorization] = struct{}{}
 			}
@@ -92,20 +93,6 @@ func RequireAuthorization(actor *Actor, requiredAuthzName sqlc.AuthzName, target
 	}
 
 	return authorized(authorizations, requiredAuthzName)
-}
-
-// RequireAuthorizationOrTargetMatch Require an actor to have a specific authorization through a globally assigned or a
-// correctly targeted role. If the actor matches the target the action will be allowed.
-func RequireAuthorizationOrTargetMatch(actor *Actor, requiredAuthzName sqlc.AuthzName, target uuid.UUID) error {
-	if !actor.Authenticated() {
-		return ErrNotAuthenticated
-	}
-
-	if actor.User.GetID() == target {
-		return nil
-	}
-
-	return RequireAuthorization(actor, requiredAuthzName, target)
 }
 
 // authorized Check if one of the authorizations in the map matches the required authorization.

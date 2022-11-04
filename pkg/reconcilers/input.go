@@ -21,7 +21,7 @@ func CreateReconcilerInput(ctx context.Context, database db.Database, team db.Te
 		return Input{}, err
 	}
 
-	members, err := database.GetTeamMembers(ctx, team.ID)
+	members, err := database.GetTeamMembers(ctx, team.Slug)
 	if err != nil {
 		return Input{}, err
 	}

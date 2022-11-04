@@ -97,8 +97,8 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) 
 }
 
 const getUserTeams = `-- name: GetUserTeams :many
-SELECT teams.id, teams.slug, teams.purpose, teams.enabled FROM user_roles
-JOIN teams ON teams.id = user_roles.target_id
+SELECT teams.slug, teams.purpose, teams.enabled, teams.last_successful_sync FROM user_roles
+JOIN teams ON teams.slug = user_roles.target_team_slug
 JOIN users ON users.id = user_roles.user_id
 WHERE user_roles.user_id = $1
 ORDER BY teams.slug ASC
@@ -114,10 +114,10 @@ func (q *Queries) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, 
 	for rows.Next() {
 		var i Team
 		if err := rows.Scan(
-			&i.ID,
 			&i.Slug,
 			&i.Purpose,
 			&i.Enabled,
+			&i.LastSuccessfulSync,
 		); err != nil {
 			return nil, err
 		}

@@ -713,16 +713,16 @@ type ReconcilerConfig struct {
 type ReconcilerError struct {
 	ID            int64
 	CorrelationID uuid.UUID
-	TeamID        uuid.UUID
 	Reconciler    ReconcilerName
 	CreatedAt     time.Time
 	ErrorMessage  string
+	TeamSlug      slug.Slug
 }
 
 type ReconcilerState struct {
 	Reconciler ReconcilerName
-	TeamID     uuid.UUID
 	State      pgtype.JSONB
+	TeamSlug   slug.Slug
 }
 
 type RoleAuthz struct {
@@ -736,10 +736,11 @@ type ServiceAccount struct {
 }
 
 type ServiceAccountRole struct {
-	ID               int32
-	RoleName         RoleName
-	ServiceAccountID uuid.UUID
-	TargetID         uuid.NullUUID
+	ID                     int32
+	RoleName               RoleName
+	ServiceAccountID       uuid.UUID
+	TargetTeamSlug         *slug.Slug
+	TargetServiceAccountID uuid.NullUUID
 }
 
 type Session struct {
@@ -749,16 +750,16 @@ type Session struct {
 }
 
 type Team struct {
-	ID      uuid.UUID
-	Slug    slug.Slug
-	Purpose string
-	Enabled bool
+	Slug               slug.Slug
+	Purpose            string
+	Enabled            bool
+	LastSuccessfulSync sql.NullTime
 }
 
 type TeamMetadatum struct {
-	TeamID uuid.UUID
-	Key    string
-	Value  sql.NullString
+	Key      string
+	Value    sql.NullString
+	TeamSlug slug.Slug
 }
 
 type User struct {
@@ -769,8 +770,9 @@ type User struct {
 }
 
 type UserRole struct {
-	ID       int32
-	RoleName RoleName
-	UserID   uuid.UUID
-	TargetID uuid.NullUUID
+	ID                     int32
+	RoleName               RoleName
+	UserID                 uuid.UUID
+	TargetTeamSlug         *slug.Slug
+	TargetServiceAccountID uuid.NullUUID
 }

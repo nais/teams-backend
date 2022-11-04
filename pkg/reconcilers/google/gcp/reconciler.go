@@ -67,13 +67,13 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 	state := &reconcilers.GoogleGcpProjectState{
 		Projects: make(map[string]reconcilers.GoogleGcpEnvironmentProject),
 	}
-	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), input.Team.ID, state)
+	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, state)
 	if err != nil {
 		return fmt.Errorf("load system state for team %q in system %q: %w", input.Team.Slug, r.Name(), err)
 	}
 
 	googleWorkspaceState := &reconcilers.GoogleWorkspaceState{}
-	err = r.database.LoadReconcilerStateForTeam(ctx, google_workspace_admin_reconciler.Name, input.Team.ID, googleWorkspaceState)
+	err = r.database.LoadReconcilerStateForTeam(ctx, google_workspace_admin_reconciler.Name, input.Team.Slug, googleWorkspaceState)
 	if err != nil {
 		return fmt.Errorf("load system state for team %q in system %q: %w", input.Team.Slug, google_workspace_admin_reconciler.Name, err)
 	}
@@ -91,7 +91,7 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 			ProjectID: project.ProjectId,
 		}
 
-		err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.ID, state)
+		err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, state)
 		if err != nil {
 			log.Errorf("system state not persisted: %s", err)
 		}

@@ -65,7 +65,7 @@ func (d *database) GetServiceAccountRoles(ctx context.Context, serviceAccountID 
 
 	roles := make([]*Role, 0, len(serviceAccountRoles))
 	for _, serviceAccountRole := range serviceAccountRoles {
-		role, err := d.roleFromRoleBinding(ctx, serviceAccountRole.RoleName, serviceAccountRole.TargetID)
+		role, err := d.roleFromRoleBinding(ctx, serviceAccountRole.RoleName, serviceAccountRole.TargetServiceAccountID, serviceAccountRole.TargetTeamSlug)
 		if err != nil {
 			return nil, err
 		}

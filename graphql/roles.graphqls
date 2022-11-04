@@ -3,38 +3,6 @@ extend type Query {
     roles: [RoleName!]!
 }
 
-extend type Mutation {
-    """
-    Assign a global role to a user
-
-    Only users with the admin role are allowed to assign global roles.
-
-    The updated user is returned on success.
-    """
-    assignGlobalRoleToUser(
-        "The role to assign the user."
-        role: RoleName!
-
-        "The user that will be assiged the role."
-        userID: UUID!
-    ): User! @admin
-
-    """
-    Revoke a global role from a user
-
-    Only users with the admin role are allowed to revoke global roles.
-
-    The updated user is returned on success.
-    """
-    revokeGlobalRoleFromUser(
-        "The role to revoke from the user."
-        role: RoleName!
-
-        "The user to revoke the role from."
-        userID: UUID!
-    ): User! @admin
-}
-
 "Role binding type."
 type Role {
     "Name of the role."
@@ -43,6 +11,9 @@ type Role {
     "Whether or not the role is global."
     isGlobal: Boolean!
 
-    "Optional target of the role binding."
-    targetId: UUID
+    "Optional service account ID if the role binding targets a service account."
+    targetServiceAccountID: UUID
+
+    "Optional team slug if the role binding targets a team."
+    targetTeamSlug: Slug
 }

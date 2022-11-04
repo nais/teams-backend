@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/nais/console/pkg/slug"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/db"
@@ -34,9 +36,9 @@ func TestReconcile(t *testing.T) {
 		},
 	}
 
-	teamID := uuid.New()
+	teamSlug := slug.Slug("slug")
 	correlationID := uuid.New()
-	team := db.Team{Team: &sqlc.Team{ID: teamID}}
+	team := db.Team{Team: &sqlc.Team{Slug: teamSlug}}
 	input := reconcilers.Input{
 		CorrelationID: correlationID,
 		Team:          team,
@@ -47,7 +49,7 @@ func TestReconcile(t *testing.T) {
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		database := db.NewMockDatabase(t)
 		database.
-			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.Slug, mock.Anything).
 			Return(fmt.Errorf("some error")).
 			Once()
 		gcpServices := &google_gcp_reconciler.GcpServices{}
@@ -62,11 +64,11 @@ func TestReconcile(t *testing.T) {
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		database := db.NewMockDatabase(t)
 		database.
-			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.Slug, mock.Anything).
 			Return(nil).
 			Once()
 		database.
-			On("LoadReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, team.Slug, mock.Anything).
 			Return(fmt.Errorf("some error")).
 			Once()
 		gcpServices := &google_gcp_reconciler.GcpServices{}
@@ -81,11 +83,11 @@ func TestReconcile(t *testing.T) {
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		database := db.NewMockDatabase(t)
 		database.
-			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.Slug, mock.Anything).
 			Return(nil).
 			Once()
 		database.
-			On("LoadReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, team.Slug, mock.Anything).
 			Return(nil).
 			Once()
 		gcpServices := &google_gcp_reconciler.GcpServices{}
@@ -100,11 +102,11 @@ func TestReconcile(t *testing.T) {
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		database := db.NewMockDatabase(t)
 		database.
-			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.Slug, mock.Anything).
 			Return(nil).
 			Once()
 		database.
-			On("LoadReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, team.ID, mock.Anything).
+			On("LoadReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, team.Slug, mock.Anything).
 			Run(func(args mock.Arguments) {
 				email := "mail@example.com"
 				state := args.Get(3).(*reconcilers.GoogleWorkspaceState)

@@ -9,31 +9,32 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/nais/console/pkg/slug"
 )
 
 const clearReconcilerErrorsForTeam = `-- name: ClearReconcilerErrorsForTeam :exec
 DELETE FROM reconciler_errors
-WHERE team_id = $1 AND reconciler = $2
+WHERE team_slug = $1 AND reconciler = $2
 `
 
 type ClearReconcilerErrorsForTeamParams struct {
-	TeamID     uuid.UUID
+	TeamSlug   slug.Slug
 	Reconciler ReconcilerName
 }
 
 func (q *Queries) ClearReconcilerErrorsForTeam(ctx context.Context, arg ClearReconcilerErrorsForTeamParams) error {
-	_, err := q.db.Exec(ctx, clearReconcilerErrorsForTeam, arg.TeamID, arg.Reconciler)
+	_, err := q.db.Exec(ctx, clearReconcilerErrorsForTeam, arg.TeamSlug, arg.Reconciler)
 	return err
 }
 
 const getTeamReconcilerErrors = `-- name: GetTeamReconcilerErrors :many
-SELECT id, correlation_id, team_id, reconciler, created_at, error_message FROM reconciler_errors
-WHERE team_id = $1
+SELECT id, correlation_id, reconciler, created_at, error_message, team_slug FROM reconciler_errors
+WHERE team_slug = $1
 ORDER BY created_at DESC
 `
 
-func (q *Queries) GetTeamReconcilerErrors(ctx context.Context, teamID uuid.UUID) ([]*ReconcilerError, error) {
-	rows, err := q.db.Query(ctx, getTeamReconcilerErrors, teamID)
+func (q *Queries) GetTeamReconcilerErrors(ctx context.Context, teamSlug slug.Slug) ([]*ReconcilerError, error) {
+	rows, err := q.db.Query(ctx, getTeamReconcilerErrors, teamSlug)
 	if err != nil {
 		return nil, err
 	}
@@ -44,10 +45,10 @@ func (q *Queries) GetTeamReconcilerErrors(ctx context.Context, teamID uuid.UUID)
 		if err := rows.Scan(
 			&i.ID,
 			&i.CorrelationID,
-			&i.TeamID,
 			&i.Reconciler,
 			&i.CreatedAt,
 			&i.ErrorMessage,
+			&i.TeamSlug,
 		); err != nil {
 			return nil, err
 		}
@@ -60,15 +61,15 @@ func (q *Queries) GetTeamReconcilerErrors(ctx context.Context, teamID uuid.UUID)
 }
 
 const setReconcilerErrorForTeam = `-- name: SetReconcilerErrorForTeam :exec
-INSERT INTO reconciler_errors (correlation_id, team_id, reconciler, error_message)
+INSERT INTO reconciler_errors (correlation_id, team_slug, reconciler, error_message)
 VALUES ($1, $2, $3, $4)
-ON CONFLICT(team_id, reconciler) DO
+ON CONFLICT(team_slug, reconciler) DO
     UPDATE SET correlation_id = $1, created_at = NOW(), error_message = $4
 `
 
 type SetReconcilerErrorForTeamParams struct {
 	CorrelationID uuid.UUID
-	TeamID        uuid.UUID
+	TeamSlug      slug.Slug
 	Reconciler    ReconcilerName
 	ErrorMessage  string
 }
@@ -76,7 +77,7 @@ type SetReconcilerErrorForTeamParams struct {
 func (q *Queries) SetReconcilerErrorForTeam(ctx context.Context, arg SetReconcilerErrorForTeamParams) error {
 	_, err := q.db.Exec(ctx, setReconcilerErrorForTeam,
 		arg.CorrelationID,
-		arg.TeamID,
+		arg.TeamSlug,
 		arg.Reconciler,
 		arg.ErrorMessage,
 	)

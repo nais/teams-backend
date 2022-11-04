@@ -59,7 +59,7 @@ func (r *googleWorkspaceAdminReconciler) Name() sqlc.ReconcilerName {
 
 func (r *googleWorkspaceAdminReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	state := &reconcilers.GoogleWorkspaceState{}
-	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), input.Team.ID, state)
+	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, state)
 	if err != nil {
 		return fmt.Errorf("unable to load system state for team %q in system %q: %w", input.Team.Slug, r.Name(), err)
 	}
@@ -74,7 +74,7 @@ func (r *googleWorkspaceAdminReconciler) Reconcile(ctx context.Context, input re
 		return err
 	}
 
-	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.ID, reconcilers.GoogleWorkspaceState{GroupEmail: &grp.Email})
+	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, reconcilers.GoogleWorkspaceState{GroupEmail: &grp.Email})
 	if err != nil {
 		log.Errorf("system state not persisted: %s", err)
 	}

@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/nais/console/pkg/slug"
+
 	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/playground"
@@ -130,7 +132,7 @@ func run() error {
 	reconcileTimer := time.NewTimer(1 * time.Second)
 	reconcileTimer.Stop()
 
-	pendingTeams := make(map[uuid.UUID]reconcilers.Input)
+	pendingTeams := make(map[slug.Slug]reconcilers.Input)
 
 	// Reconcile all teams on startup. All will share the same correlation ID
 	correlationID, err := uuid.NewUUID()
@@ -178,7 +180,7 @@ func run() error {
 			}
 
 			log.Infof("Scheduling team %q for reconciliation in %s", input.Team.Slug, time.Until(nextReconcile))
-			pendingTeams[input.Team.ID] = input
+			pendingTeams[input.Team.Slug] = input
 
 		case <-reconcileTimer.C:
 			log.Infof("Running reconcile of %d teams...", len(pendingTeams))
@@ -218,10 +220,10 @@ func run() error {
 	return nil
 }
 
-func reconcileTeams(ctx context.Context, database db.Database, reconcileInputs *map[uuid.UUID]reconcilers.Input, cfg *config.Config, auditLogger auditlogger.AuditLogger) error {
+func reconcileTeams(ctx context.Context, database db.Database, reconcileInputs *map[slug.Slug]reconcilers.Input, cfg *config.Config, auditLogger auditlogger.AuditLogger) error {
 	const reconcileTimeout = 15 * time.Minute
 
-	reconcilers, err := initReconcilers(ctx, database, cfg, auditLogger)
+	enabledReconcilers, err := initReconcilers(ctx, database, cfg, auditLogger)
 	if err != nil {
 		return err
 	}
@@ -230,16 +232,16 @@ func reconcileTeams(ctx context.Context, database db.Database, reconcileInputs *
 	defer cancel()
 
 	errors := 0
-	for teamID, input := range *reconcileInputs {
+	for teamSlug, input := range *reconcileInputs {
 		if !input.Team.Enabled {
 			log.Infof("Team %q is not enabled, skipping and removing from queue", input.Team.Slug)
-			delete(*reconcileInputs, teamID)
+			delete(*reconcileInputs, teamSlug)
 			continue
 		}
 
 		teamErrors := 0
 
-		for _, reconciler := range reconcilers {
+		for _, reconciler := range enabledReconcilers {
 			name := reconciler.Name()
 			metrics.IncReconcilerCounter(name, metrics.ReconcilerStateStarted)
 
@@ -249,14 +251,14 @@ func reconcileTeams(ctx context.Context, database db.Database, reconcileInputs *
 				metrics.IncReconcilerCounter(name, metrics.ReconcilerStateFailed)
 				log.Error(err)
 				teamErrors++
-				err = database.SetReconcilerErrorForTeam(ctx, input.CorrelationID, input.Team.ID, name, err)
+				err = database.SetReconcilerErrorForTeam(ctx, input.CorrelationID, input.Team.Slug, name, err)
 				if err != nil {
 					log.Errorf("Unable to add reconcile error to the database: %s", err)
 				}
 				continue
 			}
 
-			err = database.ClearReconcilerErrorsForTeam(ctx, input.Team.ID, name)
+			err = database.ClearReconcilerErrorsForTeam(ctx, input.Team.Slug, name)
 			if err != nil {
 				log.Errorf("Unable to purge reconcile errors for reconciler %q and team %q: %s", name, input.Team.Slug, err)
 			}
@@ -266,7 +268,10 @@ func reconcileTeams(ctx context.Context, database db.Database, reconcileInputs *
 		}
 
 		if teamErrors == 0 {
-			delete(*reconcileInputs, teamID)
+			if err = database.SetLastSuccessfulSyncForTeam(ctx, teamSlug); err != nil {
+				log.Errorf("Unable to update last successful sync timestamp for team %q", teamSlug)
+			}
+			delete(*reconcileInputs, teamSlug)
 		}
 		errors += teamErrors
 	}

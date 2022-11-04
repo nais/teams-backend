@@ -2,6 +2,7 @@ package fixtures
 
 import (
 	"context"
+
 	"github.com/jackc/pgx/v4"
 	"github.com/nais/console/pkg/db"
 )
