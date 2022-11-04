@@ -60,6 +60,11 @@ ALTER TABLE user_roles
     ADD COLUMN target_team_slug TEXT REFERENCES teams(slug) ON DELETE CASCADE,
     ADD COLUMN target_service_account_id UUID REFERENCES service_accounts(id) ON DELETE CASCADE;
 
+
+
+
+
+
 UPDATE user_roles
 SET target_team_slug = (
     SELECT slug
@@ -83,10 +88,10 @@ ALTER TABLE user_roles
 CREATE UNIQUE INDEX unique_global_user_role_idx ON user_roles (user_id, role_name)
     WHERE target_team_slug IS NULL AND target_service_account_id IS NULL;
 
-CREATE UNIQUE INDEX unique_team_user_role_idx ON user_roles (user_id, role_name)
+CREATE UNIQUE INDEX unique_team_user_role_idx ON user_roles (user_id, role_name, target_team_slug)
     WHERE target_team_slug IS NOT NULL;
 
-CREATE UNIQUE INDEX unique_service_account_user_role_idx ON user_roles (user_id, role_name)
+CREATE UNIQUE INDEX unique_service_account_user_role_idx ON user_roles (user_id, role_name, target_service_account_id)
     WHERE target_service_account_id IS NOT NULL;
 
 /* service_account_roles */
@@ -118,10 +123,10 @@ ALTER TABLE service_account_roles
 CREATE UNIQUE INDEX unique_global_service_account_role_idx ON service_account_roles (service_account_id, role_name)
     WHERE target_team_slug IS NULL AND target_service_account_id IS NULL;
 
-CREATE UNIQUE INDEX unique_team_service_account_role_idx ON service_account_roles (service_account_id, role_name)
+CREATE UNIQUE INDEX unique_team_service_account_role_idx ON service_account_roles (service_account_id, role_name, target_team_slug)
     WHERE target_team_slug IS NOT NULL;
 
-CREATE UNIQUE INDEX unique_service_account_service_account_role_idx ON service_account_roles (service_account_id, role_name)
+CREATE UNIQUE INDEX unique_service_account_service_account_role_idx ON service_account_roles (service_account_id, role_name, target_service_account_id)
     WHERE target_service_account_id IS NOT NULL;
 
 /* teams */
