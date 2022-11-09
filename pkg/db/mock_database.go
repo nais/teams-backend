@@ -940,20 +940,6 @@ func (_m *MockDatabase) RemoveAllServiceAccountRoles(ctx context.Context, servic
 	return r0
 }
 
-// RemoveAllUserRoles provides a mock function with given fields: ctx, userID
-func (_m *MockDatabase) RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) error {
-	ret := _m.Called(ctx, userID)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
-		r0 = rf(ctx, userID)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
 // RemoveApiKeysFromServiceAccount provides a mock function with given fields: ctx, serviceAccountID
 func (_m *MockDatabase) RemoveApiKeysFromServiceAccount(ctx context.Context, serviceAccountID uuid.UUID) error {
 	ret := _m.Called(ctx, serviceAccountID)

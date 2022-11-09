@@ -26,10 +26,6 @@ AND target_team_slug IS NULL
 AND target_service_account_id IS NULL
 AND role_name = $2;
 
--- name: RemoveAllUserRoles :exec
-DELETE FROM user_roles
-WHERE user_id = $1;
-
 -- name: RemoveAllServiceAccountRoles :exec
 DELETE FROM service_account_roles
 WHERE service_account_id = $1;

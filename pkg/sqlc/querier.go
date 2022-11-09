@@ -57,7 +57,6 @@ type Querier interface {
 	GetUsers(ctx context.Context) ([]*User, error)
 	GetUsersWithGloballyAssignedRole(ctx context.Context, roleName RoleName) ([]*User, error)
 	RemoveAllServiceAccountRoles(ctx context.Context, serviceAccountID uuid.UUID) error
-	RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) error
 	RemoveApiKeysFromServiceAccount(ctx context.Context, serviceAccountID uuid.UUID) error
 	RemoveUserFromTeam(ctx context.Context, arg RemoveUserFromTeamParams) error
 	ResetReconcilerConfig(ctx context.Context, reconciler ReconcilerName) error

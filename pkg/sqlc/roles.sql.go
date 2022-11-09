@@ -158,16 +158,6 @@ func (q *Queries) RemoveAllServiceAccountRoles(ctx context.Context, serviceAccou
 	return err
 }
 
-const removeAllUserRoles = `-- name: RemoveAllUserRoles :exec
-DELETE FROM user_roles
-WHERE user_id = $1
-`
-
-func (q *Queries) RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) error {
-	_, err := q.db.Exec(ctx, removeAllUserRoles, userID)
-	return err
-}
-
 const revokeGlobalUserRole = `-- name: RevokeGlobalUserRole :exec
 DELETE FROM user_roles
 WHERE user_id = $1

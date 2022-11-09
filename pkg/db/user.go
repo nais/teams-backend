@@ -51,10 +51,6 @@ func (d *database) GetUserByExternalID(ctx context.Context, externalID string) (
 	return wrapUser(user), nil
 }
 
-func (d *database) RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) error {
-	return d.querier.RemoveAllUserRoles(ctx, userID)
-}
-
 func (d *database) UpdateUser(ctx context.Context, userID uuid.UUID, name, email, externalID string) (*User, error) {
 	user, err := d.querier.UpdateUser(ctx, sqlc.UpdateUserParams{
 		Email:      email,

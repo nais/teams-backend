@@ -116,7 +116,6 @@ type Database interface {
 	AssignGlobalRoleToServiceAccount(ctx context.Context, serviceAccountID uuid.UUID, roleName sqlc.RoleName) error
 	RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug) error
 	CreateAPIKey(ctx context.Context, apiKey string, serviceAccountID uuid.UUID) error
-	RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) error
 	RemoveAllServiceAccountRoles(ctx context.Context, serviceAccountID uuid.UUID) error
 	RemoveApiKeysFromServiceAccount(ctx context.Context, serviceAccountID uuid.UUID) error
 	GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*Role, error)
