@@ -67,6 +67,8 @@ const (
 	AuditActionGraphqlApiReconcilersReset                AuditAction = "graphql-api:reconcilers:reset"
 	AuditActionGraphqlApiTeamDisable                     AuditAction = "graphql-api:team:disable"
 	AuditActionGraphqlApiTeamEnable                      AuditAction = "graphql-api:team:enable"
+	AuditActionUsersyncAssignAdminRole                   AuditAction = "usersync:assign-admin-role"
+	AuditActionUsersyncRevokeAdminRole                   AuditAction = "usersync:revoke-admin-role"
 )
 
 func (e *AuditAction) Scan(src interface{}) error {
@@ -83,7 +85,7 @@ func (e *AuditAction) Scan(src interface{}) error {
 
 type NullAuditAction struct {
 	AuditAction AuditAction
-	Valid       bool // Valid is true if String is not NULL
+	Valid       bool // Valid is true if AuditAction is not NULL
 }
 
 // Scan implements the Scanner interface.
@@ -154,7 +156,9 @@ func (e AuditAction) Valid() bool {
 		AuditActionGraphqlApiReconcilersEnable,
 		AuditActionGraphqlApiReconcilersReset,
 		AuditActionGraphqlApiTeamDisable,
-		AuditActionGraphqlApiTeamEnable:
+		AuditActionGraphqlApiTeamEnable,
+		AuditActionUsersyncAssignAdminRole,
+		AuditActionUsersyncRevokeAdminRole:
 		return true
 	}
 	return false
@@ -211,6 +215,8 @@ func AllAuditActionValues() []AuditAction {
 		AuditActionGraphqlApiReconcilersReset,
 		AuditActionGraphqlApiTeamDisable,
 		AuditActionGraphqlApiTeamEnable,
+		AuditActionUsersyncAssignAdminRole,
+		AuditActionUsersyncRevokeAdminRole,
 	}
 }
 
@@ -237,7 +243,7 @@ func (e *AuditLogsTargetType) Scan(src interface{}) error {
 
 type NullAuditLogsTargetType struct {
 	AuditLogsTargetType AuditLogsTargetType
-	Valid               bool // Valid is true if String is not NULL
+	Valid               bool // Valid is true if AuditLogsTargetType is not NULL
 }
 
 // Scan implements the Scanner interface.
@@ -313,7 +319,7 @@ func (e *AuthzName) Scan(src interface{}) error {
 
 type NullAuthzName struct {
 	AuthzName AuthzName
-	Valid     bool // Valid is true if String is not NULL
+	Valid     bool // Valid is true if AuthzName is not NULL
 }
 
 // Scan implements the Scanner interface.
@@ -404,7 +410,7 @@ func (e *ReconcilerConfigKey) Scan(src interface{}) error {
 
 type NullReconcilerConfigKey struct {
 	ReconcilerConfigKey ReconcilerConfigKey
-	Valid               bool // Valid is true if String is not NULL
+	Valid               bool // Valid is true if ReconcilerConfigKey is not NULL
 }
 
 // Scan implements the Scanner interface.
@@ -475,7 +481,7 @@ func (e *ReconcilerName) Scan(src interface{}) error {
 
 type NullReconcilerName struct {
 	ReconcilerName ReconcilerName
-	Valid          bool // Valid is true if String is not NULL
+	Valid          bool // Valid is true if ReconcilerName is not NULL
 }
 
 // Scan implements the Scanner interface.
@@ -546,7 +552,7 @@ func (e *RoleName) Scan(src interface{}) error {
 
 type NullRoleName struct {
 	RoleName RoleName
-	Valid    bool // Valid is true if String is not NULL
+	Valid    bool // Valid is true if RoleName is not NULL
 }
 
 // Scan implements the Scanner interface.
@@ -625,7 +631,7 @@ func (e *SystemName) Scan(src interface{}) error {
 
 type NullSystemName struct {
 	SystemName SystemName
-	Valid      bool // Valid is true if String is not NULL
+	Valid      bool // Valid is true if SystemName is not NULL
 }
 
 // Scan implements the Scanner interface.

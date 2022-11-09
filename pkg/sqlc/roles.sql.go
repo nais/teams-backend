@@ -115,6 +115,39 @@ func (q *Queries) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*UserRo
 	return items, nil
 }
 
+const getUsersWithGloballyAssignedRole = `-- name: GetUsersWithGloballyAssignedRole :many
+SELECT users.id, users.email, users.name, users.external_id FROM users
+JOIN user_roles ON user_roles.user_id = users.id
+WHERE user_roles.target_team_slug IS NULL
+AND user_roles.target_service_account_id IS NULL
+AND user_roles.role_name = $1
+`
+
+func (q *Queries) GetUsersWithGloballyAssignedRole(ctx context.Context, roleName RoleName) ([]*User, error) {
+	rows, err := q.db.Query(ctx, getUsersWithGloballyAssignedRole, roleName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.Name,
+			&i.ExternalID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const removeAllServiceAccountRoles = `-- name: RemoveAllServiceAccountRoles :exec
 DELETE FROM service_account_roles
 WHERE service_account_id = $1
@@ -135,7 +168,7 @@ func (q *Queries) RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) erro
 	return err
 }
 
-const removeGlobalUserRole = `-- name: RemoveGlobalUserRole :exec
+const revokeGlobalUserRole = `-- name: RevokeGlobalUserRole :exec
 DELETE FROM user_roles
 WHERE user_id = $1
 AND target_team_slug IS NULL
@@ -143,12 +176,12 @@ AND target_service_account_id IS NULL
 AND role_name = $2
 `
 
-type RemoveGlobalUserRoleParams struct {
+type RevokeGlobalUserRoleParams struct {
 	UserID   uuid.UUID
 	RoleName RoleName
 }
 
-func (q *Queries) RemoveGlobalUserRole(ctx context.Context, arg RemoveGlobalUserRoleParams) error {
-	_, err := q.db.Exec(ctx, removeGlobalUserRole, arg.UserID, arg.RoleName)
+func (q *Queries) RevokeGlobalUserRole(ctx context.Context, arg RevokeGlobalUserRoleParams) error {
+	_, err := q.db.Exec(ctx, revokeGlobalUserRole, arg.UserID, arg.RoleName)
 	return err
 }

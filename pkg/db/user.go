@@ -17,7 +17,7 @@ func (d *database) CreateUser(ctx context.Context, name, email, externalID strin
 		return nil, err
 	}
 
-	return &User{User: user}, nil
+	return wrapUser(user), nil
 }
 
 func (d *database) DeleteUser(ctx context.Context, userID uuid.UUID) error {
@@ -30,7 +30,7 @@ func (d *database) GetUserByEmail(ctx context.Context, email string) (*User, err
 		return nil, err
 	}
 
-	return &User{User: user}, nil
+	return wrapUser(user), nil
 }
 
 func (d *database) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
@@ -39,7 +39,7 @@ func (d *database) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error)
 		return nil, err
 	}
 
-	return &User{User: user}, nil
+	return wrapUser(user), nil
 }
 
 func (d *database) GetUserByExternalID(ctx context.Context, externalID string) (*User, error) {
@@ -48,7 +48,7 @@ func (d *database) GetUserByExternalID(ctx context.Context, externalID string) (
 		return nil, err
 	}
 
-	return &User{User: user}, nil
+	return wrapUser(user), nil
 }
 
 func (d *database) RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) error {
@@ -66,7 +66,7 @@ func (d *database) UpdateUser(ctx context.Context, userID uuid.UUID, name, email
 		return nil, err
 	}
 
-	return &User{User: user}, nil
+	return wrapUser(user), nil
 }
 
 func (d *database) GetUsers(ctx context.Context) ([]*User, error) {
@@ -75,16 +75,20 @@ func (d *database) GetUsers(ctx context.Context) ([]*User, error) {
 		return nil, err
 	}
 
-	return d.getUsers(users)
+	return wrapUsers(users), nil
 }
 
-func (d *database) getUsers(users []*sqlc.User) ([]*User, error) {
+func wrapUsers(users []*sqlc.User) []*User {
 	result := make([]*User, 0)
 	for _, user := range users {
-		result = append(result, &User{User: user})
+		result = append(result, wrapUser(user))
 	}
 
-	return result, nil
+	return result
+}
+
+func wrapUser(user *sqlc.User) *User {
+	return &User{User: user}
 }
 
 func (d *database) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*Role, error) {

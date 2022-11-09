@@ -889,6 +889,29 @@ func (_m *MockDatabase) GetUsers(ctx context.Context) ([]*User, error) {
 	return r0, r1
 }
 
+// GetUsersWithGloballyAssignedRole provides a mock function with given fields: ctx, roleName
+func (_m *MockDatabase) GetUsersWithGloballyAssignedRole(ctx context.Context, roleName sqlc.RoleName) ([]*User, error) {
+	ret := _m.Called(ctx, roleName)
+
+	var r0 []*User
+	if rf, ok := ret.Get(0).(func(context.Context, sqlc.RoleName) []*User); ok {
+		r0 = rf(ctx, roleName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*User)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, sqlc.RoleName) error); ok {
+		r1 = rf(ctx, roleName)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // LoadReconcilerStateForTeam provides a mock function with given fields: ctx, reconcilerName, _a2, state
 func (_m *MockDatabase) LoadReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, _a2 slug.Slug, state interface{}) error {
 	ret := _m.Called(ctx, reconcilerName, _a2, state)
@@ -980,6 +1003,20 @@ func (_m *MockDatabase) ResetReconcilerConfig(ctx context.Context, reconcilerNam
 	}
 
 	return r0, r1
+}
+
+// RevokeGlobalUserRole provides a mock function with given fields: ctx, userID, roleName
+func (_m *MockDatabase) RevokeGlobalUserRole(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error {
+	ret := _m.Called(ctx, userID, roleName)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, sqlc.RoleName) error); ok {
+		r0 = rf(ctx, userID, roleName)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // SetLastSuccessfulSyncForTeam provides a mock function with given fields: ctx, teamSlug
