@@ -76,6 +76,22 @@ func (d *database) SetTeamMemberRole(ctx context.Context, userID uuid.UUID, team
 	})
 }
 
+func (d *database) RevokeGlobalUserRole(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error {
+	return d.querier.RevokeGlobalUserRole(ctx, sqlc.RevokeGlobalUserRoleParams{
+		RoleName: roleName,
+		UserID:   userID,
+	})
+}
+
+func (d *database) GetUsersWithGloballyAssignedRole(ctx context.Context, roleName sqlc.RoleName) ([]*User, error) {
+	users, err := d.querier.GetUsersWithGloballyAssignedRole(ctx, roleName)
+	if err != nil {
+		return nil, err
+	}
+
+	return wrapUsers(users), nil
+}
+
 func (d *database) roleFromRoleBinding(ctx context.Context, roleName sqlc.RoleName, targetServiceAccountID uuid.NullUUID, targetTeamSlug *slug.Slug) (*Role, error) {
 	authorizations, err := d.querier.GetRoleAuthorizations(ctx, roleName)
 	if err != nil {

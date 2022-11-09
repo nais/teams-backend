@@ -67,12 +67,21 @@ func TestSync(t *testing.T) {
 
 		createdLocalUser := &db.User{User: &sqlc.User{ID: serialUuid(4), Email: "user2@example.com", ExternalID: "456", Name: "Create Me"}}
 
-		httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
-			return test.Response("200 OK", `{"users":[`+
-				`{"Id": "123", "primaryEmail":"user1@example.com","name":{"fullName":"Correct Name"}},`+ // Will update name of local user
-				`{"Id": "456", "primaryEmail":"user2@example.com","name":{"fullName":"Create Me"}},`+ // Will be created
-				`{"Id": "789", "primaryEmail":"user3@example.com","name":{"fullName":"Some Name"}}]}`) // Will update email of local user
-		})
+		httpClient := test.NewTestHttpClient(
+			// org users
+			func(req *http.Request) *http.Response {
+				return test.Response("200 OK", `{"users":[`+
+					`{"id": "123", "primaryEmail":"user1@example.com","name":{"fullName":"Correct Name"}},`+ // Will update name of local user
+					`{"id": "456", "primaryEmail":"user2@example.com","name":{"fullName":"Create Me"}},`+ // Will be created
+					`{"id": "789", "primaryEmail":"user3@example.com","name":{"fullName":"Some Name"}}]}`) // Will update email of local user
+			},
+			// admin group members
+			func(req *http.Request) *http.Response {
+				return test.Response("200 OK", `{"members":[`+
+					`{"id": "456", "email":"user2@example.com","type":"USER"},`+ // Will be granted admin role
+					`{"Id": "666", "email":"some-group@example.com","type":"GROUP"}]}`) // Group type, will be ignored
+			},
+		)
 
 		ctx := context.Background()
 		txCtx := context.Background()
@@ -144,6 +153,16 @@ func TestSync(t *testing.T) {
 			Return(nil).
 			Once()
 
+		dbtx.
+			On("GetUsersWithGloballyAssignedRole", txCtx, sqlc.RoleNameAdmin).
+			Return(nil, nil).
+			Once()
+
+		dbtx.
+			On("AssignGlobalRoleToUser", txCtx, createdLocalUser.ID, sqlc.RoleNameAdmin).
+			Return(nil).
+			Once()
+
 		auditLogger.
 			On("Logf", ctx, targetIdentifier("user1@example.com"), auditAction(sqlc.AuditActionUsersyncUpdate), "Local user updated: \"user1@example.com\"").
 			Return(nil).
@@ -158,6 +177,10 @@ func TestSync(t *testing.T) {
 			Once()
 		auditLogger.
 			On("Logf", ctx, targetIdentifier("delete-me@example.com"), auditAction(sqlc.AuditActionUsersyncDelete), "Local user deleted: \"delete-me@example.com\"").
+			Return(nil).
+			Once()
+		auditLogger.
+			On("Logf", ctx, targetIdentifier("user2@example.com"), auditAction(sqlc.AuditActionUsersyncAssignAdminRole), "Assign global admin role to user: \"user2@example.com\"").
 			Return(nil).
 			Once()
 

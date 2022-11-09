@@ -55,12 +55,12 @@ type Querier interface {
 	GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*UserRole, error)
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error)
 	GetUsers(ctx context.Context) ([]*User, error)
+	GetUsersWithGloballyAssignedRole(ctx context.Context, roleName RoleName) ([]*User, error)
 	RemoveAllServiceAccountRoles(ctx context.Context, serviceAccountID uuid.UUID) error
-	RemoveAllUserRoles(ctx context.Context, userID uuid.UUID) error
 	RemoveApiKeysFromServiceAccount(ctx context.Context, serviceAccountID uuid.UUID) error
-	RemoveGlobalUserRole(ctx context.Context, arg RemoveGlobalUserRoleParams) error
 	RemoveUserFromTeam(ctx context.Context, arg RemoveUserFromTeamParams) error
 	ResetReconcilerConfig(ctx context.Context, reconciler ReconcilerName) error
+	RevokeGlobalUserRole(ctx context.Context, arg RevokeGlobalUserRoleParams) error
 	SetLastSuccessfulSyncForTeam(ctx context.Context, slug slug.Slug) error
 	SetReconcilerErrorForTeam(ctx context.Context, arg SetReconcilerErrorForTeamParams) error
 	SetReconcilerStateForTeam(ctx context.Context, arg SetReconcilerStateForTeamParams) error
