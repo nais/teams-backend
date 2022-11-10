@@ -100,7 +100,17 @@ func run() error {
 		return err
 	}
 
-	handler := setupGraphAPI(database, cfg.TenantDomain, teamReconciler, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi))
+	clusterInfo, err := google_gcp_reconciler.GetClusterInfoFromJson(cfg.GCP.Clusters)
+	if err != nil {
+		return err
+	}
+
+	gcpEnvironments := make([]string, 0, len(clusterInfo))
+	for env := range clusterInfo {
+		gcpEnvironments = append(gcpEnvironments, env)
+	}
+
+	handler := setupGraphAPI(database, cfg.TenantDomain, teamReconciler, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi), gcpEnvironments)
 	srv, err := setupHTTPServer(cfg, database, handler, authHandler)
 	if err != nil {
 		return err
@@ -369,8 +379,8 @@ func initReconcilers(ctx context.Context, database db.Database, cfg *config.Conf
 	return recs, nil
 }
 
-func setupGraphAPI(database db.Database, domain string, teamReconciler chan<- reconcilers.Input, auditLogger auditlogger.AuditLogger) *graphql_handler.Server {
-	resolver := graph.NewResolver(database, domain, teamReconciler, auditLogger)
+func setupGraphAPI(database db.Database, domain string, teamReconciler chan<- reconcilers.Input, auditLogger auditlogger.AuditLogger, gcpEnvironments []string) *graphql_handler.Server {
+	resolver := graph.NewResolver(database, domain, teamReconciler, auditLogger, gcpEnvironments)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
 	gc.Directives.Admin = directives.Admin()

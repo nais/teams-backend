@@ -18,20 +18,22 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	database       db.Database
-	tenantDomain   string
-	teamReconciler chan<- reconcilers.Input
-	systemName     sqlc.SystemName
-	auditLogger    auditlogger.AuditLogger
+	database        db.Database
+	tenantDomain    string
+	teamReconciler  chan<- reconcilers.Input
+	systemName      sqlc.SystemName
+	auditLogger     auditlogger.AuditLogger
+	gcpEnvironments []string
 }
 
-func NewResolver(database db.Database, tenantDomain string, teamReconciler chan<- reconcilers.Input, auditLogger auditlogger.AuditLogger) *Resolver {
+func NewResolver(database db.Database, tenantDomain string, teamReconciler chan<- reconcilers.Input, auditLogger auditlogger.AuditLogger, gcpEnvironments []string) *Resolver {
 	return &Resolver{
-		database:       database,
-		tenantDomain:   tenantDomain,
-		systemName:     sqlc.SystemNameGraphqlApi,
-		teamReconciler: teamReconciler,
-		auditLogger:    auditLogger,
+		database:        database,
+		tenantDomain:    tenantDomain,
+		systemName:      sqlc.SystemNameGraphqlApi,
+		teamReconciler:  teamReconciler,
+		auditLogger:     auditLogger,
+		gcpEnvironments: gcpEnvironments,
 	}
 }
 

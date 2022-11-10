@@ -18,3 +18,13 @@ func Truncate(s string, length int) string {
 	}
 	return s[:length]
 }
+
+// Contains Check if a specific value is in a slice of strings
+func Contains(strings []string, contains string) bool {
+	for _, value := range strings {
+		if value == contains {
+			return true
+		}
+	}
+	return false
+}

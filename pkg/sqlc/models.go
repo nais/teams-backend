@@ -69,6 +69,7 @@ const (
 	AuditActionGraphqlApiTeamEnable                      AuditAction = "graphql-api:team:enable"
 	AuditActionUsersyncAssignAdminRole                   AuditAction = "usersync:assign-admin-role"
 	AuditActionUsersyncRevokeAdminRole                   AuditAction = "usersync:revoke-admin-role"
+	AuditActionGraphqlApiReconcilersUpdateTeamState      AuditAction = "graphql-api:reconcilers:update-team-state"
 )
 
 func (e *AuditAction) Scan(src interface{}) error {
@@ -158,7 +159,8 @@ func (e AuditAction) Valid() bool {
 		AuditActionGraphqlApiTeamDisable,
 		AuditActionGraphqlApiTeamEnable,
 		AuditActionUsersyncAssignAdminRole,
-		AuditActionUsersyncRevokeAdminRole:
+		AuditActionUsersyncRevokeAdminRole,
+		AuditActionGraphqlApiReconcilersUpdateTeamState:
 		return true
 	}
 	return false
@@ -217,6 +219,7 @@ func AllAuditActionValues() []AuditAction {
 		AuditActionGraphqlApiTeamEnable,
 		AuditActionUsersyncAssignAdminRole,
 		AuditActionUsersyncRevokeAdminRole,
+		AuditActionGraphqlApiReconcilersUpdateTeamState,
 	}
 }
 
