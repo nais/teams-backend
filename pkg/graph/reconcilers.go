@@ -236,5 +236,7 @@ func (r *Resolver) ReconcilerConfig() generated.ReconcilerConfigResolver {
 	return &reconcilerConfigResolver{r}
 }
 
-type reconcilerResolver struct{ *Resolver }
-type reconcilerConfigResolver struct{ *Resolver }
+type (
+	reconcilerResolver       struct{ *Resolver }
+	reconcilerConfigResolver struct{ *Resolver }
+)
