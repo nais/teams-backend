@@ -15,6 +15,7 @@ import (
 	"github.com/nais/console/pkg/graph/apierror"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
+	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
@@ -597,6 +598,71 @@ func (r *teamResolver) LastSuccessfulSync(ctx context.Context, obj *db.Team) (*t
 		return nil, nil
 	}
 	return &obj.LastSuccessfulSync.Time, nil
+}
+
+// ReconcilerState is the resolver for the reconcilerState field.
+func (r *teamResolver) ReconcilerState(ctx context.Context, obj *db.Team) (*model.ReconcilerState, error) {
+	gitHubState := &reconcilers.GitHubState{}
+	googleWorkspaceState := &reconcilers.GoogleWorkspaceState{}
+	gcpProjectState := &reconcilers.GoogleGcpProjectState{
+		Projects: make(map[string]reconcilers.GoogleGcpEnvironmentProject),
+	}
+	naisNamespaceState := &reconcilers.GoogleGcpNaisNamespaceState{
+		Namespaces: make(map[string]slug.Slug),
+	}
+
+	queriedFields := GetQueriedFields(ctx)
+
+	if _, inQuery := queriedFields["gitHubTeamSlug"]; inQuery {
+		err := r.database.LoadReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGithubTeam, obj.Slug, gitHubState)
+		if err != nil {
+			return nil, apierror.Errorf("Unable to load the existing GCP project state.")
+		}
+	}
+
+	if _, inQuery := queriedFields["googleWorkspaceGroupEmail"]; inQuery {
+		err := r.database.LoadReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGoogleWorkspaceAdmin, obj.Slug, googleWorkspaceState)
+		if err != nil {
+			return nil, apierror.Errorf("Unable to load the existing Google Workspace state.")
+		}
+	}
+
+	gcpProjects := make([]*model.GcpProject, 0)
+	if _, inQuery := queriedFields["gcpProjects"]; inQuery {
+		err := r.database.LoadReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGoogleGcpProject, obj.Slug, gcpProjectState)
+		if err != nil {
+			return nil, apierror.Errorf("Unable to load the existing GCP project state.")
+		}
+
+		for env, projectID := range gcpProjectState.Projects {
+			gcpProjects = append(gcpProjects, &model.GcpProject{
+				Environment: env,
+				ProjectID:   projectID.ProjectID,
+			})
+		}
+	}
+
+	naisNamespaces := make([]*model.NaisNamespace, 0)
+	if _, inQuery := queriedFields["naisNamespaces"]; inQuery {
+		err := r.database.LoadReconcilerStateForTeam(ctx, sqlc.ReconcilerNameNaisNamespace, obj.Slug, naisNamespaceState)
+		if err != nil {
+			return nil, apierror.Errorf("Unable to load the existing GCP project state.")
+		}
+
+		for environment, namespace := range naisNamespaceState.Namespaces {
+			naisNamespaces = append(naisNamespaces, &model.NaisNamespace{
+				Environment: environment,
+				Namespace:   &namespace,
+			})
+		}
+	}
+
+	return &model.ReconcilerState{
+		GitHubTeamSlug:            gitHubState.Slug,
+		GoogleWorkspaceGroupEmail: googleWorkspaceState.GroupEmail,
+		GcpProjects:               gcpProjects,
+		NaisNamespaces:            naisNamespaces,
+	}, nil
 }
 
 // Team returns generated.TeamResolver implementation.

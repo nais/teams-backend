@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/db"
@@ -35,6 +36,15 @@ func NewResolver(database db.Database, tenantDomain string, teamReconciler chan<
 		auditLogger:     auditLogger,
 		gcpEnvironments: gcpEnvironments,
 	}
+}
+
+// GetQueriedFields Get a map of queried fields for the given context with the field names as keys
+func GetQueriedFields(ctx context.Context) map[string]bool {
+	fields := make(map[string]bool)
+	for _, field := range graphql.CollectAllFields(ctx) {
+		fields[field] = true
+	}
+	return fields
 }
 
 // reconcileTeam Trigger team reconcilers for a given team
