@@ -25,6 +25,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Name:  "User Name",
 		},
 	}
+
 	ctx := authz.ContextWithActor(context.Background(), user, []*db.Role{
 		{
 			RoleName: sqlc.RoleNameAdmin,
@@ -33,6 +34,23 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			},
 		},
 	})
+
+	serviceAccount := db.ServiceAccount{
+		ServiceAccount: &sqlc.ServiceAccount{
+			ID:   uuid.New(),
+			Name: "User Name",
+		},
+	}
+
+	saCtx := authz.ContextWithActor(context.Background(), serviceAccount, []*db.Role{
+		{
+			RoleName: sqlc.RoleNameAdmin,
+			Authorizations: []sqlc.AuthzName{
+				sqlc.AuthzNameTeamsCreate,
+			},
+		},
+	})
+
 	reconcilers := make(chan reconcilers.Input, 100)
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	database := db.NewMockDatabase(t)
@@ -89,6 +107,52 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Slug:    &teamSlug,
 			Purpose: " some purpose ",
 		})
+		assert.NoError(t, err)
+		assert.Equal(t, createdTeam.Slug, returnedTeam.Slug)
+
+		input := <-reconcilers
+		assert.Equal(t, createdTeam.Slug, input.Team.Slug)
+	})
+
+	t.Run("calling with SA, does not change roles", func(t *testing.T) {
+		createdTeam := &db.Team{
+			Team: &sqlc.Team{Slug: teamSlug},
+		}
+		txCtx := context.Background()
+		dbtx := db.NewMockDatabase(t)
+
+		dbtx.
+			On("CreateTeam", txCtx, teamSlug, "some purpose").
+			Return(createdTeam, nil).
+			Once()
+
+		database.
+			On("Transaction", saCtx, mock.Anything).
+			Run(func(args mock.Arguments) {
+				fn := args.Get(1).(db.DatabaseTransactionFunc)
+				fn(txCtx, dbtx)
+			}).
+			Return(nil).
+			Once()
+		database.
+			On("GetTeamMembers", saCtx, createdTeam.Slug).
+			Return([]*db.User{&user}, nil).
+			Once()
+
+		auditLogger.
+			On("Logf", saCtx, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+				return targets[0].Identifier == string(createdTeam.Slug)
+			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
+				return fields.Actor.User == serviceAccount
+			}), "Team created").
+			Return(nil).
+			Once()
+
+		returnedTeam, err := resolver.CreateTeam(saCtx, model.CreateTeamInput{
+			Slug:    &teamSlug,
+			Purpose: " some purpose ",
+		})
+
 		assert.NoError(t, err)
 		assert.Equal(t, createdTeam.Slug, returnedTeam.Slug)
 
