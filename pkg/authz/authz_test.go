@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	authTeamCreateError = `required role: "teams:create"`
-	authTeamUpdateError = `required role: "teams:update"`
+	authTeamCreateError = `required authorization: "teams:create"`
+	authTeamUpdateError = `required authorization: "teams:update"`
 )
 
 func TestContextWithUser(t *testing.T) {

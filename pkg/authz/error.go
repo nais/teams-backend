@@ -4,14 +4,26 @@ import (
 	"fmt"
 )
 
-type ErrNotAuthorized struct {
+type ErrMissingRole struct {
 	role string
 }
 
-func (e ErrNotAuthorized) Error() string {
+func (e ErrMissingRole) Error() string {
 	return fmt.Sprintf("required role: %q", e.role)
 }
 
-func (e ErrNotAuthorized) Role() string {
+func (e ErrMissingRole) Role() string {
 	return e.role
+}
+
+type ErrMissingAuthorization struct {
+	authorization string
+}
+
+func (e ErrMissingAuthorization) Error() string {
+	return fmt.Sprintf("required authorization: %q", e.authorization)
+}
+
+func (e ErrMissingAuthorization) Authorization() string {
+	return e.authorization
 }
