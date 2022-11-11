@@ -1493,7 +1493,7 @@ type Team {
     lastSuccessfulSync: Time
 
     "Current reconciler state for the team."
-    reconcilerState: ReconcilerState! @admin
+    reconcilerState: ReconcilerState!
 }
 
 "Reconciler state type."
@@ -6687,28 +6687,8 @@ func (ec *executionContext) _Team_reconcilerState(ctx context.Context, field gra
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		directive0 := func(rctx context.Context) (interface{}, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Team().ReconcilerState(rctx, obj)
-		}
-		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Admin == nil {
-				return nil, errors.New("directive admin is not implemented")
-			}
-			return ec.directives.Admin(ctx, obj, directive0)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*model.ReconcilerState); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/graph/model.ReconcilerState`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Team().ReconcilerState(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)

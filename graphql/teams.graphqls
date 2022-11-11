@@ -172,7 +172,7 @@ type Team {
     lastSuccessfulSync: Time
 
     "Current reconciler state for the team."
-    reconcilerState: ReconcilerState! @admin
+    reconcilerState: ReconcilerState!
 }
 
 "Reconciler state type."
