@@ -32,7 +32,7 @@ func TestAdmin(t *testing.T) {
 		user := &db.User{}
 		ctx := authz.ContextWithActor(context.Background(), user, []*db.Role{{RoleName: sqlc.RoleNameTeamcreator}})
 		_, err := directives.Admin()(ctx, obj, nextHandler)
-		assert.EqualError(t, err, "this endpoint requires a user with the admin role")
+		assert.EqualError(t, err, "required role: \"Admin\"")
 	})
 
 	t.Run("User with no admin role", func(t *testing.T) {
