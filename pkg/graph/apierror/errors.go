@@ -50,14 +50,15 @@ func GetErrorPresenter() graphql.ErrorPresenterFunc {
 		case Error:
 			// Error is already formatted for end-user consumption.
 			return err
-		case authz.ErrNotAuthorized:
-			err.Message = "You are authenticated, but your account is not authorized to perform this action. Specifically, you need the %q role." + originalError.Role()
+		case authz.ErrMissingRole:
+			err.Message = fmt.Sprintf("You are authenticated, but your account is not authorized to perform this action. Specifically, you need the %q role.", originalError.Role())
+			return err
+		case authz.ErrMissingAuthorization:
+			err.Message = fmt.Sprintf("You are authenticated, but your account is not authorized to perform this action. Specifically, you need the %q authorization.", originalError.Authorization())
 			return err
 		case *pgconn.PgError:
 			err.Message = ErrDatabase.Error()
-			// Log error?
 			log.Errorf("database error %s: %s (%s)", originalError.Code, originalError.Message, originalError.Detail)
-			// err.Message = pgErr.Detail
 			return err
 		default:
 			break

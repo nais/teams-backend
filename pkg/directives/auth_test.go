@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/directives"
 	"github.com/stretchr/testify/assert"
 )
@@ -19,6 +20,7 @@ func TestAuth(t *testing.T) {
 			panic("Should not be executed")
 		}
 		_, err := auth(context.Background(), obj, nextHandler)
-		assert.EqualError(t, err, "this endpoint requires an authenticated user")
+		assert.ErrorIs(t, err, authz.ErrNotAuthenticated)
+		assert.EqualError(t, err, "not authenticated")
 	})
 }

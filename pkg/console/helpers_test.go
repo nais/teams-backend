@@ -35,3 +35,17 @@ func TestTruncate(t *testing.T) {
 		assert.Equal(t, "some ", helpers.Truncate("some string", 5))
 	})
 }
+
+func TestContains(t *testing.T) {
+	t.Run("Empty slice", func(t *testing.T) {
+		assert.False(t, helpers.Contains([]string{}, "string"))
+	})
+
+	t.Run("Slice contains string", func(t *testing.T) {
+		assert.True(t, helpers.Contains([]string{"foo", "bar"}, "bar"))
+	})
+
+	t.Run("Slice does not contain string", func(t *testing.T) {
+		assert.False(t, helpers.Contains([]string{"foo", "bar"}, "Bar"))
+	})
+}

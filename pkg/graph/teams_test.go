@@ -54,7 +54,8 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 	reconcilers := make(chan reconcilers.Input, 100)
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	database := db.NewMockDatabase(t)
-	resolver := graph.NewResolver(database, "example.com", reconcilers, auditLogger).Mutation()
+	gcpEnvironments := []string{"env"}
+	resolver := graph.NewResolver(database, "example.com", reconcilers, auditLogger, gcpEnvironments).Mutation()
 	teamSlug := slug.Slug("some-slug")
 
 	t.Run("create team with empty purpose", func(t *testing.T) {

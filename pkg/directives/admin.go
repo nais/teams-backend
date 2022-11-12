@@ -2,7 +2,6 @@ package directives
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/nais/console/pkg/sqlc"
 
@@ -20,7 +19,7 @@ func Admin() DirectiveFunc {
 
 		err := authz.RequireRole(actor, sqlc.RoleNameAdmin)
 		if err != nil {
-			return nil, fmt.Errorf("this endpoint requires a user with the admin role")
+			return nil, err
 		}
 
 		return next(ctx)

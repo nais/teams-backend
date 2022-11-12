@@ -70,20 +70,34 @@ type ComplexityRoot struct {
 		TargetType       func(childComplexity int) int
 	}
 
+	GcpProject struct {
+		Environment func(childComplexity int) int
+		ProjectID   func(childComplexity int) int
+	}
+
 	Mutation struct {
-		AddTeamMembers      func(childComplexity int, slug *slug.Slug, userIds []*uuid.UUID) int
-		AddTeamOwners       func(childComplexity int, slug *slug.Slug, userIds []*uuid.UUID) int
-		ConfigureReconciler func(childComplexity int, name sqlc.ReconcilerName, config []*model.ReconcilerConfigInput) int
-		CreateTeam          func(childComplexity int, input model.CreateTeamInput) int
-		DisableReconciler   func(childComplexity int, name sqlc.ReconcilerName) int
-		DisableTeam         func(childComplexity int, slug *slug.Slug) int
-		EnableReconciler    func(childComplexity int, name sqlc.ReconcilerName) int
-		EnableTeam          func(childComplexity int, slug *slug.Slug) int
-		RemoveUsersFromTeam func(childComplexity int, slug *slug.Slug, userIds []*uuid.UUID) int
-		ResetReconciler     func(childComplexity int, name sqlc.ReconcilerName) int
-		SetTeamMemberRole   func(childComplexity int, slug *slug.Slug, userID *uuid.UUID, role model.TeamRole) int
-		SynchronizeTeam     func(childComplexity int, slug *slug.Slug) int
-		UpdateTeam          func(childComplexity int, slug *slug.Slug, input model.UpdateTeamInput) int
+		AddTeamMembers               func(childComplexity int, slug *slug.Slug, userIds []*uuid.UUID) int
+		AddTeamOwners                func(childComplexity int, slug *slug.Slug, userIds []*uuid.UUID) int
+		ConfigureReconciler          func(childComplexity int, name sqlc.ReconcilerName, config []*model.ReconcilerConfigInput) int
+		CreateTeam                   func(childComplexity int, input model.CreateTeamInput) int
+		DisableReconciler            func(childComplexity int, name sqlc.ReconcilerName) int
+		DisableTeam                  func(childComplexity int, slug *slug.Slug) int
+		EnableReconciler             func(childComplexity int, name sqlc.ReconcilerName) int
+		EnableTeam                   func(childComplexity int, slug *slug.Slug) int
+		RemoveUsersFromTeam          func(childComplexity int, slug *slug.Slug, userIds []*uuid.UUID) int
+		ResetReconciler              func(childComplexity int, name sqlc.ReconcilerName) int
+		SetGcpProjectID              func(childComplexity int, teamSlug *slug.Slug, gcpEnvironment string, gcpProjectID string) int
+		SetGitHubTeamSlug            func(childComplexity int, teamSlug *slug.Slug, gitHubTeamSlug *slug.Slug) int
+		SetGoogleWorkspaceGroupEmail func(childComplexity int, teamSlug *slug.Slug, googleWorkspaceGroupEmail string) int
+		SetNaisNamespace             func(childComplexity int, teamSlug *slug.Slug, gcpEnvironment string, naisNamespace *slug.Slug) int
+		SetTeamMemberRole            func(childComplexity int, slug *slug.Slug, userID *uuid.UUID, role model.TeamRole) int
+		SynchronizeTeam              func(childComplexity int, slug *slug.Slug) int
+		UpdateTeam                   func(childComplexity int, slug *slug.Slug, input model.UpdateTeamInput) int
+	}
+
+	NaisNamespace struct {
+		Environment func(childComplexity int) int
+		Namespace   func(childComplexity int) int
 	}
 
 	Query struct {
@@ -117,6 +131,13 @@ type ComplexityRoot struct {
 		Value       func(childComplexity int) int
 	}
 
+	ReconcilerState struct {
+		GcpProjects               func(childComplexity int) int
+		GitHubTeamSlug            func(childComplexity int) int
+		GoogleWorkspaceGroupEmail func(childComplexity int) int
+		NaisNamespaces            func(childComplexity int) int
+	}
+
 	Role struct {
 		IsGlobal               func(childComplexity int) int
 		Name                   func(childComplexity int) int
@@ -143,6 +164,7 @@ type ComplexityRoot struct {
 		Members            func(childComplexity int) int
 		Metadata           func(childComplexity int) int
 		Purpose            func(childComplexity int) int
+		ReconcilerState    func(childComplexity int) int
 		Slug               func(childComplexity int) int
 		SyncErrors         func(childComplexity int) int
 	}
@@ -180,6 +202,10 @@ type AuditLogResolver interface {
 	Actor(ctx context.Context, obj *db.AuditLog) (*string, error)
 }
 type MutationResolver interface {
+	SetGitHubTeamSlug(ctx context.Context, teamSlug *slug.Slug, gitHubTeamSlug *slug.Slug) (*db.Team, error)
+	SetGoogleWorkspaceGroupEmail(ctx context.Context, teamSlug *slug.Slug, googleWorkspaceGroupEmail string) (*db.Team, error)
+	SetGcpProjectID(ctx context.Context, teamSlug *slug.Slug, gcpEnvironment string, gcpProjectID string) (*db.Team, error)
+	SetNaisNamespace(ctx context.Context, teamSlug *slug.Slug, gcpEnvironment string, naisNamespace *slug.Slug) (*db.Team, error)
 	EnableReconciler(ctx context.Context, name sqlc.ReconcilerName) (*db.Reconciler, error)
 	DisableReconciler(ctx context.Context, name sqlc.ReconcilerName) (*db.Reconciler, error)
 	ConfigureReconciler(ctx context.Context, name sqlc.ReconcilerName, config []*model.ReconcilerConfigInput) (*db.Reconciler, error)
@@ -226,6 +252,7 @@ type TeamResolver interface {
 	SyncErrors(ctx context.Context, obj *db.Team) ([]*model.SyncError, error)
 
 	LastSuccessfulSync(ctx context.Context, obj *db.Team) (*time.Time, error)
+	ReconcilerState(ctx context.Context, obj *db.Team) (*model.ReconcilerState, error)
 }
 type UserResolver interface {
 	Teams(ctx context.Context, obj *db.User) ([]*model.TeamMembership, error)
@@ -309,6 +336,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.AuditLog.TargetType(childComplexity), true
+
+	case "GcpProject.environment":
+		if e.complexity.GcpProject.Environment == nil {
+			break
+		}
+
+		return e.complexity.GcpProject.Environment(childComplexity), true
+
+	case "GcpProject.projectId":
+		if e.complexity.GcpProject.ProjectID == nil {
+			break
+		}
+
+		return e.complexity.GcpProject.ProjectID(childComplexity), true
 
 	case "Mutation.addTeamMembers":
 		if e.complexity.Mutation.AddTeamMembers == nil {
@@ -430,6 +471,54 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.ResetReconciler(childComplexity, args["name"].(sqlc.ReconcilerName)), true
 
+	case "Mutation.setGcpProjectId":
+		if e.complexity.Mutation.SetGcpProjectID == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_setGcpProjectId_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SetGcpProjectID(childComplexity, args["teamSlug"].(*slug.Slug), args["gcpEnvironment"].(string), args["gcpProjectId"].(string)), true
+
+	case "Mutation.setGitHubTeamSlug":
+		if e.complexity.Mutation.SetGitHubTeamSlug == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_setGitHubTeamSlug_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SetGitHubTeamSlug(childComplexity, args["teamSlug"].(*slug.Slug), args["gitHubTeamSlug"].(*slug.Slug)), true
+
+	case "Mutation.setGoogleWorkspaceGroupEmail":
+		if e.complexity.Mutation.SetGoogleWorkspaceGroupEmail == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_setGoogleWorkspaceGroupEmail_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SetGoogleWorkspaceGroupEmail(childComplexity, args["teamSlug"].(*slug.Slug), args["googleWorkspaceGroupEmail"].(string)), true
+
+	case "Mutation.setNaisNamespace":
+		if e.complexity.Mutation.SetNaisNamespace == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_setNaisNamespace_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SetNaisNamespace(childComplexity, args["teamSlug"].(*slug.Slug), args["gcpEnvironment"].(string), args["naisNamespace"].(*slug.Slug)), true
+
 	case "Mutation.setTeamMemberRole":
 		if e.complexity.Mutation.SetTeamMemberRole == nil {
 			break
@@ -465,6 +554,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.UpdateTeam(childComplexity, args["slug"].(*slug.Slug), args["input"].(model.UpdateTeamInput)), true
+
+	case "NaisNamespace.environment":
+		if e.complexity.NaisNamespace.Environment == nil {
+			break
+		}
+
+		return e.complexity.NaisNamespace.Environment(childComplexity), true
+
+	case "NaisNamespace.namespace":
+		if e.complexity.NaisNamespace.Namespace == nil {
+			break
+		}
+
+		return e.complexity.NaisNamespace.Namespace(childComplexity), true
 
 	case "Query.me":
 		if e.complexity.Query.Me == nil {
@@ -635,6 +738,34 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.ReconcilerConfig.Value(childComplexity), true
 
+	case "ReconcilerState.gcpProjects":
+		if e.complexity.ReconcilerState.GcpProjects == nil {
+			break
+		}
+
+		return e.complexity.ReconcilerState.GcpProjects(childComplexity), true
+
+	case "ReconcilerState.gitHubTeamSlug":
+		if e.complexity.ReconcilerState.GitHubTeamSlug == nil {
+			break
+		}
+
+		return e.complexity.ReconcilerState.GitHubTeamSlug(childComplexity), true
+
+	case "ReconcilerState.googleWorkspaceGroupEmail":
+		if e.complexity.ReconcilerState.GoogleWorkspaceGroupEmail == nil {
+			break
+		}
+
+		return e.complexity.ReconcilerState.GoogleWorkspaceGroupEmail(childComplexity), true
+
+	case "ReconcilerState.naisNamespaces":
+		if e.complexity.ReconcilerState.NaisNamespaces == nil {
+			break
+		}
+
+		return e.complexity.ReconcilerState.NaisNamespaces(childComplexity), true
+
 	case "Role.isGlobal":
 		if e.complexity.Role.IsGlobal == nil {
 			break
@@ -746,6 +877,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Team.Purpose(childComplexity), true
+
+	case "Team.reconcilerState":
+		if e.complexity.Team.ReconcilerState == nil {
+			break
+		}
+
+		return e.complexity.Team.ReconcilerState(childComplexity), true
 
 	case "Team.slug":
 		if e.complexity.Team.Slug == nil {
@@ -964,6 +1102,50 @@ directive @auth on FIELD_DEFINITION
 
 "Require an authenticated user with the admin role for all requests with this directive."
 directive @admin on FIELD_DEFINITION`, BuiltIn: false},
+	{Name: "../../../graphql/reconcilerStates.graphqls", Input: `extend type Mutation {
+    "Set the GitHub team slug for a Console team."
+    setGitHubTeamSlug(
+        "The slug for the Console team."
+        teamSlug: Slug!
+
+        "The slug for the connected GitHub team."
+        gitHubTeamSlug: Slug!
+    ): Team! @admin
+
+    "Set the Google Workspace group email for a Console team."
+    setGoogleWorkspaceGroupEmail(
+        "The slug for the Console team."
+        teamSlug: Slug!
+
+        "The email for the connected Google workspace group."
+        googleWorkspaceGroupEmail: String!
+    ): Team! @admin
+
+    "Set the GCP project ID for a Console team in a specific environment."
+    setGcpProjectId(
+        "The slug for the Console team."
+        teamSlug: Slug!
+
+        "The environment for the GCP project."
+        gcpEnvironment: String!
+
+        "The project ID for the connected GCP project."
+        gcpProjectId: String!
+    ): Team! @admin
+
+    "Set the NAIS namespace for a Console team in a specific environment."
+    setNaisNamespace(
+        "The slug for the Console team."
+        teamSlug: Slug!
+
+        "The environment for the namespace."
+        gcpEnvironment: String!
+
+        "The namespace."
+        naisNamespace: Slug!
+    ): Team! @admin
+}
+`, BuiltIn: false},
 	{Name: "../../../graphql/reconcilers.graphqls", Input: `extend type Mutation {
     """
     Enable a reconciler
@@ -1309,6 +1491,42 @@ type Team {
 
     "Timestamp of the last successful synchronization of the team."
     lastSuccessfulSync: Time
+
+    "Current reconciler state for the team."
+    reconcilerState: ReconcilerState!
+}
+
+"Reconciler state type."
+type ReconcilerState {
+    "The GitHub team slug."
+    gitHubTeamSlug: Slug
+
+    "The Google Workspace group email."
+    googleWorkspaceGroupEmail: String
+
+    "A list of GCP projects."
+    gcpProjects: [GcpProject!]!
+
+    "A list of NAIS namespaces."
+    naisNamespaces: [NaisNamespace!]!
+}
+
+"GCP project type."
+type GcpProject {
+    "The environment for the project."
+    environment: String!
+
+    "The GCP project ID."
+    projectId: String!
+}
+
+"NAIS namespace type."
+type NaisNamespace {
+    "The environment for the namespace."
+    environment: String!
+
+    "The namespace."
+    namespace: Slug!
 }
 
 "Team metadata type."
@@ -1597,6 +1815,120 @@ func (ec *executionContext) field_Mutation_resetReconciler_args(ctx context.Cont
 		}
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_setGcpProjectId_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *slug.Slug
+	if tmp, ok := rawArgs["teamSlug"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamSlug"))
+		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["teamSlug"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["gcpEnvironment"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("gcpEnvironment"))
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["gcpEnvironment"] = arg1
+	var arg2 string
+	if tmp, ok := rawArgs["gcpProjectId"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("gcpProjectId"))
+		arg2, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["gcpProjectId"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_setGitHubTeamSlug_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *slug.Slug
+	if tmp, ok := rawArgs["teamSlug"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamSlug"))
+		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["teamSlug"] = arg0
+	var arg1 *slug.Slug
+	if tmp, ok := rawArgs["gitHubTeamSlug"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("gitHubTeamSlug"))
+		arg1, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["gitHubTeamSlug"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_setGoogleWorkspaceGroupEmail_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *slug.Slug
+	if tmp, ok := rawArgs["teamSlug"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamSlug"))
+		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["teamSlug"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["googleWorkspaceGroupEmail"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("googleWorkspaceGroupEmail"))
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["googleWorkspaceGroupEmail"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_setNaisNamespace_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *slug.Slug
+	if tmp, ok := rawArgs["teamSlug"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamSlug"))
+		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["teamSlug"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["gcpEnvironment"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("gcpEnvironment"))
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["gcpEnvironment"] = arg1
+	var arg2 *slug.Slug
+	if tmp, ok := rawArgs["naisNamespace"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("naisNamespace"))
+		arg2, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["naisNamespace"] = arg2
 	return args, nil
 }
 
@@ -2163,6 +2495,474 @@ func (ec *executionContext) fieldContext_AuditLog_createdAt(ctx context.Context,
 	return fc, nil
 }
 
+func (ec *executionContext) _GcpProject_environment(ctx context.Context, field graphql.CollectedField, obj *model.GcpProject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GcpProject_environment(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Environment, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GcpProject_environment(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GcpProject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GcpProject_projectId(ctx context.Context, field graphql.CollectedField, obj *model.GcpProject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GcpProject_projectId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ProjectID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GcpProject_projectId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GcpProject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_setGitHubTeamSlug(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_setGitHubTeamSlug(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().SetGitHubTeamSlug(rctx, fc.Args["teamSlug"].(*slug.Slug), fc.Args["gitHubTeamSlug"].(*slug.Slug))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Admin == nil {
+				return nil, errors.New("directive admin is not implemented")
+			}
+			return ec.directives.Admin(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*db.Team); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/db.Team`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*db.Team)
+	fc.Result = res
+	return ec.marshalNTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐTeam(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_setGitHubTeamSlug(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "slug":
+				return ec.fieldContext_Team_slug(ctx, field)
+			case "purpose":
+				return ec.fieldContext_Team_purpose(ctx, field)
+			case "metadata":
+				return ec.fieldContext_Team_metadata(ctx, field)
+			case "auditLogs":
+				return ec.fieldContext_Team_auditLogs(ctx, field)
+			case "members":
+				return ec.fieldContext_Team_members(ctx, field)
+			case "syncErrors":
+				return ec.fieldContext_Team_syncErrors(ctx, field)
+			case "enabled":
+				return ec.fieldContext_Team_enabled(ctx, field)
+			case "lastSuccessfulSync":
+				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
+			case "reconcilerState":
+				return ec.fieldContext_Team_reconcilerState(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_setGitHubTeamSlug_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_setGoogleWorkspaceGroupEmail(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_setGoogleWorkspaceGroupEmail(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().SetGoogleWorkspaceGroupEmail(rctx, fc.Args["teamSlug"].(*slug.Slug), fc.Args["googleWorkspaceGroupEmail"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Admin == nil {
+				return nil, errors.New("directive admin is not implemented")
+			}
+			return ec.directives.Admin(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*db.Team); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/db.Team`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*db.Team)
+	fc.Result = res
+	return ec.marshalNTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐTeam(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_setGoogleWorkspaceGroupEmail(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "slug":
+				return ec.fieldContext_Team_slug(ctx, field)
+			case "purpose":
+				return ec.fieldContext_Team_purpose(ctx, field)
+			case "metadata":
+				return ec.fieldContext_Team_metadata(ctx, field)
+			case "auditLogs":
+				return ec.fieldContext_Team_auditLogs(ctx, field)
+			case "members":
+				return ec.fieldContext_Team_members(ctx, field)
+			case "syncErrors":
+				return ec.fieldContext_Team_syncErrors(ctx, field)
+			case "enabled":
+				return ec.fieldContext_Team_enabled(ctx, field)
+			case "lastSuccessfulSync":
+				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
+			case "reconcilerState":
+				return ec.fieldContext_Team_reconcilerState(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_setGoogleWorkspaceGroupEmail_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_setGcpProjectId(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_setGcpProjectId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().SetGcpProjectID(rctx, fc.Args["teamSlug"].(*slug.Slug), fc.Args["gcpEnvironment"].(string), fc.Args["gcpProjectId"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Admin == nil {
+				return nil, errors.New("directive admin is not implemented")
+			}
+			return ec.directives.Admin(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*db.Team); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/db.Team`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*db.Team)
+	fc.Result = res
+	return ec.marshalNTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐTeam(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_setGcpProjectId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "slug":
+				return ec.fieldContext_Team_slug(ctx, field)
+			case "purpose":
+				return ec.fieldContext_Team_purpose(ctx, field)
+			case "metadata":
+				return ec.fieldContext_Team_metadata(ctx, field)
+			case "auditLogs":
+				return ec.fieldContext_Team_auditLogs(ctx, field)
+			case "members":
+				return ec.fieldContext_Team_members(ctx, field)
+			case "syncErrors":
+				return ec.fieldContext_Team_syncErrors(ctx, field)
+			case "enabled":
+				return ec.fieldContext_Team_enabled(ctx, field)
+			case "lastSuccessfulSync":
+				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
+			case "reconcilerState":
+				return ec.fieldContext_Team_reconcilerState(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_setGcpProjectId_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_setNaisNamespace(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_setNaisNamespace(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().SetNaisNamespace(rctx, fc.Args["teamSlug"].(*slug.Slug), fc.Args["gcpEnvironment"].(string), fc.Args["naisNamespace"].(*slug.Slug))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Admin == nil {
+				return nil, errors.New("directive admin is not implemented")
+			}
+			return ec.directives.Admin(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*db.Team); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/db.Team`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*db.Team)
+	fc.Result = res
+	return ec.marshalNTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐTeam(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_setNaisNamespace(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "slug":
+				return ec.fieldContext_Team_slug(ctx, field)
+			case "purpose":
+				return ec.fieldContext_Team_purpose(ctx, field)
+			case "metadata":
+				return ec.fieldContext_Team_metadata(ctx, field)
+			case "auditLogs":
+				return ec.fieldContext_Team_auditLogs(ctx, field)
+			case "members":
+				return ec.fieldContext_Team_members(ctx, field)
+			case "syncErrors":
+				return ec.fieldContext_Team_syncErrors(ctx, field)
+			case "enabled":
+				return ec.fieldContext_Team_enabled(ctx, field)
+			case "lastSuccessfulSync":
+				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
+			case "reconcilerState":
+				return ec.fieldContext_Team_reconcilerState(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_setNaisNamespace_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_enableReconciler(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_enableReconciler(ctx, field)
 	if err != nil {
@@ -2610,6 +3410,8 @@ func (ec *executionContext) fieldContext_Mutation_createTeam(ctx context.Context
 				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
+			case "reconcilerState":
+				return ec.fieldContext_Team_reconcilerState(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -2703,6 +3505,8 @@ func (ec *executionContext) fieldContext_Mutation_updateTeam(ctx context.Context
 				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
+			case "reconcilerState":
+				return ec.fieldContext_Team_reconcilerState(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -2796,6 +3600,8 @@ func (ec *executionContext) fieldContext_Mutation_removeUsersFromTeam(ctx contex
 				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
+			case "reconcilerState":
+				return ec.fieldContext_Team_reconcilerState(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -2970,6 +3776,8 @@ func (ec *executionContext) fieldContext_Mutation_addTeamMembers(ctx context.Con
 				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
+			case "reconcilerState":
+				return ec.fieldContext_Team_reconcilerState(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3063,6 +3871,8 @@ func (ec *executionContext) fieldContext_Mutation_addTeamOwners(ctx context.Cont
 				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
+			case "reconcilerState":
+				return ec.fieldContext_Team_reconcilerState(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3156,6 +3966,8 @@ func (ec *executionContext) fieldContext_Mutation_setTeamMemberRole(ctx context.
 				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
+			case "reconcilerState":
+				return ec.fieldContext_Team_reconcilerState(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3249,6 +4061,8 @@ func (ec *executionContext) fieldContext_Mutation_disableTeam(ctx context.Contex
 				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
+			case "reconcilerState":
+				return ec.fieldContext_Team_reconcilerState(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3342,6 +4156,8 @@ func (ec *executionContext) fieldContext_Mutation_enableTeam(ctx context.Context
 				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
+			case "reconcilerState":
+				return ec.fieldContext_Team_reconcilerState(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3356,6 +4172,94 @@ func (ec *executionContext) fieldContext_Mutation_enableTeam(ctx context.Context
 	if fc.Args, err = ec.field_Mutation_enableTeam_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _NaisNamespace_environment(ctx context.Context, field graphql.CollectedField, obj *model.NaisNamespace) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_NaisNamespace_environment(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Environment, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_NaisNamespace_environment(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "NaisNamespace",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _NaisNamespace_namespace(ctx context.Context, field graphql.CollectedField, obj *model.NaisNamespace) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_NaisNamespace_namespace(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Namespace, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*slug.Slug)
+	fc.Result = res
+	return ec.marshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_NaisNamespace_namespace(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "NaisNamespace",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Slug does not have child fields")
+		},
 	}
 	return fc, nil
 }
@@ -3625,6 +4529,8 @@ func (ec *executionContext) fieldContext_Query_teams(ctx context.Context, field 
 				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
+			case "reconcilerState":
+				return ec.fieldContext_Team_reconcilerState(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3707,6 +4613,8 @@ func (ec *executionContext) fieldContext_Query_team(ctx context.Context, field g
 				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
+			case "reconcilerState":
+				return ec.fieldContext_Team_reconcilerState(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -4751,6 +5659,188 @@ func (ec *executionContext) fieldContext_ReconcilerConfig_value(ctx context.Cont
 	return fc, nil
 }
 
+func (ec *executionContext) _ReconcilerState_gitHubTeamSlug(ctx context.Context, field graphql.CollectedField, obj *model.ReconcilerState) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ReconcilerState_gitHubTeamSlug(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GitHubTeamSlug, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*slug.Slug)
+	fc.Result = res
+	return ec.marshalOSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ReconcilerState_gitHubTeamSlug(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ReconcilerState",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Slug does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ReconcilerState_googleWorkspaceGroupEmail(ctx context.Context, field graphql.CollectedField, obj *model.ReconcilerState) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ReconcilerState_googleWorkspaceGroupEmail(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GoogleWorkspaceGroupEmail, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ReconcilerState_googleWorkspaceGroupEmail(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ReconcilerState",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ReconcilerState_gcpProjects(ctx context.Context, field graphql.CollectedField, obj *model.ReconcilerState) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ReconcilerState_gcpProjects(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GcpProjects, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.GcpProject)
+	fc.Result = res
+	return ec.marshalNGcpProject2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐGcpProjectᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ReconcilerState_gcpProjects(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ReconcilerState",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "environment":
+				return ec.fieldContext_GcpProject_environment(ctx, field)
+			case "projectId":
+				return ec.fieldContext_GcpProject_projectId(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type GcpProject", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ReconcilerState_naisNamespaces(ctx context.Context, field graphql.CollectedField, obj *model.ReconcilerState) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ReconcilerState_naisNamespaces(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.NaisNamespaces, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.NaisNamespace)
+	fc.Result = res
+	return ec.marshalNNaisNamespace2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐNaisNamespaceᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ReconcilerState_naisNamespaces(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ReconcilerState",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "environment":
+				return ec.fieldContext_NaisNamespace_environment(ctx, field)
+			case "namespace":
+				return ec.fieldContext_NaisNamespace_namespace(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type NaisNamespace", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Role_name(ctx context.Context, field graphql.CollectedField, obj *db.Role) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Role_name(ctx, field)
 	if err != nil {
@@ -5584,6 +6674,60 @@ func (ec *executionContext) fieldContext_Team_lastSuccessfulSync(ctx context.Con
 	return fc, nil
 }
 
+func (ec *executionContext) _Team_reconcilerState(ctx context.Context, field graphql.CollectedField, obj *db.Team) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Team_reconcilerState(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Team().ReconcilerState(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.ReconcilerState)
+	fc.Result = res
+	return ec.marshalNReconcilerState2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐReconcilerState(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Team_reconcilerState(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Team",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "gitHubTeamSlug":
+				return ec.fieldContext_ReconcilerState_gitHubTeamSlug(ctx, field)
+			case "googleWorkspaceGroupEmail":
+				return ec.fieldContext_ReconcilerState_googleWorkspaceGroupEmail(ctx, field)
+			case "gcpProjects":
+				return ec.fieldContext_ReconcilerState_gcpProjects(ctx, field)
+			case "naisNamespaces":
+				return ec.fieldContext_ReconcilerState_naisNamespaces(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ReconcilerState", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _TeamMember_user(ctx context.Context, field graphql.CollectedField, obj *model.TeamMember) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_TeamMember_user(ctx, field)
 	if err != nil {
@@ -5739,6 +6883,8 @@ func (ec *executionContext) fieldContext_TeamMembership_team(ctx context.Context
 				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
+			case "reconcilerState":
+				return ec.fieldContext_Team_reconcilerState(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -5930,6 +7076,8 @@ func (ec *executionContext) fieldContext_TeamSync_team(ctx context.Context, fiel
 				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
+			case "reconcilerState":
+				return ec.fieldContext_Team_reconcilerState(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -8215,6 +9363,41 @@ func (ec *executionContext) _AuditLog(ctx context.Context, sel ast.SelectionSet,
 	return out
 }
 
+var gcpProjectImplementors = []string{"GcpProject"}
+
+func (ec *executionContext) _GcpProject(ctx context.Context, sel ast.SelectionSet, obj *model.GcpProject) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, gcpProjectImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("GcpProject")
+		case "environment":
+
+			out.Values[i] = ec._GcpProject_environment(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "projectId":
+
+			out.Values[i] = ec._GcpProject_projectId(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var mutationImplementors = []string{"Mutation"}
 
 func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -8234,6 +9417,42 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Mutation")
+		case "setGitHubTeamSlug":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_setGitHubTeamSlug(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "setGoogleWorkspaceGroupEmail":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_setGoogleWorkspaceGroupEmail(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "setGcpProjectId":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_setGcpProjectId(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "setNaisNamespace":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_setNaisNamespace(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "enableReconciler":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
@@ -8347,6 +9566,41 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_enableTeam(ctx, field)
 			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var naisNamespaceImplementors = []string{"NaisNamespace"}
+
+func (ec *executionContext) _NaisNamespace(ctx context.Context, sel ast.SelectionSet, obj *model.NaisNamespace) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, naisNamespaceImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("NaisNamespace")
+		case "environment":
+
+			out.Values[i] = ec._NaisNamespace_environment(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "namespace":
+
+			out.Values[i] = ec._NaisNamespace_namespace(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -8777,6 +10031,49 @@ func (ec *executionContext) _ReconcilerConfig(ctx context.Context, sel ast.Selec
 	return out
 }
 
+var reconcilerStateImplementors = []string{"ReconcilerState"}
+
+func (ec *executionContext) _ReconcilerState(ctx context.Context, sel ast.SelectionSet, obj *model.ReconcilerState) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, reconcilerStateImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ReconcilerState")
+		case "gitHubTeamSlug":
+
+			out.Values[i] = ec._ReconcilerState_gitHubTeamSlug(ctx, field, obj)
+
+		case "googleWorkspaceGroupEmail":
+
+			out.Values[i] = ec._ReconcilerState_googleWorkspaceGroupEmail(ctx, field, obj)
+
+		case "gcpProjects":
+
+			out.Values[i] = ec._ReconcilerState_gcpProjects(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "naisNamespaces":
+
+			out.Values[i] = ec._ReconcilerState_naisNamespaces(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var roleImplementors = []string{"Role"}
 
 func (ec *executionContext) _Role(ctx context.Context, sel ast.SelectionSet, obj *db.Role) graphql.Marshaler {
@@ -9051,6 +10348,26 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 					}
 				}()
 				res = ec._Team_lastSuccessfulSync(ctx, field, obj)
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
+		case "reconcilerState":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Team_reconcilerState(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
 				return res
 			}
 
@@ -9722,6 +11039,60 @@ func (ec *executionContext) unmarshalNCreateTeamInput2githubᚗcomᚋnaisᚋcons
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) marshalNGcpProject2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐGcpProjectᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.GcpProject) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNGcpProject2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐGcpProject(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNGcpProject2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐGcpProject(ctx context.Context, sel ast.SelectionSet, v *model.GcpProject) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._GcpProject(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNInt2int32(ctx context.Context, v interface{}) (int32, error) {
 	res, err := graphql.UnmarshalInt32(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -9735,6 +11106,60 @@ func (ec *executionContext) marshalNInt2int32(ctx context.Context, sel ast.Selec
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNNaisNamespace2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐNaisNamespaceᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.NaisNamespace) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNNaisNamespace2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐNaisNamespace(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNNaisNamespace2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐNaisNamespace(ctx context.Context, sel ast.SelectionSet, v *model.NaisNamespace) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._NaisNamespace(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNReconciler2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐReconciler(ctx context.Context, sel ast.SelectionSet, v db.Reconciler) graphql.Marshaler {
@@ -9901,6 +11326,20 @@ func (ec *executionContext) marshalNReconcilerName2githubᚗcomᚋnaisᚋconsole
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNReconcilerState2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐReconcilerState(ctx context.Context, sel ast.SelectionSet, v model.ReconcilerState) graphql.Marshaler {
+	return ec._ReconcilerState(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNReconcilerState2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐReconcilerState(ctx context.Context, sel ast.SelectionSet, v *model.ReconcilerState) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ReconcilerState(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNRole2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐRoleᚄ(ctx context.Context, sel ast.SelectionSet, v []*db.Role) graphql.Marshaler {

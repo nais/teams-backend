@@ -46,7 +46,7 @@ func RequireRole(actor *Actor, requiredRoleName sqlc.RoleName) error {
 		}
 	}
 
-	return ErrNotAuthorized{role: string(requiredRoleName)}
+	return ErrMissingRole{role: string(requiredRoleName)}
 }
 
 // ActorFromContext Get the actor stored in the context. Requires that a middleware has stored an actor in the first
@@ -103,5 +103,5 @@ func authorized(authorizations map[sqlc.AuthzName]struct{}, requiredAuthzName sq
 		}
 	}
 
-	return ErrNotAuthorized{role: string(requiredAuthzName)}
+	return ErrMissingAuthorization{authorization: string(requiredAuthzName)}
 }

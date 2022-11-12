@@ -170,6 +170,42 @@ type Team {
 
     "Timestamp of the last successful synchronization of the team."
     lastSuccessfulSync: Time
+
+    "Current reconciler state for the team."
+    reconcilerState: ReconcilerState!
+}
+
+"Reconciler state type."
+type ReconcilerState {
+    "The GitHub team slug."
+    gitHubTeamSlug: Slug
+
+    "The Google Workspace group email."
+    googleWorkspaceGroupEmail: String
+
+    "A list of GCP projects."
+    gcpProjects: [GcpProject!]!
+
+    "A list of NAIS namespaces."
+    naisNamespaces: [NaisNamespace!]!
+}
+
+"GCP project type."
+type GcpProject {
+    "The environment for the project."
+    environment: String!
+
+    "The GCP project ID."
+    projectId: String!
+}
+
+"NAIS namespace type."
+type NaisNamespace {
+    "The environment for the namespace."
+    environment: String!
+
+    "The namespace."
+    namespace: Slug!
 }
 
 "Team metadata type."

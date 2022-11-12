@@ -22,12 +22,40 @@ type CreateTeamInput struct {
 	Purpose string `json:"purpose"`
 }
 
+// GCP project type.
+type GcpProject struct {
+	// The environment for the project.
+	Environment string `json:"environment"`
+	// The GCP project ID.
+	ProjectID string `json:"projectId"`
+}
+
+// NAIS namespace type.
+type NaisNamespace struct {
+	// The environment for the namespace.
+	Environment string `json:"environment"`
+	// The namespace.
+	Namespace *slug.Slug `json:"namespace"`
+}
+
 // Reconciler configuration input.
 type ReconcilerConfigInput struct {
 	// Configuration key.
 	Key sqlc.ReconcilerConfigKey `json:"key"`
 	// Configuration value.
 	Value string `json:"value"`
+}
+
+// Reconciler state type.
+type ReconcilerState struct {
+	// The GitHub team slug.
+	GitHubTeamSlug *slug.Slug `json:"gitHubTeamSlug"`
+	// The Google Workspace group email.
+	GoogleWorkspaceGroupEmail *string `json:"googleWorkspaceGroupEmail"`
+	// A list of GCP projects.
+	GcpProjects []*GcpProject `json:"gcpProjects"`
+	// A list of NAIS namespaces.
+	NaisNamespaces []*NaisNamespace `json:"naisNamespaces"`
 }
 
 // Sync error type.

@@ -18,7 +18,8 @@ func TestQueryResolver_Users(t *testing.T) {
 	database := db.NewMockDatabase(t)
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	ch := make(chan reconcilers.Input, 100)
-	resolver := graph.NewResolver(database, "example.com", ch, auditLogger).Query()
+	gcpEnvironments := []string{"env"}
+	resolver := graph.NewResolver(database, "example.com", ch, auditLogger, gcpEnvironments).Query()
 
 	t.Run("unauthenticated user", func(t *testing.T) {
 		users, err := resolver.Users(ctx)

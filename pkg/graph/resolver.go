@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/db"
@@ -18,21 +19,32 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	database       db.Database
-	tenantDomain   string
-	teamReconciler chan<- reconcilers.Input
-	systemName     sqlc.SystemName
-	auditLogger    auditlogger.AuditLogger
+	database        db.Database
+	tenantDomain    string
+	teamReconciler  chan<- reconcilers.Input
+	systemName      sqlc.SystemName
+	auditLogger     auditlogger.AuditLogger
+	gcpEnvironments []string
 }
 
-func NewResolver(database db.Database, tenantDomain string, teamReconciler chan<- reconcilers.Input, auditLogger auditlogger.AuditLogger) *Resolver {
+func NewResolver(database db.Database, tenantDomain string, teamReconciler chan<- reconcilers.Input, auditLogger auditlogger.AuditLogger, gcpEnvironments []string) *Resolver {
 	return &Resolver{
-		database:       database,
-		tenantDomain:   tenantDomain,
-		systemName:     sqlc.SystemNameGraphqlApi,
-		teamReconciler: teamReconciler,
-		auditLogger:    auditLogger,
+		database:        database,
+		tenantDomain:    tenantDomain,
+		systemName:      sqlc.SystemNameGraphqlApi,
+		teamReconciler:  teamReconciler,
+		auditLogger:     auditLogger,
+		gcpEnvironments: gcpEnvironments,
 	}
+}
+
+// GetQueriedFields Get a map of queried fields for the given context with the field names as keys
+func GetQueriedFields(ctx context.Context) map[string]bool {
+	fields := make(map[string]bool)
+	for _, field := range graphql.CollectAllFields(ctx) {
+		fields[field] = true
+	}
+	return fields
 }
 
 // reconcileTeam Trigger team reconcilers for a given team
