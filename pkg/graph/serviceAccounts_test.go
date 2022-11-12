@@ -2,16 +2,16 @@ package graph_test
 
 import (
 	"context"
-	"github.com/nais/console/pkg/auditlogger"
-	"github.com/nais/console/pkg/graph"
-	"github.com/nais/console/pkg/reconcilers"
-	"github.com/stretchr/testify/assert"
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/graph"
+	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/sqlc"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMutationResolver_Roles(t *testing.T) {
@@ -33,10 +33,9 @@ func TestMutationResolver_Roles(t *testing.T) {
 	reconcilers := make(chan reconcilers.Input, 100)
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	database := db.NewMockDatabase(t)
-	resolver := graph.NewResolver(database, "example.com", reconcilers, auditLogger).ServiceAccount()
+	resolver := graph.NewResolver(database, "example.com", reconcilers, auditLogger, []string{"env"}).ServiceAccount()
 
 	t.Run("get roles for serviceAccount", func(t *testing.T) {
-
 		role := &db.Role{
 			Authorizations:         nil,
 			RoleName:               "",
