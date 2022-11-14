@@ -5,20 +5,20 @@ import (
 	"encoding/json"
 	"fmt"
 
-	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
+	"cloud.google.com/go/pubsub"
+	log "github.com/sirupsen/logrus"
+	"google.golang.org/api/option"
 
 	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/slug"
-
+	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
 	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
+	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
-	log "github.com/sirupsen/logrus"
 
-	"cloud.google.com/go/pubsub"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/reconcilers"
-	"google.golang.org/api/option"
 )
 
 const (
