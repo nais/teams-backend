@@ -95,8 +95,8 @@ JSON-encoded object with info about the clusters:
 ```json
 {
   "<env>": {
-    "team_folder_id": 123456789012,
-    "cluster_project_id": "<id>"
+    "teams_folder_id": "123456789012",
+    "project_id": "<id>"
   },
   ...
 }
