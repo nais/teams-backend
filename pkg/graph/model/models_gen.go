@@ -52,6 +52,8 @@ type ReconcilerState struct {
 	GitHubTeamSlug *slug.Slug `json:"gitHubTeamSlug"`
 	// The Google Workspace group email.
 	GoogleWorkspaceGroupEmail *string `json:"googleWorkspaceGroupEmail"`
+	// The Azure AD group ID.
+	AzureADGroupID *uuid.UUID `json:"azureADGroupId"`
 	// A list of GCP projects.
 	GcpProjects []*GcpProject `json:"gcpProjects"`
 	// A list of NAIS namespaces.

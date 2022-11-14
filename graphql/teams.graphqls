@@ -183,6 +183,9 @@ type ReconcilerState {
     "The Google Workspace group email."
     googleWorkspaceGroupEmail: String
 
+    "The Azure AD group ID."
+    azureADGroupId: UUID
+
     "A list of GCP projects."
     gcpProjects: [GcpProject!]!
 

@@ -86,6 +86,7 @@ type ComplexityRoot struct {
 		EnableTeam                   func(childComplexity int, slug *slug.Slug) int
 		RemoveUsersFromTeam          func(childComplexity int, slug *slug.Slug, userIds []*uuid.UUID) int
 		ResetReconciler              func(childComplexity int, name sqlc.ReconcilerName) int
+		SetAzureADGroupID            func(childComplexity int, teamSlug *slug.Slug, azureADGroupID *uuid.UUID) int
 		SetGcpProjectID              func(childComplexity int, teamSlug *slug.Slug, gcpEnvironment string, gcpProjectID string) int
 		SetGitHubTeamSlug            func(childComplexity int, teamSlug *slug.Slug, gitHubTeamSlug *slug.Slug) int
 		SetGoogleWorkspaceGroupEmail func(childComplexity int, teamSlug *slug.Slug, googleWorkspaceGroupEmail string) int
@@ -132,6 +133,7 @@ type ComplexityRoot struct {
 	}
 
 	ReconcilerState struct {
+		AzureADGroupID            func(childComplexity int) int
 		GcpProjects               func(childComplexity int) int
 		GitHubTeamSlug            func(childComplexity int) int
 		GoogleWorkspaceGroupEmail func(childComplexity int) int
@@ -204,6 +206,7 @@ type AuditLogResolver interface {
 type MutationResolver interface {
 	SetGitHubTeamSlug(ctx context.Context, teamSlug *slug.Slug, gitHubTeamSlug *slug.Slug) (*db.Team, error)
 	SetGoogleWorkspaceGroupEmail(ctx context.Context, teamSlug *slug.Slug, googleWorkspaceGroupEmail string) (*db.Team, error)
+	SetAzureADGroupID(ctx context.Context, teamSlug *slug.Slug, azureADGroupID *uuid.UUID) (*db.Team, error)
 	SetGcpProjectID(ctx context.Context, teamSlug *slug.Slug, gcpEnvironment string, gcpProjectID string) (*db.Team, error)
 	SetNaisNamespace(ctx context.Context, teamSlug *slug.Slug, gcpEnvironment string, naisNamespace *slug.Slug) (*db.Team, error)
 	EnableReconciler(ctx context.Context, name sqlc.ReconcilerName) (*db.Reconciler, error)
@@ -471,6 +474,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.ResetReconciler(childComplexity, args["name"].(sqlc.ReconcilerName)), true
 
+	case "Mutation.setAzureADGroupId":
+		if e.complexity.Mutation.SetAzureADGroupID == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_setAzureADGroupId_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SetAzureADGroupID(childComplexity, args["teamSlug"].(*slug.Slug), args["azureADGroupId"].(*uuid.UUID)), true
+
 	case "Mutation.setGcpProjectId":
 		if e.complexity.Mutation.SetGcpProjectID == nil {
 			break
@@ -737,6 +752,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.ReconcilerConfig.Value(childComplexity), true
+
+	case "ReconcilerState.azureADGroupId":
+		if e.complexity.ReconcilerState.AzureADGroupID == nil {
+			break
+		}
+
+		return e.complexity.ReconcilerState.AzureADGroupID(childComplexity), true
 
 	case "ReconcilerState.gcpProjects":
 		if e.complexity.ReconcilerState.GcpProjects == nil {
@@ -1119,6 +1141,15 @@ directive @admin on FIELD_DEFINITION`, BuiltIn: false},
 
         "The email for the connected Google workspace group."
         googleWorkspaceGroupEmail: String!
+    ): Team! @admin
+
+    "Set the Azure AD group ID for a Console team."
+    setAzureADGroupId(
+        "The slug for the Console team."
+        teamSlug: Slug!
+
+        "The UUID for the connected Azure AD group."
+        azureADGroupId: UUID!
     ): Team! @admin
 
     "Set the GCP project ID for a Console team in a specific environment."
@@ -1504,6 +1535,9 @@ type ReconcilerState {
     "The Google Workspace group email."
     googleWorkspaceGroupEmail: String
 
+    "The Azure AD group ID."
+    azureADGroupId: UUID
+
     "A list of GCP projects."
     gcpProjects: [GcpProject!]!
 
@@ -1815,6 +1849,30 @@ func (ec *executionContext) field_Mutation_resetReconciler_args(ctx context.Cont
 		}
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_setAzureADGroupId_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *slug.Slug
+	if tmp, ok := rawArgs["teamSlug"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamSlug"))
+		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["teamSlug"] = arg0
+	var arg1 *uuid.UUID
+	if tmp, ok := rawArgs["azureADGroupId"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("azureADGroupId"))
+		arg1, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["azureADGroupId"] = arg1
 	return args, nil
 }
 
@@ -2767,6 +2825,101 @@ func (ec *executionContext) fieldContext_Mutation_setGoogleWorkspaceGroupEmail(c
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_setGoogleWorkspaceGroupEmail_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_setAzureADGroupId(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_setAzureADGroupId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().SetAzureADGroupID(rctx, fc.Args["teamSlug"].(*slug.Slug), fc.Args["azureADGroupId"].(*uuid.UUID))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Admin == nil {
+				return nil, errors.New("directive admin is not implemented")
+			}
+			return ec.directives.Admin(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*db.Team); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/db.Team`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*db.Team)
+	fc.Result = res
+	return ec.marshalNTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐTeam(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_setAzureADGroupId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "slug":
+				return ec.fieldContext_Team_slug(ctx, field)
+			case "purpose":
+				return ec.fieldContext_Team_purpose(ctx, field)
+			case "metadata":
+				return ec.fieldContext_Team_metadata(ctx, field)
+			case "auditLogs":
+				return ec.fieldContext_Team_auditLogs(ctx, field)
+			case "members":
+				return ec.fieldContext_Team_members(ctx, field)
+			case "syncErrors":
+				return ec.fieldContext_Team_syncErrors(ctx, field)
+			case "enabled":
+				return ec.fieldContext_Team_enabled(ctx, field)
+			case "lastSuccessfulSync":
+				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
+			case "reconcilerState":
+				return ec.fieldContext_Team_reconcilerState(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_setAzureADGroupId_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -5741,6 +5894,47 @@ func (ec *executionContext) fieldContext_ReconcilerState_googleWorkspaceGroupEma
 	return fc, nil
 }
 
+func (ec *executionContext) _ReconcilerState_azureADGroupId(ctx context.Context, field graphql.CollectedField, obj *model.ReconcilerState) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ReconcilerState_azureADGroupId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AzureADGroupID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*uuid.UUID)
+	fc.Result = res
+	return ec.marshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ReconcilerState_azureADGroupId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ReconcilerState",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type UUID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ReconcilerState_gcpProjects(ctx context.Context, field graphql.CollectedField, obj *model.ReconcilerState) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ReconcilerState_gcpProjects(ctx, field)
 	if err != nil {
@@ -6717,6 +6911,8 @@ func (ec *executionContext) fieldContext_Team_reconcilerState(ctx context.Contex
 				return ec.fieldContext_ReconcilerState_gitHubTeamSlug(ctx, field)
 			case "googleWorkspaceGroupEmail":
 				return ec.fieldContext_ReconcilerState_googleWorkspaceGroupEmail(ctx, field)
+			case "azureADGroupId":
+				return ec.fieldContext_ReconcilerState_azureADGroupId(ctx, field)
 			case "gcpProjects":
 				return ec.fieldContext_ReconcilerState_gcpProjects(ctx, field)
 			case "naisNamespaces":
@@ -9435,6 +9631,15 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "setAzureADGroupId":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_setAzureADGroupId(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "setGcpProjectId":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
@@ -10048,6 +10253,10 @@ func (ec *executionContext) _ReconcilerState(ctx context.Context, sel ast.Select
 		case "googleWorkspaceGroupEmail":
 
 			out.Values[i] = ec._ReconcilerState_googleWorkspaceGroupEmail(ctx, field, obj)
+
+		case "azureADGroupId":
+
+			out.Values[i] = ec._ReconcilerState_azureADGroupId(ctx, field, obj)
 
 		case "gcpProjects":
 

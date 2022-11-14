@@ -610,6 +610,7 @@ func (r *teamResolver) ReconcilerState(ctx context.Context, obj *db.Team) (*mode
 	naisNamespaceState := &reconcilers.GoogleGcpNaisNamespaceState{
 		Namespaces: make(map[string]slug.Slug),
 	}
+	azureADState := &reconcilers.AzureState{}
 
 	queriedFields := GetQueriedFields(ctx)
 
@@ -657,11 +658,19 @@ func (r *teamResolver) ReconcilerState(ctx context.Context, obj *db.Team) (*mode
 		}
 	}
 
+	if _, inQuery := queriedFields["azureADGroupId"]; inQuery {
+		err := r.database.LoadReconcilerStateForTeam(ctx, sqlc.ReconcilerNameAzureGroup, obj.Slug, azureADState)
+		if err != nil {
+			return nil, apierror.Errorf("Unable to load the existing Azure AD state.")
+		}
+	}
+
 	return &model.ReconcilerState{
 		GitHubTeamSlug:            gitHubState.Slug,
 		GoogleWorkspaceGroupEmail: googleWorkspaceState.GroupEmail,
 		GcpProjects:               gcpProjects,
 		NaisNamespaces:            naisNamespaces,
+		AzureADGroupID:            azureADState.GroupID,
 	}, nil
 }
 

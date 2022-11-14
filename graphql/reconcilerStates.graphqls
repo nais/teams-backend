@@ -17,6 +17,15 @@ extend type Mutation {
         googleWorkspaceGroupEmail: String!
     ): Team! @admin
 
+    "Set the Azure AD group ID for a Console team."
+    setAzureADGroupId(
+        "The slug for the Console team."
+        teamSlug: Slug!
+
+        "The UUID for the connected Azure AD group."
+        azureADGroupId: UUID!
+    ): Team! @admin
+
     "Set the GCP project ID for a Console team in a specific environment."
     setGcpProjectId(
         "The slug for the Console team."

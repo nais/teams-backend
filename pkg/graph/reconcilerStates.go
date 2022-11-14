@@ -46,7 +46,7 @@ func (r *mutationResolver) SetGitHubTeamSlug(ctx context.Context, teamSlug *slug
 		Actor:         authz.ActorFromContext(ctx),
 		CorrelationID: correlationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Update GitHub state")
+	r.auditLogger.Logf(ctx, targets, fields, "Update GitHub state, set team slug: %q", gitHubTeamSlug)
 
 	r.reconcileTeam(ctx, correlationID, *team)
 
@@ -84,7 +84,41 @@ func (r *mutationResolver) SetGoogleWorkspaceGroupEmail(ctx context.Context, tea
 		Actor:         authz.ActorFromContext(ctx),
 		CorrelationID: correlationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Update Google Workspace state")
+	r.auditLogger.Logf(ctx, targets, fields, "Update Google Workspace state, set group email: %q", googleWorkspaceGroupEmail)
+
+	r.reconcileTeam(ctx, correlationID, *team)
+
+	return team, nil
+}
+
+// SetAzureADGroupID is the resolver for the setAzureADGroupId field.
+func (r *mutationResolver) SetAzureADGroupID(ctx context.Context, teamSlug *slug.Slug, azureADGroupID *uuid.UUID) (*db.Team, error) {
+	team, err := r.database.GetTeamBySlug(ctx, *teamSlug)
+	if err != nil {
+		return nil, apierror.ErrTeamNotExist
+	}
+
+	correlationID, err := uuid.NewUUID()
+	if err != nil {
+		return nil, fmt.Errorf("create log correlation ID: %w", err)
+	}
+
+	err = r.database.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameAzureGroup, *teamSlug, reconcilers.AzureState{
+		GroupID: azureADGroupID,
+	})
+	if err != nil {
+		return nil, apierror.Errorf("Unable to save the Azure AD state.")
+	}
+
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(team.Slug),
+	}
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGraphqlApiReconcilersUpdateTeamState,
+		Actor:         authz.ActorFromContext(ctx),
+		CorrelationID: correlationID,
+	}
+	r.auditLogger.Logf(ctx, targets, fields, "Update Azure AD state, set group ID: %q", azureADGroupID)
 
 	r.reconcileTeam(ctx, correlationID, *team)
 
@@ -129,7 +163,7 @@ func (r *mutationResolver) SetGcpProjectID(ctx context.Context, teamSlug *slug.S
 		Actor:         authz.ActorFromContext(ctx),
 		CorrelationID: correlationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Update GCP project state")
+	r.auditLogger.Logf(ctx, targets, fields, "Update GCP project state, set project ID %q in environment %q", gcpProjectID, gcpEnvironment)
 
 	r.reconcileTeam(ctx, correlationID, *team)
 
@@ -174,7 +208,7 @@ func (r *mutationResolver) SetNaisNamespace(ctx context.Context, teamSlug *slug.
 		Actor:         authz.ActorFromContext(ctx),
 		CorrelationID: correlationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Update NAIS namespace state")
+	r.auditLogger.Logf(ctx, targets, fields, "Update NAIS namespace state, set namespace %q in environment %q", naisNamespace, gcpEnvironment)
 
 	r.reconcileTeam(ctx, correlationID, *team)
 
