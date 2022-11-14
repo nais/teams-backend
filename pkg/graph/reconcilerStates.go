@@ -127,6 +127,10 @@ func (r *mutationResolver) SetAzureADGroupID(ctx context.Context, teamSlug *slug
 
 // SetGcpProjectID is the resolver for the setGcpProjectId field.
 func (r *mutationResolver) SetGcpProjectID(ctx context.Context, teamSlug *slug.Slug, gcpEnvironment string, gcpProjectID string) (*db.Team, error) {
+	if len(r.gcpEnvironments) == 0 {
+		return nil, apierror.Errorf("GCP cluster info has not been configured.")
+	}
+
 	team, err := r.database.GetTeamBySlug(ctx, *teamSlug)
 	if err != nil {
 		return nil, apierror.ErrTeamNotExist
@@ -172,6 +176,10 @@ func (r *mutationResolver) SetGcpProjectID(ctx context.Context, teamSlug *slug.S
 
 // SetNaisNamespace is the resolver for the setNaisNamespace field.
 func (r *mutationResolver) SetNaisNamespace(ctx context.Context, teamSlug *slug.Slug, gcpEnvironment string, naisNamespace *slug.Slug) (*db.Team, error) {
+	if len(r.gcpEnvironments) == 0 {
+		return nil, apierror.Errorf("GCP cluster info has not been configured.")
+	}
+
 	team, err := r.database.GetTeamBySlug(ctx, *teamSlug)
 	if err != nil {
 		return nil, apierror.ErrTeamNotExist

@@ -100,14 +100,16 @@ func run() error {
 		return err
 	}
 
-	clusterInfo, err := google_gcp_reconciler.GetClusterInfoFromJson(cfg.GCP.Clusters)
-	if err != nil {
-		return err
-	}
+	gcpEnvironments := make([]string, 0)
+	if cfg.GCP.Clusters != "" {
+		clusterInfo, err := google_gcp_reconciler.GetClusterInfoFromJson(cfg.GCP.Clusters)
+		if err != nil {
+			return err
+		}
 
-	gcpEnvironments := make([]string, 0, len(clusterInfo))
-	for env := range clusterInfo {
-		gcpEnvironments = append(gcpEnvironments, env)
+		for env := range clusterInfo {
+			gcpEnvironments = append(gcpEnvironments, env)
+		}
 	}
 
 	handler := setupGraphAPI(database, cfg.TenantDomain, teamReconciler, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi), gcpEnvironments)
