@@ -5,20 +5,20 @@ import (
 	"encoding/json"
 	"fmt"
 
-	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
+	"cloud.google.com/go/pubsub"
+	log "github.com/sirupsen/logrus"
+	"google.golang.org/api/option"
 
 	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/slug"
-
+	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
 	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
+	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
-	log "github.com/sirupsen/logrus"
 
-	"cloud.google.com/go/pubsub"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/reconcilers"
-	"google.golang.org/api/option"
 )
 
 const (
@@ -26,9 +26,10 @@ const (
 )
 
 type naisdData struct {
-	Name       string `json:"name"`
-	GcpProject string `json:"gcpProject"` // the user specified "project id"; not the "projects/ID" format
-	GroupEmail string `json:"groupEmail"`
+	Name         string `json:"name"`
+	GcpProject   string `json:"gcpProject"` // the user specified "project id"; not the "projects/ID" format
+	GroupEmail   string `json:"groupEmail"`
+	AzureGroupID string `json:"azureGroupID"`
 }
 
 type naisdRequest struct {
@@ -42,22 +43,24 @@ type naisNamespaceReconciler struct {
 	auditLogger     auditlogger.AuditLogger
 	credentialsFile string
 	projectID       string
+	azureEnabled    bool
 }
 
 const Name = sqlc.ReconcilerNameNaisNamespace
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, domain, credentialsFile, projectID string) *naisNamespaceReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, domain, credentialsFile, projectID string, azureEnabled bool) *naisNamespaceReconciler {
 	return &naisNamespaceReconciler{
 		database:        database,
 		auditLogger:     auditLogger,
 		domain:          domain,
 		credentialsFile: credentialsFile,
 		projectID:       projectID,
+		azureEnabled:    azureEnabled,
 	}
 }
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
-	return New(database, auditLogger, cfg.TenantDomain, cfg.Google.CredentialsFile, cfg.NaisNamespace.ProjectID), nil
+	return New(database, auditLogger, cfg.TenantDomain, cfg.Google.CredentialsFile, cfg.NaisNamespace.ProjectID, cfg.NaisNamespace.AzureEnabled), nil
 }
 
 func (r *naisNamespaceReconciler) Name() sqlc.ReconcilerName {
@@ -88,14 +91,18 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 		return fmt.Errorf("no GCP project state exists for team %q yet", input.Team.Slug)
 	}
 
-	workspaceState := &reconcilers.GoogleWorkspaceState{}
-	err = r.database.LoadReconcilerStateForTeam(ctx, google_workspace_admin_reconciler.Name, input.Team.Slug, workspaceState)
-	if err != nil || workspaceState.GroupEmail == nil {
-		return fmt.Errorf("no workspace admin state exists for team %q, or group email not set", input.Team.Slug)
+	googleGroupEmail, err := r.getGoogleGroupEmail(ctx, input.Team.Slug)
+	if err != nil {
+		return err
+	}
+
+	azureGroupID, err := r.getAzureGroupID(ctx, input.Team.Slug)
+	if err != nil {
+		return err
 	}
 
 	for environment, project := range gcpProjectState.Projects {
-		err = r.createNamespace(ctx, svc, input.Team, environment, project.ProjectID, *workspaceState.GroupEmail)
+		err = r.createNamespace(ctx, svc, input.Team, environment, project.ProjectID, googleGroupEmail, azureGroupID)
 		if err != nil {
 			return fmt.Errorf("unable to create namespace for project %q in environment %q: %w", project.ProjectID, environment, err)
 		}
@@ -121,14 +128,15 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	return nil
 }
 
-func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, pubsubService *pubsub.Client, team db.Team, environment, gcpProjectID string, groupEmail string) error {
+func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, pubsubService *pubsub.Client, team db.Team, environment, gcpProjectID string, groupEmail string, azureGroupID string) error {
 	const topicPrefix = "naisd-console-"
 	req := &naisdRequest{
 		Type: NaisdCreateNamespace,
 		Data: naisdData{
-			Name:       string(team.Slug),
-			GcpProject: gcpProjectID,
-			GroupEmail: groupEmail,
+			Name:         string(team.Slug),
+			GcpProject:   gcpProjectID,
+			GroupEmail:   groupEmail,
+			AzureGroupID: azureGroupID,
 		},
 	}
 
@@ -143,4 +151,36 @@ func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, pubsubSer
 	<-future.Ready()
 	_, err = future.Get(ctx)
 	return err
+}
+
+func (r *naisNamespaceReconciler) getGoogleGroupEmail(ctx context.Context, teamSlug slug.Slug) (string, error) {
+	googleWorkspaceState := &reconcilers.GoogleWorkspaceState{}
+	err := r.database.LoadReconcilerStateForTeam(ctx, google_workspace_admin_reconciler.Name, teamSlug, googleWorkspaceState)
+	if err != nil {
+		return "", fmt.Errorf("no workspace admin state exists for team %q", teamSlug)
+	}
+
+	if googleWorkspaceState.GroupEmail == nil {
+		return "", fmt.Errorf("no group email set for team %q", teamSlug)
+	}
+
+	return *googleWorkspaceState.GroupEmail, nil
+}
+
+func (r *naisNamespaceReconciler) getAzureGroupID(ctx context.Context, teamSlug slug.Slug) (string, error) {
+	if !r.azureEnabled {
+		return "", nil
+	}
+
+	azureState := &reconcilers.AzureState{}
+	err := r.database.LoadReconcilerStateForTeam(ctx, azure_group_reconciler.Name, teamSlug, azureState)
+	if err != nil {
+		return "", fmt.Errorf("no Azure state exists for team %q", teamSlug)
+	}
+
+	if azureState.GroupID == nil {
+		return "", fmt.Errorf("no Azure group ID set for team %q", teamSlug)
+	}
+
+	return azureState.GroupID.String(), nil
 }
