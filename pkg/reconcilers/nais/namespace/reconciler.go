@@ -91,12 +91,12 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 		return fmt.Errorf("no GCP project state exists for team %q yet", input.Team.Slug)
 	}
 
-	googleGroupEmail, err := r.getGoogleGroupEmail(ctx, input)
+	googleGroupEmail, err := r.getGoogleGroupEmail(ctx, input.Team.Slug)
 	if err != nil {
 		return err
 	}
 
-	azureGroupID, err := r.getAzureGroupID(ctx, input)
+	azureGroupID, err := r.getAzureGroupID(ctx, input.Team.Slug)
 	if err != nil {
 		return err
 	}
@@ -153,33 +153,33 @@ func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, pubsubSer
 	return err
 }
 
-func (r *naisNamespaceReconciler) getGoogleGroupEmail(ctx context.Context, input reconcilers.Input) (string, error) {
+func (r *naisNamespaceReconciler) getGoogleGroupEmail(ctx context.Context, teamSlug slug.Slug) (string, error) {
 	googleWorkspaceState := &reconcilers.GoogleWorkspaceState{}
-	err := r.database.LoadReconcilerStateForTeam(ctx, google_workspace_admin_reconciler.Name, input.Team.Slug, googleWorkspaceState)
+	err := r.database.LoadReconcilerStateForTeam(ctx, google_workspace_admin_reconciler.Name, teamSlug, googleWorkspaceState)
 	if err != nil {
-		return "", fmt.Errorf("no workspace admin state exists for team %q", input.Team.Slug)
+		return "", fmt.Errorf("no workspace admin state exists for team %q", teamSlug)
 	}
 
 	if googleWorkspaceState.GroupEmail == nil {
-		return "", fmt.Errorf("no group email set for team %q", input.Team.Slug)
+		return "", fmt.Errorf("no group email set for team %q", teamSlug)
 	}
 
 	return *googleWorkspaceState.GroupEmail, nil
 }
 
-func (r *naisNamespaceReconciler) getAzureGroupID(ctx context.Context, input reconcilers.Input) (string, error) {
+func (r *naisNamespaceReconciler) getAzureGroupID(ctx context.Context, teamSlug slug.Slug) (string, error) {
 	if !r.azureEnabled {
 		return "", nil
 	}
 
 	azureState := &reconcilers.AzureState{}
-	err := r.database.LoadReconcilerStateForTeam(ctx, azure_group_reconciler.Name, input.Team.Slug, azureState)
+	err := r.database.LoadReconcilerStateForTeam(ctx, azure_group_reconciler.Name, teamSlug, azureState)
 	if err != nil {
-		return "", fmt.Errorf("no Azure state exists for team %q", input.Team.Slug)
+		return "", fmt.Errorf("no Azure state exists for team %q", teamSlug)
 	}
 
 	if azureState.GroupID == nil {
-		return "", fmt.Errorf("no Azure group ID set for team %q", input.Team.Slug)
+		return "", fmt.Errorf("no Azure group ID set for team %q", teamSlug)
 	}
 
 	return azureState.GroupID.String(), nil
