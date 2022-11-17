@@ -1,6 +1,8 @@
 package reconcilers
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/slug"
 )
@@ -27,4 +29,8 @@ type GoogleGcpEnvironmentProject struct {
 
 type GoogleGcpNaisNamespaceState struct {
 	Namespaces map[string]slug.Slug `json:"namespaces"` // Key is the environment for the team namespace
+}
+
+type NaisDeployKeyState struct {
+	Provisioned *time.Time `json:"provisioned"`
 }

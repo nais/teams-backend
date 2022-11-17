@@ -10,8 +10,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/nais/console/pkg/slug"
-
 	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/playground"
@@ -35,7 +33,9 @@ import (
 	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
 	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
 	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
+	nais_deploy_reconciler "github.com/nais/console/pkg/reconcilers/nais/deploy"
 	nais_namespace_reconciler "github.com/nais/console/pkg/reconcilers/nais/namespace"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/pkg/usersync"
 	"github.com/nais/console/pkg/version"
@@ -351,6 +351,7 @@ func initReconcilers(ctx context.Context, database db.Database, cfg *config.Conf
 		google_workspace_admin_reconciler.Name: google_workspace_admin_reconciler.NewFromConfig,
 		google_gcp_reconciler.Name:             google_gcp_reconciler.NewFromConfig,
 		nais_namespace_reconciler.Name:         nais_namespace_reconciler.NewFromConfig,
+		nais_deploy_reconciler.Name:            nais_deploy_reconciler.NewFromConfig,
 	}
 
 	enabledReconcilers, err := database.GetEnabledReconcilers(ctx)

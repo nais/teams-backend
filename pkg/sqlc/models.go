@@ -70,6 +70,7 @@ const (
 	AuditActionUsersyncAssignAdminRole                   AuditAction = "usersync:assign-admin-role"
 	AuditActionUsersyncRevokeAdminRole                   AuditAction = "usersync:revoke-admin-role"
 	AuditActionGraphqlApiReconcilersUpdateTeamState      AuditAction = "graphql-api:reconcilers:update-team-state"
+	AuditActionNaisDeployProvisionDeployKey              AuditAction = "nais:deploy:provision-deploy-key"
 )
 
 func (e *AuditAction) Scan(src interface{}) error {
@@ -160,7 +161,8 @@ func (e AuditAction) Valid() bool {
 		AuditActionGraphqlApiTeamEnable,
 		AuditActionUsersyncAssignAdminRole,
 		AuditActionUsersyncRevokeAdminRole,
-		AuditActionGraphqlApiReconcilersUpdateTeamState:
+		AuditActionGraphqlApiReconcilersUpdateTeamState,
+		AuditActionNaisDeployProvisionDeployKey:
 		return true
 	}
 	return false
@@ -220,6 +222,7 @@ func AllAuditActionValues() []AuditAction {
 		AuditActionUsersyncAssignAdminRole,
 		AuditActionUsersyncRevokeAdminRole,
 		AuditActionGraphqlApiReconcilersUpdateTeamState,
+		AuditActionNaisDeployProvisionDeployKey,
 	}
 }
 
@@ -468,6 +471,7 @@ const (
 	ReconcilerNameGoogleGcpProject     ReconcilerName = "google:gcp:project"
 	ReconcilerNameGoogleWorkspaceAdmin ReconcilerName = "google:workspace-admin"
 	ReconcilerNameNaisNamespace        ReconcilerName = "nais:namespace"
+	ReconcilerNameNaisDeploy           ReconcilerName = "nais:deploy"
 )
 
 func (e *ReconcilerName) Scan(src interface{}) error {
@@ -511,7 +515,8 @@ func (e ReconcilerName) Valid() bool {
 		ReconcilerNameGithubTeam,
 		ReconcilerNameGoogleGcpProject,
 		ReconcilerNameGoogleWorkspaceAdmin,
-		ReconcilerNameNaisNamespace:
+		ReconcilerNameNaisNamespace,
+		ReconcilerNameNaisDeploy:
 		return true
 	}
 	return false
@@ -524,6 +529,7 @@ func AllReconcilerNameValues() []ReconcilerName {
 		ReconcilerNameGoogleGcpProject,
 		ReconcilerNameGoogleWorkspaceAdmin,
 		ReconcilerNameNaisNamespace,
+		ReconcilerNameNaisDeploy,
 	}
 }
 
