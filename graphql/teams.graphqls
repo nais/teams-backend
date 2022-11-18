@@ -191,6 +191,9 @@ type ReconcilerState {
 
     "A list of NAIS namespaces."
     naisNamespaces: [NaisNamespace!]!
+
+    "Timestamp of when the NAIS deploy key was provisioned."
+    naisDeployKeyProvisioned: Time
 }
 
 "GCP project type."

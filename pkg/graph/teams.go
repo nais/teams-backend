@@ -611,6 +611,7 @@ func (r *teamResolver) ReconcilerState(ctx context.Context, obj *db.Team) (*mode
 		Namespaces: make(map[string]slug.Slug),
 	}
 	azureADState := &reconcilers.AzureState{}
+	naisDeployKeyState := &reconcilers.NaisDeployKeyState{}
 
 	queriedFields := GetQueriedFields(ctx)
 
@@ -665,12 +666,20 @@ func (r *teamResolver) ReconcilerState(ctx context.Context, obj *db.Team) (*mode
 		}
 	}
 
+	if _, inQuery := queriedFields["naisDeployKeyProvisioned"]; inQuery {
+		err := r.database.LoadReconcilerStateForTeam(ctx, sqlc.ReconcilerNameNaisDeploy, obj.Slug, naisDeployKeyState)
+		if err != nil {
+			return nil, apierror.Errorf("Unable to load the existing NAIS deploy key state.")
+		}
+	}
+
 	return &model.ReconcilerState{
 		GitHubTeamSlug:            gitHubState.Slug,
 		GoogleWorkspaceGroupEmail: googleWorkspaceState.GroupEmail,
 		GcpProjects:               gcpProjects,
 		NaisNamespaces:            naisNamespaces,
 		AzureADGroupID:            azureADState.GroupID,
+		NaisDeployKeyProvisioned:  naisDeployKeyState.Provisioned,
 	}, nil
 }
 

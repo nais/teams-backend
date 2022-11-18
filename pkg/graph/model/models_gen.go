@@ -58,6 +58,8 @@ type ReconcilerState struct {
 	GcpProjects []*GcpProject `json:"gcpProjects"`
 	// A list of NAIS namespaces.
 	NaisNamespaces []*NaisNamespace `json:"naisNamespaces"`
+	// Timestamp of when the NAIS deploy key was provisioned.
+	NaisDeployKeyProvisioned *time.Time `json:"naisDeployKeyProvisioned"`
 }
 
 // Sync error type.

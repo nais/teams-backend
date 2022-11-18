@@ -30,10 +30,16 @@ type OAuth struct {
 	RedirectURL  string `envconfig:"CONSOLE_OAUTH_REDIRECT_URL"`
 }
 
+type NaisDeploy struct {
+	Endpoint     string `envconfig:"CONSOLE_NAIS_DEPLOY_ENDPOINT"`
+	ProvisionKey string `envconfig:"CONSOLE_NAIS_DEPLOY_PROVISION_KEY"`
+}
+
 type Config struct {
 	Google                Google
 	GCP                   GCP
 	UserSync              UserSync
+	NaisDeploy            NaisDeploy
 	NaisNamespace         NaisNamespace
 	OAuth                 OAuth
 	TenantName            string `envconfig:"CONSOLE_TENANT_NAME"`
@@ -66,6 +72,9 @@ func Defaults() *Config {
 		TenantDomain:  "example.com",
 		LogFormat:     "text",
 		LogLevel:      "DEBUG",
+		NaisDeploy: NaisDeploy{
+			Endpoint: "http://localhost:8080/api/v1/provision",
+		},
 	}
 }
 
