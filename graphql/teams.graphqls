@@ -201,6 +201,9 @@ type GcpProject {
     "The environment for the project."
     environment: String!
 
+    "The display name of the project."
+    projectName: String!
+
     "The GCP project ID."
     projectId: String!
 }

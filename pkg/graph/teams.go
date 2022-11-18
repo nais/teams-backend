@@ -16,6 +16,7 @@ import (
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/reconcilers"
+	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
@@ -639,6 +640,7 @@ func (r *teamResolver) ReconcilerState(ctx context.Context, obj *db.Team) (*mode
 		for env, projectID := range gcpProjectState.Projects {
 			gcpProjects = append(gcpProjects, &model.GcpProject{
 				Environment: env,
+				ProjectName: google_gcp_reconciler.GetProjectDisplayName(*obj, env),
 				ProjectID:   projectID.ProjectID,
 			})
 		}

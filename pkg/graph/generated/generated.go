@@ -73,6 +73,7 @@ type ComplexityRoot struct {
 	GcpProject struct {
 		Environment func(childComplexity int) int
 		ProjectID   func(childComplexity int) int
+		ProjectName func(childComplexity int) int
 	}
 
 	Mutation struct {
@@ -354,6 +355,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.GcpProject.ProjectID(childComplexity), true
+
+	case "GcpProject.projectName":
+		if e.complexity.GcpProject.ProjectName == nil {
+			break
+		}
+
+		return e.complexity.GcpProject.ProjectName(childComplexity), true
 
 	case "Mutation.addTeamMembers":
 		if e.complexity.Mutation.AddTeamMembers == nil {
@@ -1561,6 +1569,9 @@ type GcpProject {
     "The environment for the project."
     environment: String!
 
+    "The display name of the project."
+    projectName: String!
+
     "The GCP project ID."
     projectId: String!
 }
@@ -2596,6 +2607,50 @@ func (ec *executionContext) _GcpProject_environment(ctx context.Context, field g
 }
 
 func (ec *executionContext) fieldContext_GcpProject_environment(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GcpProject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GcpProject_projectName(ctx context.Context, field graphql.CollectedField, obj *model.GcpProject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GcpProject_projectName(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ProjectName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GcpProject_projectName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "GcpProject",
 		Field:      field,
@@ -5987,6 +6042,8 @@ func (ec *executionContext) fieldContext_ReconcilerState_gcpProjects(ctx context
 			switch field.Name {
 			case "environment":
 				return ec.fieldContext_GcpProject_environment(ctx, field)
+			case "projectName":
+				return ec.fieldContext_GcpProject_projectName(ctx, field)
 			case "projectId":
 				return ec.fieldContext_GcpProject_projectId(ctx, field)
 			}
@@ -9626,6 +9683,13 @@ func (ec *executionContext) _GcpProject(ctx context.Context, sel ast.SelectionSe
 		case "environment":
 
 			out.Values[i] = ec._GcpProject_environment(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "projectName":
+
+			out.Values[i] = ec._GcpProject_projectName(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++

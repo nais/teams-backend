@@ -26,6 +26,8 @@ type CreateTeamInput struct {
 type GcpProject struct {
 	// The environment for the project.
 	Environment string `json:"environment"`
+	// The display name of the project.
+	ProjectName string `json:"projectName"`
 	// The GCP project ID.
 	ProjectID string `json:"projectId"`
 }

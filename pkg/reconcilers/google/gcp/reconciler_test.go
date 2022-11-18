@@ -166,3 +166,9 @@ func TestGetClusterInfoFromJson(t *testing.T) {
 		assert.Equal(t, "some-id-456", info["env2"].ProjectID)
 	})
 }
+
+func TestGetProjectDisplayName(t *testing.T) {
+	team := db.Team{Team: &sqlc.Team{Slug: "some-slug"}}
+	env := "prod"
+	assert.Equal(t, "some-slug-prod", google_gcp_reconciler.GetProjectDisplayName(team, env))
+}

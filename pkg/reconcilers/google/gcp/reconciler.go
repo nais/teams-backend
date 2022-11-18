@@ -137,7 +137,7 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *rec
 
 	projectID := GenerateProjectID(r.domain, environment, input.Team.Slug)
 	project := &cloudresourcemanager.Project{
-		DisplayName: string(input.Team.Slug) + "-" + environment,
+		DisplayName: GetProjectDisplayName(input.Team, environment),
 		Parent:      "folders/" + strconv.FormatInt(parentFolderID, 10),
 		ProjectId:   projectID,
 	}
@@ -378,6 +378,11 @@ func GenerateProjectID(domain, environment string, slug slug.Slug) string {
 	parts[2] = console.Truncate(hex.EncodeToString(hasher.Sum(nil)), 4)
 
 	return strings.Join(parts, "-")
+}
+
+// GetProjectDisplayName Get the display name of a project for a team in a given environment
+func GetProjectDisplayName(team db.Team, environment string) string {
+	return string(team.Slug) + "-" + environment
 }
 
 func GetClusterInfoFromJson(jsonData string) (ClusterInfo, error) {
