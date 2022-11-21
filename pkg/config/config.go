@@ -44,7 +44,6 @@ type Config struct {
 	OAuth                 OAuth
 	TenantName            string `envconfig:"CONSOLE_TENANT_NAME"`
 	TenantDomain          string `envconfig:"CONSOLE_TENANT_DOMAIN"`
-	AutoLoginUser         string `envconfig:"CONSOLE_AUTO_LOGIN_USER"`
 	FrontendURL           string `envconfig:"CONSOLE_FRONTEND_URL"`
 	DatabaseURL           string `envconfig:"CONSOLE_DATABASE_URL"`
 	ListenAddress         string `envconfig:"CONSOLE_LISTEN_ADDRESS"`

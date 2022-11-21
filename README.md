@@ -8,10 +8,6 @@ ADR: https://github.com/navikt/pig/blob/master/kubeops/adr/010-console-nais-io.m
 
 Console is configured using environment variables:
 
-### `CONSOLE_AUTO_LOGIN_USER`
-
-Auto login a specific user on all requests against the GraphQL API. This setting should **NEVER** be used in a production environment.
-
 ### `CONSOLE_DATABASE_URL`
 
 The URL for the database. Defaults to `postgres://console:console@localhost:3002/console?sslmode=disable` which works for local development purposes.
@@ -61,11 +57,18 @@ Can be used to create a set of service accounts with roles and API keys. The val
 The names **must** begin with `nais-`. This is a reserved prefix, and service accounts with this prefix can not be created
 using the GraphQL API.
 
-The roles specified must be valid role names. See [pkg/roles/roles.go](pkg/roles/roles.go) for all role names.
+The roles specified must be valid role names. Role names can be fetched from the GraphQL API:
+
+```graphql
+query {
+    roles
+}
+```
 
 The service accounts will be re-created every time the application starts. Use the API to delete one or more of 
 the service accounts, it is not sufficient to simply remove the service account from the JSON structure in the environment 
 variable.
+
 ## Reconcilers
 
 Console uses reconcilers to sync team information to external systems, for instance GitHub or Azure AD. All reconcilers

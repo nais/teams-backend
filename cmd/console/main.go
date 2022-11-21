@@ -429,14 +429,6 @@ func setupHTTPServer(cfg *config.Config, database db.Database, graphApi *graphql
 		middleware.Oauth2Authentication(database),
 	}
 
-	// If no other authentication mechanisms produce a authenticated user,
-	// fall back to auto-login if it is enabled.
-	if len(cfg.AutoLoginUser) > 0 {
-		log.Warnf("Auto-login user %q is ENABLED for ALL REQUESTS.", cfg.AutoLoginUser)
-		log.Warnf("THIS IS A MAJOR SECURITY ISSUE! DO NOT RUN THIS CONFIGURATION IN PRODUCTION!!!")
-		middlewares = append(middlewares, middleware.Autologin(database, cfg.AutoLoginUser))
-	}
-
 	r.Route("/query", func(r chi.Router) {
 		r.Use(middlewares...)
 		r.Post("/", graphApi.ServeHTTP)

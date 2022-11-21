@@ -2,9 +2,6 @@
 CONSOLE_GOOGLE_DELEGATED_USER=email
 CONSOLE_GOOGLE_CREDENTIALS_FILE=filename
 
-# GCP reconciler
-CONSOLE_GCP_PROJECT_PARENT_IDS=prod:folder/357,dev:folder/864
-
 # Synchronize Google users to local database
 CONSOLE_USERSYNC_ENABLED=false
 
@@ -19,7 +16,6 @@ CONSOLE_NAIS_NAMESPACE_PROJECT_ID=string
 
 # Misc
 CONSOLE_TENANT_DOMAIN=nav.no
-CONSOLE_AUTO_LOGIN_USER=string # This configuration value MUST NOT be used in production
 CONSOLE_FRONTEND_URL=http://localhost:3001
 CONSOLE_DATABASE_URL=postgres://console:console@localhost:5432/console?sslmode=disable
 CONSOLE_LISTEN_ADDRESS=127.0.0.1:3000
