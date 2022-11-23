@@ -9,7 +9,7 @@ import (
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/google_token_source"
+	"github.com/nais/console/pkg/google_jwt"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
@@ -39,16 +39,13 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, domain strin
 }
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
-	scopes := []string{
-		admin_directory_v1.AdminDirectoryUserReadonlyScope,
-		admin_directory_v1.AdminDirectoryGroupScope,
-	}
-	ts, err := google_token_source.GetDelegatedTokenSource(ctx, cfg.GoogleManagementProjectID, cfg.TenantDomain, scopes)
+	config, err := google_jwt.GetConfig(cfg.Google.CredentialsFile, cfg.Google.DelegatedUser)
 	if err != nil {
-		return nil, fmt.Errorf("get delegated token source: %w", err)
+		return nil, fmt.Errorf("get google jwt config: %w", err)
 	}
 
-	srv, err := admin_directory_v1.NewService(ctx, option.WithTokenSource(ts))
+	client := config.Client(ctx)
+	srv, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
 		return nil, fmt.Errorf("retrieve directory client: %w", err)
 	}
