@@ -1,8 +1,14 @@
 FROM golang:1.19-alpine as builder
 RUN apk add --no-cache git make curl build-base
 ENV GOOS=linux
-COPY . /src
+
 WORKDIR /src
+
+COPY go.mod ./
+COPY go.sum ./
+RUN go mod download
+
+COPY . ./
 RUN make test
 RUN make check
 RUN make alpine
