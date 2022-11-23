@@ -12,7 +12,7 @@ import (
 
 // Oauth2Authentication If the request has a session cookie, look up the session from the store, and if it exists, try
 // to load the user with the email address stored in the session.
-func Oauth2Authentication(database db.Database) func(next http.Handler) http.Handler {
+func Oauth2Authentication(database db.Database, authHandler authn.Handler) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
 			cookie, err := r.Cookie(authn.SessionCookieName)
@@ -61,7 +61,7 @@ func Oauth2Authentication(database db.Database) func(next http.Handler) http.Han
 				return
 			}
 
-			authn.SetSessionCookie(w, session)
+			authHandler.SetSessionCookie(w, session)
 			ctx = authz.ContextWithActor(r.Context(), user, roles)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		}

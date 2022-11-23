@@ -27,17 +27,27 @@ type OAuth2 interface {
 	Verify(ctx context.Context, rawIDToken string) (*oidc.IDToken, error)
 }
 
-type Handler struct {
+type Handler interface {
+	Login(w http.ResponseWriter, r *http.Request)
+	Callback(w http.ResponseWriter, r *http.Request)
+	Logout(w http.ResponseWriter, r *http.Request)
+	SetSessionCookie(w http.ResponseWriter, session *db.Session)
+	DeleteCookie(w http.ResponseWriter, name string)
+}
+
+type handler struct {
 	database     db.Database
 	oauth2Config OAuth2
 	frontendURL  url.URL
+	secureCookie bool
 }
 
-func New(oauth2Config OAuth2, database db.Database, frontendURL url.URL) *Handler {
-	return &Handler{
+func New(oauth2Config OAuth2, database db.Database, frontendURL url.URL) Handler {
+	return &handler{
 		database:     database,
 		oauth2Config: oauth2Config,
 		frontendURL:  frontendURL,
+		secureCookie: shouldUseSecureCookies(frontendURL),
 	}
 }
 
@@ -45,14 +55,14 @@ type claims struct {
 	Email string
 }
 
-func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+func (h *handler) Login(w http.ResponseWriter, r *http.Request) {
 	redirectURI := r.URL.Query().Get("redirect_uri")
 	http.SetCookie(w, &http.Cookie{
 		Name:     RedirectURICookie,
 		Value:    redirectURI,
 		Path:     "/",
 		Expires:  time.Now().Add(30 * time.Minute),
-		Secure:   true,
+		Secure:   h.secureCookie,
 		HttpOnly: true,
 	})
 
@@ -62,14 +72,14 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		Value:    oauthState,
 		Path:     "/",
 		Expires:  time.Now().Add(30 * time.Minute),
-		Secure:   true,
+		Secure:   h.secureCookie,
 		HttpOnly: true,
 	})
 	consentUrl := h.oauth2Config.AuthCodeURL(oauthState, oauth2.SetAuthURLParam("prompt", "select_account"))
 	http.Redirect(w, r, consentUrl, http.StatusFound)
 }
 
-func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
+func (h *handler) Callback(w http.ResponseWriter, r *http.Request) {
 	frontendURL := h.frontendURL
 
 	redirectURI, err := r.Cookie(RedirectURICookie)
@@ -77,7 +87,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		frontendURL.Path = strings.TrimPrefix(redirectURI.Value, "/")
 	}
 
-	deleteCookie(w, RedirectURICookie)
+	h.DeleteCookie(w, RedirectURICookie)
 	code := r.URL.Query().Get("code")
 	if len(code) == 0 {
 		log.Error("Missing code query parameter")
@@ -92,7 +102,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deleteCookie(w, OAuthStateCookie)
+	h.DeleteCookie(w, OAuthStateCookie)
 	state := r.URL.Query().Get("state")
 	if state != oauthCookie.Value {
 		log.Error("Incoming state does not match local state")
@@ -142,11 +152,11 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	SetSessionCookie(w, session)
+	h.SetSessionCookie(w, session)
 	http.Redirect(w, r, frontendURL.String(), http.StatusFound)
 }
 
-func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+func (h *handler) Logout(w http.ResponseWriter, r *http.Request) {
 	redirectUrl := "/"
 	cookie, err := r.Cookie(SessionCookieName)
 	if err != nil {
@@ -169,32 +179,31 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	DeleteSessionCookie(w)
 	http.Redirect(w, r, redirectUrl, http.StatusFound)
 }
 
-func SetSessionCookie(w http.ResponseWriter, session *db.Session) {
+func (h *handler) SetSessionCookie(w http.ResponseWriter, session *db.Session) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     SessionCookieName,
 		Value:    session.ID.String(),
 		Path:     "/",
 		Expires:  session.Expires,
-		Secure:   true,
+		Secure:   h.secureCookie,
 		HttpOnly: true,
 	})
 }
 
-func deleteCookie(w http.ResponseWriter, name string) {
+func (h *handler) DeleteCookie(w http.ResponseWriter, name string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     name,
 		Value:    "",
 		Path:     "/",
 		Expires:  time.Unix(0, 0),
-		Secure:   true,
+		Secure:   h.secureCookie,
 		HttpOnly: true,
 	})
 }
 
-func DeleteSessionCookie(w http.ResponseWriter) {
-	deleteCookie(w, SessionCookieName)
+func shouldUseSecureCookies(frontendURL url.URL) bool {
+	return frontendURL.Host != "console.local.nais.io"
 }

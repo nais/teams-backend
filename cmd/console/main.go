@@ -295,7 +295,7 @@ func reconcileTeams(ctx context.Context, database db.Database, reconcileInputs *
 	return nil
 }
 
-func setupAuthHandler(cfg *config.Config, database db.Database) (*authn.Handler, error) {
+func setupAuthHandler(cfg *config.Config, database db.Database) (authn.Handler, error) {
 	cf := authn.NewGoogle(cfg.OAuth.ClientID, cfg.OAuth.ClientSecret, cfg.OAuth.RedirectURL)
 	frontendURL, err := url.Parse(cfg.FrontendURL)
 	if err != nil {
@@ -415,7 +415,7 @@ func corsConfig(frontendUrl string) cors.Options {
 	}
 }
 
-func setupHTTPServer(cfg *config.Config, database db.Database, graphApi *graphql_handler.Server, authHandler *authn.Handler) (*http.Server, error) {
+func setupHTTPServer(cfg *config.Config, database db.Database, graphApi *graphql_handler.Server, authHandler authn.Handler) (*http.Server, error) {
 	r := chi.NewRouter()
 
 	r.Handle("/metrics", promhttp.Handler())
@@ -426,7 +426,7 @@ func setupHTTPServer(cfg *config.Config, database db.Database, graphApi *graphql
 	middlewares := []func(http.Handler) http.Handler{
 		cors.New(corsConfig(cfg.FrontendURL)).Handler,
 		middleware.ApiKeyAuthentication(database),
-		middleware.Oauth2Authentication(database),
+		middleware.Oauth2Authentication(database, authHandler),
 	}
 
 	r.Route("/query", func(r chi.Router) {

@@ -20,19 +20,21 @@ import (
 func TestOauth2Authentication(t *testing.T) {
 	t.Run("No cookie in request", func(t *testing.T) {
 		database := db.NewMockDatabase(t)
+		authnHandler := authn.NewMockHandler(t)
 		responseWriter := httptest.NewRecorder()
 		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			actor := authz.ActorFromContext(r.Context())
 			assert.Nil(t, actor)
 		})
 		req := getRequest(context.Background())
-		middleware := middleware.Oauth2Authentication(database)
+		middleware := middleware.Oauth2Authentication(database, authnHandler)
 		middleware(next).ServeHTTP(responseWriter, req)
 	})
 
 	t.Run("Invalid cookie value", func(t *testing.T) {
 		ctx := context.Background()
 		database := db.NewMockDatabase(t)
+		authnHandler := authn.NewMockHandler(t)
 		responseWriter := httptest.NewRecorder()
 		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			actor := authz.ActorFromContext(r.Context())
@@ -43,13 +45,14 @@ func TestOauth2Authentication(t *testing.T) {
 			Name:  authn.SessionCookieName,
 			Value: "unknown-session-key",
 		})
-		middleware := middleware.Oauth2Authentication(database)
+		middleware := middleware.Oauth2Authentication(database, authnHandler)
 		middleware(next).ServeHTTP(responseWriter, req)
 	})
 
 	t.Run("Valid cookie, no session in store", func(t *testing.T) {
 		ctx := context.Background()
 		database := db.NewMockDatabase(t)
+		authnHandler := authn.NewMockHandler(t)
 		responseWriter := httptest.NewRecorder()
 		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			actor := authz.ActorFromContext(r.Context())
@@ -66,7 +69,7 @@ func TestOauth2Authentication(t *testing.T) {
 			On("GetSessionByID", ctx, sessionID).
 			Return(nil, notFoundErr).
 			Once()
-		middleware := middleware.Oauth2Authentication(database)
+		middleware := middleware.Oauth2Authentication(database, authnHandler)
 		middleware(next).ServeHTTP(responseWriter, req)
 	})
 
@@ -95,6 +98,11 @@ func TestOauth2Authentication(t *testing.T) {
 			Expires: time.Now().Add(30 * time.Minute),
 		}}
 
+		responseWriter := httptest.NewRecorder()
+
+		authnHandler := authn.NewMockHandler(t)
+		authnHandler.On("SetSessionCookie", responseWriter, extendedSession)
+
 		database := db.NewMockDatabase(t)
 		database.
 			On("GetSessionByID", ctx, sessionID).
@@ -113,7 +121,6 @@ func TestOauth2Authentication(t *testing.T) {
 			Return(extendedSession, nil).
 			Once()
 
-		responseWriter := httptest.NewRecorder()
 		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			actor := authz.ActorFromContext(r.Context())
 			assert.NotNil(t, actor)
@@ -126,7 +133,7 @@ func TestOauth2Authentication(t *testing.T) {
 			Value: sessionID.String(),
 		})
 
-		middleware := middleware.Oauth2Authentication(database)
+		middleware := middleware.Oauth2Authentication(database, authnHandler)
 		middleware(next).ServeHTTP(responseWriter, req)
 	})
 
@@ -135,6 +142,7 @@ func TestOauth2Authentication(t *testing.T) {
 		sessionID := uuid.New()
 		userID := uuid.New()
 		database := db.NewMockDatabase(t)
+		authnHandler := authn.NewMockHandler(t)
 		responseWriter := httptest.NewRecorder()
 		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			actor := authz.ActorFromContext(r.Context())
@@ -159,7 +167,7 @@ func TestOauth2Authentication(t *testing.T) {
 			Return(nil).
 			Once()
 
-		middleware := middleware.Oauth2Authentication(database)
+		middleware := middleware.Oauth2Authentication(database, authnHandler)
 		middleware(next).ServeHTTP(responseWriter, req)
 	})
 
@@ -168,6 +176,7 @@ func TestOauth2Authentication(t *testing.T) {
 		sessionID := uuid.New()
 		userID := uuid.New()
 		database := db.NewMockDatabase(t)
+		authnHandler := authn.NewMockHandler(t)
 		responseWriter := httptest.NewRecorder()
 		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			actor := authz.ActorFromContext(r.Context())
@@ -196,7 +205,7 @@ func TestOauth2Authentication(t *testing.T) {
 			Return(nil).
 			Once()
 
-		middleware := middleware.Oauth2Authentication(database)
+		middleware := middleware.Oauth2Authentication(database, authnHandler)
 		middleware(next).ServeHTTP(responseWriter, req)
 	})
 }
