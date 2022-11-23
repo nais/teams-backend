@@ -10,6 +10,7 @@ import (
 	"google.golang.org/api/option"
 
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/google_token_source"
 	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
 	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
 	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
@@ -38,29 +39,27 @@ type naisdRequest struct {
 }
 
 type naisNamespaceReconciler struct {
-	database        db.Database
-	domain          string
-	auditLogger     auditlogger.AuditLogger
-	credentialsFile string
-	projectID       string
-	azureEnabled    bool
+	database     db.Database
+	domain       string
+	auditLogger  auditlogger.AuditLogger
+	projectID    string
+	azureEnabled bool
 }
 
 const Name = sqlc.ReconcilerNameNaisNamespace
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, domain, credentialsFile, projectID string, azureEnabled bool) *naisNamespaceReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, domain, projectID string, azureEnabled bool) *naisNamespaceReconciler {
 	return &naisNamespaceReconciler{
-		database:        database,
-		auditLogger:     auditLogger,
-		domain:          domain,
-		credentialsFile: credentialsFile,
-		projectID:       projectID,
-		azureEnabled:    azureEnabled,
+		database:     database,
+		auditLogger:  auditLogger,
+		domain:       domain,
+		projectID:    projectID,
+		azureEnabled: azureEnabled,
 	}
 }
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
-	return New(database, auditLogger, cfg.TenantDomain, cfg.Google.CredentialsFile, cfg.NaisNamespace.ProjectID, cfg.NaisNamespace.AzureEnabled), nil
+	return New(database, auditLogger, cfg.TenantDomain, cfg.NaisNamespace.ProjectID, cfg.NaisNamespace.AzureEnabled), nil
 }
 
 func (r *naisNamespaceReconciler) Name() sqlc.ReconcilerName {
@@ -68,7 +67,12 @@ func (r *naisNamespaceReconciler) Name() sqlc.ReconcilerName {
 }
 
 func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
-	svc, err := pubsub.NewClient(ctx, r.projectID, option.WithCredentialsFile(r.credentialsFile))
+	ts, err := google_token_source.GetTokenSource(ctx, r.projectID, nil)
+	if err != nil {
+		return fmt.Errorf("create token source: %w", err)
+	}
+
+	svc, err := pubsub.NewClient(ctx, r.projectID, option.WithTokenSource(ts))
 	if err != nil {
 		return fmt.Errorf("retrieve pubsub client: %w", err)
 	}

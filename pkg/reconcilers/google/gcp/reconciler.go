@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -15,12 +14,12 @@ import (
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/google_token_source"
 	"github.com/nais/console/pkg/reconcilers"
-	"github.com/nais/console/pkg/reconcilers/google/workspace_admin"
+	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/oauth2/google"
 	"google.golang.org/api/cloudbilling/v1"
 	"google.golang.org/api/cloudresourcemanager/v3"
 	"google.golang.org/api/googleapi"
@@ -46,7 +45,7 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters Clu
 }
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
-	gcpServices, err := createGcpServices(ctx, cfg.Google.CredentialsFile)
+	gcpServices, err := createGcpServices(ctx, cfg.GoogleManagementProjectID)
 	if err != nil {
 		return nil, err
 	}
@@ -327,30 +326,24 @@ func cnrmServiceAccountNameAndAccountID(slug slug.Slug, projectID string) (name,
 }
 
 // createGcpServices Creates the GCP services used by the reconciler
-func createGcpServices(ctx context.Context, credentialsFilePath string) (*GcpServices, error) {
-	credentials, err := os.ReadFile(credentialsFilePath)
+func createGcpServices(ctx context.Context, projectID string) (*GcpServices, error) {
+	scopes := []string{cloudresourcemanager.CloudPlatformScope}
+	ts, err := google_token_source.GetTokenSource(ctx, projectID, scopes)
 	if err != nil {
-		return nil, fmt.Errorf("read google credentials file: %w", err)
+		return nil, fmt.Errorf("get delegated token source: %w", err)
 	}
 
-	jwtConfig, err := google.JWTConfigFromJSON(credentials, cloudresourcemanager.CloudPlatformScope)
-	if err != nil {
-		return nil, fmt.Errorf("initialize google credentials: %w", err)
-	}
-
-	client := jwtConfig.Client(ctx)
-
-	cloudResourceManagerService, err := cloudresourcemanager.NewService(ctx, option.WithHTTPClient(client))
+	cloudResourceManagerService, err := cloudresourcemanager.NewService(ctx, option.WithTokenSource(ts))
 	if err != nil {
 		return nil, fmt.Errorf("retrieve cloud resource manager service: %w", err)
 	}
 
-	iamService, err := iam.NewService(ctx, option.WithHTTPClient(client))
+	iamService, err := iam.NewService(ctx, option.WithTokenSource(ts))
 	if err != nil {
 		return nil, fmt.Errorf("retrieve IAM service service: %w", err)
 	}
 
-	cloudBillingService, err := cloudbilling.NewService(ctx, option.WithHTTPClient(client))
+	cloudBillingService, err := cloudbilling.NewService(ctx, option.WithTokenSource(ts))
 	if err != nil {
 		return nil, fmt.Errorf("retrieve cloud billing service: %w", err)
 	}

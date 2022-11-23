@@ -4,14 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/google_jwt"
+	"github.com/nais/console/pkg/google_token_source"
 	"github.com/nais/console/pkg/sqlc"
 	log "github.com/sirupsen/logrus"
 	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
@@ -23,7 +22,7 @@ type userSynchronizer struct {
 	database     db.Database
 	auditLogger  auditlogger.AuditLogger
 	tenantDomain string
-	client       *http.Client
+	service      *admin_directory_v1.Service
 }
 
 const adminGroupPrefix = "console-admins"
@@ -38,12 +37,12 @@ var (
 	}
 )
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, client *http.Client) *userSynchronizer {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, service *admin_directory_v1.Service) *userSynchronizer {
 	return &userSynchronizer{
 		database:     database,
 		auditLogger:  auditLogger,
 		tenantDomain: domain,
-		client:       client,
+		service:      service,
 	}
 }
 
@@ -52,12 +51,23 @@ func NewFromConfig(cfg *config.Config, database db.Database, auditLogger auditlo
 		return nil, ErrNotEnabled
 	}
 
-	cf, err := google_jwt.GetConfig(cfg.Google.CredentialsFile, cfg.Google.DelegatedUser)
+	ctx := context.Background()
+
+	scopes := []string{
+		admin_directory_v1.AdminDirectoryUserReadonlyScope,
+		admin_directory_v1.AdminDirectoryGroupScope,
+	}
+	ts, err := google_token_source.GetDelegatedTokenSource(ctx, cfg.GoogleManagementProjectID, cfg.TenantDomain, scopes)
 	if err != nil {
-		return nil, fmt.Errorf("get google jwt config: %w", err)
+		return nil, fmt.Errorf("create delegated token source: %w", err)
 	}
 
-	return New(database, auditLogger, cfg.TenantDomain, cf.Client(context.Background())), nil
+	srv, err := admin_directory_v1.NewService(ctx, option.WithTokenSource(ts))
+	if err != nil {
+		return nil, fmt.Errorf("retrieve directory client: %w", err)
+	}
+
+	return New(database, auditLogger, cfg.TenantDomain, srv), nil
 }
 
 type auditLogEntry struct {
@@ -70,12 +80,7 @@ type auditLogEntry struct {
 // the local user will get the name potentially updated. After all users have been upserted, local users that matches
 // the tenant domain that does not exist in the Google Directory will be removed.
 func (s *userSynchronizer) Sync(ctx context.Context) error {
-	srv, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(s.client))
-	if err != nil {
-		return fmt.Errorf("retrieve directory client: %w", err)
-	}
-
-	remoteUsers, err := getAllPaginatedUsers(ctx, srv.Users, s.tenantDomain)
+	remoteUsers, err := getAllPaginatedUsers(ctx, s.service.Users, s.tenantDomain)
 	if err != nil {
 		return fmt.Errorf("list remote users: %w", err)
 	}
@@ -134,7 +139,7 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 			return err
 		}
 
-		err = assignConsoleAdmins(ctx, dbtx, srv.Members, s.tenantDomain, remoteUserMapping, &auditLogEntries)
+		err = assignConsoleAdmins(ctx, dbtx, s.service.Members, s.tenantDomain, remoteUserMapping, &auditLogEntries)
 		if err != nil {
 			return err
 		}
