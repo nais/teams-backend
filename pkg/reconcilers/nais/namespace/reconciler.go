@@ -66,7 +66,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 	if err != nil {
 		return nil, fmt.Errorf("create token source: %w", err)
 	}
-	return New(database, auditLogger, cfg.TenantDomain, cfg.NaisNamespace.ProjectID, cfg.NaisNamespace.AzureEnabled, ts), nil
+	return New(database, auditLogger, cfg.TenantDomain, cfg.GoogleManagementProjectID, cfg.NaisNamespace.AzureEnabled, ts), nil
 }
 
 func (r *naisNamespaceReconciler) Name() sqlc.ReconcilerName {

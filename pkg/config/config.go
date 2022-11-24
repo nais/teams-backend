@@ -11,8 +11,7 @@ type GCP struct {
 }
 
 type NaisNamespace struct {
-	ProjectID    string `envconfig:"CONSOLE_NAIS_NAMESPACE_PROJECT_ID"`
-	AzureEnabled bool   `envconfig:"CONSOLE_NAIS_NAMESPACE_AZURE_ENABLED"`
+	AzureEnabled bool `envconfig:"CONSOLE_NAIS_NAMESPACE_AZURE_ENABLED"`
 }
 
 type UserSync struct {
