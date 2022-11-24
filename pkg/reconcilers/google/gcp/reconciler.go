@@ -45,7 +45,7 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters Clu
 }
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
-	gcpServices, err := createGcpServices(ctx, cfg.GoogleManagementProjectID)
+	gcpServices, err := createGcpServices(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -326,9 +326,8 @@ func cnrmServiceAccountNameAndAccountID(slug slug.Slug, projectID string) (name,
 }
 
 // createGcpServices Creates the GCP services used by the reconciler
-func createGcpServices(ctx context.Context, projectID string) (*GcpServices, error) {
-	scopes := []string{cloudresourcemanager.CloudPlatformScope}
-	ts, err := google_token_source.GetTokenSource(ctx, projectID, scopes)
+func createGcpServices(ctx context.Context, cfg *config.Config) (*GcpServices, error) {
+	ts, err := google_token_source.NewFromConfig(cfg).GCP(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get delegated token source: %w", err)
 	}

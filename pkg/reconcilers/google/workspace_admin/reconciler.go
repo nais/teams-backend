@@ -39,11 +39,7 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, domain strin
 }
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
-	scopes := []string{
-		admin_directory_v1.AdminDirectoryUserReadonlyScope,
-		admin_directory_v1.AdminDirectoryGroupScope,
-	}
-	ts, err := google_token_source.GetDelegatedTokenSource(ctx, cfg.GoogleManagementProjectID, cfg.TenantDomain, scopes)
+	ts, err := google_token_source.NewFromConfig(cfg).GCP(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get delegated token source: %w", err)
 	}

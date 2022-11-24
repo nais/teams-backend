@@ -53,13 +53,9 @@ func NewFromConfig(cfg *config.Config, database db.Database, auditLogger auditlo
 
 	ctx := context.Background()
 
-	scopes := []string{
-		admin_directory_v1.AdminDirectoryUserReadonlyScope,
-		admin_directory_v1.AdminDirectoryGroupScope,
-	}
-	ts, err := google_token_source.GetDelegatedTokenSource(ctx, cfg.GoogleManagementProjectID, cfg.TenantDomain, scopes)
+	ts, err := google_token_source.NewFromConfig(cfg).Admin(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("create delegated token source: %w", err)
+		return nil, fmt.Errorf("create token source: %w", err)
 	}
 
 	srv, err := admin_directory_v1.NewService(ctx, option.WithTokenSource(ts))

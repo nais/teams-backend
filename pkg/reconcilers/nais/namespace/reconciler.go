@@ -7,6 +7,7 @@ import (
 
 	"cloud.google.com/go/pubsub"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/oauth2"
 	"google.golang.org/api/option"
 
 	"github.com/nais/console/pkg/db"
@@ -44,22 +45,28 @@ type naisNamespaceReconciler struct {
 	auditLogger  auditlogger.AuditLogger
 	projectID    string
 	azureEnabled bool
+	tokenSource  oauth2.TokenSource
 }
 
 const Name = sqlc.ReconcilerNameNaisNamespace
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, domain, projectID string, azureEnabled bool) *naisNamespaceReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, domain, projectID string, azureEnabled bool, tokenSource oauth2.TokenSource) *naisNamespaceReconciler {
 	return &naisNamespaceReconciler{
 		database:     database,
 		auditLogger:  auditLogger,
 		domain:       domain,
 		projectID:    projectID,
 		azureEnabled: azureEnabled,
+		tokenSource:  tokenSource,
 	}
 }
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
-	return New(database, auditLogger, cfg.TenantDomain, cfg.NaisNamespace.ProjectID, cfg.NaisNamespace.AzureEnabled), nil
+	ts, err := google_token_source.NewFromConfig(cfg).GCP(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("create token source: %w", err)
+	}
+	return New(database, auditLogger, cfg.TenantDomain, cfg.NaisNamespace.ProjectID, cfg.NaisNamespace.AzureEnabled, ts), nil
 }
 
 func (r *naisNamespaceReconciler) Name() sqlc.ReconcilerName {
@@ -67,12 +74,7 @@ func (r *naisNamespaceReconciler) Name() sqlc.ReconcilerName {
 }
 
 func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
-	ts, err := google_token_source.GetTokenSource(ctx, r.projectID, nil)
-	if err != nil {
-		return fmt.Errorf("create token source: %w", err)
-	}
-
-	svc, err := pubsub.NewClient(ctx, r.projectID, option.WithTokenSource(ts))
+	svc, err := pubsub.NewClient(ctx, r.projectID, option.WithTokenSource(r.tokenSource))
 	if err != nil {
 		return fmt.Errorf("retrieve pubsub client: %w", err)
 	}
