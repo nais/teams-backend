@@ -14,23 +14,12 @@ import (
 	"github.com/nais/console/pkg/usersync"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
+	"google.golang.org/api/option"
 )
 
 func TestSync(t *testing.T) {
 	domain := "example.com"
-
-	t.Run("Server error from Google", func(t *testing.T) {
-		auditLogger := auditlogger.NewMockAuditLogger(t)
-		database := db.NewMockDatabase(t)
-
-		httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
-			return test.Response("500 Internal Server Error", `{"error": "some error"}`)
-		})
-
-		usersync := usersync.New(database, auditLogger, domain, httpClient)
-		err := usersync.Sync(context.Background())
-		assert.ErrorContains(t, err, "list remote users")
-	})
 
 	t.Run("No remote users", func(t *testing.T) {
 		auditLogger := auditlogger.NewMockAuditLogger(t)
@@ -45,8 +34,12 @@ func TestSync(t *testing.T) {
 			return test.Response("200 OK", `{"users":[]}`)
 		})
 
-		usersync := usersync.New(database, auditLogger, domain, httpClient)
-		err := usersync.Sync(context.Background())
+		ctx := context.Background()
+		svc, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(httpClient))
+		assert.NoError(t, err)
+
+		usersync := usersync.New(database, auditLogger, domain, svc)
+		err = usersync.Sync(ctx)
 		assert.NoError(t, err)
 	})
 
@@ -184,8 +177,11 @@ func TestSync(t *testing.T) {
 			Return(nil).
 			Once()
 
-		usersync := usersync.New(database, auditLogger, domain, httpClient)
-		err := usersync.Sync(ctx)
+		svc, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(httpClient))
+		assert.NoError(t, err)
+
+		usersync := usersync.New(database, auditLogger, domain, svc)
+		err = usersync.Sync(ctx)
 		assert.NoError(t, err)
 	})
 }
