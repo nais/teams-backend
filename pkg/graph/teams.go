@@ -640,7 +640,7 @@ func (r *teamResolver) ReconcilerState(ctx context.Context, obj *db.Team) (*mode
 		for env, projectID := range gcpProjectState.Projects {
 			gcpProjects = append(gcpProjects, &model.GcpProject{
 				Environment: env,
-				ProjectName: google_gcp_reconciler.GetProjectDisplayName(*obj, env),
+				ProjectName: google_gcp_reconciler.GetProjectDisplayName(obj.Slug, env),
 				ProjectID:   projectID.ProjectID,
 			})
 		}

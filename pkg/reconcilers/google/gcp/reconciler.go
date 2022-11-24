@@ -28,7 +28,8 @@ import (
 )
 
 const (
-	Name = sqlc.ReconcilerNameGoogleGcpProject
+	Name                              = sqlc.ReconcilerNameGoogleGcpProject
+	GoogleProjectDisplayNameMaxLength = 30
 )
 
 func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters ClusterInfo, gcpServices *GcpServices, tenantName, domain, cnrmRoleName, billingAccount string) *googleGcpReconciler {
@@ -136,7 +137,7 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *rec
 
 	projectID := GenerateProjectID(r.domain, environment, input.Team.Slug)
 	project := &cloudresourcemanager.Project{
-		DisplayName: GetProjectDisplayName(input.Team, environment),
+		DisplayName: GetProjectDisplayName(input.Team.Slug, environment),
 		Parent:      "folders/" + strconv.FormatInt(parentFolderID, 10),
 		ProjectId:   projectID,
 	}
@@ -365,16 +366,20 @@ func GenerateProjectID(domain, environment string, slug slug.Slug) string {
 	hasher.Write([]byte(domain))
 
 	parts := make([]string, 3)
-	parts[0] = console.Truncate(string(slug), 20)
-	parts[1] = console.Truncate(environment, 4)
+	parts[0] = strings.TrimSuffix(console.Truncate(string(slug), 20), "-")
+	parts[1] = strings.TrimSuffix(console.Truncate(environment, 4), "-")
 	parts[2] = console.Truncate(hex.EncodeToString(hasher.Sum(nil)), 4)
 
 	return strings.Join(parts, "-")
 }
 
 // GetProjectDisplayName Get the display name of a project for a team in a given environment
-func GetProjectDisplayName(team db.Team, environment string) string {
-	return string(team.Slug) + "-" + environment
+func GetProjectDisplayName(slug slug.Slug, environment string) string {
+	suffix := "-" + environment
+	maxSlugLength := GoogleProjectDisplayNameMaxLength - len(suffix)
+	prefix := console.Truncate(string(slug), maxSlugLength)
+	prefix = strings.TrimSuffix(prefix, "-")
+	return prefix + suffix
 }
 
 func GetClusterInfoFromJson(jsonData string) (ClusterInfo, error) {

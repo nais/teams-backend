@@ -134,6 +134,12 @@ func TestGenerateProjectID(t *testing.T) {
 	// team names that get truncated produce different hashes
 	assert.Equal(t, "happyteam-is-very-ha-prod-4b2d", google_gcp_reconciler.GenerateProjectID("bais.io", "production", "happyteam-is-very-happy"))
 	assert.Equal(t, "happyteam-is-very-ha-prod-4801", google_gcp_reconciler.GenerateProjectID("bais.io", "production", "happyteam-is-very-happy-and-altogether-too-long"))
+
+	// project id with double hyphens
+	assert.Equal(t, "hapyteam-is-very-ha-prod-fd5d", google_gcp_reconciler.GenerateProjectID("bais.io", "production", "hapyteam-is-very-ha-a"))
+
+	// environment with hyphen as 4th character in environment
+	assert.Equal(t, "hapyteam-is-happy-pro-2a15", google_gcp_reconciler.GenerateProjectID("bais.io", "pro-duction", "hapyteam-is-happy"))
 }
 
 func TestGetClusterInfoFromJson(t *testing.T) {
@@ -168,7 +174,17 @@ func TestGetClusterInfoFromJson(t *testing.T) {
 }
 
 func TestGetProjectDisplayName(t *testing.T) {
-	team := db.Team{Team: &sqlc.Team{Slug: "some-slug"}}
-	env := "prod"
-	assert.Equal(t, "some-slug-prod", google_gcp_reconciler.GetProjectDisplayName(team, env))
+	tests := []struct {
+		slug        string
+		environment string
+		displayName string
+	}{
+		{"some-slug", "prod", "some-slug-prod"},
+		{"some-slug", "production", "some-slug-production"},
+		{"some-verry-unnecessarily-long-slug", "dev", "some-verry-unnecessarily-l-dev"},
+		{"some-verry-unnecessarily-long-slug", "prod", "some-verry-unnecessarily-prod"},
+	}
+	for _, tt := range tests {
+		assert.Equal(t, tt.displayName, google_gcp_reconciler.GetProjectDisplayName(slug.Slug(tt.slug), tt.environment))
+	}
 }
