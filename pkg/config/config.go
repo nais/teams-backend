@@ -35,7 +35,6 @@ type Config struct {
 	NaisDeploy                NaisDeploy
 	NaisNamespace             NaisNamespace
 	OAuth                     OAuth
-	InCluster                 bool   `envconfig:"CONSOLE_IN_CLUSTER"`
 	GoogleManagementProjectID string `envconfig:"CONSOLE_GOOGLE_MANAGEMENT_PROJECT_ID"`
 	TenantName                string `envconfig:"CONSOLE_TENANT_NAME"`
 	TenantDomain              string `envconfig:"CONSOLE_TENANT_DOMAIN"`
