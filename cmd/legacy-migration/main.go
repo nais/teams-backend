@@ -12,21 +12,27 @@ import (
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/legacy"
+	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
-	log "github.com/sirupsen/logrus"
 )
 
 func main() {
-	err := run()
+	log, err := logger.GetLogger("text", "info")
 	if err != nil {
-		log.Errorf("fatal: %s", err)
+		fmt.Println("set up logger")
 		os.Exit(1)
+	}
+
+	err = run(log)
+	if err != nil {
+		log.WithError(err).Error("run")
+		os.Exit(2)
 	}
 }
 
-func run() error {
+func run(log logger.Logger) error {
 	const ymlpath = "./local/teams.yml"
 	const jsonpath = "./local/teams.json"
 	const gcpJsonCacheTemplate = "./local/gcp-cache/%s-output.json"
@@ -50,7 +56,7 @@ func run() error {
 		panic(err)
 	}
 
-	teams, err := legacy.ReadTeamFiles(ymlpath, jsonpath)
+	teams, err := legacy.ReadTeamFiles(ymlpath, jsonpath, log)
 	if err != nil {
 		panic(err)
 	}
@@ -71,7 +77,7 @@ func run() error {
 
 	users := make(map[string]*db.User)
 	err = database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
-		auditLogger := auditlogger.New(dbtx).WithSystemName(sqlc.SystemNameLegacyImporter)
+		auditLogger := auditlogger.New(dbtx, log).WithSystemName(sqlc.SystemNameLegacyImporter)
 
 		for _, yamlteam := range teams {
 			teamOwners := make(map[string]*db.User, 0)

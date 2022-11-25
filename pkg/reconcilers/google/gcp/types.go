@@ -3,6 +3,7 @@ package google_gcp_reconciler
 import (
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/logger"
 	"google.golang.org/api/cloudbilling/v1"
 	"google.golang.org/api/cloudresourcemanager/v3"
 	"google.golang.org/api/iam/v1"
@@ -31,4 +32,5 @@ type googleGcpReconciler struct {
 	domain         string
 	cnrmRoleName   string
 	billingAccount string
+	log            logger.Logger
 }

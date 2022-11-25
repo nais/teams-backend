@@ -6,9 +6,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
 
@@ -50,7 +50,7 @@ func (t *Team) Convert() (*db.Team, []db.TeamMetadata) {
 	}, metadata
 }
 
-func ReadTeamFiles(ymlPath, jsonPath string) (map[string]*Team, error) {
+func ReadTeamFiles(ymlPath, jsonPath string, log logger.Logger) (map[string]*Team, error) {
 	yf, err := os.Open(ymlPath)
 	if err != nil {
 		return nil, err

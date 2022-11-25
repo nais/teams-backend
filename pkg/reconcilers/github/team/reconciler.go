@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/slug"
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
@@ -21,14 +22,13 @@ import (
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/shurcooL/githubv4"
-	log "github.com/sirupsen/logrus"
 )
 
 const Name = sqlc.ReconcilerNameGithubTeam
 
 var errGitHubUserNotFound = errors.New("GitHub user does not exist")
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, org, domain string, teamsService TeamsService, graphClient GraphClient) *githubTeamReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, org, domain string, teamsService TeamsService, graphClient GraphClient, log logger.Logger) *githubTeamReconciler {
 	return &githubTeamReconciler{
 		database:     database,
 		auditLogger:  auditLogger,
@@ -36,10 +36,13 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, org, domain 
 		domain:       domain,
 		teamsService: teamsService,
 		graphClient:  graphClient,
+		log:          log,
 	}
 }
 
-func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
+	log = log.WithSystem(string(Name))
+
 	config, err := convertDatabaseConfig(ctx, database)
 	if err != nil {
 		return nil, err
@@ -63,7 +66,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 	restClient := github.NewClient(httpClient)
 	graphClient := githubv4.NewClient(httpClient)
 
-	return New(database, auditLogger, config.org, cfg.TenantDomain, restClient.Teams, graphClient), nil
+	return New(database, auditLogger, config.org, cfg.TenantDomain, restClient.Teams, graphClient, log), nil
 }
 
 func (r *githubTeamReconciler) Name() sqlc.ReconcilerName {
@@ -95,7 +98,7 @@ func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.
 	slug := slug.Slug(*githubTeam.Slug)
 	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, reconcilers.GitHubState{Slug: &slug})
 	if err != nil {
-		log.Errorf("system state not persisted: %s", err)
+		r.log.WithError(err).Error("persist system state")
 	}
 
 	return r.connectUsers(ctx, githubTeam, input)
@@ -207,19 +210,19 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 		resp, err := r.teamsService.RemoveTeamMembershipBySlug(ctx, r.org, *githubTeam.Slug, username)
 		err = httpError(http.StatusNoContent, *resp, err)
 		if err != nil {
-			log.Warnf("unable to remove member %q from GitHub team %q: %s", username, *githubTeam.Slug, err)
+			r.log.WithError(err).Warnf("remove member %q from GitHub team %q", username, *githubTeam.Slug)
 			continue
 		}
 
 		email, err := r.getEmailFromGitHubUsername(ctx, username)
 		if err != nil {
-			log.Warnf("unable to get email from GitHub username %q for audit log purposes: %s", username, err)
+			r.log.WithError(err).Warnf("get email from GitHub username %q for audit log purposes", username)
 		}
 
 		if email != nil {
 			_, err = r.database.GetUserByEmail(ctx, *email)
 			if err != nil {
-				log.Warnf("unable to get Console user with email %q: %s", *email, err)
+				r.log.WithError(err).Warnf("get Console user with email %q", *email)
 				email = nil
 			}
 		}
@@ -239,7 +242,7 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 		_, resp, err := r.teamsService.AddTeamMembershipBySlug(ctx, r.org, *githubTeam.Slug, username, &github.TeamAddTeamMembershipOptions{})
 		err = httpError(http.StatusOK, *resp, err)
 		if err != nil {
-			log.Warnf("unable to add member %q to GitHub team %q: %s", username, *githubTeam.Slug, err)
+			r.log.WithError(err).Warnf("add member %q to GitHub team %q", username, *githubTeam.Slug)
 			continue
 		}
 
@@ -319,7 +322,7 @@ func (r *githubTeamReconciler) mapSSOUsers(ctx context.Context, users []*db.User
 	for _, user := range users {
 		githubUsername, err := r.getGitHubUsernameFromEmail(ctx, user.Email)
 		if err == errGitHubUserNotFound {
-			log.Warnf("no GitHub user for email: %q", user.Email)
+			r.log.WithError(err).Warnf("no GitHub user for email: %q", user.Email)
 			continue
 		}
 		if err != nil {

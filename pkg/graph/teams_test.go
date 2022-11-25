@@ -10,6 +10,7 @@ import (
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/graph/model"
+	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
@@ -55,7 +56,9 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	database := db.NewMockDatabase(t)
 	gcpEnvironments := []string{"env"}
-	resolver := graph.NewResolver(database, "example.com", reconcilers, auditLogger, gcpEnvironments).Mutation()
+	log, err := logger.GetLogger("text", "info")
+	assert.NoError(t, err)
+	resolver := graph.NewResolver(database, "example.com", reconcilers, auditLogger, gcpEnvironments, log).Mutation()
 	teamSlug := slug.Slug("some-slug")
 
 	t.Run("create team with empty purpose", func(t *testing.T) {

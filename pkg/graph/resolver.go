@@ -8,10 +8,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/graph/apierror"
 	"github.com/nais/console/pkg/graph/model"
+	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
-	log "github.com/sirupsen/logrus"
 )
 
 // This file will not be regenerated automatically.
@@ -25,9 +27,10 @@ type Resolver struct {
 	systemName      sqlc.SystemName
 	auditLogger     auditlogger.AuditLogger
 	gcpEnvironments []string
+	log             logger.Logger
 }
 
-func NewResolver(database db.Database, tenantDomain string, teamReconciler chan<- reconcilers.Input, auditLogger auditlogger.AuditLogger, gcpEnvironments []string) *Resolver {
+func NewResolver(database db.Database, tenantDomain string, teamReconciler chan<- reconcilers.Input, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *Resolver {
 	return &Resolver{
 		database:        database,
 		tenantDomain:    tenantDomain,
@@ -35,6 +38,7 @@ func NewResolver(database db.Database, tenantDomain string, teamReconciler chan<
 		teamReconciler:  teamReconciler,
 		auditLogger:     auditLogger,
 		gcpEnvironments: gcpEnvironments,
+		log:             log.WithSystem(string(sqlc.SystemNameGraphqlApi)),
 	}
 }
 
@@ -51,7 +55,7 @@ func GetQueriedFields(ctx context.Context) map[string]bool {
 func (r *Resolver) reconcileTeam(ctx context.Context, correlationID uuid.UUID, team db.Team) {
 	reconcilerInput, err := reconcilers.CreateReconcilerInput(ctx, r.database, team)
 	if err != nil {
-		log.Errorf("unable to generate reconcile input for team %q: %s", team.Slug, err)
+		r.log.Errorf("unable to generate reconcile input for team %q: %s", team.Slug, err)
 		return
 	}
 
@@ -62,19 +66,30 @@ func (r *Resolver) reconcileTeam(ctx context.Context, correlationID uuid.UUID, t
 func (r *Resolver) reconcileAllTeams(ctx context.Context, correlationID uuid.UUID) {
 	teams, err := r.database.GetTeams(ctx)
 	if err != nil {
-		log.Errorf("unable to get teams for reconcile loop: %s", err)
+		r.log.Errorf("unable to get teams for reconcile loop: %s", err)
 		return
 	}
 
 	for _, team := range teams {
 		input, err := reconcilers.CreateReconcilerInput(ctx, r.database, *team)
 		if err != nil {
-			log.Errorf("unable to create input for team %q for reconcile loop: %s", team.Slug, err)
+			r.log.Errorf("unable to create input for team %q for reconcile loop: %s", team.Slug, err)
 			return
 		}
 
 		r.teamReconciler <- input.WithCorrelationID(correlationID)
 	}
+}
+
+// getTeam helper to get team by slug, or log if err
+func (r *Resolver) getTeamBySlugOrLog(ctx context.Context, slug slug.Slug) (*db.Team, error) {
+	team, err := r.database.GetTeamBySlug(ctx, slug)
+	if err != nil {
+		r.log.WithTeamSlug(string(slug)).WithError(err).Errorf("get team")
+		return nil, apierror.ErrTeamNotExist
+	}
+
+	return team, nil
 }
 
 func sqlcRoleFromTeamRole(teamRole model.TeamRole) (sqlc.RoleName, error) {

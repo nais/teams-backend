@@ -11,8 +11,8 @@ import (
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/google_token_source"
+	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/sqlc"
-	log "github.com/sirupsen/logrus"
 	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
@@ -23,6 +23,7 @@ type userSynchronizer struct {
 	auditLogger  auditlogger.AuditLogger
 	tenantDomain string
 	service      *admin_directory_v1.Service
+	log          logger.Logger
 }
 
 const adminGroupPrefix = "console-admins"
@@ -37,16 +38,19 @@ var (
 	}
 )
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, service *admin_directory_v1.Service) *userSynchronizer {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, service *admin_directory_v1.Service, log logger.Logger) *userSynchronizer {
 	return &userSynchronizer{
 		database:     database,
 		auditLogger:  auditLogger,
 		tenantDomain: domain,
 		service:      service,
+		log:          log,
 	}
 }
 
-func NewFromConfig(cfg *config.Config, database db.Database, auditLogger auditlogger.AuditLogger) (*userSynchronizer, error) {
+func NewFromConfig(cfg *config.Config, database db.Database, auditLogger auditlogger.AuditLogger, log logger.Logger) (*userSynchronizer, error) {
+	log = log.WithSystem(string(sqlc.SystemNameUsersync))
+
 	if !cfg.UserSync.Enabled {
 		return nil, ErrNotEnabled
 	}
@@ -63,7 +67,7 @@ func NewFromConfig(cfg *config.Config, database db.Database, auditLogger auditlo
 		return nil, fmt.Errorf("retrieve directory client: %w", err)
 	}
 
-	return New(database, auditLogger, cfg.TenantDomain, srv), nil
+	return New(database, auditLogger, cfg.TenantDomain, srv, log), nil
 }
 
 type auditLogEntry struct {
@@ -135,7 +139,7 @@ func (s *userSynchronizer) Sync(ctx context.Context) error {
 			return err
 		}
 
-		err = assignConsoleAdmins(ctx, dbtx, s.service.Members, s.tenantDomain, remoteUserMapping, &auditLogEntries)
+		err = assignConsoleAdmins(ctx, dbtx, s.service.Members, s.tenantDomain, remoteUserMapping, &auditLogEntries, s.log)
 		if err != nil {
 			return err
 		}
@@ -189,8 +193,8 @@ func deleteUnknownUsers(ctx context.Context, dbtx db.Database, upsertedUsers map
 
 // assignConsoleAdmins Assign the global admin role to users based on the console-admins group. Existing admins that is
 // not present in the list of admins will get the admin role revoked.
-func assignConsoleAdmins(ctx context.Context, dbtx db.Database, membersService *admin_directory_v1.MembersService, domain string, remoteUserMapping map[string]*db.User, auditLogEntries *[]auditLogEntry) error {
-	admins, err := getAdminUsers(ctx, membersService, domain, remoteUserMapping)
+func assignConsoleAdmins(ctx context.Context, dbtx db.Database, membersService *admin_directory_v1.MembersService, domain string, remoteUserMapping map[string]*db.User, auditLogEntries *[]auditLogEntry, log logger.Logger) error {
+	admins, err := getAdminUsers(ctx, membersService, domain, remoteUserMapping, log)
 	if err != nil {
 		return err
 	}
@@ -248,7 +252,7 @@ func getExistingConsoleAdmins(ctx context.Context, dbtx db.Database) (map[uuid.U
 }
 
 // getAdminUsers Get a list of admin users based on the Console admins group in the Google Workspace
-func getAdminUsers(ctx context.Context, membersService *admin_directory_v1.MembersService, domain string, remoteUserMapping map[string]*db.User) (map[uuid.UUID]*db.User, error) {
+func getAdminUsers(ctx context.Context, membersService *admin_directory_v1.MembersService, domain string, remoteUserMapping map[string]*db.User, log logger.Logger) (map[uuid.UUID]*db.User, error) {
 	adminGroupKey := adminGroupPrefix + "@" + domain
 	groupMembers := make([]*admin_directory_v1.Member, 0)
 	callback := func(fragments *admin_directory_v1.Members) error {
@@ -269,7 +273,7 @@ func getAdminUsers(ctx context.Context, membersService *admin_directory_v1.Membe
 			// Special case: When the group does not exist we want to remove all existing admins. The group might never
 			// have been created by the tenant admins in the first place, or it might have been deleted. In any case, we
 			// want to treat this case as if the group exists, and that it is empty, effectively removing all admins.
-			log.Errorf("console admins group %q does not exist", adminGroupKey)
+			log.Warnf("console admins group %q does not exist", adminGroupKey)
 			return admins, nil
 		}
 
@@ -321,12 +325,9 @@ func getAllPaginatedUsers(ctx context.Context, svc *admin_directory_v1.UsersServ
 	users := make([]*admin_directory_v1.User, 0)
 
 	callback := func(fragments *admin_directory_v1.Users) error {
-		log.Debugf("Got %d users, might be more...", len(fragments.Users))
 		users = append(users, fragments.Users...)
 		return nil
 	}
-
-	log.Debugf("Fetching all users from Google Admin directory...")
 
 	err := svc.
 		List().
@@ -335,8 +336,6 @@ func getAllPaginatedUsers(ctx context.Context, svc *admin_directory_v1.UsersServ
 		ShowDeleted("false").
 		Query("isSuspended=false").
 		Pages(ctx, callback)
-
-	log.Debugf("Finished fetching %d users from Google Admin directory.", len(users))
 
 	return users, err
 }

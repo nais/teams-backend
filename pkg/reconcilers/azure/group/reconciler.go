@@ -6,11 +6,11 @@ import (
 	"strings"
 
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/slug"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/sqlc"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/azureclient"
@@ -25,14 +25,16 @@ type azureGroupReconciler struct {
 	auditLogger auditlogger.AuditLogger
 	client      azureclient.Client
 	domain      string
+	log         logger.Logger
 }
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, client azureclient.Client, domain string) *azureGroupReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, client azureclient.Client, domain string, log logger.Logger) *azureGroupReconciler {
 	return &azureGroupReconciler{
 		database:    database,
 		auditLogger: auditLogger,
 		client:      client,
 		domain:      domain,
+		log:         log,
 	}
 }
 
@@ -57,7 +59,8 @@ func convertDatabaseConfig(ctx context.Context, database db.Database) (*reconcil
 	}, nil
 }
 
-func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
+	log = log.WithSystem(string(Name))
 	config, err := convertDatabaseConfig(ctx, database)
 	if err != nil {
 		return nil, err
@@ -74,7 +77,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		},
 	}
 
-	return New(database, auditLogger, azureclient.New(conf.Client(context.Background())), cfg.TenantDomain), nil
+	return New(database, auditLogger, azureclient.New(conf.Client(context.Background())), cfg.TenantDomain, log), nil
 }
 
 func (r *azureGroupReconciler) Name() sqlc.ReconcilerName {
@@ -107,7 +110,7 @@ func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.
 		id, _ := uuid.Parse(grp.ID)
 		err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, reconcilers.AzureState{GroupID: &id})
 		if err != nil {
-			log.Errorf("system state not persisted: %s", err)
+			r.log.WithError(err).Error("persiste system state")
 		}
 	}
 
@@ -131,14 +134,14 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 		remoteEmail := strings.ToLower(member.Mail)
 		err = r.client.RemoveMemberFromGroup(ctx, grp, member)
 		if err != nil {
-			log.Warnf("unable to remove member %q from group %q in Azure: %s", remoteEmail, grp.MailNickname, err)
+			r.log.WithError(err).Error("remove member %q from group %q in Azure", remoteEmail, grp.MailNickname)
 			continue
 		}
 
 		if _, exists := consoleUserMap[remoteEmail]; !exists {
 			user, err := r.database.GetUserByEmail(ctx, remoteEmail)
 			if err != nil {
-				log.Warnf("unable to lookup local user with email %q: %s", remoteEmail, err)
+				r.log.WithError(err).Warnf("lookup local user with email %q: %s", remoteEmail)
 				continue
 			}
 			consoleUserMap[remoteEmail] = user
@@ -159,12 +162,12 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 	for _, consoleUser := range membersToAdd {
 		member, err := r.client.GetUser(ctx, consoleUser.Email)
 		if err != nil {
-			log.Warnf("unable to lookup user with email %q in Azure: %s", consoleUser.Email, err)
+			r.log.WithError(err).Warnf("lookup user with email %q in Azure", consoleUser.Email)
 			continue
 		}
 		err = r.client.AddMemberToGroup(ctx, grp, member)
 		if err != nil {
-			log.Warnf("unable to add member %q to Azure group %q: %s", consoleUser.Email, grp.MailNickname, err)
+			r.log.WithError(err).Warnf("add member %q to Azure group %q", consoleUser.Email, grp.MailNickname)
 			continue
 		}
 

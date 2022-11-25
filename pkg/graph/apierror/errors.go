@@ -9,7 +9,8 @@ import (
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/jackc/pgconn"
 	"github.com/nais/console/pkg/authz"
-	log "github.com/sirupsen/logrus"
+	"github.com/nais/console/pkg/logger"
+	"github.com/nais/console/pkg/sqlc"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
@@ -41,7 +42,9 @@ func Errorf(format string, args ...any) Error {
 
 // GetErrorPresenter returns a GraphQL error presenter that filters out error messages not intended for end users.
 // All filtered errors are logged.
-func GetErrorPresenter() graphql.ErrorPresenterFunc {
+func GetErrorPresenter(log logger.Logger) graphql.ErrorPresenterFunc {
+	log = log.WithSystem(string(sqlc.SystemNameGraphqlApi))
+
 	return func(ctx context.Context, e error) *gqlerror.Error {
 		err := graphql.DefaultErrorPresenter(ctx, e)
 		unwrappedError := errors.Unwrap(e)

@@ -9,6 +9,7 @@ import (
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/graph"
+	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/stretchr/testify/assert"
@@ -33,7 +34,9 @@ func TestMutationResolver_Roles(t *testing.T) {
 	reconcilers := make(chan reconcilers.Input, 100)
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	database := db.NewMockDatabase(t)
-	resolver := graph.NewResolver(database, "example.com", reconcilers, auditLogger, []string{"env"}).ServiceAccount()
+	log, err := logger.GetLogger("text", "info")
+	assert.NoError(t, err)
+	resolver := graph.NewResolver(database, "example.com", reconcilers, auditLogger, []string{"env"}, log).ServiceAccount()
 
 	t.Run("get roles for serviceAccount", func(t *testing.T) {
 		role := &db.Role{

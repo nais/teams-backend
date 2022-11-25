@@ -15,11 +15,11 @@ import (
 	"github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/google_token_source"
+	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
 	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
-	log "github.com/sirupsen/logrus"
 	"google.golang.org/api/cloudbilling/v1"
 	"google.golang.org/api/cloudresourcemanager/v3"
 	"google.golang.org/api/googleapi"
@@ -32,7 +32,7 @@ const (
 	GoogleProjectDisplayNameMaxLength = 30
 )
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters ClusterInfo, gcpServices *GcpServices, tenantName, domain, cnrmRoleName, billingAccount string) *googleGcpReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters ClusterInfo, gcpServices *GcpServices, tenantName, domain, cnrmRoleName, billingAccount string, log logger.Logger) *googleGcpReconciler {
 	return &googleGcpReconciler{
 		database:       database,
 		auditLogger:    auditLogger,
@@ -42,10 +42,13 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters Clu
 		cnrmRoleName:   cnrmRoleName,
 		billingAccount: billingAccount,
 		tenantName:     tenantName,
+		log:            log,
 	}
 }
 
-func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
+	log = log.WithSystem(string(Name))
+
 	gcpServices, err := createGcpServices(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -56,7 +59,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		return nil, fmt.Errorf("parse GCP cluster info: %w", err)
 	}
 
-	return New(database, auditLogger, clusters, gcpServices, cfg.TenantName, cfg.TenantDomain, cfg.GCP.CnrmRole, cfg.GCP.BillingAccount), nil
+	return New(database, auditLogger, clusters, gcpServices, cfg.TenantName, cfg.TenantDomain, cfg.GCP.CnrmRole, cfg.GCP.BillingAccount, log), nil
 }
 
 func (r *googleGcpReconciler) Name() sqlc.ReconcilerName {
@@ -93,7 +96,7 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 
 		err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, state)
 		if err != nil {
-			log.Errorf("system state not persisted: %s", err)
+			r.log.WithError(err).Error("persist system state")
 		}
 
 		err = r.ensureProjectHasLabels(ctx, project, map[string]string{

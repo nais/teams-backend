@@ -14,10 +14,10 @@ import (
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
-	log "github.com/sirupsen/logrus"
 )
 
 type ProvisionApiKeyRequest struct {
@@ -32,29 +32,33 @@ type naisDeployReconciler struct {
 	auditLogger  auditlogger.AuditLogger
 	endpoint     string
 	provisionKey []byte
+	log          logger.Logger
 }
 
 const (
 	Name = sqlc.ReconcilerNameNaisDeploy
 )
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, client *http.Client, endpoint string, provisionKey []byte) *naisDeployReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, client *http.Client, endpoint string, provisionKey []byte, log logger.Logger) *naisDeployReconciler {
 	return &naisDeployReconciler{
 		database:     database,
 		client:       client,
 		auditLogger:  auditLogger,
 		endpoint:     endpoint,
 		provisionKey: provisionKey,
+		log:          log,
 	}
 }
 
-func NewFromConfig(_ context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(_ context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
+	log = log.WithSystem(string(Name))
+
 	provisionKey, err := hex.DecodeString(cfg.NaisDeploy.ProvisionKey)
 	if err != nil {
 		return nil, err
 	}
 
-	return New(database, auditLogger, http.DefaultClient, cfg.NaisDeploy.Endpoint, provisionKey), nil
+	return New(database, auditLogger, http.DefaultClient, cfg.NaisDeploy.Endpoint, provisionKey, log), nil
 }
 
 func (r *naisDeployReconciler) Name() sqlc.ReconcilerName {
@@ -98,7 +102,7 @@ func (r *naisDeployReconciler) Reconcile(ctx context.Context, input reconcilers.
 			Provisioned: &now,
 		})
 		if err != nil {
-			log.Errorf("reconciler state not persisted: %s", err)
+			r.log.WithError(err).Error("persiste reconsiler state")
 		}
 		return nil
 	case http.StatusNoContent:

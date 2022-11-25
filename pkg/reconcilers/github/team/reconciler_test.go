@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/slug"
 
 	"github.com/google/go-github/v43/github"
@@ -27,6 +28,8 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 	org := "org"
 	teamSlug := "slug"
 	teamPurpose := "purpose"
+	log, err := logger.GetLogger("text", "info")
+	assert.NoError(t, err)
 
 	ctx := context.Background()
 	correlationID := uuid.New()
@@ -98,7 +101,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			Return(nil).
 			Once()
 
-		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, gitHubClient)
+		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, gitHubClient, log)
 		err := reconciler.Reconcile(ctx, input)
 		assert.NoError(t, err)
 	})
@@ -128,7 +131,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			).
 			Once()
 
-		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, gitHubClient)
+		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, gitHubClient, log)
 		err := reconciler.Reconcile(ctx, input)
 		assert.Error(t, err)
 	})
@@ -186,7 +189,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		configureSyncTeamInfo(teamsService, org, teamSlug, teamPurpose)
 		configureDeleteTeamIDP(teamsService, org, teamSlug)
 
-		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, gitHubClient)
+		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, gitHubClient, log)
 		err := reconciler.Reconcile(ctx, input)
 		assert.NoError(t, err)
 	})
@@ -268,7 +271,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			Return(nil).
 			Once()
 
-		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, gitHubClient)
+		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, gitHubClient, log)
 		err := reconciler.Reconcile(ctx, input)
 		assert.NoError(t, err)
 	})
@@ -287,6 +290,9 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 	keepEmail := "should-keep@example.com"
 	removeLogin := "should-remove"
 	removeEmail := "should-remove@example.com"
+
+	log, err := logger.GetLogger("text", "info")
+	assert.NoError(t, err)
 
 	ctx := context.Background()
 
@@ -351,7 +357,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 
 		configureDeleteTeamIDP(teamsService, org, teamName)
 
-		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, graphClient)
+		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, graphClient, log)
 		err := reconciler.Reconcile(ctx, input)
 		assert.NoError(t, err)
 	})
@@ -380,8 +386,11 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 				},
 			}, nil).Once()
 
-		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, graphClient)
-		err := reconciler.Reconcile(ctx, input)
+		log, err := logger.GetLogger("text", "info")
+		assert.NoError(t, err)
+
+		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, graphClient, log)
+		err = reconciler.Reconcile(ctx, input)
 
 		assert.ErrorContainsf(t, err, "server error from GitHub: 418: I'm a teapot: this is a body", err.Error())
 	})

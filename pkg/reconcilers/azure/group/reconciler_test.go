@@ -2,17 +2,17 @@ package azure_group_reconciler_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/azureclient"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
-	"github.com/sirupsen/logrus"
-	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/nais/console/pkg/auditlogger"
@@ -25,6 +25,8 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 	teamSlug := slug.Slug("slug")
 	teamPurpose := "My purpose"
 
+	log, err := logger.GetLogger("text", "info")
+	assert.NoError(t, err)
 	ctx := context.Background()
 
 	group := &azureclient.Group{
@@ -66,13 +68,11 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		TeamMembers:   []*db.User{addUser, keepUser},
 	}
 
-	logHook := test.NewGlobal()
-
 	t.Run("happy case", func(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		mockClient := azureclient.NewMockClient(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain)
+		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain, log)
 
 		database.
 			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.Slug, mock.Anything).
@@ -141,7 +141,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		mockClient := azureclient.NewMockClient(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain)
+		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain, log)
 
 		database.
 			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.Slug, mock.Anything).
@@ -161,7 +161,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		mockClient := azureclient.NewMockClient(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain)
+		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain, log)
 
 		database.
 			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.Slug, mock.Anything).
@@ -182,11 +182,15 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 	})
 
 	t.Run("RemoveMemberFromGroup fail", func(t *testing.T) {
-		logHook.Reset()
 		database := db.NewMockDatabase(t)
 		mockClient := azureclient.NewMockClient(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain)
+
+		removeMemberFromGroupErr := errors.New("RemoveMemberFromGroup failed")
+		mockLogger := logger.NewMockLogger(t)
+		mockLogger.On("WithError", removeMemberFromGroupErr).Return(log.WithError(err)).Once()
+
+		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain, mockLogger)
 
 		team := db.Team{
 			Team: &sqlc.Team{
@@ -211,7 +215,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Once()
 		mockClient.
 			On("RemoveMemberFromGroup", mock.Anything, group, removeMember).
-			Return(fmt.Errorf("RemoveMemberFromGroup failed")).
+			Return(removeMemberFromGroupErr).
 			Once()
 
 		err := reconciler.Reconcile(ctx, reconcilers.Input{
@@ -219,18 +223,17 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Team:          team,
 		})
 		assert.NoError(t, err)
-
-		assert.Equal(t, 1, len(logHook.Entries))
-		assert.Equal(t, logrus.WarnLevel, logHook.LastEntry().Level)
-		assert.Contains(t, logHook.LastEntry().Message, `unable to remove member "removemember@example.com" from group "nais-team-myteam"`)
 	})
 
 	t.Run("GetUser fail", func(t *testing.T) {
-		logHook.Reset()
 		database := db.NewMockDatabase(t)
 		mockClient := azureclient.NewMockClient(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain)
+
+		getUserError := errors.New("GetUser failed")
+		mockLogger := logger.NewMockLogger(t)
+		mockLogger.On("WithError", getUserError).Return(log.WithError(getUserError)).Once()
+		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain, mockLogger)
 
 		database.
 			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.Slug, mock.Anything).
@@ -255,7 +258,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Once()
 		mockClient.
 			On("GetUser", mock.Anything, addUser.Email).
-			Return(nil, fmt.Errorf("GetUser failed")).
+			Return(nil, getUserError).
 			Once()
 
 		auditLogger.
@@ -269,18 +272,16 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 
 		err := reconciler.Reconcile(ctx, input)
 		assert.NoError(t, err)
-
-		assert.Equal(t, 1, len(logHook.Entries))
-		assert.Equal(t, logrus.WarnLevel, logHook.LastEntry().Level)
-		assert.Contains(t, logHook.LastEntry().Message, `unable to lookup user with email "add@example.com" in Azure`)
 	})
 
 	t.Run("AddMemberToGroup fail", func(t *testing.T) {
-		logHook.Reset()
 		database := db.NewMockDatabase(t)
 		mockClient := azureclient.NewMockClient(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain)
+		addMemberToGroupError := errors.New("AddMemberToGroup failed")
+		mockLogger := logger.NewMockLogger(t)
+		mockLogger.On("WithError", addMemberToGroupError).Return(log.WithError(addMemberToGroupError)).Once()
+		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain, mockLogger)
 
 		database.
 			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.Slug, mock.Anything).
@@ -301,14 +302,10 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Once()
 		mockClient.
 			On("AddMemberToGroup", mock.Anything, group, addMember).
-			Return(fmt.Errorf("AddMemberToGroup failed")).
+			Return(addMemberToGroupError).
 			Once()
 
 		err := reconciler.Reconcile(ctx, input)
 		assert.NoError(t, err)
-
-		assert.Equal(t, 1, len(logHook.Entries))
-		assert.Equal(t, logrus.WarnLevel, logHook.LastEntry().Level)
-		assert.Contains(t, logHook.LastEntry().Message, `unable to add member "add@example.com" to Azure group "nais-team-myteam"`)
 	})
 }

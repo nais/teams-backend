@@ -2,6 +2,7 @@ package authn
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -10,7 +11,8 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/db"
-	log "github.com/sirupsen/logrus"
+	"github.com/nais/console/pkg/logger"
+	"github.com/nais/console/pkg/sqlc"
 	"golang.org/x/oauth2"
 )
 
@@ -40,14 +42,16 @@ type handler struct {
 	oauth2Config OAuth2
 	frontendURL  url.URL
 	secureCookie bool
+	log          logger.Logger
 }
 
-func New(oauth2Config OAuth2, database db.Database, frontendURL url.URL) Handler {
+func New(oauth2Config OAuth2, database db.Database, frontendURL url.URL, log logger.Logger) Handler {
 	return &handler{
 		database:     database,
 		oauth2Config: oauth2Config,
 		frontendURL:  frontendURL,
 		secureCookie: shouldUseSecureCookies(frontendURL),
+		log:          log.WithSystem(string(sqlc.SystemNameAuthn)),
 	}
 }
 
@@ -90,14 +94,14 @@ func (h *handler) Callback(w http.ResponseWriter, r *http.Request) {
 	h.DeleteCookie(w, RedirectURICookie)
 	code := r.URL.Query().Get("code")
 	if len(code) == 0 {
-		log.Error("Missing code query parameter")
+		h.log.WithError(fmt.Errorf("missing query parameter")).Error("check code param")
 		http.Redirect(w, r, frontendURL.String()+"?error=unauthenticated", http.StatusFound)
 		return
 	}
 
 	oauthCookie, err := r.Cookie(OAuthStateCookie)
 	if err != nil {
-		log.WithError(err).Error("Missing oauth state cookie")
+		h.log.WithError(err).Error("missing oauth state cookie")
 		http.Redirect(w, r, frontendURL.String()+"?error=invalid-state", http.StatusFound)
 		return
 	}
@@ -105,49 +109,49 @@ func (h *handler) Callback(w http.ResponseWriter, r *http.Request) {
 	h.DeleteCookie(w, OAuthStateCookie)
 	state := r.URL.Query().Get("state")
 	if state != oauthCookie.Value {
-		log.Error("Incoming state does not match local state")
+		h.log.WithError(fmt.Errorf("state mismatch")).Error("check incoming state matches local state")
 		http.Redirect(w, r, frontendURL.String()+"?error=invalid-state", http.StatusFound)
 		return
 	}
 
 	tokens, err := h.oauth2Config.Exchange(r.Context(), code)
 	if err != nil {
-		log.WithError(err).Error("Exchanging authorization code for tokens")
+		h.log.WithError(err).Error("exchanging authorization code for tokens")
 		http.Redirect(w, r, frontendURL.String()+"?error=unauthenticated", http.StatusFound)
 		return
 	}
 
 	rawIDToken, ok := tokens.Extra(IDTokenKey).(string)
 	if !ok {
-		log.Error("Missing id_token")
+		h.log.WithError(fmt.Errorf("missing id_token")).Error("id token presence")
 		http.Redirect(w, r, frontendURL.String()+"?error=unauthenticated", http.StatusFound)
 		return
 	}
 
 	idToken, err := h.oauth2Config.Verify(r.Context(), rawIDToken)
 	if err != nil {
-		log.WithError(err).Error("Invalid id_token")
+		h.log.WithError(err).Error("verify id_token")
 		http.Redirect(w, r, frontendURL.String()+"?error=unauthenticated", http.StatusFound)
 		return
 	}
 
 	claims := &claims{}
 	if err := idToken.Claims(claims); err != nil {
-		log.WithError(err).Error("Unable to parse claims")
+		h.log.WithError(err).Error("parse claims")
 		http.Redirect(w, r, frontendURL.String()+"?error=unauthenticated", http.StatusFound)
 		return
 	}
 
 	user, err := h.database.GetUserByEmail(r.Context(), claims.Email)
 	if err != nil {
-		log.WithError(err).Errorf("User with email %q does not exist in the Console database", claims.Email)
+		h.log.WithError(err).Errorf("get user (%s) from db", claims.Email)
 		http.Redirect(w, r, frontendURL.String()+"?error=unknown-user", http.StatusFound)
 		return
 	}
 
 	session, err := h.database.CreateSession(r.Context(), user.ID)
 	if err != nil {
-		log.WithError(err).Errorf("Unable to create session")
+		h.log.WithError(err).Error("create session")
 		http.Redirect(w, r, frontendURL.String()+"?error=unable-to-create-session", http.StatusFound)
 		return
 	}
@@ -160,21 +164,21 @@ func (h *handler) Logout(w http.ResponseWriter, r *http.Request) {
 	redirectUrl := "/"
 	cookie, err := r.Cookie(SessionCookieName)
 	if err != nil {
-		log.WithError(err).Error("Unable to logout session")
+		h.log.WithError(err).Error("logout session")
 		http.Redirect(w, r, redirectUrl, http.StatusFound)
 		return
 	}
 
 	sessionID, err := uuid.Parse(cookie.Value)
 	if err != nil {
-		log.WithError(err).Error("Unable to parse cookie value as UUID")
+		h.log.WithError(err).Error("parse cookie value as UUID")
 		http.Redirect(w, r, redirectUrl, http.StatusFound)
 		return
 	}
 
 	err = h.database.DeleteSession(r.Context(), sessionID)
 	if err != nil {
-		log.WithError(err).Error("Unable to delete session from database")
+		h.log.WithError(err).Error("delete session from database")
 		http.Redirect(w, r, redirectUrl, http.StatusFound)
 		return
 	}

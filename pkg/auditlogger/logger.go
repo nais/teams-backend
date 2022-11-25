@@ -8,20 +8,23 @@ import (
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 type auditLogger struct {
 	database   db.Database
 	systemName sqlc.SystemName
+	log        logger.Logger
 }
 
 func (l *auditLogger) WithSystemName(systemName sqlc.SystemName) AuditLogger {
 	return &auditLogger{
 		database:   l.database,
 		systemName: systemName,
+		log:        l.log.WithSystem(string(systemName)),
 	}
 }
 
@@ -30,9 +33,10 @@ type AuditLogger interface {
 	WithSystemName(systemName sqlc.SystemName) AuditLogger
 }
 
-func New(database db.Database) AuditLogger {
+func New(database db.Database, log logger.Logger) AuditLogger {
 	return &auditLogger{
 		database: database,
+		log:      log,
 	}
 }
 
@@ -97,18 +101,30 @@ func (l *auditLogger) Logf(ctx context.Context, targets []Target, fields Fields,
 			return fmt.Errorf("create audit log entry: %w", err)
 		}
 
-		logFields := log.Fields{
-			"action":            fields.Action,
-			"correlation_id":    fields.CorrelationID,
-			"system_name":       l.systemName,
-			"target_type":       target.Type,
-			"target_identifier": target.Identifier,
-		}
-		if actor != nil {
-			logFields["actor"] = *actor
+		logFields := logrus.Fields{
+			"action":         fields.Action,
+			"correlation_id": fields.CorrelationID,
+			"target_type":    target.Type,
 		}
 
-		log.StandardLogger().WithFields(logFields).Infof(message)
+		log := l.log
+		if actor != nil {
+			logFields["actor"] = *actor
+			log = log.WithActor(*actor)
+		}
+
+		switch target.Type {
+		case sqlc.AuditLogsTargetTypeTeam:
+			log = log.WithTeamSlug(target.Identifier)
+		case sqlc.AuditLogsTargetTypeUser:
+			log = log.WithUser(target.Identifier)
+		case sqlc.AuditLogsTargetTypeReconciler:
+			log = log.WithReconciler(target.Identifier)
+		default:
+			logFields["target_identifier"] = target.Identifier
+		}
+
+		log.WithFields(logFields).Infof(message)
 	}
 
 	return nil

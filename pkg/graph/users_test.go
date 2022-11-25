@@ -8,6 +8,7 @@ import (
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/graph"
+	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/stretchr/testify/assert"
@@ -19,7 +20,9 @@ func TestQueryResolver_Users(t *testing.T) {
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	ch := make(chan reconcilers.Input, 100)
 	gcpEnvironments := []string{"env"}
-	resolver := graph.NewResolver(database, "example.com", ch, auditLogger, gcpEnvironments).Query()
+	log, err := logger.GetLogger("text", "info")
+	assert.NoError(t, err)
+	resolver := graph.NewResolver(database, "example.com", ch, auditLogger, gcpEnvironments, log).Query()
 
 	t.Run("unauthenticated user", func(t *testing.T) {
 		users, err := resolver.Users(ctx)

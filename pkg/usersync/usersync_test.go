@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/pkg/test"
 	"github.com/nais/console/pkg/usersync"
@@ -20,6 +21,8 @@ import (
 
 func TestSync(t *testing.T) {
 	domain := "example.com"
+	log, err := logger.GetLogger("text", "info")
+	assert.NoError(t, err)
 
 	t.Run("No remote users", func(t *testing.T) {
 		auditLogger := auditlogger.NewMockAuditLogger(t)
@@ -38,7 +41,7 @@ func TestSync(t *testing.T) {
 		svc, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(httpClient))
 		assert.NoError(t, err)
 
-		usersync := usersync.New(database, auditLogger, domain, svc)
+		usersync := usersync.New(database, auditLogger, domain, svc, log)
 		err = usersync.Sync(ctx)
 		assert.NoError(t, err)
 	})
@@ -180,7 +183,7 @@ func TestSync(t *testing.T) {
 		svc, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(httpClient))
 		assert.NoError(t, err)
 
-		usersync := usersync.New(database, auditLogger, domain, svc)
+		usersync := usersync.New(database, auditLogger, domain, svc, log)
 		err = usersync.Sync(ctx)
 		assert.NoError(t, err)
 	})

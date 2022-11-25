@@ -7,6 +7,7 @@ import (
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/sqlc"
 )
 
@@ -23,7 +24,7 @@ type Reconciler interface {
 const TeamNamePrefix = "nais-team-"
 
 // ReconcilerFactory The constructor function for all reconcilers
-type ReconcilerFactory func(context.Context, db.Database, *config.Config, auditlogger.AuditLogger) (Reconciler, error)
+type ReconcilerFactory func(context.Context, db.Database, *config.Config, auditlogger.AuditLogger, logger.Logger) (Reconciler, error)
 
 func ReconcilerNameToSystemName(name sqlc.ReconcilerName) sqlc.SystemName {
 	switch name {

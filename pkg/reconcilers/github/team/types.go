@@ -6,6 +6,7 @@ import (
 	"github.com/google/go-github/v43/github"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/logger"
 	"github.com/shurcooL/githubv4"
 )
 
@@ -31,6 +32,7 @@ type githubTeamReconciler struct {
 	graphClient  GraphClient
 	org          string
 	domain       string
+	log          logger.Logger
 }
 
 type GitHubUser struct {

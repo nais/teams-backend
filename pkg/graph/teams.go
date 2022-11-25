@@ -19,7 +19,6 @@ import (
 	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
-	log "github.com/sirupsen/logrus"
 )
 
 // CreateTeam is the resolver for the createTeam field.
@@ -87,9 +86,8 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, slug *slug.Slug, inpu
 		return nil, err
 	}
 
-	team, err := r.database.GetTeamBySlug(ctx, *slug)
+	team, err := r.getTeamBySlugOrLog(ctx, *slug)
 	if err != nil {
-		log.Errorf("get team %q: %s", *slug, err)
 		return nil, apierror.ErrTeamNotExist
 	}
 
@@ -133,10 +131,9 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, slug *slug.S
 		return nil, err
 	}
 
-	team, err := r.database.GetTeamBySlug(ctx, *slug)
+	team, err := r.getTeamBySlugOrLog(ctx, *slug)
 	if err != nil {
-		log.Errorf("get team %q: %s", *slug, err)
-		return nil, apierror.ErrTeamNotExist
+		return nil, err
 	}
 
 	correlationID, err := uuid.NewUUID()
@@ -201,10 +198,9 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, slug *slug.Slug)
 		return nil, err
 	}
 
-	team, err := r.database.GetTeamBySlug(ctx, *slug)
+	team, err := r.getTeamBySlugOrLog(ctx, *slug)
 	if err != nil {
-		log.Errorf("get team %q: %s", *slug, err)
-		return nil, apierror.ErrTeamNotExist
+		return nil, err
 	}
 
 	correlationID, err := uuid.NewUUID()
@@ -242,10 +238,9 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, slug *slug.Slug, 
 		return nil, err
 	}
 
-	team, err := r.database.GetTeamBySlug(ctx, *slug)
+	team, err := r.getTeamBySlugOrLog(ctx, *slug)
 	if err != nil {
-		log.Errorf("get team %q: %s", *slug, err)
-		return nil, apierror.ErrTeamNotExist
+		return nil, err
 	}
 
 	correlationID, err := uuid.NewUUID()
@@ -295,10 +290,9 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, slug *slug.Slug, u
 		return nil, err
 	}
 
-	team, err := r.database.GetTeamBySlug(ctx, *slug)
+	team, err := r.getTeamBySlugOrLog(ctx, *slug)
 	if err != nil {
-		log.Errorf("get team %q: %s", *slug, err)
-		return nil, apierror.ErrTeamNotExist
+		return nil, err
 	}
 
 	correlationID, err := uuid.NewUUID()
@@ -348,10 +342,9 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, slug *slug.Slu
 		return nil, err
 	}
 
-	team, err := r.database.GetTeamBySlug(ctx, *slug)
+	team, err := r.getTeamBySlugOrLog(ctx, *slug)
 	if err != nil {
-		log.Errorf("get team %q: %s", *slug, err)
-		return nil, apierror.ErrTeamNotExist
+		return nil, err
 	}
 
 	correlationID, err := uuid.NewUUID()
@@ -410,10 +403,9 @@ func (r *mutationResolver) DisableTeam(ctx context.Context, slug *slug.Slug) (*d
 		return nil, err
 	}
 
-	team, err := r.database.GetTeamBySlug(ctx, *slug)
+	team, err := r.getTeamBySlugOrLog(ctx, *slug)
 	if err != nil {
-		log.Errorf("get team %q: %s", *slug, err)
-		return nil, apierror.ErrTeamNotExist
+		return nil, err
 	}
 
 	correlationID, err := uuid.NewUUID()
@@ -449,10 +441,9 @@ func (r *mutationResolver) EnableTeam(ctx context.Context, slug *slug.Slug) (*db
 		return nil, err
 	}
 
-	team, err := r.database.GetTeamBySlug(ctx, *slug)
+	team, err := r.getTeamBySlugOrLog(ctx, *slug)
 	if err != nil {
-		log.Errorf("get team %q: %s", *slug, err)
-		return nil, apierror.ErrTeamNotExist
+		return nil, err
 	}
 
 	correlationID, err := uuid.NewUUID()
@@ -499,10 +490,9 @@ func (r *queryResolver) Team(ctx context.Context, slug *slug.Slug) (*db.Team, er
 		return nil, err
 	}
 
-	team, err := r.database.GetTeamBySlug(ctx, *slug)
+	team, err := r.getTeamBySlugOrLog(ctx, *slug)
 	if err != nil {
-		log.Errorf("get team %q: %s", *slug, err)
-		return nil, apierror.ErrTeamNotExist
+		return nil, err
 	}
 
 	return team, nil

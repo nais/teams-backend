@@ -624,6 +624,7 @@ const (
 	SystemNameGraphqlApi           SystemName = "graphql-api"
 	SystemNameUsersync             SystemName = "usersync"
 	SystemNameLegacyImporter       SystemName = "legacy-importer"
+	SystemNameAuthn                SystemName = "authn"
 )
 
 func (e *SystemName) Scan(src interface{}) error {
@@ -671,7 +672,8 @@ func (e SystemName) Valid() bool {
 		SystemNameNaisNamespace,
 		SystemNameGraphqlApi,
 		SystemNameUsersync,
-		SystemNameLegacyImporter:
+		SystemNameLegacyImporter,
+		SystemNameAuthn:
 		return true
 	}
 	return false
@@ -688,6 +690,7 @@ func AllSystemNameValues() []SystemName {
 		SystemNameGraphqlApi,
 		SystemNameUsersync,
 		SystemNameLegacyImporter,
+		SystemNameAuthn,
 	}
 }
 

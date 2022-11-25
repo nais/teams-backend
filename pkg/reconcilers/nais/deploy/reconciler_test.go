@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
 	nais_deploy_reconciler "github.com/nais/console/pkg/reconcilers/nais/deploy"
 	"github.com/nais/console/pkg/slug"
@@ -19,6 +20,9 @@ import (
 )
 
 func TestNaisDeployReconciler_Reconcile(t *testing.T) {
+	log, err := logger.GetLogger("text", "info")
+	assert.NoError(t, err)
+
 	teamSlug := slug.Slug("slug")
 	correlationID := uuid.New()
 	team := db.Team{Team: &sqlc.Team{Slug: teamSlug}}
@@ -60,7 +64,7 @@ func TestNaisDeployReconciler_Reconcile(t *testing.T) {
 			Return(nil).
 			Once()
 
-		reconciler := nais_deploy_reconciler.New(database, auditLogger, http.DefaultClient, srv.URL, key)
+		reconciler := nais_deploy_reconciler.New(database, auditLogger, http.DefaultClient, srv.URL, key, log)
 		err := reconciler.Reconcile(ctx, input)
 
 		assert.NoError(t, err)
@@ -74,7 +78,7 @@ func TestNaisDeployReconciler_Reconcile(t *testing.T) {
 			w.WriteHeader(http.StatusInternalServerError)
 		}))
 		defer srv.Close()
-		reconciler := nais_deploy_reconciler.New(database, auditLogger, http.DefaultClient, srv.URL, key)
+		reconciler := nais_deploy_reconciler.New(database, auditLogger, http.DefaultClient, srv.URL, key, log)
 		err := reconciler.Reconcile(ctx, input)
 		assert.EqualError(t, err, "provision NAIS deploy API key for team \"slug\": 500 Internal Server Error")
 	})
@@ -87,7 +91,7 @@ func TestNaisDeployReconciler_Reconcile(t *testing.T) {
 			w.WriteHeader(http.StatusNoContent)
 		}))
 		defer srv.Close()
-		reconciler := nais_deploy_reconciler.New(database, auditLogger, http.DefaultClient, srv.URL, key)
+		reconciler := nais_deploy_reconciler.New(database, auditLogger, http.DefaultClient, srv.URL, key, log)
 		err := reconciler.Reconcile(ctx, input)
 		assert.NoError(t, err)
 	})

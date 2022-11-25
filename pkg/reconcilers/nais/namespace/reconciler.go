@@ -6,12 +6,12 @@ import (
 	"fmt"
 
 	"cloud.google.com/go/pubsub"
-	log "github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/option"
 
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/google_token_source"
+	"github.com/nais/console/pkg/logger"
 	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
 	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
 	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
@@ -46,11 +46,12 @@ type naisNamespaceReconciler struct {
 	projectID    string
 	azureEnabled bool
 	tokenSource  oauth2.TokenSource
+	log          logger.Logger
 }
 
 const Name = sqlc.ReconcilerNameNaisNamespace
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, domain, projectID string, azureEnabled bool, tokenSource oauth2.TokenSource) *naisNamespaceReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, domain, projectID string, azureEnabled bool, tokenSource oauth2.TokenSource, log logger.Logger) *naisNamespaceReconciler {
 	return &naisNamespaceReconciler{
 		database:     database,
 		auditLogger:  auditLogger,
@@ -58,15 +59,18 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, domain, proj
 		projectID:    projectID,
 		azureEnabled: azureEnabled,
 		tokenSource:  tokenSource,
+		log:          log,
 	}
 }
 
-func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
+	log = log.WithSystem(string(Name))
+
 	ts, err := google_token_source.NewFromConfig(cfg).GCP(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("create token source: %w", err)
 	}
-	return New(database, auditLogger, cfg.TenantDomain, cfg.GoogleManagementProjectID, cfg.NaisNamespace.AzureEnabled, ts), nil
+	return New(database, auditLogger, cfg.TenantDomain, cfg.GoogleManagementProjectID, cfg.NaisNamespace.AzureEnabled, ts, log), nil
 }
 
 func (r *naisNamespaceReconciler) Name() sqlc.ReconcilerName {
@@ -128,7 +132,7 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 
 	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, namespaceState)
 	if err != nil {
-		log.Errorf("system state not persisted: %s", err)
+		r.log.WithError(err).Error("persisted system state")
 	}
 
 	return nil

@@ -10,9 +10,9 @@ import (
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/google_token_source"
+	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/sqlc"
-	log "github.com/sirupsen/logrus"
 	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
@@ -23,22 +23,26 @@ type googleWorkspaceAdminReconciler struct {
 	auditLogger  auditlogger.AuditLogger
 	domain       string
 	adminService *admin_directory_v1.Service
+	log          logger.Logger
 }
 
 const (
 	Name = sqlc.ReconcilerNameGoogleWorkspaceAdmin
 )
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, adminService *admin_directory_v1.Service) *googleWorkspaceAdminReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, adminService *admin_directory_v1.Service, log logger.Logger) *googleWorkspaceAdminReconciler {
 	return &googleWorkspaceAdminReconciler{
 		database:     database,
 		auditLogger:  auditLogger,
 		domain:       domain,
 		adminService: adminService,
+		log:          log,
 	}
 }
 
-func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger) (reconcilers.Reconciler, error) {
+func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
+	log = log.WithSystem(string(Name))
+
 	ts, err := google_token_source.NewFromConfig(cfg).Admin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get delegated token source: %w", err)
@@ -49,7 +53,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		return nil, fmt.Errorf("retrieve directory client: %w", err)
 	}
 
-	return New(database, auditLogger, cfg.TenantDomain, srv), nil
+	return New(database, auditLogger, cfg.TenantDomain, srv, log), nil
 }
 
 func (r *googleWorkspaceAdminReconciler) Name() sqlc.ReconcilerName {
@@ -75,7 +79,7 @@ func (r *googleWorkspaceAdminReconciler) Reconcile(ctx context.Context, input re
 
 	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, reconcilers.GoogleWorkspaceState{GroupEmail: &grp.Email})
 	if err != nil {
-		log.Errorf("system state not persisted: %s", err)
+		r.log.WithError(err).Error("persiste system state")
 	}
 
 	err = r.connectUsers(ctx, grp, input)
@@ -145,7 +149,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 		remoteMemberEmail := strings.ToLower(member.Email)
 		err = r.adminService.Members.Delete(grp.Id, member.Id).Do()
 		if err != nil {
-			log.Warnf("delete member %q from Google Directory group %q: %s", remoteMemberEmail, grp.Email, err)
+			r.log.WithError(err).Warnf("delete member %q from Google Directory group %q", remoteMemberEmail, grp.Email)
 			continue
 		}
 
@@ -175,7 +179,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 		}
 		_, err = r.adminService.Members.Insert(grp.Id, member).Do()
 		if err != nil {
-			log.Warnf("add member %q to Google Directory group %q: %s", member.Email, grp.Email, err)
+			r.log.WithError(err).Warnf("add member %q to Google Directory group %q", member.Email, grp.Email)
 			continue
 		}
 		targets := []auditlogger.Target{
