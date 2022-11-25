@@ -120,14 +120,14 @@ func run(cfg *config.Config, log logger.Logger) error {
 		return err
 	}
 
-	log.Infof("Ready to accept requests.")
+	log.Info("ready to accept requests.")
 
 	go func() {
 		err := srv.ListenAndServe()
 		if err != http.ErrServerClosed {
 			log.Error(err)
 		}
-		log.Infof("HTTP server finished, terminating...")
+		log.Info("HTTP server finished, terminating...")
 		cancel()
 	}()
 
@@ -135,7 +135,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)
 	go func() {
 		sig := <-signals
-		log.Infof("Received signal %s, terminating...", sig)
+		log.Infof("received signal %s, terminating...", sig)
 		cancel()
 	}()
 
@@ -177,10 +177,10 @@ func run(cfg *config.Config, log logger.Logger) error {
 			return err
 		}
 
-		log.Warnf("User synchronization disabled: %s", err)
+		log.WithError(err).Warn("user synchronization disabled")
 	}
 
-	defer log.Infof("Main program context canceled; exiting.")
+	defer log.Info("main program context canceled; exiting.")
 
 	for ctx.Err() == nil {
 		select {
@@ -193,16 +193,16 @@ func run(cfg *config.Config, log logger.Logger) error {
 				reconcileTimer.Reset(immediateReconcile)
 			}
 
-			log.Infof("Scheduling team %q for reconciliation in %s", input.Team.Slug, time.Until(nextReconcile))
+			log.WithTeamSlug(string(input.Team.Slug)).Debugf("scheduling team reconciliation in %s", time.Until(nextReconcile))
 			pendingTeams[input.Team.Slug] = input
 
 		case <-reconcileTimer.C:
-			log.Infof("Running reconcile of %d teams...", len(pendingTeams))
+			log.Debugf("running reconcile of %d teams...", len(pendingTeams))
 
 			err = reconcileTeams(ctx, database, &pendingTeams, cfg, auditLogger, log)
 
 			if err != nil {
-				log.Error(err)
+				log.WithError(err).Error("reconcile teams")
 				reconcileTimer.Reset(nextReconcileGracePeriod)
 			}
 
@@ -210,24 +210,24 @@ func run(cfg *config.Config, log logger.Logger) error {
 				log.Warnf("%d teams are not fully reconciled.", len(pendingTeams))
 			}
 
-			log.Infof("Reconciliation complete.")
+			log.Debug("reconciliation complete.")
 
 		case <-userSyncTimer.C:
 			const interval = time.Hour * 1
 			const timeout = time.Second * 30
 
-			log.Infof("Starting user synchronization...")
+			log.Debug("starting user synchronization...")
 
 			ctx, cancel := context.WithTimeout(ctx, timeout)
 			err = userSyncer.Sync(ctx)
 			cancel()
 
 			if err != nil {
-				log.Error(err)
+				log.WithError(err).Error("sync users")
 			}
 
 			userSyncTimer.Reset(interval)
-			log.Infof("User synchronization complete; next run at %s", time.Now().Add(interval))
+			log.Debugf("user synchronization complete; next run at %s", time.Now().Add(interval))
 		}
 	}
 
@@ -256,7 +256,7 @@ func reconcileTeams(
 	for teamSlug, input := range *reconcileInputs {
 		log := log.WithTeamSlug(string(teamSlug))
 		if !input.Team.Enabled {
-			log.Infof("team is not enabled, skipping and removing from queue")
+			log.Info("team is not enabled, skipping and removing from queue")
 			delete(*reconcileInputs, teamSlug)
 			continue
 		}
@@ -363,12 +363,12 @@ func initReconcilers(
 
 		rec, err := factory(ctx, database, cfg, auditLogger.WithSystemName(reconcilers.ReconcilerNameToSystemName(name)), log)
 		if err != nil {
-			log.WithError(err).Error("unable to create reconciler")
+			log.WithReconciler(string(name)).WithError(err).Error("initialize")
 			continue
 		}
 
 		recs = append(recs, rec)
-		log.Info("initialized")
+		log.WithReconciler(string(name)).Info("initialized")
 	}
 
 	return recs, nil
