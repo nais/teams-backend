@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"testing"
 
+	"cloud.google.com/go/pubsub"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
-	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/google_token_source"
 	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
 	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
@@ -19,6 +18,9 @@ import (
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"google.golang.org/api/option"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func TestReconcile(t *testing.T) {
@@ -34,10 +36,12 @@ func TestReconcile(t *testing.T) {
 
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	logger := logger.NewMockLogger(t)
-	tokenSource, _ := google_token_source.NewFromConfig(&config.Config{
-		GoogleManagementProjectID: projectID,
-		TenantDomain:              domain,
-	}).GCP(ctx)
+	pubsubClient, _ := pubsub.NewClient(
+		ctx,
+		projectID,
+		option.WithoutAuthentication(),
+		option.WithGRPCDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())),
+	)
 
 	t.Run("unable to load namespace state", func(t *testing.T) {
 		database := db.NewMockDatabase(t)
@@ -45,7 +49,7 @@ func TestReconcile(t *testing.T) {
 			On("LoadReconcilerStateForTeam", ctx, sqlc.ReconcilerNameNaisNamespace, team.Slug, mock.Anything).
 			Return(fmt.Errorf("some error")).
 			Once()
-		r := nais_namespace_reconciler.New(database, auditLogger, domain, projectID, azureEnabled, tokenSource, logger)
+		r := nais_namespace_reconciler.New(database, auditLogger, domain, projectID, azureEnabled, pubsubClient, logger)
 		err := r.Reconcile(ctx, input)
 		assert.ErrorContains(t, err, `unable to load NAIS namespace state for team "slug"`)
 	})
@@ -60,7 +64,7 @@ func TestReconcile(t *testing.T) {
 			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.Slug, mock.Anything).
 			Return(fmt.Errorf("some error")).
 			Once()
-		r := nais_namespace_reconciler.New(database, auditLogger, domain, projectID, azureEnabled, tokenSource, logger)
+		r := nais_namespace_reconciler.New(database, auditLogger, domain, projectID, azureEnabled, pubsubClient, logger)
 		err := r.Reconcile(ctx, input)
 		assert.ErrorContains(t, err, `unable to load GCP project state for team "slug"`)
 	})
@@ -75,7 +79,7 @@ func TestReconcile(t *testing.T) {
 			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.Slug, mock.Anything).
 			Return(nil).
 			Once()
-		r := nais_namespace_reconciler.New(database, auditLogger, domain, projectID, azureEnabled, tokenSource, logger)
+		r := nais_namespace_reconciler.New(database, auditLogger, domain, projectID, azureEnabled, pubsubClient, logger)
 		err := r.Reconcile(ctx, input)
 		assert.ErrorContains(t, err, `no GCP project state exists for team "slug"`)
 	})
@@ -100,7 +104,7 @@ func TestReconcile(t *testing.T) {
 			On("LoadReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, team.Slug, mock.Anything).
 			Return(fmt.Errorf("some error")).
 			Once()
-		r := nais_namespace_reconciler.New(database, auditLogger, domain, projectID, azureEnabled, tokenSource, logger)
+		r := nais_namespace_reconciler.New(database, auditLogger, domain, projectID, azureEnabled, pubsubClient, logger)
 		err := r.Reconcile(ctx, input)
 		assert.ErrorContains(t, err, `no workspace admin state exists for team "slug"`)
 	})
@@ -134,7 +138,7 @@ func TestReconcile(t *testing.T) {
 			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.Slug, mock.Anything).
 			Return(fmt.Errorf("some error")).
 			Once()
-		r := nais_namespace_reconciler.New(database, auditLogger, domain, projectID, azureEnabled, tokenSource, logger)
+		r := nais_namespace_reconciler.New(database, auditLogger, domain, projectID, azureEnabled, pubsubClient, logger)
 		err := r.Reconcile(ctx, input)
 		assert.ErrorContains(t, err, `no Azure state exists for team "slug"`)
 	})

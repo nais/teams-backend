@@ -6,21 +6,18 @@ import (
 	"fmt"
 
 	"cloud.google.com/go/pubsub"
-	"golang.org/x/oauth2"
-	"google.golang.org/api/option"
-
+	"github.com/nais/console/pkg/auditlogger"
+	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/google_token_source"
 	"github.com/nais/console/pkg/logger"
+	"github.com/nais/console/pkg/reconcilers"
 	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
 	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
 	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
-
-	"github.com/nais/console/pkg/auditlogger"
-	"github.com/nais/console/pkg/config"
-	"github.com/nais/console/pkg/reconcilers"
+	"google.golang.org/api/option"
 )
 
 const (
@@ -45,20 +42,20 @@ type naisNamespaceReconciler struct {
 	auditLogger  auditlogger.AuditLogger
 	projectID    string
 	azureEnabled bool
-	tokenSource  oauth2.TokenSource
+	pubsubClient *pubsub.Client
 	log          logger.Logger
 }
 
 const Name = sqlc.ReconcilerNameNaisNamespace
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, domain, projectID string, azureEnabled bool, tokenSource oauth2.TokenSource, log logger.Logger) *naisNamespaceReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, domain, projectID string, azureEnabled bool, pubsubClient *pubsub.Client, log logger.Logger) *naisNamespaceReconciler {
 	return &naisNamespaceReconciler{
 		database:     database,
 		auditLogger:  auditLogger,
 		domain:       domain,
 		projectID:    projectID,
 		azureEnabled: azureEnabled,
-		tokenSource:  tokenSource,
+		pubsubClient: pubsubClient,
 		log:          log,
 	}
 }
@@ -66,11 +63,17 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, domain, proj
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
 	log = log.WithSystem(string(Name))
 
-	ts, err := google_token_source.NewFromConfig(cfg).GCP(ctx)
+	tokenSource, err := google_token_source.NewFromConfig(cfg).GCP(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("create token source: %w", err)
 	}
-	return New(database, auditLogger, cfg.TenantDomain, cfg.GoogleManagementProjectID, cfg.NaisNamespace.AzureEnabled, ts, log), nil
+
+	pubsubClient, err := pubsub.NewClient(ctx, cfg.GoogleManagementProjectID, option.WithTokenSource(tokenSource))
+	if err != nil {
+		return nil, fmt.Errorf("retrieve pubsub client: %w", err)
+	}
+
+	return New(database, auditLogger, cfg.TenantDomain, cfg.GoogleManagementProjectID, cfg.NaisNamespace.AzureEnabled, pubsubClient, log), nil
 }
 
 func (r *naisNamespaceReconciler) Name() sqlc.ReconcilerName {
@@ -78,15 +81,10 @@ func (r *naisNamespaceReconciler) Name() sqlc.ReconcilerName {
 }
 
 func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
-	svc, err := pubsub.NewClient(ctx, r.projectID, option.WithTokenSource(r.tokenSource))
-	if err != nil {
-		return fmt.Errorf("retrieve pubsub client: %w", err)
-	}
-
 	namespaceState := &reconcilers.GoogleGcpNaisNamespaceState{
 		Namespaces: make(map[string]slug.Slug),
 	}
-	err = r.database.LoadReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, namespaceState)
+	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, namespaceState)
 	if err != nil {
 		return fmt.Errorf("unable to load NAIS namespace state for team %q: %w", input.Team.Slug, err)
 	}
@@ -114,7 +112,7 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	}
 
 	for environment, project := range gcpProjectState.Projects {
-		err = r.createNamespace(ctx, svc, input.Team, environment, project.ProjectID, googleGroupEmail, azureGroupID)
+		err = r.createNamespace(ctx, input.Team, environment, project.ProjectID, googleGroupEmail, azureGroupID)
 		if err != nil {
 			return fmt.Errorf("unable to create namespace for project %q in environment %q: %w", project.ProjectID, environment, err)
 		}
@@ -140,7 +138,7 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	return nil
 }
 
-func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, pubsubService *pubsub.Client, team db.Team, environment, gcpProjectID string, groupEmail string, azureGroupID string) error {
+func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, team db.Team, environment, gcpProjectID string, groupEmail string, azureGroupID string) error {
 	const topicPrefix = "naisd-console-"
 	req := &naisdRequest{
 		Type: NaisdCreateNamespace,
@@ -159,7 +157,7 @@ func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, pubsubSer
 
 	topic := topicPrefix + environment
 	msg := &pubsub.Message{Data: payload}
-	future := pubsubService.Topic(topic).Publish(ctx, msg)
+	future := r.pubsubClient.Topic(topic).Publish(ctx, msg)
 	<-future.Ready()
 	_, err = future.Get(ctx)
 	return err
