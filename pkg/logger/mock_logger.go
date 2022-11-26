@@ -78,6 +78,22 @@ func (_m *MockLogger) Fatalln(args ...interface{}) {
 	_m.Called(_ca...)
 }
 
+// GetInternalLogger provides a mock function with given fields:
+func (_m *MockLogger) GetInternalLogger() *logrus.Logger {
+	ret := _m.Called()
+
+	var r0 *logrus.Logger
+	if rf, ok := ret.Get(0).(func() *logrus.Logger); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*logrus.Logger)
+		}
+	}
+
+	return r0
+}
+
 // Info provides a mock function with given fields: args
 func (_m *MockLogger) Info(args ...interface{}) {
 	var _ca []interface{}

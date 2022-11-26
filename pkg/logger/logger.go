@@ -10,6 +10,7 @@ import (
 
 type Logger interface {
 	logrus.FieldLogger
+	GetInternalLogger() *logrus.Logger
 	WithActor(actor string) Logger
 	WithReconciler(reconciler string) Logger
 	WithSystem(system string) Logger
@@ -19,6 +20,10 @@ type Logger interface {
 
 type logger struct {
 	*logrus.Entry
+}
+
+func (l *logger) GetInternalLogger() *logrus.Logger {
+	return l.Entry.Logger
 }
 
 func (l *logger) WithTeamSlug(slug string) Logger {
