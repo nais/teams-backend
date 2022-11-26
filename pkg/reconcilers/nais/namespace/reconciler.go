@@ -88,13 +88,15 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	}
 	err = r.database.LoadReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, namespaceState)
 	if err != nil {
-		return fmt.Errorf("unable to load system state for team %q in system %q: %w", input.Team.Slug, r.Name(), err)
+		return fmt.Errorf("unable to load NAIS namespace state for team %q: %w", input.Team.Slug, err)
 	}
 
-	gcpProjectState := &reconcilers.GoogleGcpProjectState{}
+	gcpProjectState := &reconcilers.GoogleGcpProjectState{
+		Projects: make(map[string]reconcilers.GoogleGcpEnvironmentProject),
+	}
 	err = r.database.LoadReconcilerStateForTeam(ctx, google_gcp_reconciler.Name, input.Team.Slug, gcpProjectState)
 	if err != nil {
-		return fmt.Errorf("unable to load system state for team %q in system %q: %w", input.Team.Slug, google_gcp_reconciler.Name, err)
+		return fmt.Errorf("unable to load GCP project state for team %q: %w", input.Team.Slug, err)
 	}
 
 	if len(gcpProjectState.Projects) == 0 {
@@ -167,7 +169,7 @@ func (r *naisNamespaceReconciler) getGoogleGroupEmail(ctx context.Context, teamS
 	googleWorkspaceState := &reconcilers.GoogleWorkspaceState{}
 	err := r.database.LoadReconcilerStateForTeam(ctx, google_workspace_admin_reconciler.Name, teamSlug, googleWorkspaceState)
 	if err != nil {
-		return "", fmt.Errorf("no workspace admin state exists for team %q", teamSlug)
+		return "", fmt.Errorf("no workspace admin state exists for team %q: %w", teamSlug, err)
 	}
 
 	if googleWorkspaceState.GroupEmail == nil {
@@ -185,7 +187,7 @@ func (r *naisNamespaceReconciler) getAzureGroupID(ctx context.Context, teamSlug 
 	azureState := &reconcilers.AzureState{}
 	err := r.database.LoadReconcilerStateForTeam(ctx, azure_group_reconciler.Name, teamSlug, azureState)
 	if err != nil {
-		return "", fmt.Errorf("no Azure state exists for team %q", teamSlug)
+		return "", fmt.Errorf("no Azure state exists for team %q: %w", teamSlug, err)
 	}
 
 	if azureState.GroupID == nil {
