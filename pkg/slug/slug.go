@@ -30,8 +30,3 @@ func UnmarshalSlug(v interface{}) (*Slug, error) {
 func (s Slug) String() string {
 	return string(s)
 }
-
-func (s Slug) StringP() *string {
-	strp := string(s)
-	return &strp
-}
