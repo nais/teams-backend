@@ -31,7 +31,7 @@ type naisdData struct {
 	AzureGroupID string `json:"azureGroupID"`
 }
 
-type naisdRequest struct {
+type NaisdRequest struct {
 	Type string    `json:"type"`
 	Data naisdData `json:"data"`
 }
@@ -140,7 +140,7 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 
 func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, team db.Team, environment, gcpProjectID string, groupEmail string, azureGroupID string) error {
 	const topicPrefix = "naisd-console-"
-	req := &naisdRequest{
+	req := &NaisdRequest{
 		Type: NaisdCreateNamespace,
 		Data: naisdData{
 			Name:         string(team.Slug),
@@ -155,11 +155,13 @@ func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, team db.T
 		return err
 	}
 
-	topic := topicPrefix + environment
+	topicName := topicPrefix + environment
 	msg := &pubsub.Message{Data: payload}
-	future := r.pubsubClient.Topic(topic).Publish(ctx, msg)
+	topic := r.pubsubClient.Topic(topicName)
+	future := topic.Publish(ctx, msg)
 	<-future.Ready()
 	_, err = future.Get(ctx)
+	topic.Stop()
 	return err
 }
 
