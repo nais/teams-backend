@@ -54,20 +54,43 @@ CONSOLE_OAUTH_CLIENT_SECRET=xxx
 CONSOLE_OAUTH_REDIRECT_URL=http://localhost:3000/oauth2/callback
 ```
 
-FIXME: legge delegated user-enven inn i Fasit
-
 Synkroniser brukere fra GCP og verifiser at brukere ikke blir fjernet fra databasen.
 
-Arkiver/disable eksisterende løsninger:
+Ta databasedump, overfør config og data til produksjon, og ta helg.
+
+## Sanere eksisterende løsninger
+
 - navikt/teams
+  - Skrive i docs.nais.io om Console vs navikt/teams
+  - Erstatte README med notis om å gå til Console
 - nais/teams
-  - opprettelse av namespace [jhrv: antakelig OK]
-  - rolebinding med rettigheter samt riktig azure-gruppe [jhrv: MÅ vi bruke azure on-prem?]
-  - ca-certificates [jhrv: hva er fremtiden?] [kimt: i hvilken form skal dette videreføres for NAV?]
-  - noe vi har glemt?
-- alertmanager-config opprettes av Fasit, med predefinerte navn på alertkanaler: #TEAM-"alerts"-ENV. Vises fram i console-frontend. [jhrv: OK]
+  - FIXME: aiven networkpolicy, jhrv & co jobber med det nå
+  - FIXME: opprettelse av namespace blir ikke gjort enda i legacy-gcp (kanskje lage ny tenant-type, starten av uka)
+  - FIXME: securelogs må kanskje utredes om igjen
+  - FIXME: docker credentials
+  - FIXME: diverse ressurser
+  - opprettelse av namespace [krampl: OK]
+  - rolebinding med rettigheter samt riktig azure-gruppe [krampl: OK]
+  - ca-certificates [kimt: dette er gjort]
+  - noe vi har glemt? [vegar: garantert]
+  - snorlax utgår
 - navikt/google-group-sync
+  - Arkiveres, trenger ikke oppdateres
 - rbac-sync
+  - Se om det gruppe-auth kan skrus på for legacy [krampl]
 - ToBAC (den bruker det gamle opplegget med azure ad-"morgruppa")
   - den utgår totalt. Varsle i #nais-announcements om at den skal skrus av asap
+  - kanskje den allerede er skrudd av
 - "Teams management"-Slack-boten
+  - Den er skrevet om til Go + Console. Mangler deploy.
+  - Eksisterende workflow ligger i navikt/teams og blir stoppet.
+  - Ikke nødvendig for migrering, men bør gjøres snart etterpå.
+- alertmanager-config
+  - FIXME: Hackes inn i naisd? [krampl]
+  - FIXME: legge inn felt i console for slack-alert-channel
+  - Oppsett er fortsatt under endring, trenger robusthet og HA
+  - mulig for oppretting fra Fasit sin side, med predefinerte navn på alertkanaler: #TEAM-"alerts"-ENV.
+  - Kan til slutt vises fram i console-frontend
+- azure teams management
+  - Slette appen
+  - La gruppene være, kommunisere at de ikke er managed lengre
