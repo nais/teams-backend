@@ -64,20 +64,27 @@ Ta databasedump, overfør config og data til produksjon, og ta helg.
   - Skrive i docs.nais.io om Console vs navikt/teams [kimt: laget branch klar til merge]
   - Erstatte README med notis om å gå til Console [kimt: laget branch klar til merge]
 - nais/teams
-  - FIXME: aiven networkpolicy, jhrv & co jobber med det nå
+  - config connector [OK]
+  - FIXME: networkpolicies, jhrv & co jobber med det nå [i mål 5. des]
   - FIXME: opprettelse av namespace blir ikke gjort enda i legacy-gcp [krampl: gjort, men utestet]
-  - FIXME: securelogs må kanskje utredes om igjen
-  - FIXME: docker credentials
-  - FIXME: diverse ressurser
+  - rolebindings til nais deploy/teams [OK]
+  - FIXME: securelogs må kanskje utredes om igjen (fluentd) [terje] [replicator?]
+  - FIXME: docker credentials [kan feature-flagges inn i naisd?] [kopiere replicator fra NADA?] [kyrre]
+  - FIXME: resourcequota [videreføres ikke med mindre det oppstår behov]
   - opprettelse av namespace [krampl: OK]
   - rolebinding med rettigheter samt riktig azure-gruppe [krampl: OK]
   - ca-certificates [kimt: dette er gjort]
   - noe vi har glemt? [vegar: garantert]
   - snorlax utgår
+- alertmanager-config
+  - FIXME: legge inn redigeringsmulighet i console for slack-alert-channel -> sendes til naisd
+  - Oppsett er fortsatt under endring, trenger robusthet og HA
+  - mulig for oppretting fra Fasit sin side, med predefinerte navn på alertkanaler: #TEAM-"alerts"-ENV.
+  - Kan til slutt vises fram i console-frontend
 - navikt/google-group-sync
   - Arkiveres, trenger ikke oppdateres
 - rbac-sync
-  - Se om det gruppe-auth kan skrus på for legacy [krampl]
+  - Se om det gruppe-auth kan skrus på for legacy [krampl] [trong]
 - ToBAC (den bruker det gamle opplegget med azure ad-"morgruppa")
   - den utgår totalt. Varsle i #nais-announcements om at den skal skrus av asap
   - kanskje den allerede er skrudd av
@@ -85,12 +92,6 @@ Ta databasedump, overfør config og data til produksjon, og ta helg.
   - Den er skrevet om til Go + Console. Mangler deploy.
   - Eksisterende workflow ligger i navikt/teams og blir stoppet.
   - Ikke nødvendig for migrering, men bør gjøres snart etterpå.
-- alertmanager-config
-  - FIXME: Hackes inn i naisd? [krampl]
-  - FIXME: legge inn felt i console for slack-alert-channel
-  - Oppsett er fortsatt under endring, trenger robusthet og HA
-  - mulig for oppretting fra Fasit sin side, med predefinerte navn på alertkanaler: #TEAM-"alerts"-ENV.
-  - Kan til slutt vises fram i console-frontend
 - azure teams management
   - Slette appen
   - La gruppene være, kommunisere at de ikke er managed lengre
