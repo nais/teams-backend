@@ -16,7 +16,7 @@ import (
 const createTeam = `-- name: CreateTeam :one
 INSERT INTO teams (slug, purpose)
 VALUES ($1, $2)
-RETURNING slug, purpose, enabled, last_successful_sync
+RETURNING slug, purpose, enabled, last_successful_sync, slack_alerts_channel
 `
 
 type CreateTeamParams struct {
@@ -32,6 +32,7 @@ func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, 
 		&i.Purpose,
 		&i.Enabled,
 		&i.LastSuccessfulSync,
+		&i.SlackAlertsChannel,
 	)
 	return &i, err
 }
@@ -40,7 +41,7 @@ const disableTeam = `-- name: DisableTeam :one
 UPDATE teams
 SET enabled = false
 WHERE slug = $1
-RETURNING slug, purpose, enabled, last_successful_sync
+RETURNING slug, purpose, enabled, last_successful_sync, slack_alerts_channel
 `
 
 func (q *Queries) DisableTeam(ctx context.Context, slug slug.Slug) (*Team, error) {
@@ -51,6 +52,7 @@ func (q *Queries) DisableTeam(ctx context.Context, slug slug.Slug) (*Team, error
 		&i.Purpose,
 		&i.Enabled,
 		&i.LastSuccessfulSync,
+		&i.SlackAlertsChannel,
 	)
 	return &i, err
 }
@@ -59,7 +61,7 @@ const enableTeam = `-- name: EnableTeam :one
 UPDATE teams
 SET enabled = true
 WHERE slug = $1
-RETURNING slug, purpose, enabled, last_successful_sync
+RETURNING slug, purpose, enabled, last_successful_sync, slack_alerts_channel
 `
 
 func (q *Queries) EnableTeam(ctx context.Context, slug slug.Slug) (*Team, error) {
@@ -70,12 +72,13 @@ func (q *Queries) EnableTeam(ctx context.Context, slug slug.Slug) (*Team, error)
 		&i.Purpose,
 		&i.Enabled,
 		&i.LastSuccessfulSync,
+		&i.SlackAlertsChannel,
 	)
 	return &i, err
 }
 
 const getTeamBySlug = `-- name: GetTeamBySlug :one
-SELECT slug, purpose, enabled, last_successful_sync FROM teams
+SELECT slug, purpose, enabled, last_successful_sync, slack_alerts_channel FROM teams
 WHERE slug = $1
 `
 
@@ -87,6 +90,7 @@ func (q *Queries) GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, err
 		&i.Purpose,
 		&i.Enabled,
 		&i.LastSuccessfulSync,
+		&i.SlackAlertsChannel,
 	)
 	return &i, err
 }
@@ -151,7 +155,7 @@ func (q *Queries) GetTeamMetadata(ctx context.Context, teamSlug slug.Slug) ([]*T
 }
 
 const getTeams = `-- name: GetTeams :many
-SELECT slug, purpose, enabled, last_successful_sync FROM teams
+SELECT slug, purpose, enabled, last_successful_sync, slack_alerts_channel FROM teams
 ORDER BY slug ASC
 `
 
@@ -169,6 +173,7 @@ func (q *Queries) GetTeams(ctx context.Context) ([]*Team, error) {
 			&i.Purpose,
 			&i.Enabled,
 			&i.LastSuccessfulSync,
+			&i.SlackAlertsChannel,
 		); err != nil {
 			return nil, err
 		}
@@ -227,7 +232,7 @@ const updateTeam = `-- name: UpdateTeam :one
 UPDATE teams
 SET purpose = COALESCE($1, purpose)
 WHERE slug = $2
-RETURNING slug, purpose, enabled, last_successful_sync
+RETURNING slug, purpose, enabled, last_successful_sync, slack_alerts_channel
 `
 
 type UpdateTeamParams struct {
@@ -243,6 +248,7 @@ func (q *Queries) UpdateTeam(ctx context.Context, arg UpdateTeamParams) (*Team, 
 		&i.Purpose,
 		&i.Enabled,
 		&i.LastSuccessfulSync,
+		&i.SlackAlertsChannel,
 	)
 	return &i, err
 }
