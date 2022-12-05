@@ -61,11 +61,11 @@ Ta databasedump, overfør config og data til produksjon, og ta helg.
 ## Sanere eksisterende løsninger
 
 - navikt/teams
-  - Skrive i docs.nais.io om Console vs navikt/teams
-  - Erstatte README med notis om å gå til Console
+  - Skrive i docs.nais.io om Console vs navikt/teams [kimt: laget branch klar til merge]
+  - Erstatte README med notis om å gå til Console [kimt: laget branch klar til merge]
 - nais/teams
   - FIXME: aiven networkpolicy, jhrv & co jobber med det nå
-  - FIXME: opprettelse av namespace blir ikke gjort enda i legacy-gcp (kanskje lage ny tenant-type, starten av uka)
+  - FIXME: opprettelse av namespace blir ikke gjort enda i legacy-gcp [krampl: gjort, men utestet]
   - FIXME: securelogs må kanskje utredes om igjen
   - FIXME: docker credentials
   - FIXME: diverse ressurser
