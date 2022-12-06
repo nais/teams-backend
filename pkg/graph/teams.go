@@ -43,7 +43,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 
 	var team *db.Team
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
-		team, err = dbtx.CreateTeam(ctx, *input.Slug, input.Purpose)
+		team, err = dbtx.CreateTeam(ctx, *input.Slug, input.Purpose, input.SlackAlertsChannel)
 		if err != nil {
 			return err
 		}
@@ -102,7 +102,7 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, slug *slug.Slug, inpu
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	team, err = r.database.UpdateTeam(ctx, team.Slug, input.Purpose)
+	team, err = r.database.UpdateTeam(ctx, team.Slug, input.Purpose, input.SlackAlertsChannel)
 	if err != nil {
 		return nil, err
 	}
@@ -677,7 +677,10 @@ func (r *teamResolver) ReconcilerState(ctx context.Context, obj *db.Team) (*mode
 
 // SlackAlertsChannel is the resolver for the slackAlertsChannel field.
 func (r *teamResolver) SlackAlertsChannel(ctx context.Context, obj *db.Team) (*string, error) {
-	panic(fmt.Errorf("not implemented: SlackAlertsChannel - slackAlertsChannel"))
+	if !obj.SlackAlertsChannel.Valid || obj.SlackAlertsChannel.String == "" {
+		return nil, nil
+	}
+	return &obj.SlackAlertsChannel.String, nil
 }
 
 // Team returns generated.TeamResolver implementation.

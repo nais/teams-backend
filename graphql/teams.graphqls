@@ -276,7 +276,7 @@ input UpdateTeamInput {
     "Specify team purpose to update the existing value."
     purpose: String
 
-    "Specify the Slack channel where NAIS alerts will be sent."
+    "Specify the Slack channel where NAIS alerts will be sent. Set to an empty string to remove the existing value."
     slackAlertsChannel: String
 }
 

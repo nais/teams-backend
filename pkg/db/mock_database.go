@@ -157,13 +157,13 @@ func (_m *MockDatabase) CreateSession(ctx context.Context, userID uuid.UUID) (*S
 	return r0, r1
 }
 
-// CreateTeam provides a mock function with given fields: ctx, _a1, purpose
-func (_m *MockDatabase) CreateTeam(ctx context.Context, _a1 slug.Slug, purpose string) (*Team, error) {
-	ret := _m.Called(ctx, _a1, purpose)
+// CreateTeam provides a mock function with given fields: ctx, _a1, purpose, slackAlertsChannel
+func (_m *MockDatabase) CreateTeam(ctx context.Context, _a1 slug.Slug, purpose string, slackAlertsChannel *string) (*Team, error) {
+	ret := _m.Called(ctx, _a1, purpose, slackAlertsChannel)
 
 	var r0 *Team
-	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug, string) *Team); ok {
-		r0 = rf(ctx, _a1, purpose)
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug, string, *string) *Team); ok {
+		r0 = rf(ctx, _a1, purpose, slackAlertsChannel)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*Team)
@@ -171,8 +171,8 @@ func (_m *MockDatabase) CreateTeam(ctx context.Context, _a1 slug.Slug, purpose s
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug, string) error); ok {
-		r1 = rf(ctx, _a1, purpose)
+	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug, string, *string) error); ok {
+		r1 = rf(ctx, _a1, purpose, slackAlertsChannel)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1089,13 +1089,13 @@ func (_m *MockDatabase) Transaction(ctx context.Context, fn DatabaseTransactionF
 	return r0
 }
 
-// UpdateTeam provides a mock function with given fields: ctx, teamSlug, purpose
-func (_m *MockDatabase) UpdateTeam(ctx context.Context, teamSlug slug.Slug, purpose *string) (*Team, error) {
-	ret := _m.Called(ctx, teamSlug, purpose)
+// UpdateTeam provides a mock function with given fields: ctx, teamSlug, purpose, slackAlertsChannel
+func (_m *MockDatabase) UpdateTeam(ctx context.Context, teamSlug slug.Slug, purpose *string, slackAlertsChannel *string) (*Team, error) {
+	ret := _m.Called(ctx, teamSlug, purpose, slackAlertsChannel)
 
 	var r0 *Team
-	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug, *string) *Team); ok {
-		r0 = rf(ctx, teamSlug, purpose)
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug, *string, *string) *Team); ok {
+		r0 = rf(ctx, teamSlug, purpose, slackAlertsChannel)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*Team)
@@ -1103,8 +1103,8 @@ func (_m *MockDatabase) UpdateTeam(ctx context.Context, teamSlug slug.Slug, purp
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug, *string) error); ok {
-		r1 = rf(ctx, teamSlug, purpose)
+	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug, *string, *string) error); ok {
+		r1 = rf(ctx, teamSlug, purpose, slackAlertsChannel)
 	} else {
 		r1 = ret.Error(1)
 	}

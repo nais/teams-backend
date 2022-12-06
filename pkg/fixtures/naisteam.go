@@ -16,7 +16,7 @@ func CreateNaisVerification(ctx context.Context, database db.Database) error {
 	_, err := database.GetTeamBySlug(ctx, Slug)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			_, err = database.CreateTeam(ctx, Slug, Purpose)
+			_, err = database.CreateTeam(ctx, Slug, Purpose, nil)
 		}
 	}
 

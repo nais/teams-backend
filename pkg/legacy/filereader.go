@@ -1,6 +1,7 @@
 package legacy
 
 import (
+	"database/sql"
 	"encoding/json"
 	"os"
 
@@ -25,29 +26,22 @@ type Team struct {
 	AzureGroupID          uuid.UUID
 }
 
-func (t *Team) Convert() (*db.Team, []db.TeamMetadata) {
-	metadata := make([]db.TeamMetadata, 0)
-
-	if len(t.SlackChannel) > 0 {
-		metadata = append(metadata, db.TeamMetadata{
-			Key:   "slack-channel-generic",
-			Value: &t.SlackChannel,
-		})
-	}
+func (t *Team) Convert() *db.Team {
+	var slackAlertsChannel *string
 
 	if len(t.PlatformAlertsChannel) > 0 {
-		metadata = append(metadata, db.TeamMetadata{
-			Key:   "slack-channel-platform-alerts",
-			Value: &t.PlatformAlertsChannel,
-		})
+		slackAlertsChannel = &t.PlatformAlertsChannel
+	} else if len(t.SlackChannel) > 0 {
+		slackAlertsChannel = &t.SlackChannel
 	}
 
 	return &db.Team{
 		Team: &sqlc.Team{
-			Slug:    slug.Slug(t.Name),
-			Purpose: t.Description,
+			Slug:               slug.Slug(t.Name),
+			Purpose:            t.Description,
+			SlackAlertsChannel: nullString(slackAlertsChannel),
 		},
-	}, metadata
+	}
 }
 
 func ReadTeamFiles(ymlPath, jsonPath string, log logger.Logger) (map[string]*Team, error) {
@@ -93,4 +87,14 @@ func ReadTeamFiles(ymlPath, jsonPath string, log logger.Logger) (map[string]*Tea
 	}
 
 	return teammap, nil
+}
+
+func nullString(s *string) sql.NullString {
+	if s == nil {
+		return sql.NullString{}
+	}
+	return sql.NullString{
+		String: *s,
+		Valid:  true,
+	}
 }

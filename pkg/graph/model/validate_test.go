@@ -12,6 +12,38 @@ func ptr[T any](value T) *T {
 	return &value
 }
 
+func TestCreateTeamInput_Validate_SlackAlertsChannel(t *testing.T) {
+	tpl := model.CreateTeamInput{
+		Slug:    ptr(slug.Slug("valid-slug")),
+		Purpose: "valid purpose",
+	}
+
+	validChannels := []string{
+		"#foo",
+		"#foo-bar",
+		"#æøå",
+		"#aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+	}
+
+	invalidChannels := []string{
+		"foo", // missing hash
+		"#a",  // too short
+		"#aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", // too long
+		"#foo bar", // space not allowed
+		"#Foobar",  // upper case not allowed
+	}
+
+	for _, s := range validChannels {
+		tpl.SlackAlertsChannel = ptr(s)
+		assert.NoError(t, tpl.Validate(), "Slack alerts channel %q should pass validation, but didn't", *tpl.SlackAlertsChannel)
+	}
+
+	for _, s := range invalidChannels {
+		tpl.SlackAlertsChannel = ptr(s)
+		assert.Error(t, tpl.Validate(), "Slack alerts channel %q passed validation even if it should not", *tpl.SlackAlertsChannel)
+	}
+}
+
 func TestCreateTeamInput_Validate_Slug(t *testing.T) {
 	tpl := model.CreateTeamInput{
 		Slug:    nil,
@@ -48,11 +80,11 @@ func TestCreateTeamInput_Validate_Slug(t *testing.T) {
 
 	for _, s := range validSlugs {
 		tpl.Slug = ptr(slug.Slug(s))
-		assert.NoError(t, tpl.Validate(), "Slug '%s' should pass validation, but didn't", tpl.Slug)
+		assert.NoError(t, tpl.Validate(), "Slug %q should pass validation, but didn't", tpl.Slug)
 	}
 
 	for _, s := range invalidSlugs {
 		tpl.Slug = ptr(slug.Slug(s))
-		assert.Error(t, tpl.Validate(), "Slug '%s' passed validation even if it should not", tpl.Slug)
+		assert.Error(t, tpl.Validate(), "Slug %q passed validation even if it should not", tpl.Slug)
 	}
 }

@@ -60,11 +60,13 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 	assert.NoError(t, err)
 	resolver := graph.NewResolver(database, "example.com", reconcilers, auditLogger, gcpEnvironments, log).Mutation()
 	teamSlug := slug.Slug("some-slug")
+	slackChannel := "#my-slack-channel"
 
 	t.Run("create team with empty purpose", func(t *testing.T) {
 		_, err := resolver.CreateTeam(ctx, model.CreateTeamInput{
-			Slug:    &teamSlug,
-			Purpose: "  ",
+			Slug:               &teamSlug,
+			Purpose:            "  ",
+			SlackAlertsChannel: nil,
 		})
 		assert.ErrorContains(t, err, "You must specify the purpose for your team")
 	})
@@ -77,7 +79,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 		dbtx := db.NewMockDatabase(t)
 
 		dbtx.
-			On("CreateTeam", txCtx, teamSlug, "some purpose").
+			On("CreateTeam", txCtx, teamSlug, "some purpose", &slackChannel).
 			Return(createdTeam, nil).
 			Once()
 		dbtx.
@@ -108,8 +110,9 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Once()
 
 		returnedTeam, err := resolver.CreateTeam(ctx, model.CreateTeamInput{
-			Slug:    &teamSlug,
-			Purpose: " some purpose ",
+			Slug:               &teamSlug,
+			Purpose:            " some purpose ",
+			SlackAlertsChannel: &slackChannel,
 		})
 		assert.NoError(t, err)
 		assert.Equal(t, createdTeam.Slug, returnedTeam.Slug)
@@ -126,7 +129,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 		dbtx := db.NewMockDatabase(t)
 
 		dbtx.
-			On("CreateTeam", txCtx, teamSlug, "some purpose").
+			On("CreateTeam", txCtx, teamSlug, "some purpose", &slackChannel).
 			Return(createdTeam, nil).
 			Once()
 
@@ -153,8 +156,9 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Once()
 
 		returnedTeam, err := resolver.CreateTeam(saCtx, model.CreateTeamInput{
-			Slug:    &teamSlug,
-			Purpose: " some purpose ",
+			Slug:               &teamSlug,
+			Purpose:            " some purpose ",
+			SlackAlertsChannel: &slackChannel,
 		})
 
 		assert.NoError(t, err)

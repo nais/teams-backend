@@ -14,18 +14,19 @@ import (
 )
 
 const createTeam = `-- name: CreateTeam :one
-INSERT INTO teams (slug, purpose)
-VALUES ($1, $2)
+INSERT INTO teams (slug, purpose, slack_alerts_channel)
+VALUES ($1, $2, $3)
 RETURNING slug, purpose, enabled, last_successful_sync, slack_alerts_channel
 `
 
 type CreateTeamParams struct {
-	Slug    slug.Slug
-	Purpose string
+	Slug               slug.Slug
+	Purpose            string
+	SlackAlertsChannel sql.NullString
 }
 
 func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, error) {
-	row := q.db.QueryRow(ctx, createTeam, arg.Slug, arg.Purpose)
+	row := q.db.QueryRow(ctx, createTeam, arg.Slug, arg.Purpose, arg.SlackAlertsChannel)
 	var i Team
 	err := row.Scan(
 		&i.Slug,
@@ -230,18 +231,20 @@ func (q *Queries) SetTeamMetadata(ctx context.Context, arg SetTeamMetadataParams
 
 const updateTeam = `-- name: UpdateTeam :one
 UPDATE teams
-SET purpose = COALESCE($1, purpose)
-WHERE slug = $2
+SET purpose = COALESCE($1, purpose),
+    slack_alerts_channel = COALESCE($2, slack_alerts_channel)
+WHERE slug = $3
 RETURNING slug, purpose, enabled, last_successful_sync, slack_alerts_channel
 `
 
 type UpdateTeamParams struct {
-	Purpose sql.NullString
-	Slug    slug.Slug
+	Purpose            sql.NullString
+	SlackAlertsChannel sql.NullString
+	Slug               slug.Slug
 }
 
 func (q *Queries) UpdateTeam(ctx context.Context, arg UpdateTeamParams) (*Team, error) {
-	row := q.db.QueryRow(ctx, updateTeam, arg.Purpose, arg.Slug)
+	row := q.db.QueryRow(ctx, updateTeam, arg.Purpose, arg.SlackAlertsChannel, arg.Slug)
 	var i Team
 	err := row.Scan(
 		&i.Slug,

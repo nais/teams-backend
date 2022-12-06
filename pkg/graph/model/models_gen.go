@@ -104,7 +104,7 @@ type TeamSync struct {
 type UpdateTeamInput struct {
 	// Specify team purpose to update the existing value.
 	Purpose *string `json:"purpose"`
-	// Specify the Slack channel where NAIS alerts will be sent.
+	// Specify the Slack channel where NAIS alerts will be sent. Set to an empty string to remove the existing value.
 	SlackAlertsChannel *string `json:"slackAlertsChannel"`
 }
 
