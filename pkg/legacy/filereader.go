@@ -3,6 +3,7 @@ package legacy
 import (
 	"encoding/json"
 	"os"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/db"
@@ -38,7 +39,7 @@ func (t *Team) Convert() *db.Team {
 		Team: &sqlc.Team{
 			Slug:               slug.Slug(t.Name),
 			Purpose:            t.Description,
-			SlackAlertsChannel: slackAlertsChannel,
+			SlackAlertsChannel: strings.ToLower(slackAlertsChannel),
 		},
 	}
 }
