@@ -172,16 +172,11 @@ func run(log logger.Logger) error {
 				delete(teamMembers, user.Email)
 			}
 
-			convertedTeam, metadata := yamlteam.Convert()
+			convertedTeam := yamlteam.Convert()
 
 			team, err := dbtx.GetTeamBySlug(ctx, convertedTeam.Slug)
 			if err != nil {
-				team, err = dbtx.CreateTeam(ctx, convertedTeam.Slug, convertedTeam.Purpose)
-				if err != nil {
-					return err
-				}
-
-				err = dbtx.SetTeamMetadata(ctx, team.Slug, metadata)
+				team, err = dbtx.CreateTeam(ctx, convertedTeam.Slug, convertedTeam.Purpose, convertedTeam.SlackAlertsChannel)
 				if err != nil {
 					return err
 				}

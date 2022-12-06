@@ -173,6 +173,9 @@ type Team {
 
     "Current reconciler state for the team."
     reconcilerState: ReconcilerState!
+
+    "Slack channel for NAIS alerts."
+    slackAlertsChannel: String
 }
 
 "Reconciler state type."
@@ -263,12 +266,18 @@ input CreateTeamInput {
 
     "Team purpose."
     purpose: String!
+
+    "Specify the Slack channel where NAIS alerts will be sent."
+    slackAlertsChannel: String!
 }
 
 "Input for updating an existing team."
 input UpdateTeamInput {
     "Specify team purpose to update the existing value."
     purpose: String
+
+    "Specify the Slack channel to update the existing value."
+    slackAlertsChannel: String
 }
 
 "Available team roles."
