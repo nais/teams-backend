@@ -675,14 +675,6 @@ func (r *teamResolver) ReconcilerState(ctx context.Context, obj *db.Team) (*mode
 	}, nil
 }
 
-// SlackAlertsChannel is the resolver for the slackAlertsChannel field.
-func (r *teamResolver) SlackAlertsChannel(ctx context.Context, obj *db.Team) (*string, error) {
-	if !obj.SlackAlertsChannel.Valid || obj.SlackAlertsChannel.String == "" {
-		return nil, nil
-	}
-	return &obj.SlackAlertsChannel.String, nil
-}
-
 // Team returns generated.TeamResolver implementation.
 func (r *Resolver) Team() generated.TeamResolver { return &teamResolver{r} }
 

@@ -66,11 +66,11 @@ func (d *database) UpdateTeam(ctx context.Context, teamSlug slug.Slug, purpose, 
 	return &Team{Team: team}, nil
 }
 
-func (d *database) CreateTeam(ctx context.Context, slug slug.Slug, purpose string, slackAlertsChannel *string) (*Team, error) {
+func (d *database) CreateTeam(ctx context.Context, slug slug.Slug, purpose, slackAlertsChannel string) (*Team, error) {
 	team, err := d.querier.CreateTeam(ctx, sqlc.CreateTeamParams{
 		Slug:               slug,
 		Purpose:            purpose,
-		SlackAlertsChannel: nullString(slackAlertsChannel),
+		SlackAlertsChannel: slackAlertsChannel,
 	})
 	if err != nil {
 		return nil, err

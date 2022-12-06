@@ -158,11 +158,11 @@ func (_m *MockDatabase) CreateSession(ctx context.Context, userID uuid.UUID) (*S
 }
 
 // CreateTeam provides a mock function with given fields: ctx, _a1, purpose, slackAlertsChannel
-func (_m *MockDatabase) CreateTeam(ctx context.Context, _a1 slug.Slug, purpose string, slackAlertsChannel *string) (*Team, error) {
+func (_m *MockDatabase) CreateTeam(ctx context.Context, _a1 slug.Slug, purpose string, slackAlertsChannel string) (*Team, error) {
 	ret := _m.Called(ctx, _a1, purpose, slackAlertsChannel)
 
 	var r0 *Team
-	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug, string, *string) *Team); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug, string, string) *Team); ok {
 		r0 = rf(ctx, _a1, purpose, slackAlertsChannel)
 	} else {
 		if ret.Get(0) != nil {
@@ -171,7 +171,7 @@ func (_m *MockDatabase) CreateTeam(ctx context.Context, _a1 slug.Slug, purpose s
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug, string, *string) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug, string, string) error); ok {
 		r1 = rf(ctx, _a1, purpose, slackAlertsChannel)
 	} else {
 		r1 = ret.Error(1)

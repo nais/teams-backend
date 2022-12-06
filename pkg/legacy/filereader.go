@@ -1,7 +1,6 @@
 package legacy
 
 import (
-	"database/sql"
 	"encoding/json"
 	"os"
 
@@ -27,19 +26,19 @@ type Team struct {
 }
 
 func (t *Team) Convert() *db.Team {
-	var slackAlertsChannel *string
+	var slackAlertsChannel string
 
 	if len(t.PlatformAlertsChannel) > 0 {
-		slackAlertsChannel = &t.PlatformAlertsChannel
+		slackAlertsChannel = t.PlatformAlertsChannel
 	} else if len(t.SlackChannel) > 0 {
-		slackAlertsChannel = &t.SlackChannel
+		slackAlertsChannel = t.SlackChannel
 	}
 
 	return &db.Team{
 		Team: &sqlc.Team{
 			Slug:               slug.Slug(t.Name),
 			Purpose:            t.Description,
-			SlackAlertsChannel: nullString(slackAlertsChannel),
+			SlackAlertsChannel: slackAlertsChannel,
 		},
 	}
 }
@@ -87,14 +86,4 @@ func ReadTeamFiles(ymlPath, jsonPath string, log logger.Logger) (map[string]*Tea
 	}
 
 	return teammap, nil
-}
-
-func nullString(s *string) sql.NullString {
-	if s == nil {
-		return sql.NullString{}
-	}
-	return sql.NullString{
-		String: *s,
-		Valid:  true,
-	}
 }

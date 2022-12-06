@@ -22,7 +22,7 @@ RETURNING slug, purpose, enabled, last_successful_sync, slack_alerts_channel
 type CreateTeamParams struct {
 	Slug               slug.Slug
 	Purpose            string
-	SlackAlertsChannel sql.NullString
+	SlackAlertsChannel string
 }
 
 func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, error) {

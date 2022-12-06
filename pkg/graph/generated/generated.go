@@ -259,7 +259,6 @@ type TeamResolver interface {
 
 	LastSuccessfulSync(ctx context.Context, obj *db.Team) (*time.Time, error)
 	ReconcilerState(ctx context.Context, obj *db.Team) (*model.ReconcilerState, error)
-	SlackAlertsChannel(ctx context.Context, obj *db.Team) (*string, error)
 }
 type UserResolver interface {
 	Teams(ctx context.Context, obj *db.User) ([]*model.TeamMembership, error)
@@ -1645,7 +1644,7 @@ input CreateTeamInput {
     purpose: String!
 
     "Specify the Slack channel where NAIS alerts will be sent."
-    slackAlertsChannel: String
+    slackAlertsChannel: String!
 }
 
 "Input for updating an existing team."
@@ -1653,7 +1652,7 @@ input UpdateTeamInput {
     "Specify team purpose to update the existing value."
     purpose: String
 
-    "Specify the Slack channel where NAIS alerts will be sent. Set to an empty string to remove the existing value."
+    "Specify the Slack channel to update the existing value."
     slackAlertsChannel: String
 }
 
@@ -7097,7 +7096,7 @@ func (ec *executionContext) _Team_slackAlertsChannel(ctx context.Context, field 
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Team().SlackAlertsChannel(rctx, obj)
+		return obj.SlackAlertsChannel, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -7106,17 +7105,17 @@ func (ec *executionContext) _Team_slackAlertsChannel(ctx context.Context, field 
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Team_slackAlertsChannel(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Team",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
 		},
@@ -9572,7 +9571,7 @@ func (ec *executionContext) unmarshalInputCreateTeamInput(ctx context.Context, o
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slackAlertsChannel"))
-			it.SlackAlertsChannel, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.SlackAlertsChannel, err = ec.unmarshalNString2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -10816,22 +10815,9 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 
 			})
 		case "slackAlertsChannel":
-			field := field
 
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Team_slackAlertsChannel(ctx, field, obj)
-				return res
-			}
+			out.Values[i] = ec._Team_slackAlertsChannel(ctx, field, obj)
 
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -12704,6 +12690,16 @@ func (ec *executionContext) marshalOSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkg�
 		return graphql.Null
 	}
 	res := slug.MarshalSlug(v)
+	return res
+}
+
+func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {
+	res, err := graphql.UnmarshalString(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOString2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
+	res := graphql.MarshalString(v)
 	return res
 }
 

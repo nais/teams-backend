@@ -34,20 +34,21 @@ func TestCreateTeamInput_Validate_SlackAlertsChannel(t *testing.T) {
 	}
 
 	for _, s := range validChannels {
-		tpl.SlackAlertsChannel = ptr(s)
-		assert.NoError(t, tpl.Validate(), "Slack alerts channel %q should pass validation, but didn't", *tpl.SlackAlertsChannel)
+		tpl.SlackAlertsChannel = s
+		assert.NoError(t, tpl.Validate(), "Slack alerts channel %q should pass validation, but didn't", tpl.SlackAlertsChannel)
 	}
 
 	for _, s := range invalidChannels {
-		tpl.SlackAlertsChannel = ptr(s)
-		assert.Error(t, tpl.Validate(), "Slack alerts channel %q passed validation even if it should not", *tpl.SlackAlertsChannel)
+		tpl.SlackAlertsChannel = s
+		assert.Error(t, tpl.Validate(), "Slack alerts channel %q passed validation even if it should not", tpl.SlackAlertsChannel)
 	}
 }
 
 func TestCreateTeamInput_Validate_Slug(t *testing.T) {
 	tpl := model.CreateTeamInput{
-		Slug:    nil,
-		Purpose: "valid purpose",
+		Slug:               nil,
+		Purpose:            "valid purpose",
+		SlackAlertsChannel: "#channel",
 	}
 
 	validSlugs := []string{

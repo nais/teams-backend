@@ -32,7 +32,7 @@ ON CONFLICT (team_slug, key) DO
 -- name: UpdateTeam :one
 UPDATE teams
 SET purpose = COALESCE(sqlc.narg(purpose), purpose),
-    slack_alerts_channel = COALESCE(sqlc.arg(slack_alerts_channel), slack_alerts_channel)
+    slack_alerts_channel = COALESCE(sqlc.narg(slack_alerts_channel), slack_alerts_channel)
 WHERE slug = sqlc.arg(slug)
 RETURNING *;
 

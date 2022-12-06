@@ -176,11 +176,7 @@ func run(log logger.Logger) error {
 
 			team, err := dbtx.GetTeamBySlug(ctx, convertedTeam.Slug)
 			if err != nil {
-				var slackAlertsChannel *string
-				if convertedTeam.SlackAlertsChannel.Valid {
-					slackAlertsChannel = &convertedTeam.SlackAlertsChannel.String
-				}
-				team, err = dbtx.CreateTeam(ctx, convertedTeam.Slug, convertedTeam.Purpose, slackAlertsChannel)
+				team, err = dbtx.CreateTeam(ctx, convertedTeam.Slug, convertedTeam.Purpose, convertedTeam.SlackAlertsChannel)
 				if err != nil {
 					return err
 				}

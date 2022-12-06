@@ -6,14 +6,7 @@ import (
 
 func (input CreateTeamInput) Sanitize() CreateTeamInput {
 	input.Purpose = strings.TrimSpace(input.Purpose)
-
-	if input.SlackAlertsChannel != nil && *input.SlackAlertsChannel == "" {
-		input.SlackAlertsChannel = nil
-	}
-
-	if input.SlackAlertsChannel != nil {
-		input.SlackAlertsChannel = ptr(strings.TrimSpace(*input.SlackAlertsChannel))
-	}
+	input.SlackAlertsChannel = strings.TrimSpace(input.SlackAlertsChannel)
 	return input
 }
 

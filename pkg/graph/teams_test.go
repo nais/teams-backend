@@ -66,7 +66,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 		_, err := resolver.CreateTeam(ctx, model.CreateTeamInput{
 			Slug:               &teamSlug,
 			Purpose:            "  ",
-			SlackAlertsChannel: nil,
+			SlackAlertsChannel: slackChannel,
 		})
 		assert.ErrorContains(t, err, "You must specify the purpose for your team")
 	})
@@ -79,7 +79,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 		dbtx := db.NewMockDatabase(t)
 
 		dbtx.
-			On("CreateTeam", txCtx, teamSlug, "some purpose", &slackChannel).
+			On("CreateTeam", txCtx, teamSlug, "some purpose", slackChannel).
 			Return(createdTeam, nil).
 			Once()
 		dbtx.
@@ -112,7 +112,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 		returnedTeam, err := resolver.CreateTeam(ctx, model.CreateTeamInput{
 			Slug:               &teamSlug,
 			Purpose:            " some purpose ",
-			SlackAlertsChannel: &slackChannel,
+			SlackAlertsChannel: slackChannel,
 		})
 		assert.NoError(t, err)
 		assert.Equal(t, createdTeam.Slug, returnedTeam.Slug)
@@ -129,7 +129,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 		dbtx := db.NewMockDatabase(t)
 
 		dbtx.
-			On("CreateTeam", txCtx, teamSlug, "some purpose", &slackChannel).
+			On("CreateTeam", txCtx, teamSlug, "some purpose", slackChannel).
 			Return(createdTeam, nil).
 			Once()
 
@@ -158,7 +158,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 		returnedTeam, err := resolver.CreateTeam(saCtx, model.CreateTeamInput{
 			Slug:               &teamSlug,
 			Purpose:            " some purpose ",
-			SlackAlertsChannel: &slackChannel,
+			SlackAlertsChannel: slackChannel,
 		})
 
 		assert.NoError(t, err)

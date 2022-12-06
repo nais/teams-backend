@@ -102,7 +102,7 @@ type Database interface {
 	DeleteUser(ctx context.Context, userID uuid.UUID) error
 	GetUsers(ctx context.Context) ([]*User, error)
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error)
-	CreateTeam(ctx context.Context, slug slug.Slug, purpose string, slackAlertsChannel *string) (*Team, error)
+	CreateTeam(ctx context.Context, slug slug.Slug, purpose, slackAlertsChannel string) (*Team, error)
 	SetTeamMetadata(ctx context.Context, slug slug.Slug, metadata []TeamMetadata) error
 	GetTeamMetadata(ctx context.Context, slug slug.Slug) ([]*TeamMetadata, error)
 	UpdateTeam(ctx context.Context, teamSlug slug.Slug, purpose, slackAlertsChannel *string) (*Team, error)
