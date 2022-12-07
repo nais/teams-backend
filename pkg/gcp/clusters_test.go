@@ -30,11 +30,11 @@ func TestDecodeJSONToClusters(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Contains(t, clusters, "env1")
-		assert.Equal(t, int64(123), clusters["env1"].TeamFolderID)
+		assert.Equal(t, int64(123), clusters["env1"].TeamsFolderID)
 		assert.Equal(t, "some-id-123", clusters["env1"].ProjectID)
 
 		assert.Contains(t, clusters, "env2")
-		assert.Equal(t, int64(456), clusters["env2"].TeamFolderID)
+		assert.Equal(t, int64(456), clusters["env2"].TeamsFolderID)
 		assert.Equal(t, "some-id-456", clusters["env2"].ProjectID)
 	})
 }

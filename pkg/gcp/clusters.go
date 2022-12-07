@@ -10,8 +10,8 @@ import (
 type Clusters map[string]Cluster
 
 type Cluster struct {
-	TeamFolderID int64
-	ProjectID    string
+	TeamsFolderID int64
+	ProjectID     string
 }
 
 func (c *Clusters) Decode(value string) error {
@@ -20,8 +20,8 @@ func (c *Clusters) Decode(value string) error {
 		return nil
 	}
 	clustersWithStringID := make(map[string]struct {
-		TeamFolderID string `json:"teams_folder_id"`
-		ProjectID    string `json:"project_id"`
+		TeamsFolderID string `json:"teams_folder_id"`
+		ProjectID     string `json:"project_id"`
 	})
 
 	err := json.NewDecoder(strings.NewReader(value)).Decode(&clustersWithStringID)
@@ -30,13 +30,13 @@ func (c *Clusters) Decode(value string) error {
 	}
 
 	for environment, cluster := range clustersWithStringID {
-		folderID, err := strconv.ParseInt(cluster.TeamFolderID, 10, 64)
+		folderID, err := strconv.ParseInt(cluster.TeamsFolderID, 10, 64)
 		if err != nil {
 			return fmt.Errorf("parse GCP cluster info's folder ID: %w", err)
 		}
 		(*c)[environment] = Cluster{
-			TeamFolderID: folderID,
-			ProjectID:    cluster.ProjectID,
+			TeamsFolderID: folderID,
+			ProjectID:     cluster.ProjectID,
 		}
 	}
 	return nil

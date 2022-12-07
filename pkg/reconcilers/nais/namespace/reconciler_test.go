@@ -48,8 +48,8 @@ func TestReconcile(t *testing.T) {
 	azureGroupID := uuid.New()
 	clusters := gcp.Clusters{
 		environment: gcp.Cluster{
-			TeamFolderID: 123,
-			ProjectID:    "env-dev-123",
+			TeamsFolderID: 123,
+			ProjectID:     "env-dev-123",
 		},
 	}
 

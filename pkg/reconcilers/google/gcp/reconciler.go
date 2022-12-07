@@ -82,7 +82,7 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 	}
 
 	for environment, cluster := range r.clusters {
-		project, err := r.getOrCreateProject(ctx, state, environment, cluster.TeamFolderID, input)
+		project, err := r.getOrCreateProject(ctx, state, environment, cluster.TeamsFolderID, input)
 		if err != nil {
 			return fmt.Errorf("get or create a GCP project for team %q in environment %q: %w", input.Team.Slug, environment, err)
 		}

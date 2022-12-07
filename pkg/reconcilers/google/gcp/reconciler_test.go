@@ -34,8 +34,8 @@ func TestReconcile(t *testing.T) {
 
 	clusters := gcp.Clusters{
 		env: {
-			TeamFolderID: teamFolderID,
-			ProjectID:    clusterProjectID,
+			TeamsFolderID: teamFolderID,
+			ProjectID:     clusterProjectID,
 		},
 	}
 
