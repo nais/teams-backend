@@ -14,6 +14,7 @@ import (
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/gcp"
 	"github.com/nais/console/pkg/google_token_source"
 	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
@@ -32,7 +33,7 @@ const (
 	GoogleProjectDisplayNameMaxLength = 30
 )
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters ClusterInfo, gcpServices *GcpServices, tenantName, domain, cnrmRoleName, billingAccount string, log logger.Logger) *googleGcpReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, gcpServices *GcpServices, tenantName, domain, cnrmRoleName, billingAccount string, log logger.Logger) *googleGcpReconciler {
 	return &googleGcpReconciler{
 		database:       database,
 		auditLogger:    auditLogger,
@@ -54,12 +55,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		return nil, err
 	}
 
-	clusters, err := GetClusterInfoFromJson(cfg.GCP.Clusters)
-	if err != nil {
-		return nil, fmt.Errorf("parse GCP cluster info: %w", err)
-	}
-
-	return New(database, auditLogger, clusters, gcpServices, cfg.TenantName, cfg.TenantDomain, cfg.GCP.CnrmRole, cfg.GCP.BillingAccount, log), nil
+	return New(database, auditLogger, cfg.GCP.Clusters, gcpServices, cfg.TenantName, cfg.TenantDomain, cfg.GCP.CnrmRole, cfg.GCP.BillingAccount, log), nil
 }
 
 func (r *googleGcpReconciler) Name() sqlc.ReconcilerName {
@@ -174,7 +170,7 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *rec
 
 // setProjectPermissions Make sure that the project has the necessary permissions, and don't remove permissions we don't
 // control
-func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project *cloudresourcemanager.Project, input reconcilers.Input, groupEmail, environment string, cluster Cluster) error {
+func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project *cloudresourcemanager.Project, input reconcilers.Input, groupEmail, environment string, cluster gcp.Cluster) error {
 	cnrmServiceAccount, err := r.getOrCreateProjectCnrmServiceAccount(ctx, input, environment, cluster)
 	if err != nil {
 		return fmt.Errorf("create CNRM service account for project %q for team %q in environment %q: %w", project.ProjectId, input.Team.Slug, environment, err)
@@ -232,7 +228,7 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 
 // getOrCreateProjectCnrmServiceAccount Get the CNRM service account for the project in this env. If the service account
 // does not exist, attempt to create it, and then return it.
-func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.Context, input reconcilers.Input, environment string, cluster Cluster) (*iam.ServiceAccount, error) {
+func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.Context, input reconcilers.Input, environment string, cluster gcp.Cluster) (*iam.ServiceAccount, error) {
 	name, accountID := cnrmServiceAccountNameAndAccountID(input.Team.Slug, cluster.ProjectID)
 	serviceAccount, err := r.gcpServices.IamProjectsServiceAccountsService.Get(name).Do()
 	if err == nil {
@@ -383,30 +379,6 @@ func GetProjectDisplayName(slug slug.Slug, environment string) string {
 	prefix := console.Truncate(string(slug), maxSlugLength)
 	prefix = strings.TrimSuffix(prefix, "-")
 	return prefix + suffix
-}
-
-func GetClusterInfoFromJson(jsonData string) (ClusterInfo, error) {
-	type stringClusterInfo = map[string]struct {
-		TeamFolderID string `json:"teams_folder_id"`
-		ProjectID    string `json:"project_id"`
-	}
-	tmpClusters := make(stringClusterInfo)
-	clusters := ClusterInfo{}
-	err := json.NewDecoder(strings.NewReader(jsonData)).Decode(&tmpClusters)
-	if err != nil {
-		return nil, fmt.Errorf("parse GCP cluster info: %w", err)
-	}
-	for k, v := range tmpClusters {
-		folderID, err := strconv.ParseInt(v.TeamFolderID, 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("parse GCP cluster info's folder ID: %w", err)
-		}
-		clusters[k] = Cluster{
-			TeamFolderID: folderID,
-			ProjectID:    v.ProjectID,
-		}
-	}
-	return clusters, nil
 }
 
 // calculateRoleBindings Given a set of role bindings, make sure the ones in requiredRoleBindings are present

@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/nais/console/pkg/logger"
-	"github.com/nais/console/pkg/slug"
-
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/gcp"
+	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/reconcilers/google/gcp"
 	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -32,7 +32,7 @@ func TestReconcile(t *testing.T) {
 		billingAccount   = "billingAccounts/123"
 	)
 
-	clusters := google_gcp_reconciler.ClusterInfo{
+	clusters := gcp.Clusters{
 		env: {
 			TeamFolderID: teamFolderID,
 			ProjectID:    clusterProjectID,
@@ -118,7 +118,7 @@ func TestReconcile(t *testing.T) {
 			Return(nil).
 			Once()
 		gcpServices := &google_gcp_reconciler.GcpServices{}
-		reconciler := google_gcp_reconciler.New(database, auditLogger, google_gcp_reconciler.ClusterInfo{}, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log)
+		reconciler := google_gcp_reconciler.New(database, auditLogger, gcp.Clusters{}, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log)
 
 		err := reconciler.Reconcile(ctx, input)
 		assert.NoError(t, err)
@@ -143,37 +143,6 @@ func TestGenerateProjectID(t *testing.T) {
 
 	// environment with hyphen as 4th character in environment
 	assert.Equal(t, "hapyteam-is-happy-pro-2a15", google_gcp_reconciler.GenerateProjectID("bais.io", "pro-duction", "hapyteam-is-happy"))
-}
-
-func TestGetClusterInfoFromJson(t *testing.T) {
-	t.Run("empty string", func(t *testing.T) {
-		info, err := google_gcp_reconciler.GetClusterInfoFromJson("")
-		assert.Nil(t, info)
-		assert.EqualError(t, err, "parse GCP cluster info: EOF")
-	})
-
-	t.Run("empty JSON object", func(t *testing.T) {
-		info, err := google_gcp_reconciler.GetClusterInfoFromJson("{}")
-		assert.NoError(t, err)
-		assert.Empty(t, info)
-	})
-
-	t.Run("JSON with clusters", func(t *testing.T) {
-		jsonData := `{
-			"env1": {"teams_folder_id": "123", "project_id": "some-id-123"},
-			"env2": {"teams_folder_id": "456", "project_id": "some-id-456"}
-		}`
-		info, err := google_gcp_reconciler.GetClusterInfoFromJson(jsonData)
-		assert.NoError(t, err)
-
-		assert.Contains(t, info, "env1")
-		assert.Equal(t, int64(123), info["env1"].TeamFolderID)
-		assert.Equal(t, "some-id-123", info["env1"].ProjectID)
-
-		assert.Contains(t, info, "env2")
-		assert.Equal(t, int64(456), info["env2"].TeamFolderID)
-		assert.Equal(t, "some-id-456", info["env2"].ProjectID)
-	})
 }
 
 func TestGetProjectDisplayName(t *testing.T) {

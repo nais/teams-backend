@@ -9,6 +9,7 @@ import (
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/gcp"
 	"github.com/nais/console/pkg/google_token_source"
 	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
@@ -40,6 +41,7 @@ type naisNamespaceReconciler struct {
 	database     db.Database
 	domain       string
 	auditLogger  auditlogger.AuditLogger
+	clusters     gcp.Clusters
 	projectID    string
 	azureEnabled bool
 	pubsubClient *pubsub.Client
@@ -48,10 +50,11 @@ type naisNamespaceReconciler struct {
 
 const Name = sqlc.ReconcilerNameNaisNamespace
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, domain, projectID string, azureEnabled bool, pubsubClient *pubsub.Client, log logger.Logger) *naisNamespaceReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, domain, projectID string, azureEnabled bool, pubsubClient *pubsub.Client, log logger.Logger) *naisNamespaceReconciler {
 	return &naisNamespaceReconciler{
 		database:     database,
 		auditLogger:  auditLogger,
+		clusters:     clusters,
 		domain:       domain,
 		projectID:    projectID,
 		azureEnabled: azureEnabled,
@@ -73,7 +76,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		return nil, fmt.Errorf("retrieve pubsub client: %w", err)
 	}
 
-	return New(database, auditLogger, cfg.TenantDomain, cfg.GoogleManagementProjectID, cfg.NaisNamespace.AzureEnabled, pubsubClient, log), nil
+	return New(database, auditLogger, cfg.GCP.Clusters, cfg.TenantDomain, cfg.GoogleManagementProjectID, cfg.NaisNamespace.AzureEnabled, pubsubClient, log), nil
 }
 
 func (r *naisNamespaceReconciler) Name() sqlc.ReconcilerName {
@@ -111,7 +114,16 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 		return err
 	}
 
+	log := r.log.WithTeamSlug(string(input.Team.Slug))
+	updateGcpProjectState := false
+
 	for environment, project := range gcpProjectState.Projects {
+		if !r.activeEnvironment(environment) {
+			updateGcpProjectState = true
+			log.Infof("environment %q from GCP project state is no longer active, will update state for the team", environment)
+			delete(gcpProjectState.Projects, environment)
+			continue
+		}
 		err = r.createNamespace(ctx, input.Team, environment, project.ProjectID, googleGroupEmail, azureGroupID)
 		if err != nil {
 			return fmt.Errorf("unable to create namespace for project %q in environment %q: %w", project.ProjectID, environment, err)
@@ -132,7 +144,14 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 
 	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, namespaceState)
 	if err != nil {
-		r.log.WithError(err).Error("persisted system state")
+		log.WithError(err).Error("persisted NAIS namespace state")
+	}
+
+	if updateGcpProjectState {
+		err = r.database.SetReconcilerStateForTeam(ctx, google_gcp_reconciler.Name, input.Team.Slug, gcpProjectState)
+		if err != nil {
+			log.WithError(err).Error("persisted GCP project state")
+		}
 	}
 
 	return nil
@@ -195,4 +214,9 @@ func (r *naisNamespaceReconciler) getAzureGroupID(ctx context.Context, teamSlug 
 	}
 
 	return azureState.GroupID.String(), nil
+}
+
+func (r *naisNamespaceReconciler) activeEnvironment(environment string) bool {
+	_, exists := r.clusters[environment]
+	return exists
 }

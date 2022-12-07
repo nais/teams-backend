@@ -2,12 +2,13 @@ package config
 
 import (
 	"github.com/kelseyhightower/envconfig"
+	"github.com/nais/console/pkg/gcp"
 )
 
 type GCP struct {
-	Clusters       string `envconfig:"CONSOLE_GCP_CLUSTERS"`
-	CnrmRole       string `envconfig:"CONSOLE_GCP_CNRM_ROLE"`
-	BillingAccount string `envconfig:"CONSOLE_GCP_BILLING_ACCOUNT"`
+	Clusters       gcp.Clusters `envconfig:"CONSOLE_GCP_CLUSTERS"`
+	CnrmRole       string       `envconfig:"CONSOLE_GCP_CNRM_ROLE"`
+	BillingAccount string       `envconfig:"CONSOLE_GCP_BILLING_ACCOUNT"`
 }
 
 type NaisNamespace struct {
@@ -48,12 +49,12 @@ type Config struct {
 }
 
 type ImporterConfig struct {
-	AzureClientID     string `envconfig:"CONSOLE_IMPORTER_AZURE_CLIENT_ID"`
-	AzureClientSecret string `envconfig:"CONSOLE_IMPORTER_AZURE_CLIENT_SECRET"`
-	AzureTenantID     string `envconfig:"CONSOLE_IMPORTER_AZURE_TENANT_ID"`
-	DatabaseURL       string `envconfig:"CONSOLE_DATABASE_URL"`
-	TenantDomain      string `envconfig:"CONSOLE_TENANT_DOMAIN"`
-	GCPClusters       string `envconfig:"CONSOLE_GCP_CLUSTERS"`
+	AzureClientID     string       `envconfig:"CONSOLE_IMPORTER_AZURE_CLIENT_ID"`
+	AzureClientSecret string       `envconfig:"CONSOLE_IMPORTER_AZURE_CLIENT_SECRET"`
+	AzureTenantID     string       `envconfig:"CONSOLE_IMPORTER_AZURE_TENANT_ID"`
+	DatabaseURL       string       `envconfig:"CONSOLE_DATABASE_URL"`
+	TenantDomain      string       `envconfig:"CONSOLE_TENANT_DOMAIN"`
+	GCPClusters       gcp.Clusters `envconfig:"CONSOLE_GCP_CLUSTERS"`
 }
 
 func Defaults() *Config {

@@ -102,16 +102,9 @@ func run(cfg *config.Config, log logger.Logger) error {
 		return err
 	}
 
-	gcpEnvironments := make([]string, 0)
-	if cfg.GCP.Clusters != "" {
-		clusterInfo, err := google_gcp_reconciler.GetClusterInfoFromJson(cfg.GCP.Clusters)
-		if err != nil {
-			return err
-		}
-
-		for env := range clusterInfo {
-			gcpEnvironments = append(gcpEnvironments, env)
-		}
+	gcpEnvironments := make([]string, 0, len(cfg.GCP.Clusters))
+	for environment := range cfg.GCP.Clusters {
+		gcpEnvironments = append(gcpEnvironments, environment)
 	}
 
 	handler := setupGraphAPI(database, cfg.TenantDomain, teamReconciler, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi), gcpEnvironments, log)
