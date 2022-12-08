@@ -18,43 +18,45 @@ type ServiceAccount struct {
 
 const NaisServiceAccountPrefix = "nais-"
 
-func parseAndValidateServiceAccounts(serviceAccountsJson string) ([]ServiceAccount, error) {
-	serviceAccounts := make([]ServiceAccount, 0)
-	err := json.NewDecoder(strings.NewReader(serviceAccountsJson)).Decode(&serviceAccounts)
-	if err != nil {
-		return nil, err
+type ServiceAccounts []ServiceAccount
+
+func (s *ServiceAccounts) Decode(value string) error {
+	if value == "" {
+		return nil
 	}
 
-	for _, serviceAccount := range serviceAccounts {
-		if !strings.HasPrefix(serviceAccount.Name, NaisServiceAccountPrefix) {
-			return nil, fmt.Errorf("service account is missing required %q prefix: %q", NaisServiceAccountPrefix, serviceAccount.Name)
-		}
-
-		if len(serviceAccount.Roles) == 0 {
-			return nil, fmt.Errorf("service account must have at least one role: %q", serviceAccount.Name)
-		}
-
-		if serviceAccount.APIKey == "" {
-			return nil, fmt.Errorf("service account is missing an API key: %q", serviceAccount.Name)
-		}
-
-		for _, role := range serviceAccount.Roles {
-			if !sqlc.RoleName(role).Valid() {
-				return nil, fmt.Errorf("invalid role name: %q for service account %q", role, serviceAccount.Name)
-			}
-		}
-	}
-
-	return serviceAccounts, nil
-}
-
-// SetupStaticServiceAccounts Create a set of service accounts with roles and API keys
-func SetupStaticServiceAccounts(ctx context.Context, database db.Database, serviceAccountsJson string) error {
-	serviceAccounts, err := parseAndValidateServiceAccounts(serviceAccountsJson)
+	serviceAccounts := make(ServiceAccounts, 0)
+	err := json.NewDecoder(strings.NewReader(value)).Decode(&serviceAccounts)
 	if err != nil {
 		return err
 	}
 
+	for _, serviceAccount := range serviceAccounts {
+		if !strings.HasPrefix(serviceAccount.Name, NaisServiceAccountPrefix) {
+			return fmt.Errorf("service account is missing required %q prefix: %q", NaisServiceAccountPrefix, serviceAccount.Name)
+		}
+
+		if len(serviceAccount.Roles) == 0 {
+			return fmt.Errorf("service account must have at least one role: %q", serviceAccount.Name)
+		}
+
+		if serviceAccount.APIKey == "" {
+			return fmt.Errorf("service account is missing an API key: %q", serviceAccount.Name)
+		}
+
+		for _, role := range serviceAccount.Roles {
+			if !sqlc.RoleName(role).Valid() {
+				return fmt.Errorf("invalid role name: %q for service account %q", role, serviceAccount.Name)
+			}
+		}
+	}
+
+	*s = serviceAccounts
+	return nil
+}
+
+// SetupStaticServiceAccounts Create a set of service accounts with roles and API keys
+func SetupStaticServiceAccounts(ctx context.Context, database db.Database, serviceAccounts ServiceAccounts) error {
 	return database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
 		serviceAccountNames := make(map[string]struct{})
 		for _, serviceAccountFromInput := range serviceAccounts {

@@ -14,66 +14,57 @@ import (
 )
 
 func TestSetupStaticServiceAccounts(t *testing.T) {
+	serviceAccounts := make(fixtures.ServiceAccounts, 0)
+
 	t.Run("empty string", func(t *testing.T) {
-		ctx := context.Background()
-		database := db.NewMockDatabase(t)
-		err := fixtures.SetupStaticServiceAccounts(ctx, database, "")
-		assert.EqualError(t, err, "EOF")
+		err := serviceAccounts.Decode("")
+		assert.NoError(t, err)
+		assert.Len(t, serviceAccounts, 0)
+	})
+
+	t.Run("invalid data", func(t *testing.T) {
+		err := serviceAccounts.Decode(`{"foo":"bar"}`)
+		assert.ErrorContains(t, err, `json: cannot unmarshal object`)
+		assert.Len(t, serviceAccounts, 0)
 	})
 
 	t.Run("service account with no roles", func(t *testing.T) {
-		ctx := context.Background()
-		database := db.NewMockDatabase(t)
-		json := `[
-					{
-						"name": "nais-service-account",
-						"apiKey": "some key",
-						"roles": []
-					}
-				]`
-		err := fixtures.SetupStaticServiceAccounts(ctx, database, json)
+		err := serviceAccounts.Decode(`[{
+			"name": "nais-service-account",
+			"apiKey": "some key",
+			"roles": []
+		}]`)
 		assert.EqualError(t, err, `service account must have at least one role: "nais-service-account"`)
+		assert.Len(t, serviceAccounts, 0)
 	})
 
 	t.Run("missing API key", func(t *testing.T) {
-		ctx := context.Background()
-		database := db.NewMockDatabase(t)
-		json := `[
-				{
-					"name": "nais-service-account",
-					"roles": ["Admin"]
-				}
-			]`
-		err := fixtures.SetupStaticServiceAccounts(ctx, database, json)
+		err := serviceAccounts.Decode(`[{
+			"name": "nais-service-account",
+			"roles": ["Admin"]
+		}]`)
 		assert.EqualError(t, err, `service account is missing an API key: "nais-service-account"`)
+		assert.Len(t, serviceAccounts, 0)
 	})
 
 	t.Run("service account with invalid name", func(t *testing.T) {
-		ctx := context.Background()
-		database := db.NewMockDatabase(t)
-		json := `[
-				{
-					"name": "service-account",
-					"apiKey": "some key",
-					"roles": ["Team viewer"]
-				}
-			]`
-		err := fixtures.SetupStaticServiceAccounts(ctx, database, json)
+		err := serviceAccounts.Decode(`[{
+			"name": "service-account",
+			"apiKey": "some key",
+			"roles": ["Team viewer"]
+		}]`)
 		assert.EqualError(t, err, `service account is missing required "nais-" prefix: "service-account"`)
+		assert.Len(t, serviceAccounts, 0)
 	})
 
 	t.Run("service account with invalid role", func(t *testing.T) {
-		ctx := context.Background()
-		database := db.NewMockDatabase(t)
-		json := `[
-				{
-					"name": "nais-service-account",
-					"apiKey": "some key",
-					"roles": ["role"]
-				}
-			]`
-		err := fixtures.SetupStaticServiceAccounts(ctx, database, json)
+		err := serviceAccounts.Decode(`[{
+			"name": "nais-service-account",
+			"apiKey": "some key",
+			"roles": ["role"]
+		}]`)
 		assert.EqualError(t, err, `invalid role name: "role" for service account "nais-service-account"`)
+		assert.Len(t, serviceAccounts, 0)
 	})
 
 	t.Run("create multiple service accounts and delete old one", func(t *testing.T) {
@@ -157,19 +148,19 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 			Return(nil).
 			Once()
 
-		json := `[
-				{
-					"name": "nais-service-account-1",
-					"apiKey": "key-1",
-					"roles": ["Team creator", "Team viewer"]
-				},
-				{
-					"name": "nais-service-account-2",
-					"apiKey": "key-2",
-					"roles": ["Admin"]
-				}
-			]`
-		err := fixtures.SetupStaticServiceAccounts(ctx, database, json)
+		err := serviceAccounts.Decode(`[{
+			"name": "nais-service-account-1",
+			"apiKey": "key-1",
+			"roles": ["Team creator", "Team viewer"]
+		}, {
+			"name": "nais-service-account-2",
+			"apiKey": "key-2",
+			"roles": ["Admin"]
+		}]`)
+		assert.NoError(t, err)
+		assert.Len(t, serviceAccounts, 2)
+
+		err = fixtures.SetupStaticServiceAccounts(ctx, database, serviceAccounts)
 		assert.NoError(t, err)
 	})
 }

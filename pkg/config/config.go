@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/kelseyhightower/envconfig"
+	"github.com/nais/console/pkg/fixtures"
 	"github.com/nais/console/pkg/gcp"
 )
 
@@ -36,16 +37,16 @@ type Config struct {
 	NaisDeploy                NaisDeploy
 	NaisNamespace             NaisNamespace
 	OAuth                     OAuth
-	GoogleManagementProjectID string `envconfig:"CONSOLE_GOOGLE_MANAGEMENT_PROJECT_ID"`
-	TenantName                string `envconfig:"CONSOLE_TENANT_NAME"`
-	TenantDomain              string `envconfig:"CONSOLE_TENANT_DOMAIN"`
-	FrontendURL               string `envconfig:"CONSOLE_FRONTEND_URL"`
-	DatabaseURL               string `envconfig:"CONSOLE_DATABASE_URL"`
-	ListenAddress             string `envconfig:"CONSOLE_LISTEN_ADDRESS"`
-	LogFormat                 string `envconfig:"CONSOLE_LOG_FORMAT"`
-	LogLevel                  string `envconfig:"CONSOLE_LOG_LEVEL"`
-	AdminApiKey               string `envconfig:"CONSOLE_ADMIN_API_KEY"`
-	StaticServiceAccounts     string `envconfig:"CONSOLE_STATIC_SERVICE_ACCOUNTS"`
+	GoogleManagementProjectID string                   `envconfig:"CONSOLE_GOOGLE_MANAGEMENT_PROJECT_ID"`
+	TenantName                string                   `envconfig:"CONSOLE_TENANT_NAME"`
+	TenantDomain              string                   `envconfig:"CONSOLE_TENANT_DOMAIN"`
+	FrontendURL               string                   `envconfig:"CONSOLE_FRONTEND_URL"`
+	DatabaseURL               string                   `envconfig:"CONSOLE_DATABASE_URL"`
+	ListenAddress             string                   `envconfig:"CONSOLE_LISTEN_ADDRESS"`
+	LogFormat                 string                   `envconfig:"CONSOLE_LOG_FORMAT"`
+	LogLevel                  string                   `envconfig:"CONSOLE_LOG_LEVEL"`
+	AdminApiKey               string                   `envconfig:"CONSOLE_ADMIN_API_KEY"`
+	StaticServiceAccounts     fixtures.ServiceAccounts `envconfig:"CONSOLE_STATIC_SERVICE_ACCOUNTS"`
 }
 
 type ImporterConfig struct {

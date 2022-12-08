@@ -85,11 +85,9 @@ func run(cfg *config.Config, log logger.Logger) error {
 		return err
 	}
 
-	if cfg.StaticServiceAccounts != "" {
-		err = fixtures.SetupStaticServiceAccounts(ctx, database, cfg.StaticServiceAccounts)
-		if err != nil {
-			return err
-		}
+	err = fixtures.SetupStaticServiceAccounts(ctx, database, cfg.StaticServiceAccounts)
+	if err != nil {
+		return err
 	}
 
 	// Control channels for goroutine communication
