@@ -1,51 +1,58 @@
 # console.nais.io
 
-Console is an API server for team creation and propagation to external systems.
+Console is an API server for NAIS team management, along with propagation to external systems.
 
-ADR:
-https://github.com/navikt/pig/blob/master/kubeops/adr/010-console-nais-io.md
+ADR: https://github.com/nais/core/blob/main/adr/010-console-nais-io.md
+
+## Local development
+
+Console needs Go 1.19, and depends on a running PostgreSQL database. For convenience, a [Docker Compose](https://docs.docker.com/compose/) configuration is provided.
+
+```sh
+docker compose up -d
+make console
+./bin/console
+```
+
+Running the compiled binary without any arguments will start an instance that does not touch any external systems. The API server runs GraphiQL at http://localhost:3000.
+
+In order to make any request to the API server, your requests must be authenticated with a `Authorization: Bearer <api-key>` header. For local development the `CONSOLE_STATIC_SERVICE_ACCOUNTS` environment variable can be used to create a service account with the necessary permissions. Refer to the configuration documentation below for more information.
+
+For a combination of more tools running locally ([hookd](https://github.com/nais/deploy), [Console frontend](https://github.com/nais/console-frontend) and more), check out the [nais/features-dev](https://github.com/nais/features-dev) repo.
 
 ## Configuration
 
-Console is configured using environment variables:
+Console can be configured using environment variables. For a complete list of possible configuration values along with documentation refer to the [pkg/config](pkg/config/config.go) package. Some configuration values that require more in depth documentation can be found below.
 
-### `CONSOLE_DATABASE_URL`
+### GCP clusters (`CONSOLE_GCP_CLUSTERS`)
 
-The URL for the database. Defaults to
-`postgres://console:console@localhost:3002/console?sslmode=disable` which works
-for local development purposes.
+JSON-encoded object with information about the GCP clusters to use with Console.
 
-### `CONSOLE_FRONTEND_URL`
+Example:
 
-URL to the console frontend. Defaults to `http://localhost:3001`. The frontend
-is in a [separate repository](https://github.com/nais/console-frontend).
+```json
+{
+  "dev": {
+    "teams_folder_id": "123456789012",
+    "project_id": "project-id-123"
+  },
+  "prod": {
+    "teams_folder_id": "123456789013",
+    "project_id": "project-id-456"
+  }
+}
+```
 
-### `CONSOLE_LISTEN_ADDRESS`
+The keys in the object refer to the environment names to use. In the example above we have two environments, `dev` and `prod`. Each environment maps to a JSON-object with two keys:
 
-The host:port combination used by the http server. Defaults to `127.0.0.1:3000`.
+- `teams_folder_id`: The numeric ID of the `teams` folder in the given environment, where all team projects will be created.
+- `project_id`: The ID of the GCP project for the environment/cluster.
 
-### `CONSOLE_LOG_FORMAT`
+### Static service accounts (`CONSOLE_STATIC_SERVICE_ACCOUNTS`)
 
-Customize the log format. Defaults to `text`. Can be set to `json`.
+Console can create a list of service accounts with predefined API keys and roles on start up.
 
-### `CONSOLE_LOG_LEVEL`
-
-The log level used in console. Defaults to `DEBUG`.
-
-### `CONSOLE_TENANT_DOMAIN`
-
-The domain for the tenant. Defaults to `example.com`.
-
-### `CONSOLE_ADMIN_API_KEY`
-
-Can be used to create an API key for the initial admin user. Used for local
-development when user sync is not enabled, and will only be used for the initial
-dataset.
-
-### `CONSOLE_STATIC_SERVICE_ACCOUNTS`
-
-Can be used to create a set of service accounts with roles and API keys. The
-value must be JSON-encoded. Example:
+Example:
 
 ```json
 [
@@ -62,143 +69,92 @@ value must be JSON-encoded. Example:
 ]
 ```
 
-The names **must** begin with `nais-`. This is a reserved prefix, and service
-accounts with this prefix can not be created using the GraphQL API.
-
-The roles specified must be valid role names. Role names can be fetched from the
-GraphQL API:
+The service account names **must** begin with `nais-`. Each role in the `roles` list must be valid role names. Role names can be fetched from the GraphQL API:
 
 ```graphql
 query {
+    roles
+}
+```
+
+Console will, on each start up of the application, ensure that the service accounts specified in the JSON value exists. If a service account is removed from the JSON value, Console will remove it from the database as well.
+
+## GraphQL API
+
+Console runs [GraphiQL](https://github.com/graphql/graphiql) by default, and this can be used to explore and use the GraphQL API. After you have started Console you will find graphiql on http://localhost:3000. Use the `CONSOLE_STATIC_SERVICE_ACCOUNTS` configuration parameter to create a service accounut to use with the API.
+
+Some common queries is listed below.
+
+### Fetch teams:
+
+```graphql
+{
+  teams {
+    slug
+    purpose
+    members {
+      user {
+        email
+        name
+      }
+      role
+    }
+  }
+}
+```
+
+### Fetch roles:
+
+```graphql
+{
   roles
 }
 ```
 
-The service accounts will be re-created every time the application starts. Use
-the API to delete one or more of the service accounts, it is not sufficient to
-simply remove the service account from the JSON structure in the environment
-variable.
-
 ## Reconcilers
 
-Console uses reconcilers to sync team information to external systems, for
-instance GitHub or Azure AD. All reconcilers must be enabled via environment
-variables, and require different settings to work as expected. All configuration
-values is mentioned below.
+Console uses reconcilers to sync team information to external systems, for instance GitHub or Azure AD. The supported reconcilers can be configured with a combination of environment variables and configuration options set through the GraphQL API. By default all reconcilers are disabled when Console starts up. To enable a reconciler, the `enableReconciler` mutation in the GraphQL API can be used. Keep in mind that the reconciler enabled status is persisted in the database, so if you enable one or more reconcilers they will still be enabled the next time you start up the Console application, unless you start up with an empty database.
+
+The implemented reconcilers and their purpose are documented below.
 
 ### Google Workspace
 
-To create groups in Google Workspace and sync members you will need the
-following environment variables set:
+To create groups in a Google Workspace organization and sync members the `google:workspace-admin` reconciler can be enabled. Once a team is created in Console the reconciler will create a group for the team in the connected Google Workspace. Given a Console team with a slug set to `console` the Google workspace group will end up with:
 
-- `CONSOLE_GOOGLE_MANAGEMENT_PROJECT_ID`
-- `CONSOLE_TENANT_DOMAIN`
+- Email: `nais-team-console@<domain>`
+- Name: `nais-team-console`
+
+When a user is added / removed to the team in Console the reconciler will make the same change in the Google Workspace group.
 
 ### GCP Projects
 
-To create projects for the team in GCP you will need to set the following
-environment variables:
-
-#### `CONSOLE_GCP_CLUSTERS`
-
-JSON-encoded object with info about the clusters:
-
-```json
-{
-  "<env>": {
-    "teams_folder_id": "123456789012",
-    "project_id": "<id>"
-  },
-  ...
-}
-```
-
-where `<env>` can be for example `prod`, and `<id>` is for example
-`nais-dev-abcd`.
-
-#### `CONSOLE_GCP_CNRM_ROLE`
-
-The name of the custom CNRM role. The value also contains the org ID. Example:
-
-`organizations/<org_id>/roles/CustomCNRMRole`
-
-where `<org_id>` is a numeric ID.
-
-#### `CONSOLE_GCP_BILLING_ACCOUNT`
-
-The ID of the billing account that each team project will use.
+Each team in Console can get a GCP project by using the `google:gcp:project` reconciler. The reconciler will create a project in each cluster that Console is configured to use. When creating a project the team group will be set as the owner of the project.
 
 ### NAIS namespace
 
-To generate NAIS namespaces for a team the following environment variables must
-be set:
+To generate NAIS namespaces for a team in the configured cluster the `nais:namespace` reconciler can be used.
 
-#### `CONSOLE_GOOGLE_MANAGEMENT_PROJECT_ID`
+### Azure AD groups
 
-The ID of the NAIS management project in the tenant organization in GCP.
+The `azure:group` reconciler works in a similar fashion as the Google Workspace one, but instead it will create a security group in Azure AD. The Azure AD tenant must share the same domain as the Google Workspace, and the email address of the users must match up for Console to correctly identify the users.
 
-## Local development
+### GitHub teams
 
-Console needs Go 1.19, and depends on a PostgreSQL database. For convenience, a
-Docker Compose configuration is provided.
+The `github:team` reconciler can create a GitHub team for each Console team, and maintain team memberships based on the information found in Console. To use this reconciler a [GitHub App](https://docs.github.com/en/developers/apps/getting-started-with-apps/about-apps) must exist. The app requires the following scopes:
 
-Running the compiled binary without any arguments will start an instance that
-does not touch any external systems. The API server runs GraphQL at
-http://localhost:3000.
+- Organization Administration: `read`
+- Organization Members: `readwrite`
 
-In order to make any request to the API server, your requests must be
-authenticated with a `Authorization: Bearer <APIKEY>` header. This API key lives
-in the database table `api_keys`. Future work involves setting these credentials
-up automatically.
+Install the application on the organization and obtain the private key, application ID, and installation ID.
 
-```sh
-docker-compose up
-make
-bin/console
-```
+### NAIS deploy key
+
+To generate NAIS deploy keys for each Console team the `nais:deploy` reconciler can be used.
 
 ## Bootstrapping other systems
 
-### GCP
+Refer to the [NAIS docs](https://naas.nais.io/technical/tenant-setup/) for botstrapping other systems to work with Console.
 
-- Create a service account (automated via
-  [nais/nais-terraform-modules](https://github.com/nais/nais-terraform-modules))
-- Enable Workspace Admin API (automated via
-  [nais/nais-terraform-modules](https://github.com/nais/nais-terraform-modules))
-- Set up OAuth2 consent screen in the nais-management project in the tenant org:
-  ```
-  gcloud alpha iap oauth-brands create \
-  --application_title=Console \
-  --support_email=SUPPORT_EMAIL \
-  --project=PROJECT_ID
-  ```
-- Create OAuth2 client ID:
-  ```
-  gcloud alpha iap oauth-clients create \
-  projects/PROJECT_ID/brands/BRAND-ID \
-  --display_name=Console
-  ```
-- - Type: Web application
-  - Name: Console
-  - Authorized redirect URIs:
-    - http://localhost:3000/oauth2/callback
+## License
 
-### Google Workspace
-
-- Enable `Security -> API Controls -> Domain-wide Delegation`
-- Add service account as API client with scopes:
-  - `https://www.googleapis.com/auth/admin.directory.group`
-  - `https://www.googleapis.com/auth/admin.directory.user.readonly`
-
-### Github
-
-- Set up single sign-on against tenant's IdP. SCIM is recommended, but not
-  required.
-- Create GitHub application in your organization, with all features disabled,
-  and with scopes:
-  - Organization Administration: `read`
-  - Organization Members: `readwrite`
-- Install GitHub application on organization and obtain private key, application
-  ID, and installation ID
-
-Important: do not share the same GitHub application between tenants!
+Console is licensed under the MIT License, see [LICENSE.md](LICENSE.md).
