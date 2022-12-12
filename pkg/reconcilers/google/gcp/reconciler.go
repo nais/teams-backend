@@ -327,7 +327,12 @@ func cnrmServiceAccountNameAndAccountID(slug slug.Slug, projectID string) (name,
 
 // createGcpServices Creates the GCP services used by the reconciler
 func createGcpServices(ctx context.Context, cfg *config.Config) (*GcpServices, error) {
-	ts, err := google_token_source.NewFromConfig(cfg).GCP(ctx)
+	builder, err := google_token_source.NewFromConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	ts, err := builder.GCP(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get delegated token source: %w", err)
 	}

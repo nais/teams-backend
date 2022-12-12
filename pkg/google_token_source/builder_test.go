@@ -1,0 +1,26 @@
+package google_token_source_test
+
+import (
+	"testing"
+
+	"github.com/nais/console/pkg/config"
+	"github.com/nais/console/pkg/google_token_source"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestNewFromConfig(t *testing.T) {
+	t.Run("Missing CONSOLE_GOOGLE_MANAGEMENT_PROJECT_ID", func(t *testing.T) {
+		cfg := &config.Config{}
+		builder, err := google_token_source.NewFromConfig(cfg)
+		assert.Nil(t, builder)
+		assert.ErrorContains(t, err, "CONSOLE_GOOGLE_MANAGEMENT_PROJECT_ID")
+	})
+
+	t.Run("Missing CONSOLE_TENANT_DOMAIN", func(t *testing.T) {
+		cfg := &config.Config{}
+		cfg.GoogleManagementProjectID = "some-project-id"
+		builder, err := google_token_source.NewFromConfig(cfg)
+		assert.Nil(t, builder)
+		assert.ErrorContains(t, err, "CONSOLE_TENANT_DOMAIN")
+	})
+}

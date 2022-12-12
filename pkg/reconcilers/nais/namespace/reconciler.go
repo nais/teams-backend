@@ -66,7 +66,12 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
 	log = log.WithSystem(string(Name))
 
-	tokenSource, err := google_token_source.NewFromConfig(cfg).GCP(ctx)
+	builder, err := google_token_source.NewFromConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	tokenSource, err := builder.GCP(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("create token source: %w", err)
 	}

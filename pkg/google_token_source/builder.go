@@ -16,11 +16,19 @@ type Builder struct {
 	subjectEmail        string
 }
 
-func NewFromConfig(cfg *config.Config) Builder {
-	return Builder{
+func NewFromConfig(cfg *config.Config) (*Builder, error) {
+	if cfg.GoogleManagementProjectID == "" {
+		return nil, fmt.Errorf("missing required configuration: CONSOLE_GOOGLE_MANAGEMENT_PROJECT_ID")
+	}
+
+	if cfg.TenantDomain == "" {
+		return nil, fmt.Errorf("missing required configuration: CONSOLE_TENANT_DOMAIN")
+	}
+
+	return &Builder{
 		serviceAccountEmail: fmt.Sprintf("console@%s.iam.gserviceaccount.com", cfg.GoogleManagementProjectID),
 		subjectEmail:        "nais-console@" + cfg.TenantDomain,
-	}
+	}, nil
 }
 
 func (g Builder) impersonateTokenSource(ctx context.Context, delegate bool, scopes []string) (oauth2.TokenSource, error) {
