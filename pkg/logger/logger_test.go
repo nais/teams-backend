@@ -4,24 +4,23 @@ import (
 	"io"
 	"testing"
 
-	"github.com/nais/console/pkg/sqlc"
-
-	"github.com/sirupsen/logrus/hooks/test"
-
-	"github.com/stretchr/testify/assert"
-
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/logger"
+	"github.com/nais/console/pkg/sqlc"
+	"github.com/sirupsen/logrus/hooks/test"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
 	logFormat = "text"
 	logLevel  = "DEBUG"
 
-	actorKey      = "actor"
-	reconcilerKey = "reconciler"
-	systemKey     = "system"
-	teamKey       = "team"
-	userKey       = "user"
+	actorKey         = "actor"
+	correlationIDKey = "correlationID"
+	reconcilerKey    = "reconciler"
+	systemKey        = "system"
+	teamKey          = "team"
+	userKey          = "user"
 
 	actor      = "actor@example.com"
 	reconciler = "nais:namespace"
@@ -30,6 +29,8 @@ const (
 	teamSlug   = "team-slug"
 	user       = "user@example.com"
 )
+
+var correlationID = uuid.New().String()
 
 func Test_logger_GetLogger(t *testing.T) {
 	t.Run("invalid format", func(t *testing.T) {
@@ -91,6 +92,13 @@ func Test_logger_WithFields(t *testing.T) {
 		fields := logHook.LastEntry().Data
 		assert.Contains(t, fields, userKey)
 		assert.Equal(t, user, fields[userKey])
+	})
+
+	t.Run("correlation ID logger", func(t *testing.T) {
+		base.WithCorrelationID(correlationID).Debug("some debug")
+		fields := logHook.LastEntry().Data
+		assert.Contains(t, fields, correlationIDKey)
+		assert.Equal(t, correlationID, fields[correlationIDKey])
 	})
 
 	t.Run("multiple loggers", func(t *testing.T) {

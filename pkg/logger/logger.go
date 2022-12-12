@@ -12,6 +12,7 @@ type Logger interface {
 	logrus.FieldLogger
 	GetInternalLogger() *logrus.Logger
 	WithActor(actor string) Logger
+	WithCorrelationID(correlationID string) Logger
 	WithReconciler(reconciler string) Logger
 	WithSystem(system string) Logger
 	WithTeamSlug(slug string) Logger
@@ -32,6 +33,10 @@ func (l *logger) WithTeamSlug(slug string) Logger {
 
 func (l *logger) WithActor(actor string) Logger {
 	return &logger{l.WithField("actor", actor)}
+}
+
+func (l *logger) WithCorrelationID(correlationID string) Logger {
+	return &logger{l.WithField("correlationID", correlationID)}
 }
 
 func (l *logger) WithUser(user string) Logger {

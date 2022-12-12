@@ -220,6 +220,22 @@ func (_m *MockLogger) WithActor(actor string) Logger {
 	return r0
 }
 
+// WithCorrelationID provides a mock function with given fields: correlationID
+func (_m *MockLogger) WithCorrelationID(correlationID string) Logger {
+	ret := _m.Called(correlationID)
+
+	var r0 Logger
+	if rf, ok := ret.Get(0).(func(string) Logger); ok {
+		r0 = rf(correlationID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(Logger)
+		}
+	}
+
+	return r0
+}
+
 // WithError provides a mock function with given fields: err
 func (_m *MockLogger) WithError(err error) *logrus.Entry {
 	ret := _m.Called(err)
