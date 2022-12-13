@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/sirupsen/logrus"
 )
@@ -12,7 +13,7 @@ type Logger interface {
 	logrus.FieldLogger
 	GetInternalLogger() *logrus.Logger
 	WithActor(actor string) Logger
-	WithCorrelationID(correlationID string) Logger
+	WithCorrelationID(correlationID uuid.UUID) Logger
 	WithReconciler(reconciler string) Logger
 	WithSystem(system string) Logger
 	WithTeamSlug(slug string) Logger
@@ -35,8 +36,8 @@ func (l *logger) WithActor(actor string) Logger {
 	return &logger{l.WithField("actor", actor)}
 }
 
-func (l *logger) WithCorrelationID(correlationID string) Logger {
-	return &logger{l.WithField("correlationID", correlationID)}
+func (l *logger) WithCorrelationID(correlationID uuid.UUID) Logger {
+	return &logger{l.WithField("correlationID", correlationID.String())}
 }
 
 func (l *logger) WithUser(user string) Logger {

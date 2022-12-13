@@ -30,7 +30,7 @@ const (
 	user       = "user@example.com"
 )
 
-var correlationID = uuid.New().String()
+var correlationID = uuid.New()
 
 func Test_logger_GetLogger(t *testing.T) {
 	t.Run("invalid format", func(t *testing.T) {
@@ -98,7 +98,7 @@ func Test_logger_WithFields(t *testing.T) {
 		base.WithCorrelationID(correlationID).Debug("some debug")
 		fields := logHook.LastEntry().Data
 		assert.Contains(t, fields, correlationIDKey)
-		assert.Equal(t, correlationID, fields[correlationIDKey])
+		assert.Equal(t, correlationID.String(), fields[correlationIDKey])
 	})
 
 	t.Run("multiple loggers", func(t *testing.T) {

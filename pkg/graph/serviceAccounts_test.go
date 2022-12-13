@@ -36,8 +36,8 @@ func TestMutationResolver_Roles(t *testing.T) {
 	database := db.NewMockDatabase(t)
 	log, err := logger.GetLogger("text", "info")
 	assert.NoError(t, err)
-	userSyncTrigger := func() {}
-	resolver := graph.NewResolver(database, "example.com", reconcilers, userSyncTrigger, auditLogger, []string{"env"}, log).ServiceAccount()
+	userSync := make(chan<- uuid.UUID)
+	resolver := graph.NewResolver(database, "example.com", reconcilers, userSync, auditLogger, []string{"env"}, log).ServiceAccount()
 
 	t.Run("get roles for serviceAccount", func(t *testing.T) {
 		role := &db.Role{

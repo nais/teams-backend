@@ -23,8 +23,8 @@ func (r *mutationResolver) SynchronizeUsers(ctx context.Context) (*model.UserSyn
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	r.log.WithCorrelationID(correlationID.String()).WithActor(actor.User.Identity()).Infof("trigger user sync")
-	r.userSyncTrigger()
+	r.log.WithCorrelationID(correlationID).WithActor(actor.User.Identity()).Infof("trigger user sync")
+	r.userSync <- correlationID
 
 	return &model.UserSync{
 		CorrelationID: &correlationID,

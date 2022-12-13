@@ -20,13 +20,17 @@ import (
 )
 
 func TestSync(t *testing.T) {
+	correlationID := uuid.New()
 	domain := "example.com"
-	log, err := logger.GetLogger("text", "info")
-	assert.NoError(t, err)
 
 	t.Run("No remote users", func(t *testing.T) {
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		database := db.NewMockDatabase(t)
+		log := logger.NewMockLogger(t)
+		log.
+			On("WithCorrelationID", correlationID).
+			Return(log).
+			Once()
 
 		database.
 			On("Transaction", mock.Anything, mock.Anything).
@@ -42,7 +46,7 @@ func TestSync(t *testing.T) {
 		assert.NoError(t, err)
 
 		usersync := usersync.New(database, auditLogger, domain, svc, log)
-		err = usersync.Sync(ctx)
+		err = usersync.Sync(ctx, correlationID)
 		assert.NoError(t, err)
 	})
 
@@ -50,6 +54,11 @@ func TestSync(t *testing.T) {
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		database := db.NewMockDatabase(t)
 		dbtx := db.NewMockDatabase(t)
+		log := logger.NewMockLogger(t)
+		log.
+			On("WithCorrelationID", correlationID).
+			Return(log).
+			Once()
 
 		numDefaultRoleNames := len(usersync.DefaultRoleNames)
 
@@ -184,7 +193,7 @@ func TestSync(t *testing.T) {
 		assert.NoError(t, err)
 
 		usersync := usersync.New(database, auditLogger, domain, svc, log)
-		err = usersync.Sync(ctx)
+		err = usersync.Sync(ctx, correlationID)
 		assert.NoError(t, err)
 	})
 }

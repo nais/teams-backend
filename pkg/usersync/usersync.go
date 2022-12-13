@@ -79,15 +79,12 @@ type auditLogEntry struct {
 // Sync Fetch all users from the tenant and add them as local users in Console. If a user already exists in Console
 // the local user will get the name potentially updated. After all users have been upserted, local users that matches
 // the tenant domain that does not exist in the Google Directory will be removed.
-func (s *UserSynchronizer) Sync(ctx context.Context) error {
+func (s *UserSynchronizer) Sync(ctx context.Context, correlationID uuid.UUID) error {
+	log := s.log.WithCorrelationID(correlationID)
+
 	remoteUsers, err := getAllPaginatedUsers(ctx, s.service.Users, s.tenantDomain)
 	if err != nil {
 		return fmt.Errorf("list remote users: %w", err)
-	}
-
-	correlationID, err := uuid.NewUUID()
-	if err != nil {
-		return fmt.Errorf("unable to create UUID for correlation: %w", err)
 	}
 
 	auditLogEntries := make([]auditLogEntry, 0)
@@ -139,7 +136,7 @@ func (s *UserSynchronizer) Sync(ctx context.Context) error {
 			return err
 		}
 
-		err = assignConsoleAdmins(ctx, dbtx, s.service.Members, s.tenantDomain, remoteUserMapping, &auditLogEntries, s.log)
+		err = assignConsoleAdmins(ctx, dbtx, s.service.Members, s.tenantDomain, remoteUserMapping, &auditLogEntries, log)
 		if err != nil {
 			return err
 		}

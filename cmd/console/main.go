@@ -49,9 +49,8 @@ const (
 	reconcilerTimeout     = time.Minute * 15
 	immediateReconcile    = time.Second * 1
 
-	userSyncInterval  = time.Hour * 1
-	userSyncTimeout   = time.Second * 30
-	immediateUserSync = time.Second * 1
+	userSyncInterval = time.Hour * 1
+	userSyncTimeout  = time.Second * 30
 )
 
 func main() {
@@ -100,19 +99,16 @@ func run(cfg *config.Config, log logger.Logger) error {
 	auditLogger := auditlogger.New(database, log)
 
 	var userSyncer *usersync.UserSynchronizer
+	userSync := make(chan uuid.UUID, 1)
 	userSyncTimer := time.NewTimer(10 * time.Second)
 	userSyncTimer.Stop()
 	if cfg.UserSync.Enabled {
 		userSyncer, err = usersync.NewFromConfig(cfg, database, auditLogger.WithSystemName(sqlc.SystemNameUsersync), log)
 		if err != nil {
-			userSyncTimer.Stop()
 			return err
 		}
-	}
 
-	userSyncTrigger := func() {
-		userSyncTimer.Stop()
-		userSyncTimer.Reset(immediateUserSync)
+		userSyncTimer.Reset(time.Second * 1)
 	}
 
 	authHandler, err := setupAuthHandler(cfg, database, log)
@@ -125,7 +121,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 		gcpEnvironments = append(gcpEnvironments, environment)
 	}
 
-	handler := setupGraphAPI(database, cfg.TenantDomain, teamReconciler, userSyncTrigger, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi), gcpEnvironments, log)
+	handler := setupGraphAPI(database, cfg.TenantDomain, teamReconciler, userSync, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi), gcpEnvironments, log)
 	srv, err := setupHTTPServer(cfg, database, handler, authHandler)
 	if err != nil {
 		return err
@@ -178,9 +174,6 @@ func run(cfg *config.Config, log logger.Logger) error {
 
 	defer log.Info("main program context canceled; exiting.")
 
-	// Trigger the initial user sync
-	userSyncTrigger()
-
 	for ctx.Err() == nil {
 		select {
 		case <-ctx.Done():
@@ -210,26 +203,35 @@ func run(cfg *config.Config, log logger.Logger) error {
 			}
 
 			log.Debug("reconciliation complete.")
-
-		case <-userSyncTimer.C:
+		case correlationID := <-userSync:
 			if userSyncer == nil {
 				log.Infof("user sync is disabled")
 				break
 			}
 
 			log.Debug("starting user synchronization...")
-
 			ctx, cancel := context.WithTimeout(ctx, userSyncTimeout)
-			err = userSyncer.Sync(ctx)
+			err = userSyncer.Sync(ctx, correlationID)
 			cancel()
 
 			if err != nil {
 				log.WithError(err).Error("sync users")
 			}
 
+			log.Debugf("user sync complete")
+
+		case <-userSyncTimer.C:
 			nextUserSync := time.Now().Add(userSyncInterval)
 			userSyncTimer.Reset(userSyncInterval)
-			log.Debugf("user synchronization complete; next run at %s", nextUserSync)
+			log.Debugf("scheduled user sync triggered; next run at %s", nextUserSync)
+
+			correlationID, err := uuid.NewUUID()
+			if err != nil {
+				log.WithError(err).Errorf("unable to create correlation ID for user sync")
+				break
+			}
+
+			userSync <- correlationID
 		}
 	}
 
@@ -374,8 +376,8 @@ func initReconcilers(
 	return recs, nil
 }
 
-func setupGraphAPI(database db.Database, domain string, teamReconciler chan<- reconcilers.Input, userSyncTrigger func(), auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *graphql_handler.Server {
-	resolver := graph.NewResolver(database, domain, teamReconciler, userSyncTrigger, auditLogger, gcpEnvironments, log)
+func setupGraphAPI(database db.Database, domain string, teamReconciler chan<- reconcilers.Input, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *graphql_handler.Server {
+	resolver := graph.NewResolver(database, domain, teamReconciler, userSync, auditLogger, gcpEnvironments, log)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
 	gc.Directives.Admin = directives.Admin()

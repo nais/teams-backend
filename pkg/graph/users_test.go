@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/db"
@@ -22,8 +23,8 @@ func TestQueryResolver_Users(t *testing.T) {
 	gcpEnvironments := []string{"env"}
 	log, err := logger.GetLogger("text", "info")
 	assert.NoError(t, err)
-	userSyncTrigger := func() {}
-	resolver := graph.NewResolver(database, "example.com", ch, userSyncTrigger, auditLogger, gcpEnvironments, log).Query()
+	userSync := make(chan<- uuid.UUID)
+	resolver := graph.NewResolver(database, "example.com", ch, userSync, auditLogger, gcpEnvironments, log).Query()
 
 	t.Run("unauthenticated user", func(t *testing.T) {
 		users, err := resolver.Users(ctx)
