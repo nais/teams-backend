@@ -65,12 +65,12 @@ Ta databasedump, overfør config og data til produksjon, og ta helg.
   - Erstatte README med notis om å gå til Console [kimt: laget branch klar til merge]
 - nais/teams
   - config connector [OK]
-  - FIXME: networkpolicies, jhrv & co jobber med det nå [i mål 5. des]
-  - FIXME: opprettelse av namespace blir ikke gjort enda i legacy-gcp [krampl: gjort, men utestet]
+  - networkpolicies [jhrv: OK]
+  - opprettelse av namespace blir ikke gjort enda i legacy-gcp [krampl: gjort, men utestet]
   - rolebindings til nais deploy/teams [OK]
-  - FIXME: securelogs må kanskje utredes om igjen (fluentd) [terje] [replicator?]
-  - FIXME: docker credentials [kan feature-flagges inn i naisd?] [kopiere replicator fra NADA?] [kyrre]
-  - FIXME: resourcequota [videreføres ikke med mindre det oppstår behov]
+  - securelogs fluentd-config [terjes/jhrv: replicator, ferdig innen 16.12]
+  - docker credentials [terjes/jhrv: replicator, ferdig innen 16.12]
+  - resourcequota [videreføres ikke med mindre det oppstår behov]
   - opprettelse av namespace [krampl: OK]
   - rolebinding med rettigheter samt riktig azure-gruppe [krampl: OK]
   - ca-certificates [kimt: dette er gjort]
@@ -84,7 +84,8 @@ Ta databasedump, overfør config og data til produksjon, og ta helg.
 - navikt/google-group-sync
   - Arkiveres, trenger ikke oppdateres
 - rbac-sync
-  - Se om det gruppe-auth kan skrus på for legacy [krampl] [trong]
+  - erstattes av gke-security-groups, kan disables etter sync/migrering
+  - kan tre inn i on-prem-clustre etterpå [frodes]
 - ToBAC (den bruker det gamle opplegget med azure ad-"morgruppa")
   - den utgår totalt. Varsle i #nais-announcements om at den skal skrus av asap
   - kanskje den allerede er skrudd av
