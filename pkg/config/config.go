@@ -62,10 +62,6 @@ type Config struct {
 	NaisNamespace NaisNamespace
 	OAuth         OAuth
 
-	// AdminApiKey Can be used to create an API key for the initial admin user. Used for local development when user
-	// sync is not enabled, and will only be used for the initial dataset.
-	AdminApiKey string `envconfig:"CONSOLE_ADMIN_API_KEY"`
-
 	// DatabaseURL The URL for the database.
 	//
 	// Example: `postgres://console:console@localhost:3002/console?sslmode=disable`

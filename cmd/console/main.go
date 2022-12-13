@@ -86,11 +86,6 @@ func run(cfg *config.Config, log logger.Logger) error {
 		return err
 	}
 
-	err = fixtures.CreateAdminServiceAccount(ctx, database, cfg.AdminApiKey)
-	if err != nil {
-		return err
-	}
-
 	err = fixtures.CreateNaisVerification(ctx, database)
 	if err != nil {
 		return err
