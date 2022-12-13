@@ -37,7 +37,8 @@ func TestMutationResolver_Role(t *testing.T) {
 	database := db.NewMockDatabase(t)
 	log, err := logger.GetLogger("text", "info")
 	assert.NoError(t, err)
-	resolver := graph.NewResolver(database, "example.com", reconcilers, auditLogger, []string{"env"}, log).Role()
+	userSyncTrigger := func() {}
+	resolver := graph.NewResolver(database, "example.com", reconcilers, userSyncTrigger, auditLogger, []string{"env"}, log).Role()
 
 	t.Run("get role name", func(t *testing.T) {
 		role := &db.Role{

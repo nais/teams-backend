@@ -5,6 +5,7 @@ package graph
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/authz"
@@ -13,6 +14,22 @@ import (
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/sqlc"
 )
+
+// SynchronizeUsers is the resolver for the synchronizeUsers field.
+func (r *mutationResolver) SynchronizeUsers(ctx context.Context) (*model.UserSync, error) {
+	actor := authz.ActorFromContext(ctx)
+	correlationID, err := uuid.NewUUID()
+	if err != nil {
+		return nil, fmt.Errorf("create log correlation ID: %w", err)
+	}
+
+	r.log.WithCorrelationID(correlationID.String()).WithActor(actor.User.Identity()).Infof("trigger user sync")
+	r.userSyncTrigger()
+
+	return &model.UserSync{
+		CorrelationID: &correlationID,
+	}, nil
+}
 
 // Users is the resolver for the users field.
 func (r *queryResolver) Users(ctx context.Context) ([]*db.User, error) {

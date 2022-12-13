@@ -15,6 +15,22 @@ extend type Query {
     ): User! @auth
 }
 
+extend type Mutation {
+    """
+    Trigger a user synchronization
+
+    This mutation will trigger a full user synchronization with the connected Google Workspace. The action is
+    asynchronous.
+    """
+    synchronizeUsers: UserSync! @admin
+}
+
+"User sync type."
+type UserSync {
+    "Correlation ID of the triggered user synchronization."
+    correlationID: UUID!
+}
+
 "User type."
 type User {
     "Unique ID of the user."

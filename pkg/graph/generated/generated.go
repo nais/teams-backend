@@ -94,6 +94,7 @@ type ComplexityRoot struct {
 		SetNaisNamespace             func(childComplexity int, teamSlug *slug.Slug, gcpEnvironment string, naisNamespace *slug.Slug) int
 		SetTeamMemberRole            func(childComplexity int, slug *slug.Slug, userID *uuid.UUID, role model.TeamRole) int
 		SynchronizeTeam              func(childComplexity int, slug *slug.Slug) int
+		SynchronizeUsers             func(childComplexity int) int
 		UpdateTeam                   func(childComplexity int, slug *slug.Slug, input model.UpdateTeamInput) int
 	}
 
@@ -201,6 +202,10 @@ type ComplexityRoot struct {
 		Roles func(childComplexity int) int
 		Teams func(childComplexity int) int
 	}
+
+	UserSync struct {
+		CorrelationID func(childComplexity int) int
+	}
 }
 
 type AuditLogResolver interface {
@@ -225,6 +230,7 @@ type MutationResolver interface {
 	SetTeamMemberRole(ctx context.Context, slug *slug.Slug, userID *uuid.UUID, role model.TeamRole) (*db.Team, error)
 	DisableTeam(ctx context.Context, slug *slug.Slug) (*db.Team, error)
 	EnableTeam(ctx context.Context, slug *slug.Slug) (*db.Team, error)
+	SynchronizeUsers(ctx context.Context) (*model.UserSync, error)
 }
 type QueryResolver interface {
 	Me(ctx context.Context) (db.AuthenticatedUser, error)
@@ -567,6 +573,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.SynchronizeTeam(childComplexity, args["slug"].(*slug.Slug)), true
+
+	case "Mutation.synchronizeUsers":
+		if e.complexity.Mutation.SynchronizeUsers == nil {
+			break
+		}
+
+		return e.complexity.Mutation.SynchronizeUsers(childComplexity), true
 
 	case "Mutation.updateTeam":
 		if e.complexity.Mutation.UpdateTeam == nil {
@@ -1035,6 +1048,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.User.Teams(childComplexity), true
+
+	case "UserSync.correlationID":
+		if e.complexity.UserSync.CorrelationID == nil {
+			break
+		}
+
+		return e.complexity.UserSync.CorrelationID(childComplexity), true
 
 	}
 	return 0, false
@@ -1679,6 +1699,22 @@ enum TeamRole {
         "ID of the user."
         email: String!
     ): User! @auth
+}
+
+extend type Mutation {
+    """
+    Trigger a user synchronization
+
+    This mutation will trigger a full user synchronization with the connected Google Workspace. The action is
+    asynchronous.
+    """
+    synchronizeUsers: UserSync! @admin
+}
+
+"User sync type."
+type UserSync {
+    "Correlation ID of the triggered user synchronization."
+    correlationID: UUID!
 }
 
 "User type."
@@ -4434,6 +4470,74 @@ func (ec *executionContext) fieldContext_Mutation_enableTeam(ctx context.Context
 	if fc.Args, err = ec.field_Mutation_enableTeam_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_synchronizeUsers(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_synchronizeUsers(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().SynchronizeUsers(rctx)
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Admin == nil {
+				return nil, errors.New("directive admin is not implemented")
+			}
+			return ec.directives.Admin(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.UserSync); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/graph/model.UserSync`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.UserSync)
+	fc.Result = res
+	return ec.marshalNUserSync2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserSync(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_synchronizeUsers(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "correlationID":
+				return ec.fieldContext_UserSync_correlationID(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type UserSync", field.Name)
+		},
 	}
 	return fc, nil
 }
@@ -7764,6 +7868,50 @@ func (ec *executionContext) fieldContext_User_roles(ctx context.Context, field g
 	return fc, nil
 }
 
+func (ec *executionContext) _UserSync_correlationID(ctx context.Context, field graphql.CollectedField, obj *model.UserSync) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserSync_correlationID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CorrelationID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*uuid.UUID)
+	fc.Result = res
+	return ec.marshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_UserSync_correlationID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserSync",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type UUID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext___Directive_name(ctx, field)
 	if err != nil {
@@ -10001,6 +10149,15 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "synchronizeUsers":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_synchronizeUsers(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -11037,6 +11194,34 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 				return innerFunc(ctx)
 
 			})
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var userSyncImplementors = []string{"UserSync"}
+
+func (ec *executionContext) _UserSync(ctx context.Context, sel ast.SelectionSet, obj *model.UserSync) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, userSyncImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("UserSync")
+		case "correlationID":
+
+			out.Values[i] = ec._UserSync_correlationID(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -12396,6 +12581,20 @@ func (ec *executionContext) marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkg�
 		return graphql.Null
 	}
 	return ec._User(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNUserSync2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserSync(ctx context.Context, sel ast.SelectionSet, v model.UserSync) graphql.Marshaler {
+	return ec._UserSync(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNUserSync2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserSync(ctx context.Context, sel ast.SelectionSet, v *model.UserSync) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._UserSync(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {

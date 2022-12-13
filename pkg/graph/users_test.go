@@ -22,7 +22,8 @@ func TestQueryResolver_Users(t *testing.T) {
 	gcpEnvironments := []string{"env"}
 	log, err := logger.GetLogger("text", "info")
 	assert.NoError(t, err)
-	resolver := graph.NewResolver(database, "example.com", ch, auditLogger, gcpEnvironments, log).Query()
+	userSyncTrigger := func() {}
+	resolver := graph.NewResolver(database, "example.com", ch, userSyncTrigger, auditLogger, gcpEnvironments, log).Query()
 
 	t.Run("unauthenticated user", func(t *testing.T) {
 		users, err := resolver.Users(ctx)

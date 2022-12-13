@@ -108,6 +108,12 @@ type UpdateTeamInput struct {
 	SlackAlertsChannel *string `json:"slackAlertsChannel"`
 }
 
+// User sync type.
+type UserSync struct {
+	// Correlation ID of the triggered user synchronization.
+	CorrelationID *uuid.UUID `json:"correlationID"`
+}
+
 // Available team roles.
 type TeamRole string
 

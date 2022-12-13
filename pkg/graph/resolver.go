@@ -24,13 +24,14 @@ type Resolver struct {
 	database        db.Database
 	tenantDomain    string
 	teamReconciler  chan<- reconcilers.Input
+	userSyncTrigger func()
 	systemName      sqlc.SystemName
 	auditLogger     auditlogger.AuditLogger
 	gcpEnvironments []string
 	log             logger.Logger
 }
 
-func NewResolver(database db.Database, tenantDomain string, teamReconciler chan<- reconcilers.Input, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *Resolver {
+func NewResolver(database db.Database, tenantDomain string, teamReconciler chan<- reconcilers.Input, userSyncTrigger func(), auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *Resolver {
 	return &Resolver{
 		database:        database,
 		tenantDomain:    tenantDomain,
@@ -39,6 +40,7 @@ func NewResolver(database db.Database, tenantDomain string, teamReconciler chan<
 		auditLogger:     auditLogger,
 		gcpEnvironments: gcpEnvironments,
 		log:             log.WithSystem(string(sqlc.SystemNameGraphqlApi)),
+		userSyncTrigger: userSyncTrigger,
 	}
 }
 

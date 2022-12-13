@@ -43,6 +43,17 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+const (
+	reconcilerQueueSize   = 4096
+	reconcilerGracePeriod = time.Second * 15
+	reconcilerTimeout     = time.Minute * 15
+	immediateReconcile    = time.Second * 1
+
+	userSyncInterval  = time.Hour * 1
+	userSyncTimeout   = time.Second * 30
+	immediateUserSync = time.Second * 1
+)
+
 func main() {
 	cfg, err := config.New()
 	if err != nil {
@@ -90,10 +101,24 @@ func run(cfg *config.Config, log logger.Logger) error {
 		return err
 	}
 
-	// Control channels for goroutine communication
-	const maxQueueSize = 4096
-	teamReconciler := make(chan reconcilers.Input, maxQueueSize)
+	teamReconciler := make(chan reconcilers.Input, reconcilerQueueSize)
 	auditLogger := auditlogger.New(database, log)
+
+	var userSyncer *usersync.UserSynchronizer
+	userSyncTimer := time.NewTimer(10 * time.Second)
+	userSyncTimer.Stop()
+	if cfg.UserSync.Enabled {
+		userSyncer, err = usersync.NewFromConfig(cfg, database, auditLogger.WithSystemName(sqlc.SystemNameUsersync), log)
+		if err != nil {
+			userSyncTimer.Stop()
+			return err
+		}
+	}
+
+	userSyncTrigger := func() {
+		userSyncTimer.Stop()
+		userSyncTimer.Reset(immediateUserSync)
+	}
 
 	authHandler, err := setupAuthHandler(cfg, database, log)
 	if err != nil {
@@ -105,7 +130,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 		gcpEnvironments = append(gcpEnvironments, environment)
 	}
 
-	handler := setupGraphAPI(database, cfg.TenantDomain, teamReconciler, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi), gcpEnvironments, log)
+	handler := setupGraphAPI(database, cfg.TenantDomain, teamReconciler, userSyncTrigger, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi), gcpEnvironments, log)
 	srv, err := setupHTTPServer(cfg, database, handler, authHandler)
 	if err != nil {
 		return err
@@ -129,9 +154,6 @@ func run(cfg *config.Config, log logger.Logger) error {
 		log.Infof("received signal %s, terminating...", sig)
 		cancel()
 	}()
-
-	const nextReconcileGracePeriod = 15 * time.Second
-	const immediateReconcile = 1 * time.Second
 
 	nextReconcile := time.Time{}
 	reconcileTimer := time.NewTimer(1 * time.Second)
@@ -159,19 +181,10 @@ func run(cfg *config.Config, log logger.Logger) error {
 		teamReconciler <- input.WithCorrelationID(correlationID)
 	}
 
-	// User synchronizer
-	userSyncTimer := time.NewTimer(1 * time.Second)
-	userSyncer, err := usersync.NewFromConfig(cfg, database, auditLogger.WithSystemName(sqlc.SystemNameUsersync), log)
-	if err != nil {
-		userSyncTimer.Stop()
-		if err != usersync.ErrNotEnabled {
-			return err
-		}
-
-		log.WithError(err).Warn("user synchronization disabled")
-	}
-
 	defer log.Info("main program context canceled; exiting.")
+
+	// Trigger the initial user sync
+	userSyncTrigger()
 
 	for ctx.Err() == nil {
 		select {
@@ -194,7 +207,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 
 			if err != nil {
 				log.WithError(err).Error("reconcile teams")
-				reconcileTimer.Reset(nextReconcileGracePeriod)
+				reconcileTimer.Reset(reconcilerGracePeriod)
 			}
 
 			if len(pendingTeams) > 0 {
@@ -204,12 +217,14 @@ func run(cfg *config.Config, log logger.Logger) error {
 			log.Debug("reconciliation complete.")
 
 		case <-userSyncTimer.C:
-			const interval = time.Hour * 1
-			const timeout = time.Second * 30
+			if userSyncer == nil {
+				log.Infof("user sync is disabled")
+				break
+			}
 
 			log.Debug("starting user synchronization...")
 
-			ctx, cancel := context.WithTimeout(ctx, timeout)
+			ctx, cancel := context.WithTimeout(ctx, userSyncTimeout)
 			err = userSyncer.Sync(ctx)
 			cancel()
 
@@ -217,8 +232,9 @@ func run(cfg *config.Config, log logger.Logger) error {
 				log.WithError(err).Error("sync users")
 			}
 
-			userSyncTimer.Reset(interval)
-			log.Debugf("user synchronization complete; next run at %s", time.Now().Add(interval))
+			nextUserSync := time.Now().Add(userSyncInterval)
+			userSyncTimer.Reset(userSyncInterval)
+			log.Debugf("user synchronization complete; next run at %s", nextUserSync)
 		}
 	}
 
@@ -233,14 +249,12 @@ func reconcileTeams(
 	auditLogger auditlogger.AuditLogger,
 	log logger.Logger,
 ) error {
-	const reconcileTimeout = 15 * time.Minute
-
 	enabledReconcilers, err := initReconcilers(ctx, database, cfg, auditLogger, log)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, reconcileTimeout)
+	ctx, cancel := context.WithTimeout(ctx, reconcilerTimeout)
 	defer cancel()
 
 	errors := 0
@@ -365,8 +379,8 @@ func initReconcilers(
 	return recs, nil
 }
 
-func setupGraphAPI(database db.Database, domain string, teamReconciler chan<- reconcilers.Input, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *graphql_handler.Server {
-	resolver := graph.NewResolver(database, domain, teamReconciler, auditLogger, gcpEnvironments, log)
+func setupGraphAPI(database db.Database, domain string, teamReconciler chan<- reconcilers.Input, userSyncTrigger func(), auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *graphql_handler.Server {
+	resolver := graph.NewResolver(database, domain, teamReconciler, userSyncTrigger, auditLogger, gcpEnvironments, log)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
 	gc.Directives.Admin = directives.Admin()

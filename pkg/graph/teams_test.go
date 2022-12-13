@@ -58,7 +58,8 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 	gcpEnvironments := []string{"env"}
 	log, err := logger.GetLogger("text", "info")
 	assert.NoError(t, err)
-	resolver := graph.NewResolver(database, "example.com", reconcilers, auditLogger, gcpEnvironments, log).Mutation()
+	userSyncTrigger := func() {}
+	resolver := graph.NewResolver(database, "example.com", reconcilers, userSyncTrigger, auditLogger, gcpEnvironments, log).Mutation()
 	teamSlug := slug.Slug("some-slug")
 	slackChannel := "#my-slack-channel"
 

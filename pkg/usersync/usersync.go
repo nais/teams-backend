@@ -18,7 +18,7 @@ import (
 	"google.golang.org/api/option"
 )
 
-type userSynchronizer struct {
+type UserSynchronizer struct {
 	database     db.Database
 	auditLogger  auditlogger.AuditLogger
 	tenantDomain string
@@ -38,8 +38,8 @@ var (
 	}
 )
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, service *admin_directory_v1.Service, log logger.Logger) *userSynchronizer {
-	return &userSynchronizer{
+func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, service *admin_directory_v1.Service, log logger.Logger) *UserSynchronizer {
+	return &UserSynchronizer{
 		database:     database,
 		auditLogger:  auditLogger,
 		tenantDomain: domain,
@@ -48,16 +48,16 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, domain strin
 	}
 }
 
-func NewFromConfig(cfg *config.Config, database db.Database, auditLogger auditlogger.AuditLogger, log logger.Logger) (*userSynchronizer, error) {
+func NewFromConfig(cfg *config.Config, database db.Database, auditLogger auditlogger.AuditLogger, log logger.Logger) (*UserSynchronizer, error) {
 	log = log.WithSystem(string(sqlc.SystemNameUsersync))
-
-	if !cfg.UserSync.Enabled {
-		return nil, ErrNotEnabled
-	}
-
 	ctx := context.Background()
 
-	ts, err := google_token_source.NewFromConfig(cfg).Admin(ctx)
+	builder, err := google_token_source.NewFromConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	ts, err := builder.Admin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("create token source: %w", err)
 	}
@@ -79,7 +79,7 @@ type auditLogEntry struct {
 // Sync Fetch all users from the tenant and add them as local users in Console. If a user already exists in Console
 // the local user will get the name potentially updated. After all users have been upserted, local users that matches
 // the tenant domain that does not exist in the Google Directory will be removed.
-func (s *userSynchronizer) Sync(ctx context.Context) error {
+func (s *UserSynchronizer) Sync(ctx context.Context) error {
 	remoteUsers, err := getAllPaginatedUsers(ctx, s.service.Users, s.tenantDomain)
 	if err != nil {
 		return fmt.Errorf("list remote users: %w", err)
