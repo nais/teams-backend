@@ -7,16 +7,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nais/console/pkg/logger"
-	"github.com/nais/console/pkg/slug"
-
-	"github.com/google/go-github/v43/github"
+	"github.com/google/go-github/v48/github"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
 	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/shurcooL/githubv4"
 	"github.com/stretchr/testify/assert"
@@ -28,8 +27,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 	org := "org"
 	teamSlug := "slug"
 	teamPurpose := "purpose"
-	log, err := logger.GetLogger("text", "info")
-	assert.NoError(t, err)
+	log := logger.NewMockLogger(t)
 
 	ctx := context.Background()
 	correlationID := uuid.New()
@@ -291,8 +289,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 	removeLogin := "should-remove"
 	removeEmail := "should-remove@example.com"
 
-	log, err := logger.GetLogger("text", "info")
-	assert.NoError(t, err)
+	log := logger.NewMockLogger(t)
 
 	ctx := context.Background()
 
@@ -386,11 +383,10 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 				},
 			}, nil).Once()
 
-		log, err := logger.GetLogger("text", "info")
-		assert.NoError(t, err)
+		log = logger.NewMockLogger(t)
 
 		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, graphClient, log)
-		err = reconciler.Reconcile(ctx, input)
+		err := reconciler.Reconcile(ctx, input)
 
 		assert.ErrorContainsf(t, err, "server error from GitHub: 418: I'm a teapot: this is a body", err.Error())
 	})

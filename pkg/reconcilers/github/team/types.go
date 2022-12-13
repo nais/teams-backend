@@ -3,7 +3,7 @@ package github_team_reconciler
 import (
 	"context"
 
-	"github.com/google/go-github/v43/github"
+	"github.com/google/go-github/v48/github"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/logger"

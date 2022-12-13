@@ -9,17 +9,16 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/nais/console/pkg/logger"
-	"github.com/nais/console/pkg/slug"
-
 	"github.com/bradleyfalzon/ghinstallation/v2"
-	"github.com/google/go-github/v43/github"
+	"github.com/google/go-github/v48/github"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/shurcooL/githubv4"
 )
@@ -135,6 +134,12 @@ func (r *githubTeamReconciler) removeTeamIDPSync(ctx context.Context, slug strin
 		Groups: make([]*github.IDPGroup, 0),
 	}
 	idpList, resp, err := r.teamsService.CreateOrUpdateIDPGroupConnectionsBySlug(ctx, r.org, slug, grpList)
+	if err != nil && strings.Contains(err.Error(), "team is not externally managed") {
+		// Special case: org has not been configured for team IDP sync, which we don't want to treat as an error
+		// FIXME: https://github.com/nais/console/issues/77
+		return nil
+	}
+
 	if resp == nil && err != nil {
 		return fmt.Errorf("unable to delete IDP sync from GitHub team %q: %w", slug, err)
 	}
@@ -176,7 +181,7 @@ func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconc
 		Name:        slug,
 		Description: &team.Purpose,
 	})
-	err = httpError(http.StatusCreated, *resp, err)
+	err = httpError(http.StatusCreated, resp, err)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create GitHub team: %w", err)
 	}
@@ -208,7 +213,7 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 	for _, gitHubUser := range membersToRemove {
 		username := gitHubUser.GetLogin()
 		resp, err := r.teamsService.RemoveTeamMembershipBySlug(ctx, r.org, *githubTeam.Slug, username)
-		err = httpError(http.StatusNoContent, *resp, err)
+		err = httpError(http.StatusNoContent, resp, err)
 		if err != nil {
 			r.log.WithError(err).Warnf("remove member %q from GitHub team %q", username, *githubTeam.Slug)
 			continue
@@ -240,7 +245,7 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 	membersToAdd := localOnlyMembers(consoleUserWithGitHubUser, membersAccordingToGitHub)
 	for username, consoleUser := range membersToAdd {
 		_, resp, err := r.teamsService.AddTeamMembershipBySlug(ctx, r.org, *githubTeam.Slug, username, &github.TeamAddTeamMembershipOptions{})
-		err = httpError(http.StatusOK, *resp, err)
+		err = httpError(http.StatusOK, resp, err)
 		if err != nil {
 			r.log.WithError(err).Warnf("add member %q to GitHub team %q", username, *githubTeam.Slug)
 			continue
@@ -272,7 +277,7 @@ func (r *githubTeamReconciler) getTeamMembers(ctx context.Context, slug string) 
 	allMembers := make([]*github.User, 0)
 	for {
 		members, resp, err := r.teamsService.ListTeamMembersBySlug(ctx, r.org, slug, opt)
-		err = httpError(http.StatusOK, *resp, err)
+		err = httpError(http.StatusOK, resp, err)
 		if err != nil {
 			return nil, err
 		}
@@ -406,9 +411,13 @@ func convertDatabaseConfig(ctx context.Context, database db.Database) (*reconcil
 
 // httpError Return an error if the response status code is not as expected, or if the passed err is already set to an
 // error
-func httpError(expected int, resp github.Response, err error) error {
+func httpError(expected int, resp *github.Response, err error) error {
 	if err != nil {
 		return err
+	}
+
+	if resp == nil {
+		return fmt.Errorf("no response")
 	}
 
 	if resp.StatusCode != expected {
