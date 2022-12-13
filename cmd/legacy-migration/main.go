@@ -234,13 +234,6 @@ func run(log logger.Logger) error {
 				}
 			}
 
-			err = dbtx.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameAzureGroup, team.Slug, reconcilers.AzureState{
-				GroupID: &yamlteam.AzureGroupID,
-			})
-			if err != nil {
-				return err
-			}
-
 			err = dbtx.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGithubTeam, team.Slug, reconcilers.GitHubState{
 				Slug: &team.Slug,
 			})
