@@ -28,10 +28,11 @@ Importer real-world data inn i databasen og sjekk for feil:
 
 ```
 env $(cat local/migration.env | xargs) \
-    go run cmd/legacy-migration/main.go | tee local/migration.log
+    go run cmd/legacy-migration/main.go 2>&1 | tee local/migration.log
 grep -E "(WARN|ERR)" local/migration.log | grep -v "srvvsb@navno"
 ```
 
+(obsolete, nye teams settes disabled av synkroniseringsscriptet)
 Sett alle teams som disabled (skal ikke synkes):
 
 ```
@@ -40,23 +41,68 @@ PGPASSWORD=console psql -h localhost -p 3002 -U console console -c 'update teams
 
 ## Klargjøre for migrering
 
-Hent console GCP-credentials fra [Fasit](https://fasit.nais.io/tenant/nav/management?feature=console&tab=helm_values)
-og base64-decode inn i `local/credentials.json`.
+Logg inn med `nais.io`-bruker:
+
+```
+gcloud auth login --update-adc
+```
+
+Hent console OAuth2-credentials fra [Fasit](https://fasit.nais.io/tenant/nav/management?feature=console&tab=helm_values).
 
 Legg inn i `local/production.env`:
 ```
-CONSOLE_TENANT_DOMAIN=nav.no
-CONSOLE_GOOGLE_CREDENTIALS_FILE=local/credentials.json
-CONSOLE_GOOGLE_DELEGATED_USER=nais-console@nav.no
-CONSOLE_NAIS_NAMESPACE_PROJECT_ID=nais-management-7178
+CONSOLE_GOOGLE_MANAGEMENT_PROJECT_ID=nais-management-233d
 CONSOLE_OAUTH_CLIENT_ID=xxx
 CONSOLE_OAUTH_CLIENT_SECRET=xxx
 CONSOLE_OAUTH_REDIRECT_URL=http://localhost:3000/oauth2/callback
+CONSOLE_TENANT_DOMAIN=nav.no
+CONSOLE_USERSYNC_ENABLED=true
 ```
 
 Synkroniser brukere fra GCP og verifiser at brukere ikke blir fjernet fra databasen.
 
+## Verifikasjon
+
+Sjekk at det ikke eksisterer tomme teams:
+
+```sql
+select t.slug, count(ur.id)
+from teams as t
+    left join user_roles as ur
+        on (t.slug = ur.target_team_slug)
+group by t.slug
+order by count(ur.id);
+```
+
+Sjekk at det er tildelt cirka-ish antall roller:
+
+```sql
+select count(*) from users;
+select count(role_name), role_name from user_roles group by role_name;
+```
+
+Sjekk at teamene finnes:
+
+```sql
+select slug,slack_alerts_channel from teams order by slug asc;
+```
+
+Forsikre deg om at alle reconcilers er skrudd av:
+
+```sql
+select * from reconcilers where enabled = true;
+-- name | display_name | description | enabled | run_order
+--------+--------------+-------------+---------+-----------
+-- (0 rows)
+```
+
+## Overføring til produksjon
+
 Ta databasedump, overfør config og data til produksjon, og ta helg.
+
+```
+PGPASSWORD=console pg_dump --clean --if-exists --no-owner -h localhost -p 3002 -U console console > local/console-production-import.sql
+```
 
 ## Sanere eksisterende løsninger
 
@@ -68,8 +114,8 @@ Ta databasedump, overfør config og data til produksjon, og ta helg.
   - networkpolicies [jhrv: OK]
   - opprettelse av namespace blir ikke gjort enda i legacy-gcp [krampl: gjort, men utestet]
   - rolebindings til nais deploy/teams [OK]
-  - securelogs fluentd-config [terjes/jhrv: replicator, ferdig innen 16.12]
-  - docker credentials [terjes/jhrv: replicator, ferdig innen 16.12]
+  - securelogs fluentd-config [terjes/jhrv: ferdig]
+  - docker credentials [terjes/jhrv: ferdig]
   - resourcequota [videreføres ikke med mindre det oppstår behov]
   - opprettelse av namespace [krampl: OK]
   - rolebinding med rettigheter samt riktig azure-gruppe [krampl: OK]
