@@ -153,7 +153,7 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *rec
 	createdProject := &cloudresourcemanager.Project{}
 	err = json.Unmarshal(response, createdProject)
 	if err != nil {
-		return nil, fmt.Errorf("convert operation response to the created GCP project: %w", err)
+		return nil, fmt.Errorf("convert operation response to the Created GCP project: %w", err)
 	}
 
 	targets := []auditlogger.Target{
@@ -163,7 +163,7 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *rec
 		Action:        sqlc.AuditActionGoogleGcpProjectCreateProject,
 		CorrelationID: input.CorrelationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "created GCP project %q for team %q in environment %q", createdProject.ProjectId, input.Team.Slug, environment)
+	r.auditLogger.Logf(ctx, targets, fields, "Created GCP project %q for team %q in environment %q", createdProject.ProjectId, input.Team.Slug, environment)
 
 	return createdProject, nil
 }
@@ -221,7 +221,7 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 		Action:        sqlc.AuditActionGoogleGcpProjectAssignPermissions,
 		CorrelationID: input.CorrelationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "assigned GCP project IAM permissions for %q", project.ProjectId)
+	r.auditLogger.Logf(ctx, targets, fields, "Assigned GCP project IAM permissions for %q", project.ProjectId)
 
 	return nil
 }
@@ -254,7 +254,7 @@ func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.C
 		Action:        sqlc.AuditActionGoogleGcpProjectCreateCnrmServiceAccount,
 		CorrelationID: input.CorrelationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "create CNRM service account for team %q in environment %q", input.Team.Slug, environment)
+	r.auditLogger.Logf(ctx, targets, fields, "Created CNRM service account for team %q in environment %q", input.Team.Slug, environment)
 
 	return serviceAccount, nil
 }
@@ -283,7 +283,7 @@ func (r *googleGcpReconciler) setTeamProjectBillingInfo(ctx context.Context, pro
 		Action:        sqlc.AuditActionGoogleGcpProjectSetBillingInfo,
 		CorrelationID: input.CorrelationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "set billing info for %q", project.ProjectId)
+	r.auditLogger.Logf(ctx, targets, fields, "Set billing info for %q", project.ProjectId)
 
 	return nil
 }

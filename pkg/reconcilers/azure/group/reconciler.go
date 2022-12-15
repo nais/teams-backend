@@ -105,7 +105,7 @@ func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.
 			Action:        sqlc.AuditActionAzureGroupCreate,
 			CorrelationID: input.CorrelationID,
 		}
-		r.auditLogger.Logf(ctx, targets, fields, "created Azure AD group: %s", grp)
+		r.auditLogger.Logf(ctx, targets, fields, "Created Azure AD group: %s", grp)
 
 		id, _ := uuid.Parse(grp.ID)
 		err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, reconcilers.AzureState{GroupID: &id})
@@ -155,7 +155,7 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 			Action:        sqlc.AuditActionAzureGroupDeleteMember,
 			CorrelationID: input.CorrelationID,
 		}
-		r.auditLogger.Logf(ctx, targets, fields, "removed member %q from Azure group %q", remoteEmail, grp.MailNickname)
+		r.auditLogger.Logf(ctx, targets, fields, "Removed member %q from Azure group %q", remoteEmail, grp.MailNickname)
 	}
 
 	membersToAdd := localOnlyMembers(members, input.TeamMembers)

@@ -193,7 +193,7 @@ func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconc
 		Action:        sqlc.AuditActionGithubTeamCreate,
 		CorrelationID: correlationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "created GitHub team %q", *githubTeam.Slug)
+	r.auditLogger.Logf(ctx, targets, fields, "Created GitHub team %q", *githubTeam.Slug)
 
 	return githubTeam, nil
 }
@@ -239,7 +239,7 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 			Action:        sqlc.AuditActionGithubTeamDeleteMember,
 			CorrelationID: input.CorrelationID,
 		}
-		r.auditLogger.Logf(ctx, targets, fields, "deleted member %q from GitHub team %q", username, *githubTeam.Slug)
+		r.auditLogger.Logf(ctx, targets, fields, "Deleted member %q from GitHub team %q", username, *githubTeam.Slug)
 	}
 
 	membersToAdd := localOnlyMembers(consoleUserWithGitHubUser, membersAccordingToGitHub)
