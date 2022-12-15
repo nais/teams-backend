@@ -259,7 +259,7 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 			Action:        sqlc.AuditActionGithubTeamAddMember,
 			CorrelationID: input.CorrelationID,
 		}
-		r.auditLogger.Logf(ctx, targets, fields, "added member %q to GitHub team %q", username, *githubTeam.Slug)
+		r.auditLogger.Logf(ctx, targets, fields, "Added member %q to GitHub team %q", username, *githubTeam.Slug)
 	}
 
 	return nil

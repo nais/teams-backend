@@ -92,7 +92,7 @@ Forsikre deg om at alle reconcilers er skrudd av:
 ```sql
 select * from reconcilers where enabled = true;
 -- name | display_name | description | enabled | run_order
---------+--------------+-------------+---------+-----------
+-- -----+--------------+-------------+---------+-----------
 -- (0 rows)
 ```
 

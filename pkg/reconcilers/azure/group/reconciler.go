@@ -179,7 +179,7 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 			Action:        sqlc.AuditActionAzureGroupAddMember,
 			CorrelationID: input.CorrelationID,
 		}
-		r.auditLogger.Logf(ctx, targets, fields, "added member %q to Azure group %q", consoleUser.Email, grp.MailNickname)
+		r.auditLogger.Logf(ctx, targets, fields, "Added member %q to Azure group %q", consoleUser.Email, grp.MailNickname)
 	}
 
 	return nil

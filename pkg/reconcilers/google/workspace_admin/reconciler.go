@@ -195,7 +195,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 			Action:        sqlc.AuditActionGoogleWorkspaceAdminAddMember,
 			CorrelationID: input.CorrelationID,
 		}
-		r.auditLogger.Logf(ctx, targets, fields, "added member %q to Google Directory group %q", member.Email, grp.Email)
+		r.auditLogger.Logf(ctx, targets, fields, "Added member %q to Google Directory group %q", member.Email, grp.Email)
 	}
 
 	return nil
@@ -225,7 +225,7 @@ func (r *googleWorkspaceAdminReconciler) addToGKESecurityGroup(ctx context.Conte
 		Action:        sqlc.AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup,
 		CorrelationID: input.CorrelationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "added group %q to GKE security group %q", member.Email, groupKey)
+	r.auditLogger.Logf(ctx, targets, fields, "Added group %q to GKE security group %q", member.Email, groupKey)
 
 	return nil
 }
