@@ -11,6 +11,7 @@ import (
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/gcp"
 	"github.com/nais/console/pkg/google_token_source"
+	"github.com/nais/console/pkg/legacy/envmap"
 	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
 	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
@@ -38,28 +39,30 @@ type NaisdRequest struct {
 }
 
 type naisNamespaceReconciler struct {
-	database     db.Database
-	domain       string
-	auditLogger  auditlogger.AuditLogger
-	clusters     gcp.Clusters
-	projectID    string
-	azureEnabled bool
-	pubsubClient *pubsub.Client
-	log          logger.Logger
+	database      db.Database
+	domain        string
+	auditLogger   auditlogger.AuditLogger
+	clusters      gcp.Clusters
+	projectID     string
+	azureEnabled  bool
+	pubsubClient  *pubsub.Client
+	log           logger.Logger
+	legacyMapping []envmap.EnvironmentMapping
 }
 
 const Name = sqlc.ReconcilerNameNaisNamespace
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, domain, projectID string, azureEnabled bool, pubsubClient *pubsub.Client, log logger.Logger) *naisNamespaceReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, domain, projectID string, azureEnabled bool, pubsubClient *pubsub.Client, legacyMapping []envmap.EnvironmentMapping, log logger.Logger) *naisNamespaceReconciler {
 	return &naisNamespaceReconciler{
-		database:     database,
-		auditLogger:  auditLogger,
-		clusters:     clusters,
-		domain:       domain,
-		projectID:    projectID,
-		azureEnabled: azureEnabled,
-		pubsubClient: pubsubClient,
-		log:          log,
+		database:      database,
+		auditLogger:   auditLogger,
+		clusters:      clusters,
+		domain:        domain,
+		projectID:     projectID,
+		azureEnabled:  azureEnabled,
+		pubsubClient:  pubsubClient,
+		legacyMapping: legacyMapping,
+		log:           log,
 	}
 }
 
@@ -81,11 +84,22 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		return nil, fmt.Errorf("retrieve pubsub client: %w", err)
 	}
 
-	return New(database, auditLogger, cfg.GCP.Clusters, cfg.TenantDomain, cfg.GoogleManagementProjectID, cfg.NaisNamespace.AzureEnabled, pubsubClient, log), nil
+	return New(database, auditLogger, cfg.GCP.Clusters, cfg.TenantDomain, cfg.GoogleManagementProjectID, cfg.NaisNamespace.AzureEnabled, pubsubClient, cfg.LegacyNaisNamespaces, log), nil
 }
 
 func (r *naisNamespaceReconciler) Name() sqlc.ReconcilerName {
 	return Name
+}
+
+func GCPProjectsWithLegacyEnvironments(projects map[string]reconcilers.GoogleGcpEnvironmentProject, mappings []envmap.EnvironmentMapping) map[string]reconcilers.GoogleGcpEnvironmentProject {
+	output := make(map[string]reconcilers.GoogleGcpEnvironmentProject)
+	for _, mapping := range mappings {
+		output[mapping.Virtual] = projects[mapping.Real]
+	}
+	for k, v := range projects {
+		output[k] = v
+	}
+	return output
 }
 
 func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
@@ -122,7 +136,11 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	log := r.log.WithTeamSlug(string(input.Team.Slug))
 	updateGcpProjectState := false
 
-	for environment, project := range gcpProjectState.Projects {
+	// lag et merged array med environments
+
+	projects := GCPProjectsWithLegacyEnvironments(gcpProjectState.Projects, r.legacyMapping)
+
+	for environment, project := range projects {
 		if !r.activeEnvironment(environment) {
 			updateGcpProjectState = true
 			log.Infof("environment %q from GCP project state is no longer active, will update state for the team", environment)
@@ -223,5 +241,14 @@ func (r *naisNamespaceReconciler) getAzureGroupID(ctx context.Context, teamSlug 
 
 func (r *naisNamespaceReconciler) activeEnvironment(environment string) bool {
 	_, exists := r.clusters[environment]
-	return exists
+	if exists {
+		return true
+	}
+	for _, mapping := range r.legacyMapping {
+		if mapping.Virtual == environment {
+			_, exists = r.clusters[mapping.Real]
+			return exists
+		}
+	}
+	return false
 }

@@ -4,6 +4,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"github.com/nais/console/pkg/fixtures"
 	"github.com/nais/console/pkg/gcp"
+	"github.com/nais/console/pkg/legacy/envmap"
 )
 
 type GCP struct {
@@ -85,6 +86,12 @@ type Config struct {
 
 	// GoogleManagementProjectID The ID of the NAIS management project in the tenant organization in GCP.
 	GoogleManagementProjectID string `envconfig:"CONSOLE_GOOGLE_MANAGEMENT_PROJECT_ID"`
+
+	// "dev-fss prod-fss dev-gcp:dev prod-gcp:prod"
+	// alle: group e-mail
+	// onprem: azure group id
+	// gcp: team gcp project id
+	LegacyNaisNamespaces []envmap.EnvironmentMapping `envconfig:"CONSOLE_LEGACY_NAIS_NAMESPACES"`
 
 	// StaticServiceAccounts A JSON-encoded value describing a set of service accounts to be created when the
 	// application starts. Refer to the README for the format.
