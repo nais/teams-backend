@@ -105,7 +105,7 @@ func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.
 			Action:        sqlc.AuditActionAzureGroupCreate,
 			CorrelationID: input.CorrelationID,
 		}
-		r.auditLogger.Logf(ctx, targets, fields, "Created Azure AD group: %s", grp)
+		r.auditLogger.Logf(ctx, targets, fields, "Created Azure AD group %q with ID %q", grp.MailNickname, grp.ID)
 
 		id, _ := uuid.Parse(grp.ID)
 		err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, reconcilers.AzureState{GroupID: &id})
