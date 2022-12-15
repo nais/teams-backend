@@ -73,6 +73,9 @@ func GetErrorPresenter(log logger.Logger) graphql.ErrorPresenterFunc {
 			err.Message = "Object was not found in the database. This usually means you specified a non-existing team identifier or e-mail address."
 		case authz.ErrNotAuthenticated:
 			err.Message = "Valid user required. You are not logged in."
+		case context.Canceled:
+			// This won't make it back to the caller if they have cancelled the request on their end
+			err.Message = "Request cancelled"
 		default:
 			log.Errorf("unhandled error: %s", err)
 			err.Message = ErrInternal.Error()
