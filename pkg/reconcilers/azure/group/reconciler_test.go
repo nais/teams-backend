@@ -113,8 +113,9 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 				return len(t) == 1 && t[0].Identifier == string(teamSlug)
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
 				return f.Action == sqlc.AuditActionAzureGroupCreate && f.CorrelationID == correlationID
-			}), mock.Anything, group).
-			Return(nil)
+			}), mock.Anything, group.MailNickname, group.ID).
+			Return(nil).
+			Once()
 
 		auditLogger.
 			On("Logf", ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
@@ -122,7 +123,8 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
 				return f.Action == sqlc.AuditActionAzureGroupDeleteMember && f.CorrelationID == correlationID
 			}), mock.Anything, removeMember.Mail, group.MailNickname).
-			Return(nil)
+			Return(nil).
+			Once()
 
 		auditLogger.
 			On("Logf", ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
@@ -130,7 +132,8 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
 				return f.Action == sqlc.AuditActionAzureGroupAddMember && f.CorrelationID == correlationID
 			}), mock.Anything, addUser.Email, group.MailNickname).
-			Return(nil)
+			Return(nil).
+			Once()
 
 		err := reconciler.Reconcile(ctx, input)
 
