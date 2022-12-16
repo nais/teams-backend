@@ -269,7 +269,7 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, slug *slug.Slug, 
 				CorrelationID: correlationID,
 				Actor:         actor,
 			}
-			r.auditLogger.Logf(ctx, targets, fields, "Add team member")
+			r.auditLogger.Logf(ctx, targets, fields, "Add team member: %q", user.Email)
 		}
 		return nil
 	})
