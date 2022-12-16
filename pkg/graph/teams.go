@@ -176,7 +176,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, slug *slug.S
 				CorrelationID: correlationID,
 				Actor:         actor,
 			}
-			r.auditLogger.Logf(ctx, targets, fields, "Removed user")
+			r.auditLogger.Logf(ctx, targets, fields, "Removed user: %q", member.Email)
 		}
 		return nil
 	})
