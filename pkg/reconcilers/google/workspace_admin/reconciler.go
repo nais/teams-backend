@@ -101,7 +101,10 @@ func (r *googleWorkspaceAdminReconciler) Reconcile(ctx context.Context, input re
 func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(ctx context.Context, state *reconcilers.GoogleWorkspaceState, input reconcilers.Input) (*admin_directory_v1.Group, error) {
 	if state.GroupEmail != nil {
 		grp, err := r.adminService.Groups.Get(*state.GroupEmail).Do()
-		metrics.IncExternalCallsByError(metricsSystemName, err)
+		if err != nil {
+			metrics.IncExternalCallsByError(metricsSystemName, err)
+		}
+		metrics.IncExternalCalls(metricsSystemName, grp.HTTPStatusCode)
 		return grp, err
 	}
 
@@ -113,10 +116,11 @@ func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(ctx context.Context, s
 		Description: input.Team.Purpose,
 	}
 	group, err := r.adminService.Groups.Insert(newGroup).Do()
-	metrics.IncExternalCallsByError(metricsSystemName, err)
 	if err != nil {
+		metrics.IncExternalCallsByError(metricsSystemName, err)
 		return nil, fmt.Errorf("unable to create Google Directory group: %w", err)
 	}
+	metrics.IncExternalCalls(metricsSystemName, group.HTTPStatusCode)
 
 	targets := []auditlogger.Target{
 		auditlogger.TeamTarget(input.Team.Slug),
@@ -190,12 +194,14 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 		member := &admin_directory_v1.Member{
 			Email: user.Email,
 		}
-		_, err = r.adminService.Members.Insert(grp.Id, member).Do()
-		metrics.IncExternalCallsByError(metricsSystemName, err)
+		operation, err := r.adminService.Members.Insert(grp.Id, member).Do()
 		if err != nil {
+			metrics.IncExternalCallsByError(metricsSystemName, err)
 			r.log.WithError(err).Warnf("add member %q to Google Directory group %q", member.Email, grp.Email)
 			continue
 		}
+		metrics.IncExternalCalls(metricsSystemName, operation.HTTPStatusCode)
+
 		targets := []auditlogger.Target{
 			auditlogger.TeamTarget(input.Team.Slug),
 			auditlogger.UserTarget(user.Email),

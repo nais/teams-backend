@@ -124,10 +124,11 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *reconcilers.GoogleGcpProjectState, environment string, parentFolderID int64, input reconcilers.Input) (*cloudresourcemanager.Project, error) {
 	if projectFromState, exists := state.Projects[environment]; exists {
 		response, err := r.gcpServices.CloudResourceManagerProjectsService.Search().Query("id:" + projectFromState.ProjectID).Do()
-		metrics.IncExternalCallsByError(metricsSystemName, err)
 		if err != nil {
+			metrics.IncExternalCallsByError(metricsSystemName, err)
 			return nil, err
 		}
+		metrics.IncExternalCalls(metricsSystemName, response.HTTPStatusCode)
 
 		if len(response.Projects) == 1 {
 			return response.Projects[0], nil
@@ -145,10 +146,11 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *rec
 		ProjectId:   projectID,
 	}
 	operation, err := r.gcpServices.CloudResourceManagerProjectsService.Create(project).Do()
-	metrics.IncExternalCallsByError(metricsSystemName, err)
 	if err != nil {
+		metrics.IncExternalCallsByError(metricsSystemName, err)
 		return nil, fmt.Errorf("initiate creation of GCP project: %w", err)
 	}
+	metrics.IncExternalCalls(metricsSystemName, operation.HTTPStatusCode)
 
 	response, err := r.getOperationResponse(operation)
 	if err != nil {
@@ -183,7 +185,7 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 
 	// Set workload identity role to the CNRM service account
 	member := fmt.Sprintf("serviceAccount:%s.svc.id.goog[cnrm-system/cnrm-controller-manager-%s]", cluster.ProjectID, input.Team.Slug)
-	_, err = r.gcpServices.IamProjectsServiceAccountsService.SetIamPolicy(cnrmServiceAccount.Name, &iam.SetIamPolicyRequest{
+	operation, err := r.gcpServices.IamProjectsServiceAccountsService.SetIamPolicy(cnrmServiceAccount.Name, &iam.SetIamPolicyRequest{
 		Policy: &iam.Policy{
 			Bindings: []*iam.Binding{
 				{
@@ -193,16 +195,18 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 			},
 		},
 	}).Do()
-	metrics.IncExternalCallsByError(metricsSystemName, err)
 	if err != nil {
+		metrics.IncExternalCallsByError(metricsSystemName, err)
 		return fmt.Errorf("assign roles for CNRM service account: %w", err)
 	}
+	metrics.IncExternalCalls(metricsSystemName, operation.HTTPStatusCode)
 
 	policy, err := r.gcpServices.CloudResourceManagerProjectsService.GetIamPolicy(project.Name, &cloudresourcemanager.GetIamPolicyRequest{}).Do()
-	metrics.IncExternalCallsByError(metricsSystemName, err)
 	if err != nil {
+		metrics.IncExternalCallsByError(metricsSystemName, err)
 		return fmt.Errorf("retrieve existing GCP project IAM policy: %w", err)
 	}
+	metrics.IncExternalCalls(metricsSystemName, policy.HTTPStatusCode)
 
 	newBindings, updated := calculateRoleBindings(policy.Bindings, map[string]string{
 		"roles/owner":  "group:" + groupEmail,
@@ -214,13 +218,14 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 	}
 
 	policy.Bindings = newBindings
-	_, err = r.gcpServices.CloudResourceManagerProjectsService.SetIamPolicy(project.Name, &cloudresourcemanager.SetIamPolicyRequest{
+	policy, err = r.gcpServices.CloudResourceManagerProjectsService.SetIamPolicy(project.Name, &cloudresourcemanager.SetIamPolicyRequest{
 		Policy: policy,
 	}).Do()
-	metrics.IncExternalCallsByError(metricsSystemName, err)
 	if err != nil {
+		metrics.IncExternalCallsByError(metricsSystemName, err)
 		return fmt.Errorf("assign GCP project IAM policy: %w", err)
 	}
+	metrics.IncExternalCalls(metricsSystemName, policy.HTTPStatusCode)
 
 	targets := []auditlogger.Target{
 		auditlogger.TeamTarget(input.Team.Slug),
@@ -239,10 +244,11 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.Context, input reconcilers.Input, environment string, cluster gcp.Cluster) (*iam.ServiceAccount, error) {
 	name, accountID := cnrmServiceAccountNameAndAccountID(input.Team.Slug, cluster.ProjectID)
 	serviceAccount, err := r.gcpServices.IamProjectsServiceAccountsService.Get(name).Do()
-	metrics.IncExternalCallsByError(metricsSystemName, err)
 	if err == nil {
+		metrics.IncExternalCallsByError(metricsSystemName, err)
 		return serviceAccount, nil
 	}
+	metrics.IncExternalCalls(metricsSystemName, serviceAccount.HTTPStatusCode)
 
 	createServiceAccountRequest := &iam.CreateServiceAccountRequest{
 		AccountId: accountID,
@@ -252,10 +258,11 @@ func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.C
 		},
 	}
 	serviceAccount, err = r.gcpServices.IamProjectsServiceAccountsService.Create("projects/"+cluster.ProjectID, createServiceAccountRequest).Do()
-	metrics.IncExternalCallsByError(metricsSystemName, err)
 	if err != nil {
+		metrics.IncExternalCallsByError(metricsSystemName, err)
 		return nil, err
 	}
+	metrics.IncExternalCalls(metricsSystemName, serviceAccount.HTTPStatusCode)
 
 	targets := []auditlogger.Target{
 		auditlogger.TeamTarget(input.Team.Slug),
@@ -271,22 +278,24 @@ func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.C
 
 func (r *googleGcpReconciler) setTeamProjectBillingInfo(ctx context.Context, project *cloudresourcemanager.Project, input reconcilers.Input) error {
 	info, err := r.gcpServices.CloudBillingProjectsService.GetBillingInfo(project.Name).Do()
-	metrics.IncExternalCallsByError(metricsSystemName, err)
 	if err != nil {
+		metrics.IncExternalCallsByError(metricsSystemName, err)
 		return err
 	}
+	metrics.IncExternalCalls(metricsSystemName, info.HTTPStatusCode)
 
 	if info.BillingAccountName == r.billingAccount {
 		return nil
 	}
 
-	_, err = r.gcpServices.CloudBillingProjectsService.UpdateBillingInfo(project.Name, &cloudbilling.ProjectBillingInfo{
+	operation, err := r.gcpServices.CloudBillingProjectsService.UpdateBillingInfo(project.Name, &cloudbilling.ProjectBillingInfo{
 		BillingAccountName: r.billingAccount,
 	}).Do()
-	metrics.IncExternalCallsByError(metricsSystemName, err)
 	if err != nil {
+		metrics.IncExternalCallsByError(metricsSystemName, err)
 		return err
 	}
+	metrics.IncExternalCalls(metricsSystemName, operation.HTTPStatusCode)
 
 	targets := []auditlogger.Target{
 		auditlogger.TeamTarget(input.Team.Slug),
@@ -305,10 +314,11 @@ func (r *googleGcpReconciler) getOperationResponse(operation *cloudresourcemanag
 	for !operation.Done {
 		time.Sleep(1 * time.Second) // Make sure not to hammer the Operation API
 		operation, err = r.gcpServices.CloudResourceManagerOperationsService.Get(operation.Name).Do()
-		metrics.IncExternalCallsByError(metricsSystemName, err)
 		if err != nil {
+			metrics.IncExternalCallsByError(metricsSystemName, err)
 			return nil, fmt.Errorf("poll operation: %w", err)
 		}
+		metrics.IncExternalCalls(metricsSystemName, operation.HTTPStatusCode)
 	}
 
 	if operation.Error != nil {
@@ -322,10 +332,11 @@ func (r *googleGcpReconciler) ensureProjectHasLabels(_ context.Context, project 
 	operation, err := r.gcpServices.CloudResourceManagerProjectsService.Patch(project.Name, &cloudresourcemanager.Project{
 		Labels: labels,
 	}).Do()
-	metrics.IncExternalCallsByError(metricsSystemName, err)
 	if err != nil {
+		metrics.IncExternalCallsByError(metricsSystemName, err)
 		return err
 	}
+	metrics.IncExternalCalls(metricsSystemName, operation.HTTPStatusCode)
 
 	_, err = r.getOperationResponse(operation)
 	return err

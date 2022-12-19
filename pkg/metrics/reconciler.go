@@ -10,7 +10,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-const subsystem = "reconciler"
+const namespace = "nais"
+const subsystem = "console"
 
 type ReconcilerState string
 
@@ -56,7 +57,7 @@ func IncExternalHTTPCalls(systemName string, resp *http.Response, err error) {
 	if resp != nil {
 		statusCode = resp.StatusCode
 	} else if err != nil {
-		statusCode = 999
+		statusCode = 1
 	}
 	labels := prometheus.Labels{
 		labelSystem:     systemName,
@@ -76,7 +77,7 @@ func IncExternalCalls(systemName string, statusCode int) {
 func IncExternalCallsByError(systemName string, err error) {
 	var statusCode int
 	if err != nil {
-		statusCode = 999
+		statusCode = 1
 	}
 	labels := prometheus.Labels{
 		labelSystem:     systemName,
