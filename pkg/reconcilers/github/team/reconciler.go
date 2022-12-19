@@ -17,6 +17,7 @@ import (
 	helpers "github.com/nais/console/pkg/console"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/logger"
+	"github.com/nais/console/pkg/metrics"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
@@ -24,6 +25,8 @@ import (
 )
 
 const Name = sqlc.ReconcilerNameGithubTeam
+
+const metricsSystemName = "github"
 
 var errGitHubUserNotFound = errors.New("GitHub user does not exist")
 
@@ -117,6 +120,7 @@ func (r *githubTeamReconciler) syncTeamInfo(ctx context.Context, team db.Team, g
 	}
 
 	_, resp, err := r.teamsService.EditTeamBySlug(ctx, r.org, slug, newTeam, false)
+	metrics.IncExternalHTTPCalls(metricsSystemName, unwrapResponse(resp), err)
 
 	if resp == nil && err != nil {
 		return fmt.Errorf("sync team info for GitHub team %q: %w", slug, err)
@@ -134,6 +138,7 @@ func (r *githubTeamReconciler) removeTeamIDPSync(ctx context.Context, slug strin
 		Groups: make([]*github.IDPGroup, 0),
 	}
 	idpList, resp, err := r.teamsService.CreateOrUpdateIDPGroupConnectionsBySlug(ctx, r.org, slug, grpList)
+	metrics.IncExternalHTTPCalls(metricsSystemName, unwrapResponse(resp), err)
 	if err != nil && strings.Contains(err.Error(), "team is not externally managed") {
 		// Special case: org has not been configured for team IDP sync, which we don't want to treat as an error
 		// FIXME: https://github.com/nais/console/issues/77
@@ -162,6 +167,7 @@ func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconc
 		slug = state.Slug.String()
 
 		existingTeam, resp, err := r.teamsService.GetTeamBySlug(ctx, r.org, string(*state.Slug))
+		metrics.IncExternalHTTPCalls(metricsSystemName, unwrapResponse(resp), err)
 		if resp == nil && err != nil {
 			return nil, fmt.Errorf("unable to fetch GitHub team %q: %w", *state.Slug, err)
 		}
@@ -181,6 +187,7 @@ func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconc
 		Name:        slug,
 		Description: &team.Purpose,
 	})
+	metrics.IncExternalHTTPCalls(metricsSystemName, unwrapResponse(resp), err)
 	err = httpError(http.StatusCreated, resp, err)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create GitHub team: %w", err)
@@ -213,6 +220,7 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 	for _, gitHubUser := range membersToRemove {
 		username := gitHubUser.GetLogin()
 		resp, err := r.teamsService.RemoveTeamMembershipBySlug(ctx, r.org, *githubTeam.Slug, username)
+		metrics.IncExternalHTTPCalls(metricsSystemName, unwrapResponse(resp), err)
 		err = httpError(http.StatusNoContent, resp, err)
 		if err != nil {
 			r.log.WithError(err).Warnf("remove member %q from GitHub team %q", username, *githubTeam.Slug)
@@ -245,6 +253,7 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 	membersToAdd := localOnlyMembers(consoleUserWithGitHubUser, membersAccordingToGitHub)
 	for username, consoleUser := range membersToAdd {
 		_, resp, err := r.teamsService.AddTeamMembershipBySlug(ctx, r.org, *githubTeam.Slug, username, &github.TeamAddTeamMembershipOptions{})
+		metrics.IncExternalHTTPCalls(metricsSystemName, unwrapResponse(resp), err)
 		err = httpError(http.StatusOK, resp, err)
 		if err != nil {
 			r.log.WithError(err).Warnf("add member %q to GitHub team %q", username, *githubTeam.Slug)
@@ -277,6 +286,7 @@ func (r *githubTeamReconciler) getTeamMembers(ctx context.Context, slug string) 
 	allMembers := make([]*github.User, 0)
 	for {
 		members, resp, err := r.teamsService.ListTeamMembersBySlug(ctx, r.org, slug, opt)
+		metrics.IncExternalHTTPCalls(metricsSystemName, unwrapResponse(resp), err)
 		err = httpError(http.StatusOK, resp, err)
 		if err != nil {
 			return nil, err
@@ -349,6 +359,7 @@ func (r *githubTeamReconciler) getGitHubUsernameFromEmail(ctx context.Context, e
 	}
 
 	err := r.graphClient.Query(ctx, &query, variables)
+	metrics.IncExternalCallsByError(metricsSystemName, err)
 	if err != nil {
 		return nil, err
 	}
@@ -372,6 +383,7 @@ func (r *githubTeamReconciler) getEmailFromGitHubUsername(ctx context.Context, u
 	}
 
 	err := r.graphClient.Query(ctx, &query, variables)
+	metrics.IncExternalCallsByError(metricsSystemName, err)
 	if err != nil {
 		return nil, err
 	}
@@ -429,4 +441,11 @@ func httpError(expected int, resp *github.Response, err error) error {
 	}
 
 	return nil
+}
+
+func unwrapResponse(resp *github.Response) *http.Response {
+	if resp == nil {
+		return nil
+	}
+	return resp.Response
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/logger"
+	"github.com/nais/console/pkg/metrics"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
@@ -38,6 +39,8 @@ type naisDeployReconciler struct {
 const (
 	Name = sqlc.ReconcilerNameNaisDeploy
 )
+
+const metricsSystemName = "nais-deploy"
 
 func New(database db.Database, auditLogger auditlogger.AuditLogger, client *http.Client, endpoint string, provisionKey []byte, log logger.Logger) *naisDeployReconciler {
 	return &naisDeployReconciler{
@@ -81,6 +84,7 @@ func (r *naisDeployReconciler) Reconcile(ctx context.Context, input reconcilers.
 	request.Header.Set("Content-Type", "application/json")
 
 	response, err := r.client.Do(request)
+	metrics.IncExternalHTTPCalls(metricsSystemName, response, err)
 	if err != nil {
 		return err
 	}

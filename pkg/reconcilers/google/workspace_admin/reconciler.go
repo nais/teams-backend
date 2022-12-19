@@ -11,6 +11,7 @@ import (
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/google_token_source"
 	"github.com/nais/console/pkg/logger"
+	"github.com/nais/console/pkg/metrics"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/sqlc"
 	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
@@ -29,6 +30,8 @@ type googleWorkspaceAdminReconciler struct {
 const (
 	Name = sqlc.ReconcilerNameGoogleWorkspaceAdmin
 )
+
+const metricsSystemName = "google-admin"
 
 func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, adminService *admin_directory_v1.Service, log logger.Logger) *googleWorkspaceAdminReconciler {
 	return &googleWorkspaceAdminReconciler{
@@ -97,7 +100,9 @@ func (r *googleWorkspaceAdminReconciler) Reconcile(ctx context.Context, input re
 
 func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(ctx context.Context, state *reconcilers.GoogleWorkspaceState, input reconcilers.Input) (*admin_directory_v1.Group, error) {
 	if state.GroupEmail != nil {
-		return r.adminService.Groups.Get(*state.GroupEmail).Do()
+		grp, err := r.adminService.Groups.Get(*state.GroupEmail).Do()
+		metrics.IncExternalCallsByError(metricsSystemName, err)
+		return grp, err
 	}
 
 	groupKey := reconcilers.TeamNamePrefix + input.Team.Slug
@@ -108,6 +113,7 @@ func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(ctx context.Context, s
 		Description: input.Team.Purpose,
 	}
 	group, err := r.adminService.Groups.Insert(newGroup).Do()
+	metrics.IncExternalCallsByError(metricsSystemName, err)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create Google Directory group: %w", err)
 	}
@@ -135,6 +141,7 @@ func getGoogleGroupMembers(ctx context.Context, service *admin_directory_v1.Memb
 		List(groupID).
 		Context(ctx).
 		Pages(ctx, callback)
+	metrics.IncExternalCallsByError(metricsSystemName, err)
 	if err != nil {
 		return nil, fmt.Errorf("list existing members in Google Directory group: %w", err)
 	}
@@ -153,6 +160,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 	for _, member := range membersToRemove {
 		remoteMemberEmail := strings.ToLower(member.Email)
 		err = r.adminService.Members.Delete(grp.Id, member.Id).Do()
+		metrics.IncExternalCallsByError(metricsSystemName, err)
 		if err != nil {
 			r.log.WithError(err).Warnf("delete member %q from Google Directory group %q", remoteMemberEmail, grp.Email)
 			continue
@@ -183,6 +191,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 			Email: user.Email,
 		}
 		_, err = r.adminService.Members.Insert(grp.Id, member).Do()
+		metrics.IncExternalCallsByError(metricsSystemName, err)
 		if err != nil {
 			r.log.WithError(err).Warnf("add member %q to Google Directory group %q", member.Email, grp.Email)
 			continue
@@ -212,6 +221,7 @@ func (r *googleWorkspaceAdminReconciler) addToGKESecurityGroup(ctx context.Conte
 	_, err := r.adminService.Members.Insert(groupKey, member).Do()
 	if err != nil {
 		googleError, ok := err.(*googleapi.Error)
+		metrics.IncExternalCallsByError(metricsSystemName, err)
 		if ok && googleError.Code == http.StatusConflict {
 			return nil
 		}

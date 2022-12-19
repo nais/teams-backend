@@ -17,6 +17,7 @@ import (
 	"github.com/nais/console/pkg/gcp"
 	"github.com/nais/console/pkg/google_token_source"
 	"github.com/nais/console/pkg/logger"
+	"github.com/nais/console/pkg/metrics"
 	"github.com/nais/console/pkg/reconcilers"
 	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
 	"github.com/nais/console/pkg/slug"
@@ -32,6 +33,8 @@ const (
 	Name                              = sqlc.ReconcilerNameGoogleGcpProject
 	GoogleProjectDisplayNameMaxLength = 30
 )
+
+const metricsSystemName = "gcp"
 
 func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, gcpServices *GcpServices, tenantName, domain, cnrmRoleName, billingAccount string, log logger.Logger) *googleGcpReconciler {
 	return &googleGcpReconciler{
@@ -121,6 +124,7 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *reconcilers.GoogleGcpProjectState, environment string, parentFolderID int64, input reconcilers.Input) (*cloudresourcemanager.Project, error) {
 	if projectFromState, exists := state.Projects[environment]; exists {
 		response, err := r.gcpServices.CloudResourceManagerProjectsService.Search().Query("id:" + projectFromState.ProjectID).Do()
+		metrics.IncExternalCallsByError(metricsSystemName, err)
 		if err != nil {
 			return nil, err
 		}
@@ -141,6 +145,7 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *rec
 		ProjectId:   projectID,
 	}
 	operation, err := r.gcpServices.CloudResourceManagerProjectsService.Create(project).Do()
+	metrics.IncExternalCallsByError(metricsSystemName, err)
 	if err != nil {
 		return nil, fmt.Errorf("initiate creation of GCP project: %w", err)
 	}
@@ -188,11 +193,13 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 			},
 		},
 	}).Do()
+	metrics.IncExternalCallsByError(metricsSystemName, err)
 	if err != nil {
 		return fmt.Errorf("assign roles for CNRM service account: %w", err)
 	}
 
 	policy, err := r.gcpServices.CloudResourceManagerProjectsService.GetIamPolicy(project.Name, &cloudresourcemanager.GetIamPolicyRequest{}).Do()
+	metrics.IncExternalCallsByError(metricsSystemName, err)
 	if err != nil {
 		return fmt.Errorf("retrieve existing GCP project IAM policy: %w", err)
 	}
@@ -210,6 +217,7 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 	_, err = r.gcpServices.CloudResourceManagerProjectsService.SetIamPolicy(project.Name, &cloudresourcemanager.SetIamPolicyRequest{
 		Policy: policy,
 	}).Do()
+	metrics.IncExternalCallsByError(metricsSystemName, err)
 	if err != nil {
 		return fmt.Errorf("assign GCP project IAM policy: %w", err)
 	}
@@ -231,6 +239,7 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.Context, input reconcilers.Input, environment string, cluster gcp.Cluster) (*iam.ServiceAccount, error) {
 	name, accountID := cnrmServiceAccountNameAndAccountID(input.Team.Slug, cluster.ProjectID)
 	serviceAccount, err := r.gcpServices.IamProjectsServiceAccountsService.Get(name).Do()
+	metrics.IncExternalCallsByError(metricsSystemName, err)
 	if err == nil {
 		return serviceAccount, nil
 	}
@@ -243,6 +252,7 @@ func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.C
 		},
 	}
 	serviceAccount, err = r.gcpServices.IamProjectsServiceAccountsService.Create("projects/"+cluster.ProjectID, createServiceAccountRequest).Do()
+	metrics.IncExternalCallsByError(metricsSystemName, err)
 	if err != nil {
 		return nil, err
 	}
@@ -261,6 +271,7 @@ func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.C
 
 func (r *googleGcpReconciler) setTeamProjectBillingInfo(ctx context.Context, project *cloudresourcemanager.Project, input reconcilers.Input) error {
 	info, err := r.gcpServices.CloudBillingProjectsService.GetBillingInfo(project.Name).Do()
+	metrics.IncExternalCallsByError(metricsSystemName, err)
 	if err != nil {
 		return err
 	}
@@ -272,6 +283,7 @@ func (r *googleGcpReconciler) setTeamProjectBillingInfo(ctx context.Context, pro
 	_, err = r.gcpServices.CloudBillingProjectsService.UpdateBillingInfo(project.Name, &cloudbilling.ProjectBillingInfo{
 		BillingAccountName: r.billingAccount,
 	}).Do()
+	metrics.IncExternalCallsByError(metricsSystemName, err)
 	if err != nil {
 		return err
 	}
@@ -293,6 +305,7 @@ func (r *googleGcpReconciler) getOperationResponse(operation *cloudresourcemanag
 	for !operation.Done {
 		time.Sleep(1 * time.Second) // Make sure not to hammer the Operation API
 		operation, err = r.gcpServices.CloudResourceManagerOperationsService.Get(operation.Name).Do()
+		metrics.IncExternalCallsByError(metricsSystemName, err)
 		if err != nil {
 			return nil, fmt.Errorf("poll operation: %w", err)
 		}
@@ -309,6 +322,7 @@ func (r *googleGcpReconciler) ensureProjectHasLabels(_ context.Context, project 
 	operation, err := r.gcpServices.CloudResourceManagerProjectsService.Patch(project.Name, &cloudresourcemanager.Project{
 		Labels: labels,
 	}).Do()
+	metrics.IncExternalCallsByError(metricsSystemName, err)
 	if err != nil {
 		return err
 	}

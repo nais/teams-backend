@@ -13,6 +13,7 @@ import (
 	"github.com/nais/console/pkg/google_token_source"
 	"github.com/nais/console/pkg/legacy/envmap"
 	"github.com/nais/console/pkg/logger"
+	"github.com/nais/console/pkg/metrics"
 	"github.com/nais/console/pkg/reconcilers"
 	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
 	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
@@ -25,6 +26,8 @@ import (
 const (
 	NaisdCreateNamespace = "create-namespace"
 )
+
+const metricsSystemName = "naisd"
 
 type naisdData struct {
 	Name         string `json:"name"`
@@ -204,6 +207,9 @@ func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, team db.T
 	<-future.Ready()
 	_, err = future.Get(ctx)
 	topic.Stop()
+
+	metrics.IncExternalCallsByError(metricsSystemName, err)
+
 	return err
 }
 

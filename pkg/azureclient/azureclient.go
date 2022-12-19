@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/nais/console/pkg/metrics"
 	"github.com/nais/console/pkg/reconcilers"
 )
 
@@ -33,6 +34,8 @@ func New(c *http.Client) Client {
 	}
 }
 
+const metricsSystemName = "azure"
+
 func (s *client) GetUser(ctx context.Context, email string) (*Member, error) {
 	u := fmt.Sprintf("https://graph.microsoft.com/v1.0/users/%s", email)
 
@@ -42,6 +45,7 @@ func (s *client) GetUser(ctx context.Context, email string) (*Member, error) {
 	}
 
 	resp, err := s.client.Do(req)
+	metrics.IncExternalHTTPCalls(metricsSystemName, resp, err)
 	if err != nil {
 		return nil, err
 	}
@@ -73,6 +77,7 @@ func (s *client) GetGroupById(ctx context.Context, id uuid.UUID) (*Group, error)
 	}
 
 	resp, err := s.client.Do(req)
+	metrics.IncExternalHTTPCalls(metricsSystemName, resp, err)
 	if err != nil {
 		return nil, err
 	}
@@ -108,6 +113,7 @@ func (s *client) CreateGroup(ctx context.Context, grp *Group) (*Group, error) {
 	req.Header.Set("content-type", "application/json")
 
 	resp, err := s.client.Do(req)
+	metrics.IncExternalHTTPCalls(metricsSystemName, resp, err)
 	if err != nil {
 		return nil, err
 	}
@@ -164,6 +170,7 @@ func (s *client) ListGroupOwners(ctx context.Context, grp *Group) ([]*Member, er
 	}
 
 	resp, err := s.client.Do(req)
+	metrics.IncExternalHTTPCalls(metricsSystemName, resp, err)
 	if err != nil {
 		return nil, err
 	}
@@ -194,6 +201,7 @@ func (s *client) ListGroupMembers(ctx context.Context, grp *Group) ([]*Member, e
 	}
 
 	resp, err := s.client.Do(req)
+	metrics.IncExternalHTTPCalls(metricsSystemName, resp, err)
 	if err != nil {
 		return nil, err
 	}
@@ -234,6 +242,7 @@ func (s *client) AddMemberToGroup(ctx context.Context, grp *Group, member *Membe
 	req.Header.Set("content-type", "application/json")
 
 	resp, err := s.client.Do(req)
+	metrics.IncExternalHTTPCalls(metricsSystemName, resp, err)
 	if err != nil {
 		return err
 	}
@@ -256,6 +265,7 @@ func (s *client) RemoveMemberFromGroup(ctx context.Context, grp *Group, member *
 	}
 
 	resp, err := s.client.Do(req)
+	metrics.IncExternalHTTPCalls(metricsSystemName, resp, err)
 	if err != nil {
 		return err
 	}
