@@ -2,6 +2,7 @@ package google_workspace_admin_reconciler
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"net/http"
 	"strings"
@@ -172,10 +173,13 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 
 		if _, exists := consoleUserMap[remoteMemberEmail]; !exists {
 			user, err := r.database.GetUserByEmail(ctx, remoteMemberEmail)
-			if err != nil {
+			if err == sql.ErrNoRows {
+				r.log.Warnf("Remote Google user %q not found in local database", remoteMemberEmail)
+			} else if err != nil {
 				return err
+			} else {
+				consoleUserMap[remoteMemberEmail] = user
 			}
-			consoleUserMap[remoteMemberEmail] = user
 		}
 
 		targets := []auditlogger.Target{
