@@ -266,6 +266,9 @@ func reconcileTeams(
 		teamErrors := 0
 
 		for _, reconciler := range enabledReconcilers {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
 			name := reconciler.Name()
 			log := log.WithSystem(string(name))
 			metrics.IncReconcilerCounter(name, metrics.ReconcilerStateStarted, log)
