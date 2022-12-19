@@ -245,10 +245,10 @@ func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.C
 	name, accountID := cnrmServiceAccountNameAndAccountID(input.Team.Slug, cluster.ProjectID)
 	serviceAccount, err := r.gcpServices.IamProjectsServiceAccountsService.Get(name).Do()
 	if err == nil {
-		metrics.IncExternalCallsByError(metricsSystemName, err)
+		metrics.IncExternalCalls(metricsSystemName, serviceAccount.HTTPStatusCode)
 		return serviceAccount, nil
 	}
-	metrics.IncExternalCalls(metricsSystemName, serviceAccount.HTTPStatusCode)
+	metrics.IncExternalCallsByError(metricsSystemName, err)
 
 	createServiceAccountRequest := &iam.CreateServiceAccountRequest{
 		AccountId: accountID,
