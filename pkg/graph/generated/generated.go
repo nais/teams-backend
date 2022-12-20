@@ -93,6 +93,7 @@ type ComplexityRoot struct {
 		SetGoogleWorkspaceGroupEmail func(childComplexity int, teamSlug *slug.Slug, googleWorkspaceGroupEmail string) int
 		SetNaisNamespace             func(childComplexity int, teamSlug *slug.Slug, gcpEnvironment string, naisNamespace *slug.Slug) int
 		SetTeamMemberRole            func(childComplexity int, slug *slug.Slug, userID *uuid.UUID, role model.TeamRole) int
+		SynchronizeAllTeams          func(childComplexity int) int
 		SynchronizeTeam              func(childComplexity int, slug *slug.Slug) int
 		SynchronizeUsers             func(childComplexity int) int
 		UpdateTeam                   func(childComplexity int, slug *slug.Slug, input model.UpdateTeamInput) int
@@ -225,6 +226,7 @@ type MutationResolver interface {
 	UpdateTeam(ctx context.Context, slug *slug.Slug, input model.UpdateTeamInput) (*db.Team, error)
 	RemoveUsersFromTeam(ctx context.Context, slug *slug.Slug, userIds []*uuid.UUID) (*db.Team, error)
 	SynchronizeTeam(ctx context.Context, slug *slug.Slug) (*model.TeamSync, error)
+	SynchronizeAllTeams(ctx context.Context) ([]*model.TeamSync, error)
 	AddTeamMembers(ctx context.Context, slug *slug.Slug, userIds []*uuid.UUID) (*db.Team, error)
 	AddTeamOwners(ctx context.Context, slug *slug.Slug, userIds []*uuid.UUID) (*db.Team, error)
 	SetTeamMemberRole(ctx context.Context, slug *slug.Slug, userID *uuid.UUID, role model.TeamRole) (*db.Team, error)
@@ -561,6 +563,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.SetTeamMemberRole(childComplexity, args["slug"].(*slug.Slug), args["userId"].(*uuid.UUID), args["role"].(model.TeamRole)), true
+
+	case "Mutation.synchronizeAllTeams":
+		if e.complexity.Mutation.SynchronizeAllTeams == nil {
+			break
+		}
+
+		return e.complexity.Mutation.SynchronizeAllTeams(childComplexity), true
 
 	case "Mutation.synchronizeTeam":
 		if e.complexity.Mutation.SynchronizeTeam == nil {
@@ -1458,6 +1467,14 @@ extend type Mutation {
         "The slug of the team to synchronize."
         slug: Slug!
     ): TeamSync! @auth
+
+    """
+    Manually synchronize all teams
+
+    This action will trigger a full synchronization of all teams against the configured third party systems. The action
+    is asynchronous. The operation can take a while, depending on the amount of teams currently enabled in Console.
+    """
+    synchronizeAllTeams: [TeamSync!]! @admin
 
     """
     Add users to a team as regular team members
@@ -3985,6 +4002,76 @@ func (ec *executionContext) fieldContext_Mutation_synchronizeTeam(ctx context.Co
 	if fc.Args, err = ec.field_Mutation_synchronizeTeam_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_synchronizeAllTeams(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_synchronizeAllTeams(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().SynchronizeAllTeams(rctx)
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Admin == nil {
+				return nil, errors.New("directive admin is not implemented")
+			}
+			return ec.directives.Admin(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*model.TeamSync); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/nais/console/pkg/graph/model.TeamSync`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.TeamSync)
+	fc.Result = res
+	return ec.marshalNTeamSync2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamSyncᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_synchronizeAllTeams(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "team":
+				return ec.fieldContext_TeamSync_team(ctx, field)
+			case "correlationID":
+				return ec.fieldContext_TeamSync_correlationID(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type TeamSync", field.Name)
+		},
 	}
 	return fc, nil
 }
@@ -10104,6 +10191,15 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "synchronizeAllTeams":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_synchronizeAllTeams(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "addTeamMembers":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
@@ -12425,6 +12521,50 @@ func (ec *executionContext) marshalNTeamRole2githubᚗcomᚋnaisᚋconsoleᚋpkg
 
 func (ec *executionContext) marshalNTeamSync2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamSync(ctx context.Context, sel ast.SelectionSet, v model.TeamSync) graphql.Marshaler {
 	return ec._TeamSync(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNTeamSync2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamSyncᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.TeamSync) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNTeamSync2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamSync(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) marshalNTeamSync2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamSync(ctx context.Context, sel ast.SelectionSet, v *model.TeamSync) graphql.Marshaler {

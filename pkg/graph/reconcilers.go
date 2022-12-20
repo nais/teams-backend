@@ -73,7 +73,11 @@ func (r *mutationResolver) EnableReconciler(ctx context.Context, name sqlc.Recon
 		CorrelationID: correlationID,
 	}
 	r.auditLogger.Logf(ctx, targets, fields, "Enable reconciler: %q", name)
-	r.reconcileAllTeams(ctx, correlationID)
+
+	_, err = r.reconcileAllTeams(ctx, correlationID)
+	if err != nil {
+		r.log.WithError(err).Errorf("reconcile all teams")
+	}
 
 	return reconciler, nil
 }

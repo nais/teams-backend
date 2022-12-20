@@ -230,6 +230,33 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, slug *slug.Slug)
 	}, nil
 }
 
+// SynchronizeAllTeams is the resolver for the synchronizeAllTeams field.
+func (r *mutationResolver) SynchronizeAllTeams(ctx context.Context) ([]*model.TeamSync, error) {
+	correlationID, err := uuid.NewUUID()
+	if err != nil {
+		return nil, fmt.Errorf("create log correlation ID: %w", err)
+	}
+
+	syncEntries, err := r.reconcileAllTeams(ctx, correlationID)
+	if err != nil {
+		return nil, err
+	}
+
+	actor := authz.ActorFromContext(ctx)
+	targets := make([]auditlogger.Target, 0, len(syncEntries))
+	for _, entry := range syncEntries {
+		targets = append(targets, auditlogger.TeamTarget(entry.Team.Slug))
+	}
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGraphqlApiTeamSync,
+		Actor:         actor,
+		CorrelationID: correlationID,
+	}
+	r.auditLogger.Logf(ctx, targets, fields, "Manually scheduled for synchronization")
+
+	return syncEntries, nil
+}
+
 // AddTeamMembers is the resolver for the addTeamMembers field.
 func (r *mutationResolver) AddTeamMembers(ctx context.Context, slug *slug.Slug, userIds []*uuid.UUID) (*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)

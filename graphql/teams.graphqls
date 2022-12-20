@@ -64,6 +64,14 @@ extend type Mutation {
     ): TeamSync! @auth
 
     """
+    Manually synchronize all teams
+
+    This action will trigger a full synchronization of all teams against the configured third party systems. The action
+    is asynchronous. The operation can take a while, depending on the amount of teams currently enabled in Console.
+    """
+    synchronizeAllTeams: [TeamSync!]! @admin
+
+    """
     Add users to a team as regular team members
 
     If one or more users are already added to the team they will not be updated. If a user is already an owner of the
