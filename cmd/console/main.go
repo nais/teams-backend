@@ -186,6 +186,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 
 			log.WithTeamSlug(string(input.Team.Slug)).Debugf("scheduling team reconciliation in %s", time.Until(nextReconcile))
 			pendingTeams[input.Team.Slug] = input
+			metrics.SetPendingTeamCount(len(pendingTeams))
 
 		case <-reconcileTimer.C:
 			log.Debugf("running reconcile of %d teams...", len(pendingTeams))
@@ -196,6 +197,8 @@ func run(cfg *config.Config, log logger.Logger) error {
 				log.WithError(err).Error("reconcile teams")
 				reconcileTimer.Reset(cfg.ReconcileRetryInterval)
 			}
+
+			metrics.SetPendingTeamCount(len(pendingTeams))
 
 			if len(pendingTeams) > 0 {
 				log.Warnf("%d teams are not fully reconciled.", len(pendingTeams))
@@ -254,7 +257,7 @@ func reconcileTeams(
 	ctx, cancel := context.WithTimeout(ctx, reconcilerTimeout)
 	defer cancel()
 
-	errors := 0
+	// Delete disabled teams from queue
 	for teamSlug, input := range *reconcileInputs {
 		log := log.WithTeamSlug(string(teamSlug))
 		if !input.Team.Enabled {
@@ -262,7 +265,12 @@ func reconcileTeams(
 			delete(*reconcileInputs, teamSlug)
 			continue
 		}
+	}
 
+	metrics.SetPendingTeamCount(len(*reconcileInputs))
+
+	errors := 0
+	for teamSlug, input := range *reconcileInputs {
 		teamErrors := 0
 
 		for _, reconciler := range enabledReconcilers {
@@ -299,6 +307,9 @@ func reconcileTeams(
 			}
 			delete(*reconcileInputs, teamSlug)
 		}
+
+		metrics.SetPendingTeamCount(len(*reconcileInputs))
+
 		errors += teamErrors
 	}
 
