@@ -321,7 +321,7 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, slug *slug.Slug, u
 				CorrelationID: correlationID,
 				Actor:         actor,
 			}
-			r.auditLogger.Logf(ctx, targets, fields, "Add team owner")
+			r.auditLogger.Logf(ctx, targets, fields, "Add team owner: %q", user.Email)
 		}
 		return nil
 	})
