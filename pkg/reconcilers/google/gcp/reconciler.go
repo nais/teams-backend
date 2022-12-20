@@ -239,10 +239,38 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 	return nil
 }
 
+// deleteIncorrectlyNamedCnrmServiceAccount Temporary function that will remove the old CNRM service account created by
+// Console with an incorrect name (the length could exceed the max length)
+func (r *googleGcpReconciler) deleteIncorrectlyNamedCnrmServiceAccount(ctx context.Context, input reconcilers.Input, projectID, environment string) {
+	accountID := fmt.Sprintf("cnrm-%s", input.Team.Slug)
+	cnrmEmailAddress := fmt.Sprintf("%s@%s.iam.gserviceaccount.com", accountID, projectID)
+	serviceAccountName := "projects/" + projectID + "/serviceAccounts/" + cnrmEmailAddress
+
+	resp, err := r.gcpServices.IamProjectsServiceAccountsService.Delete(serviceAccountName).Do()
+	if err != nil {
+		metrics.IncExternalCallsByError(metricsSystemName, err)
+		r.log.WithError(err).Error("delete incorrectly named CNRM service account for team %q in environment %q", input.Team.Slug, environment)
+		return
+	}
+
+	metrics.IncExternalCalls(metricsSystemName, resp.HTTPStatusCode)
+
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(input.Team.Slug),
+	}
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGoogleGcpProjectDeleteCnrmServiceAccount,
+		CorrelationID: input.CorrelationID,
+	}
+	r.auditLogger.Logf(ctx, targets, fields, "Delete incorrectly named CNRM service account for team %q in environment %q", input.Team.Slug, environment)
+}
+
 // getOrCreateProjectCnrmServiceAccount Get the CNRM service account for the project in this env. If the service account
 // does not exist, attempt to create it, and then return it.
 func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.Context, input reconcilers.Input, environment string, cluster gcp.Cluster) (*iam.ServiceAccount, error) {
-	name, accountID := cnrmServiceAccountNameAndAccountID(input.Team.Slug, cluster.ProjectID)
+	r.deleteIncorrectlyNamedCnrmServiceAccount(ctx, input, cluster.ProjectID, environment)
+
+	name, accountID := CnrmServiceAccountNameAndAccountID(input.Team.Slug, cluster.ProjectID)
 	serviceAccount, err := r.gcpServices.IamProjectsServiceAccountsService.Get(name).Do()
 	if err == nil {
 		metrics.IncExternalCalls(metricsSystemName, serviceAccount.HTTPStatusCode)
@@ -342,9 +370,18 @@ func (r *googleGcpReconciler) ensureProjectHasLabels(_ context.Context, project 
 	return err
 }
 
-// cnrmServiceAccountNameAndAccountID Generate a name and an account ID for a CNRM service account
-func cnrmServiceAccountNameAndAccountID(slug slug.Slug, projectID string) (name, accountID string) {
-	accountID = fmt.Sprintf("cnrm-%s", slug)
+// CnrmServiceAccountNameAndAccountID Generate a name and an account ID for a CNRM service account
+func CnrmServiceAccountNameAndAccountID(slug slug.Slug, projectID string) (name, accountID string) {
+	hasher := sha256.New()
+	hasher.Write([]byte(slug))
+
+	parts := []string{
+		"cnrm",
+		strings.TrimSuffix(console.Truncate(string(slug), 20), "-"),
+		console.Truncate(hex.EncodeToString(hasher.Sum(nil)), 4),
+	}
+
+	accountID = strings.Join(parts, "-")
 	cnrmEmailAddress := fmt.Sprintf("%s@%s.iam.gserviceaccount.com", accountID, projectID)
 	name = "projects/" + projectID + "/serviceAccounts/" + cnrmEmailAddress
 	return

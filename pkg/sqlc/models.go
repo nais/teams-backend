@@ -71,6 +71,7 @@ const (
 	AuditActionUsersyncRevokeAdminRole                   AuditAction = "usersync:revoke-admin-role"
 	AuditActionGraphqlApiReconcilersUpdateTeamState      AuditAction = "graphql-api:reconcilers:update-team-state"
 	AuditActionNaisDeployProvisionDeployKey              AuditAction = "nais:deploy:provision-deploy-key"
+	AuditActionGoogleGcpProjectDeleteCnrmServiceAccount  AuditAction = "google:gcp:project:delete-cnrm-service-account"
 )
 
 func (e *AuditAction) Scan(src interface{}) error {
@@ -162,7 +163,8 @@ func (e AuditAction) Valid() bool {
 		AuditActionUsersyncAssignAdminRole,
 		AuditActionUsersyncRevokeAdminRole,
 		AuditActionGraphqlApiReconcilersUpdateTeamState,
-		AuditActionNaisDeployProvisionDeployKey:
+		AuditActionNaisDeployProvisionDeployKey,
+		AuditActionGoogleGcpProjectDeleteCnrmServiceAccount:
 		return true
 	}
 	return false
@@ -223,6 +225,7 @@ func AllAuditActionValues() []AuditAction {
 		AuditActionUsersyncRevokeAdminRole,
 		AuditActionGraphqlApiReconcilersUpdateTeamState,
 		AuditActionNaisDeployProvisionDeployKey,
+		AuditActionGoogleGcpProjectDeleteCnrmServiceAccount,
 	}
 }
 
