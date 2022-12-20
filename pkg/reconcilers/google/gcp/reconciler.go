@@ -249,7 +249,7 @@ func (r *googleGcpReconciler) deleteIncorrectlyNamedCnrmServiceAccount(ctx conte
 	resp, err := r.gcpServices.IamProjectsServiceAccountsService.Delete(serviceAccountName).Do()
 	if err != nil {
 		metrics.IncExternalCallsByError(metricsSystemName, err)
-		r.log.WithError(err).Error("delete incorrectly named CNRM service account for team %q in environment %q", input.Team.Slug, environment)
+		r.log.WithError(err).Errorf("delete incorrectly named CNRM service account for team %q in environment %q", input.Team.Slug, environment)
 		return
 	}
 
