@@ -151,26 +151,6 @@ func run(cfg *config.Config, log logger.Logger) error {
 
 	pendingTeams := make(map[slug.Slug]reconcilers.Input)
 
-	// Reconcile all teams on startup. All will share the same correlation ID
-	correlationID, err := uuid.NewUUID()
-	if err != nil {
-		return fmt.Errorf("cannot create ID for correlation entry for initial reconcile loop: %w", err)
-	}
-
-	allTeams, err := database.GetTeams(ctx)
-	if err != nil {
-		return fmt.Errorf("unable to load team for initial reconcile loop: %w", err)
-	}
-	for _, team := range allTeams {
-		input, err := reconcilers.CreateReconcilerInput(ctx, database, *team)
-		if err != nil {
-			return fmt.Errorf("unable to create input for initial reconcile loop: %w", err)
-		}
-
-		// override correlation id as we want to group all actions in the initial reconcile loop
-		teamReconciler <- input.WithCorrelationID(correlationID)
-	}
-
 	defer log.Info("main program context canceled; exiting.")
 
 	for ctx.Err() == nil {
@@ -206,7 +186,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 
 			log.Debug("reconciliation complete.")
 
-		case <-userSync:
+		case correlationID := <-userSync:
 			if userSyncer == nil {
 				log.Infof("user sync is disabled")
 				break
