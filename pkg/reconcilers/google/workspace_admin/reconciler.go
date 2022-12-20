@@ -200,7 +200,9 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 		}
 		operation, err := r.adminService.Members.Insert(grp.Id, member).Do()
 		if err != nil {
-			metrics.IncExternalCallsByError(metricsSystemName, err)
+			// Getting an error from this call is not really an "error" per se.
+			// Thus, it is overridden in the metrics to avoid pumping up the error rate.
+			metrics.IncExternalCalls(metricsSystemName, 0)
 			r.log.WithError(err).Warnf("add member %q to Google Directory group %q", member.Email, grp.Email)
 			continue
 		}

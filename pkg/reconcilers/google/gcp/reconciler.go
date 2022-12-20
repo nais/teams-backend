@@ -276,7 +276,7 @@ func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.C
 		metrics.IncExternalCalls(metricsSystemName, serviceAccount.HTTPStatusCode)
 		return serviceAccount, nil
 	}
-	metrics.IncExternalCallsByError(metricsSystemName, err)
+	metrics.IncExternalCalls(metricsSystemName, 0)
 
 	createServiceAccountRequest := &iam.CreateServiceAccountRequest{
 		AccountId: accountID,
