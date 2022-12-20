@@ -147,7 +147,30 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *rec
 	}
 	operation, err := r.gcpServices.CloudResourceManagerProjectsService.Create(project).Do()
 	if err != nil {
-		metrics.IncExternalCallsByError(metricsSystemName, err)
+		googleError, ok := err.(*googleapi.Error)
+		if !ok {
+			metrics.IncExternalCallsByError(metricsSystemName, err)
+			return nil, fmt.Errorf("initiate creation of GCP project: %w", err)
+		}
+
+		if googleError.Code != 409 {
+			metrics.IncExternalCallsByError(metricsSystemName, err)
+			return nil, fmt.Errorf("initiate creation of GCP project: %w", err)
+		}
+
+		// the project already exists, adopt
+		response, err := r.gcpServices.CloudResourceManagerProjectsService.Search().Query("id:" + projectID).Do()
+		if err != nil {
+			metrics.IncExternalCallsByError(metricsSystemName, err)
+			return nil, fmt.Errorf("initiate creation of GCP project: %w", err)
+		}
+
+		metrics.IncExternalCalls(metricsSystemName, response.HTTPStatusCode)
+
+		if len(response.Projects) == 1 {
+			return response.Projects[0], nil
+		}
+
 		return nil, fmt.Errorf("initiate creation of GCP project: %w", err)
 	}
 	metrics.IncExternalCalls(metricsSystemName, operation.HTTPStatusCode)
