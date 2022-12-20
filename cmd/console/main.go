@@ -44,10 +44,9 @@ import (
 )
 
 const (
-	reconcilerQueueSize   = 4096
-	reconcilerGracePeriod = time.Second * 15
-	reconcilerTimeout     = time.Minute * 15
-	immediateReconcile    = time.Second * 1
+	reconcilerQueueSize = 4096
+	reconcilerTimeout   = time.Minute * 15
+	immediateReconcile  = time.Second * 1
 
 	userSyncInterval = time.Hour * 1
 	userSyncTimeout  = time.Second * 30
@@ -195,7 +194,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 
 			if err != nil {
 				log.WithError(err).Error("reconcile teams")
-				reconcileTimer.Reset(reconcilerGracePeriod)
+				reconcileTimer.Reset(cfg.ReconcileRetryInterval)
 			}
 
 			if len(pendingTeams) > 0 {
@@ -203,7 +202,8 @@ func run(cfg *config.Config, log logger.Logger) error {
 			}
 
 			log.Debug("reconciliation complete.")
-		case correlationID := <-userSync:
+
+		case <-userSync:
 			if userSyncer == nil {
 				log.Infof("user sync is disabled")
 				break

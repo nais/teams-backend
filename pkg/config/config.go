@@ -1,6 +1,8 @@
 package config
 
 import (
+	"time"
+
 	"github.com/kelseyhightower/envconfig"
 	"github.com/nais/console/pkg/fixtures"
 	"github.com/nais/console/pkg/gcp"
@@ -87,10 +89,8 @@ type Config struct {
 	// GoogleManagementProjectID The ID of the NAIS management project in the tenant organization in GCP.
 	GoogleManagementProjectID string `envconfig:"CONSOLE_GOOGLE_MANAGEMENT_PROJECT_ID"`
 
-	// "dev-fss prod-fss dev-gcp:dev prod-gcp:prod"
-	// alle: group e-mail
-	// onprem: azure group id
-	// gcp: team gcp project id
+	// Maps an external Kubernetes cluster namespace onto permissions in a specific GCP project
+	// Example: "dev-fss:dev prod-fss:rod dev-gcp:dev prod-gcp:prod"
 	LegacyNaisNamespaces []envmap.EnvironmentMapping `envconfig:"CONSOLE_LEGACY_NAIS_NAMESPACES"`
 
 	// StaticServiceAccounts A JSON-encoded value describing a set of service accounts to be created when the
@@ -106,6 +106,9 @@ type Config struct {
 	//
 	// Example: `nav`.
 	TenantName string `envconfig:"CONSOLE_TENANT_NAME"`
+
+	// How long to wait until retrying a failed reconcile.
+	ReconcileRetryInterval time.Duration `envconfig:"CONSOLE_RECONCILE_RETRY_INTERVAL"`
 }
 
 type ImporterConfig struct {
