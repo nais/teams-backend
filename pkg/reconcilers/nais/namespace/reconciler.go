@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"cloud.google.com/go/pubsub"
 	"github.com/nais/console/pkg/auditlogger"
@@ -34,6 +35,7 @@ type naisdData struct {
 	GcpProject   string `json:"gcpProject"` // the user specified "project id"; not the "projects/ID" format
 	GroupEmail   string `json:"groupEmail"`
 	AzureGroupID string `json:"azureGroupID"`
+	CNRMEmail    string `json:"cnrmEmail"`
 }
 
 type NaisdRequest struct {
@@ -185,6 +187,11 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 
 func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, team db.Team, environment, gcpProjectID string, groupEmail string, azureGroupID string) error {
 	const topicPrefix = "naisd-console-"
+	cnrmAccountName, _ := google_gcp_reconciler.CnrmServiceAccountNameAndAccountID(team.Slug, gcpProjectID)
+	fmt.Println("asd:", cnrmAccountName)
+	parts := strings.Split(cnrmAccountName, "/")
+	cnrmEmail := parts[len(parts)-1]
+
 	req := &NaisdRequest{
 		Type: NaisdCreateNamespace,
 		Data: naisdData{
@@ -192,6 +199,7 @@ func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, team db.T
 			GcpProject:   gcpProjectID,
 			GroupEmail:   groupEmail,
 			AzureGroupID: azureGroupID,
+			CNRMEmail:    cnrmEmail,
 		},
 	}
 

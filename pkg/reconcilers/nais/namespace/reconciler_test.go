@@ -35,6 +35,7 @@ func TestReconcile(t *testing.T) {
 		teamProjectID       = "some-project-id"
 		teamSlug            = "slug"
 		environment         = "dev"
+		cnrmEmail           = "cnrm-slug-cd03@some-project-id.iam.gserviceaccount.com"
 	)
 
 	ctx := context.Background()
@@ -249,6 +250,7 @@ func TestReconcile(t *testing.T) {
 		assert.Equal(t, teamSlug, publishRequest.Data.Name)
 		assert.Equal(t, teamProjectID, publishRequest.Data.GcpProject)
 		assert.Equal(t, googleWorkspaceEmail, publishRequest.Data.GroupEmail)
+		assert.Equal(t, cnrmEmail, publishRequest.Data.CNRMEmail)
 		assert.Equal(t, azureGroupID.String(), publishRequest.Data.AzureGroupID)
 	})
 
