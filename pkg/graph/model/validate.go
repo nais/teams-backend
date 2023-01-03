@@ -19,7 +19,7 @@ func ptr[T any](value T) *T {
 	return &value
 }
 
-func (input CreateTeamInput) Validate() error {
+func (input CreateTeamInput) Validate(skipNaisValidation bool) error {
 	if input.Slug == nil || !teamSlugRegex.MatchString(string(*input.Slug)) || len(*input.Slug) < 3 || len(*input.Slug) > 30 {
 		return apierror.ErrTeamSlug
 	}
@@ -30,7 +30,7 @@ func (input CreateTeamInput) Validate() error {
 
 	slug := input.Slug.String()
 
-	if strings.HasPrefix(slug, "nais") {
+	if strings.HasPrefix(slug, "nais") && !skipNaisValidation {
 		return apierror.ErrTeamPrefixReserved
 	}
 

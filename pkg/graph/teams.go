@@ -29,9 +29,12 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		return nil, err
 	}
 
+	err = authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameTeamsSkipNaisValidation)
+	skipNaisValidation := err != nil
+
 	input = input.Sanitize()
 
-	err = input.Validate()
+	err = input.Validate(skipNaisValidation)
 	if err != nil {
 		return nil, err
 	}

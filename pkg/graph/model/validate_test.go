@@ -35,12 +35,12 @@ func TestCreateTeamInput_Validate_SlackAlertsChannel(t *testing.T) {
 
 	for _, s := range validChannels {
 		tpl.SlackAlertsChannel = s
-		assert.NoError(t, tpl.Validate(), "Slack alerts channel %q should pass validation, but didn't", tpl.SlackAlertsChannel)
+		assert.NoError(t, tpl.Validate(false), "Slack alerts channel %q should pass validation, but didn't", tpl.SlackAlertsChannel)
 	}
 
 	for _, s := range invalidChannels {
 		tpl.SlackAlertsChannel = s
-		assert.Error(t, tpl.Validate(), "Slack alerts channel %q passed validation even if it should not", tpl.SlackAlertsChannel)
+		assert.Error(t, tpl.Validate(false), "Slack alerts channel %q passed validation even if it should not", tpl.SlackAlertsChannel)
 	}
 }
 
@@ -81,11 +81,57 @@ func TestCreateTeamInput_Validate_Slug(t *testing.T) {
 
 	for _, s := range validSlugs {
 		tpl.Slug = ptr(slug.Slug(s))
-		assert.NoError(t, tpl.Validate(), "Slug %q should pass validation, but didn't", tpl.Slug)
+		assert.NoError(t, tpl.Validate(false), "Slug %q should pass validation, but didn't", tpl.Slug)
 	}
 
 	for _, s := range invalidSlugs {
 		tpl.Slug = ptr(slug.Slug(s))
-		assert.Error(t, tpl.Validate(), "Slug %q passed validation even if it should not", tpl.Slug)
+		assert.Error(t, tpl.Validate(false), "Slug %q passed validation even if it should not", tpl.Slug)
+	}
+}
+
+func TestCreateTeamInput_Validate_NaisSlug(t *testing.T) {
+	tpl := model.CreateTeamInput{
+		Slug:               nil,
+		Purpose:            "valid purpose",
+		SlackAlertsChannel: "#channel",
+	}
+
+	validSlugs := []string{
+		"foo",
+		"foo-bar",
+		"f00b4r",
+		"channel4",
+		"some-long-string-less-than-31c",
+		"nais",
+		"nais-system",
+		"naisuratur",
+		"naisan",
+	}
+
+	invalidSlugs := []string{
+		"a",
+		"ab",
+		"-foo",
+		"foo-",
+		"foo--bar",
+		"4chan",
+		"team",
+		"team-foo",
+		"teamfoobar",
+		"some-long-string-more-than-30-chars",
+		"you-aint-got-the-æøå",
+		"Uppercase",
+		"rollback()",
+	}
+
+	for _, s := range validSlugs {
+		tpl.Slug = ptr(slug.Slug(s))
+		assert.NoError(t, tpl.Validate(true), "Slug %q should pass validation, but didn't", tpl.Slug)
+	}
+
+	for _, s := range invalidSlugs {
+		tpl.Slug = ptr(slug.Slug(s))
+		assert.Error(t, tpl.Validate(true), "Slug %q passed validation even if it should not", tpl.Slug)
 	}
 }

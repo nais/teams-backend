@@ -296,24 +296,25 @@ func AllAuditLogsTargetTypeValues() []AuditLogsTargetType {
 type AuthzName string
 
 const (
-	AuthzNameAuditLogsRead         AuthzName = "audit_logs:read"
-	AuthzNameServiceAccountsCreate AuthzName = "service_accounts:create"
-	AuthzNameServiceAccountsDelete AuthzName = "service_accounts:delete"
-	AuthzNameServiceAccountsList   AuthzName = "service_accounts:list"
-	AuthzNameServiceAccountsRead   AuthzName = "service_accounts:read"
-	AuthzNameServiceAccountsUpdate AuthzName = "service_accounts:update"
-	AuthzNameSystemStatesDelete    AuthzName = "system_states:delete"
-	AuthzNameSystemStatesRead      AuthzName = "system_states:read"
-	AuthzNameSystemStatesUpdate    AuthzName = "system_states:update"
-	AuthzNameTeamsCreate           AuthzName = "teams:create"
-	AuthzNameTeamsDelete           AuthzName = "teams:delete"
-	AuthzNameTeamsList             AuthzName = "teams:list"
-	AuthzNameTeamsRead             AuthzName = "teams:read"
-	AuthzNameTeamsUpdate           AuthzName = "teams:update"
-	AuthzNameUsersList             AuthzName = "users:list"
-	AuthzNameUsersUpdate           AuthzName = "users:update"
-	AuthzNameTeamsSynchronize      AuthzName = "teams:synchronize"
-	AuthzNameUsersyncSynchronize   AuthzName = "usersync:synchronize"
+	AuthzNameAuditLogsRead           AuthzName = "audit_logs:read"
+	AuthzNameServiceAccountsCreate   AuthzName = "service_accounts:create"
+	AuthzNameServiceAccountsDelete   AuthzName = "service_accounts:delete"
+	AuthzNameServiceAccountsList     AuthzName = "service_accounts:list"
+	AuthzNameServiceAccountsRead     AuthzName = "service_accounts:read"
+	AuthzNameServiceAccountsUpdate   AuthzName = "service_accounts:update"
+	AuthzNameSystemStatesDelete      AuthzName = "system_states:delete"
+	AuthzNameSystemStatesRead        AuthzName = "system_states:read"
+	AuthzNameSystemStatesUpdate      AuthzName = "system_states:update"
+	AuthzNameTeamsCreate             AuthzName = "teams:create"
+	AuthzNameTeamsDelete             AuthzName = "teams:delete"
+	AuthzNameTeamsList               AuthzName = "teams:list"
+	AuthzNameTeamsRead               AuthzName = "teams:read"
+	AuthzNameTeamsUpdate             AuthzName = "teams:update"
+	AuthzNameUsersList               AuthzName = "users:list"
+	AuthzNameUsersUpdate             AuthzName = "users:update"
+	AuthzNameTeamsSynchronize        AuthzName = "teams:synchronize"
+	AuthzNameUsersyncSynchronize     AuthzName = "usersync:synchronize"
+	AuthzNameTeamsSkipNaisValidation AuthzName = "teams:skip_nais_validation"
 )
 
 func (e *AuthzName) Scan(src interface{}) error {
@@ -370,7 +371,8 @@ func (e AuthzName) Valid() bool {
 		AuthzNameUsersList,
 		AuthzNameUsersUpdate,
 		AuthzNameTeamsSynchronize,
-		AuthzNameUsersyncSynchronize:
+		AuthzNameUsersyncSynchronize,
+		AuthzNameTeamsSkipNaisValidation:
 		return true
 	}
 	return false
@@ -396,6 +398,7 @@ func AllAuthzNameValues() []AuthzName {
 		AuthzNameUsersUpdate,
 		AuthzNameTeamsSynchronize,
 		AuthzNameUsersyncSynchronize,
+		AuthzNameTeamsSkipNaisValidation,
 	}
 }
 
@@ -555,6 +558,7 @@ const (
 	RoleNameUseradmin             RoleName = "User admin"
 	RoleNameUserviewer            RoleName = "User viewer"
 	RoleNameSynchronizer          RoleName = "Synchronizer"
+	RoleNameNaisTeamcreator       RoleName = "NaisTeam creator"
 )
 
 func (e *RoleName) Scan(src interface{}) error {
@@ -603,7 +607,8 @@ func (e RoleName) Valid() bool {
 		RoleNameTeamviewer,
 		RoleNameUseradmin,
 		RoleNameUserviewer,
-		RoleNameSynchronizer:
+		RoleNameSynchronizer,
+		RoleNameNaisTeamcreator:
 		return true
 	}
 	return false
@@ -621,6 +626,7 @@ func AllRoleNameValues() []RoleName {
 		RoleNameUseradmin,
 		RoleNameUserviewer,
 		RoleNameSynchronizer,
+		RoleNameNaisTeamcreator,
 	}
 }
 
