@@ -35,7 +35,8 @@ func TestReconcile(t *testing.T) {
 		teamProjectID       = "some-project-id"
 		teamSlug            = "slug"
 		environment         = "dev"
-		cnrmEmail           = "cnrm-slug-cd03@some-project-id.iam.gserviceaccount.com"
+		clusterProjectID    = "env-dev-123"
+		cnrmEmail           = "cnrm-slug-cd03@env-dev-123.iam.gserviceaccount.com"
 	)
 
 	ctx := context.Background()
@@ -52,7 +53,7 @@ func TestReconcile(t *testing.T) {
 	clusters := gcp.Clusters{
 		environment: gcp.Cluster{
 			TeamsFolderID: 123,
-			ProjectID:     "env-dev-123",
+			ProjectID:     clusterProjectID,
 		},
 	}
 
