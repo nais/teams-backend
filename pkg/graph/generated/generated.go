@@ -1474,7 +1474,7 @@ extend type Mutation {
     This action will trigger a full synchronization of all teams against the configured third party systems. The action
     is asynchronous. The operation can take a while, depending on the amount of teams currently enabled in Console.
     """
-    synchronizeAllTeams: [TeamSync!]! @admin
+    synchronizeAllTeams: [TeamSync!]! @auth
 
     """
     Add users to a team as regular team members
@@ -1700,7 +1700,8 @@ enum TeamRole {
 
     "Team owner, full access to the team."
     OWNER
-}`, BuiltIn: false},
+}
+`, BuiltIn: false},
 	{Name: "../../../graphql/users.graphqls", Input: `extend type Query {
     "Get a collection of users, sorted by name."
     users: [User!]! @auth
@@ -1725,7 +1726,7 @@ extend type Mutation {
     This mutation will trigger a full user synchronization with the connected Google Workspace. The action is
     asynchronous.
     """
-    synchronizeUsers: UserSync! @admin
+    synchronizeUsers: UserSync! @auth
 }
 
 "User sync type."
@@ -1750,7 +1751,8 @@ type User {
 
     "Roles attached to the user."
     roles: [Role!]!
-}`, BuiltIn: false},
+}
+`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
 
@@ -4024,10 +4026,10 @@ func (ec *executionContext) _Mutation_synchronizeAllTeams(ctx context.Context, f
 			return ec.resolvers.Mutation().SynchronizeAllTeams(rctx)
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Admin == nil {
-				return nil, errors.New("directive admin is not implemented")
+			if ec.directives.Auth == nil {
+				return nil, errors.New("directive auth is not implemented")
 			}
-			return ec.directives.Admin(ctx, nil, directive0)
+			return ec.directives.Auth(ctx, nil, directive0)
 		}
 
 		tmp, err := directive1(rctx)
@@ -4579,10 +4581,10 @@ func (ec *executionContext) _Mutation_synchronizeUsers(ctx context.Context, fiel
 			return ec.resolvers.Mutation().SynchronizeUsers(rctx)
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Admin == nil {
-				return nil, errors.New("directive admin is not implemented")
+			if ec.directives.Auth == nil {
+				return nil, errors.New("directive auth is not implemented")
 			}
-			return ec.directives.Admin(ctx, nil, directive0)
+			return ec.directives.Auth(ctx, nil, directive0)
 		}
 
 		tmp, err := directive1(rctx)

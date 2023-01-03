@@ -193,7 +193,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, slug *slug.S
 // SynchronizeTeam is the resolver for the synchronizeTeam field.
 func (r *mutationResolver) SynchronizeTeam(ctx context.Context, slug *slug.Slug) (*model.TeamSync, error) {
 	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *slug)
+	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsSynchronize, *slug)
 	if err != nil {
 		return nil, err
 	}
@@ -232,6 +232,12 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, slug *slug.Slug)
 
 // SynchronizeAllTeams is the resolver for the synchronizeAllTeams field.
 func (r *mutationResolver) SynchronizeAllTeams(ctx context.Context) ([]*model.TeamSync, error) {
+	actor := authz.ActorFromContext(ctx)
+	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameTeamsSynchronize)
+	if err != nil {
+		return nil, err
+	}
+
 	correlationID, err := uuid.NewUUID()
 	if err != nil {
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
@@ -242,7 +248,6 @@ func (r *mutationResolver) SynchronizeAllTeams(ctx context.Context) ([]*model.Te
 		return nil, err
 	}
 
-	actor := authz.ActorFromContext(ctx)
 	targets := make([]auditlogger.Target, 0, len(syncEntries))
 	for _, entry := range syncEntries {
 		targets = append(targets, auditlogger.TeamTarget(entry.Team.Slug))

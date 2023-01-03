@@ -18,6 +18,11 @@ import (
 // SynchronizeUsers is the resolver for the synchronizeUsers field.
 func (r *mutationResolver) SynchronizeUsers(ctx context.Context) (*model.UserSync, error) {
 	actor := authz.ActorFromContext(ctx)
+	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameUsersyncSynchronize)
+	if err != nil {
+		return nil, err
+	}
+
 	correlationID, err := uuid.NewUUID()
 	if err != nil {
 		return nil, fmt.Errorf("create log correlation ID: %w", err)

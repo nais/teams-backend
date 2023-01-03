@@ -22,7 +22,7 @@ extend type Mutation {
     This mutation will trigger a full user synchronization with the connected Google Workspace. The action is
     asynchronous.
     """
-    synchronizeUsers: UserSync! @admin
+    synchronizeUsers: UserSync! @auth
 }
 
 "User sync type."

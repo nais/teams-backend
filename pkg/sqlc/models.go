@@ -312,6 +312,8 @@ const (
 	AuthzNameTeamsUpdate           AuthzName = "teams:update"
 	AuthzNameUsersList             AuthzName = "users:list"
 	AuthzNameUsersUpdate           AuthzName = "users:update"
+	AuthzNameTeamsSynchronize      AuthzName = "teams:synchronize"
+	AuthzNameUsersyncSynchronize   AuthzName = "usersync:synchronize"
 )
 
 func (e *AuthzName) Scan(src interface{}) error {
@@ -366,7 +368,9 @@ func (e AuthzName) Valid() bool {
 		AuthzNameTeamsRead,
 		AuthzNameTeamsUpdate,
 		AuthzNameUsersList,
-		AuthzNameUsersUpdate:
+		AuthzNameUsersUpdate,
+		AuthzNameTeamsSynchronize,
+		AuthzNameUsersyncSynchronize:
 		return true
 	}
 	return false
@@ -390,6 +394,8 @@ func AllAuthzNameValues() []AuthzName {
 		AuthzNameTeamsUpdate,
 		AuthzNameUsersList,
 		AuthzNameUsersUpdate,
+		AuthzNameTeamsSynchronize,
+		AuthzNameUsersyncSynchronize,
 	}
 }
 
@@ -548,6 +554,7 @@ const (
 	RoleNameTeamviewer            RoleName = "Team viewer"
 	RoleNameUseradmin             RoleName = "User admin"
 	RoleNameUserviewer            RoleName = "User viewer"
+	RoleNameSynchronizer          RoleName = "Synchronizer"
 )
 
 func (e *RoleName) Scan(src interface{}) error {
@@ -595,7 +602,8 @@ func (e RoleName) Valid() bool {
 		RoleNameTeamowner,
 		RoleNameTeamviewer,
 		RoleNameUseradmin,
-		RoleNameUserviewer:
+		RoleNameUserviewer,
+		RoleNameSynchronizer:
 		return true
 	}
 	return false
@@ -612,6 +620,7 @@ func AllRoleNameValues() []RoleName {
 		RoleNameTeamviewer,
 		RoleNameUseradmin,
 		RoleNameUserviewer,
+		RoleNameSynchronizer,
 	}
 }
 
