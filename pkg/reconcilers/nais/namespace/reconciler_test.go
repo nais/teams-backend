@@ -31,12 +31,12 @@ import (
 func TestReconcile(t *testing.T) {
 	const (
 		domain              = "example.com"
-		managementProjectID = "some-project-123"
-		teamProjectID       = "some-project-id"
+		managementProjectID = "management-project-123"
+		teamProjectID       = "team-project-123"
 		teamSlug            = "slug"
 		environment         = "dev"
-		clusterProjectID    = "env-dev-123"
-		cnrmEmail           = "cnrm-slug-cd03@env-dev-123.iam.gserviceaccount.com"
+		clusterProjectID    = "cluster-dev-123"
+		cnrmEmail           = "cnrm-slug-cd03@cluster-dev-123.iam.gserviceaccount.com"
 	)
 
 	ctx := context.Background()
