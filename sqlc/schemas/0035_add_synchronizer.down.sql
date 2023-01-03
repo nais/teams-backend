@@ -7,7 +7,7 @@ DELETE FROM role_authz WHERE
   (role_name='Synchronizer' AND authz_name='team:synchronize') OR
   (role_name='Synchronizer' AND authz_name='usersync:synchronize') OR
   (role_name='Admin' AND authz_name='team:synchronize') OR
-  (role_name='Admin' AND authz_name='usersync:(synchronize')
+  (role_name='Admin' AND authz_name='usersync:synchronize')
     ;
 
 COMMIT;
