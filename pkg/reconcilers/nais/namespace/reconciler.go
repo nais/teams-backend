@@ -187,7 +187,8 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 
 func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, team db.Team, environment, gcpProjectID string, groupEmail string, azureGroupID string) error {
 	const topicPrefix = "naisd-console-"
-	cnrmAccountName, _ := google_gcp_reconciler.CnrmServiceAccountNameAndAccountID(team.Slug, r.projectID)
+	cnrmAccountName, _ := google_gcp_reconciler.CnrmServiceAccountNameAndAccountID(team.Slug, gcpProjectID)
+	fmt.Println("asd:", cnrmAccountName)
 	parts := strings.Split(cnrmAccountName, "/")
 	cnrmEmail := parts[len(parts)-1]
 
