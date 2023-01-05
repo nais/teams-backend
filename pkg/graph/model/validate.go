@@ -30,10 +30,6 @@ func (input CreateTeamInput) Validate() error {
 
 	slug := input.Slug.String()
 
-	if strings.HasPrefix(slug, "nais") {
-		return apierror.ErrTeamPrefixReserved
-	}
-
 	if strings.HasPrefix(slug, "team") {
 		return apierror.ErrTeamPrefixRedundant
 	}

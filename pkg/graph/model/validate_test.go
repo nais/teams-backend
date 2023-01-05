@@ -57,6 +57,10 @@ func TestCreateTeamInput_Validate_Slug(t *testing.T) {
 		"f00b4r",
 		"channel4",
 		"some-long-string-less-than-31c",
+		"nais",
+		"nais-system",
+		"naisuratur",
+		"naisan",
 	}
 
 	invalidSlugs := []string{
@@ -66,10 +70,6 @@ func TestCreateTeamInput_Validate_Slug(t *testing.T) {
 		"foo-",
 		"foo--bar",
 		"4chan",
-		"nais",
-		"nais-system",
-		"naisuratur",
-		"naisan",
 		"team",
 		"team-foo",
 		"teamfoobar",

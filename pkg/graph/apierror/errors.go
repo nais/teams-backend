@@ -21,7 +21,6 @@ var (
 	ErrDatabase               = Errorf("The database system encountered an error while processing your request. This is probably a transient error, please try again. If the error persists, contact the NAIS team.")
 	ErrTeamPurpose            = Errorf("You must specify the purpose for your team. This is a human-readable string which is used in external systems, and is important because other people might need to to understand what your team is all about.")
 	ErrTeamNotExist           = Errorf("The team you are referring to does not exist in our database.")
-	ErrTeamPrefixReserved     = Errorf("The name prefix 'nais' is reserved for NAIS systems. You cannot create a team that starts with that string. Choose a different name.")
 	ErrTeamPrefixRedundant    = Errorf("The name prefix 'team' is redundant. When you create a team, it is by definition a team. Try again with a different name, perhaps just removing the prefix?")
 )
 
