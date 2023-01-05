@@ -255,6 +255,94 @@ func TestReconcile(t *testing.T) {
 		assert.Equal(t, azureGroupID.String(), publishRequest.Data.AzureGroupID)
 	})
 
+	t.Run("create legacy namespaces", func(t *testing.T) {
+		var (
+			teamSlug         = "slug"
+			environment      = "dev-gcp"
+			clusterProjectID = "nais-dev-2e7b"
+			cnrmEmail        = "cnrm-slug@nais-dev-2e7b.iam.gserviceaccount.com"
+		)
+
+		emptyMapping := make([]envmap.EnvironmentMapping, 0)
+		clusters := gcp.Clusters{
+			environment: gcp.Cluster{
+				TeamsFolderID: 123,
+				ProjectID:     clusterProjectID,
+			},
+		}
+		srv, pubsubClient, close := getPubsubServerAndClient(ctx, managementProjectID, "naisd-console-"+environment)
+		defer close()
+
+		log := logger.NewMockLogger(t)
+		log.
+			On("WithTeamSlug", teamSlug).
+			Return(log).
+			Once()
+
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("Logf", ctx, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+				return targets[0].Type == "team" && targets[0].Identifier == string(team.Slug)
+			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
+				return fields.CorrelationID == input.CorrelationID && fields.Action == sqlc.AuditActionNaisNamespaceCreateNamespace
+			}), mock.Anything, team.Slug, environment).
+			Return(nil).
+			Once()
+
+		database := db.NewMockDatabase(t)
+		database.
+			On("LoadReconcilerStateForTeam", ctx, nais_namespace_reconciler.Name, team.Slug, mock.Anything).
+			Return(nil).
+			Once()
+		database.
+			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.Slug, mock.Anything).
+			Run(func(args mock.Arguments) {
+				state := args.Get(3).(*reconcilers.GoogleGcpProjectState)
+				state.Projects[environment] = reconcilers.GoogleGcpEnvironmentProject{
+					ProjectID: teamProjectID,
+				}
+			}).
+			Return(nil).
+			Once()
+		database.
+			On("LoadReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, team.Slug, mock.Anything).
+			Run(func(args mock.Arguments) {
+				state := args.Get(3).(*reconcilers.GoogleWorkspaceState)
+				state.GroupEmail = &googleWorkspaceEmail
+			}).
+			Return(nil).
+			Once()
+		database.
+			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.Slug, mock.Anything).
+			Run(func(args mock.Arguments) {
+				state := args.Get(3).(*reconcilers.AzureState)
+				state.GroupID = &azureGroupID
+			}).
+			Return(nil).
+			Once()
+		database.
+			On("SetReconcilerStateForTeam", ctx, nais_namespace_reconciler.Name, team.Slug, mock.MatchedBy(func(state *reconcilers.GoogleGcpNaisNamespaceState) bool {
+				return state.Namespaces[environment] == team.Slug
+			})).
+			Return(nil).
+			Once()
+
+		r := nais_namespace_reconciler.New(database, auditLogger, clusters, domain, managementProjectID, azureEnabled, pubsubClient, emptyMapping, log)
+		assert.NoError(t, r.Reconcile(ctx, input))
+
+		msgs := srv.Messages()
+		assert.Len(t, msgs, 1)
+
+		publishRequest := &nais_namespace_reconciler.NaisdRequest{}
+		json.Unmarshal(msgs[0].Data, publishRequest)
+
+		assert.Equal(t, teamSlug, publishRequest.Data.Name)
+		assert.Equal(t, teamProjectID, publishRequest.Data.GcpProject)
+		assert.Equal(t, googleWorkspaceEmail, publishRequest.Data.GroupEmail)
+		assert.Equal(t, cnrmEmail, publishRequest.Data.CNRMEmail)
+		assert.Equal(t, azureGroupID.String(), publishRequest.Data.AzureGroupID)
+	})
+
 	t.Run("create namespaces with additional legacy mappings", func(t *testing.T) {
 		srv, pubsubClient, close := getPubsubServerAndClient(ctx, managementProjectID, "naisd-console-dev", "naisd-console-virtual-1")
 		defer close()
