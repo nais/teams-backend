@@ -149,6 +149,8 @@ type Database interface {
 	SetLastSuccessfulSyncForTeam(ctx context.Context, teamSlug slug.Slug) error
 	RevokeGlobalUserRole(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error
 	GetUsersWithGloballyAssignedRole(ctx context.Context, roleName sqlc.RoleName) ([]*User, error)
+	IsFirstRun(ctx context.Context) (bool, error)
+	FirstRunComplete(ctx context.Context) error
 }
 
 func (u User) GetID() uuid.UUID {

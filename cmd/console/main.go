@@ -84,6 +84,22 @@ func run(cfg *config.Config, log logger.Logger) error {
 		return err
 	}
 
+	firstRun, err := database.IsFirstRun(ctx)
+	if err != nil {
+		return err
+	}
+	if firstRun {
+		log.Infof("first run detected ")
+		firstRunLogger := log.WithField("system", "first-run")
+		if err := fixtures.SetupDefaultReconcilers(ctx, firstRunLogger, cfg.FirstRunEnableReconcilers, database); err != nil {
+			return err
+		}
+
+		if err := database.FirstRunComplete(ctx); err != nil {
+			return err
+		}
+	}
+
 	err = fixtures.CreateNaisVerification(ctx, database)
 	if err != nil {
 		return err

@@ -78,6 +78,12 @@ type Config struct {
 	// Example: `http://localhost:3001`
 	FrontendURL string `envconfig:"CONSOLE_FRONTEND_URL"`
 
+	// Names of reconcilers to enable on first run of console
+	//
+	// Example: google:gcp:project,nais:namespace
+	// Valid: [google:gcp:project|google:workspace-admin|nais:namespace|nais:deploy]
+	FirstRunEnableReconcilers []fixtures.EnableableReconciler `envconfig:"CONSOLE_FIRST_RUN_ENABLE_RECONCILERS"`
+
 	// ListenAddress The host:port combination used by the http server.
 	//
 	// Example: `127.0.0.1:3000`
