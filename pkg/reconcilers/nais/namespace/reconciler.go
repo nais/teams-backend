@@ -31,11 +31,12 @@ const (
 const metricsSystemName = "naisd"
 
 type naisdData struct {
-	Name         string `json:"name"`
-	GcpProject   string `json:"gcpProject"` // the user specified "project id"; not the "projects/ID" format
-	GroupEmail   string `json:"groupEmail"`
-	AzureGroupID string `json:"azureGroupID"`
-	CNRMEmail    string `json:"cnrmEmail"`
+	Name               string `json:"name"`
+	GcpProject         string `json:"gcpProject"` // the user specified "project id"; not the "projects/ID" format
+	GroupEmail         string `json:"groupEmail"`
+	AzureGroupID       string `json:"azureGroupID"`
+	CNRMEmail          string `json:"cnrmEmail"`
+	SlackAlertsChannel string `json:"slackAlertsChannel"`
 }
 
 type NaisdRequest struct {
@@ -208,11 +209,12 @@ func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, team db.T
 	req := &NaisdRequest{
 		Type: NaisdCreateNamespace,
 		Data: naisdData{
-			Name:         string(team.Slug),
-			GcpProject:   gcpProjectID,
-			GroupEmail:   groupEmail,
-			AzureGroupID: azureGroupID,
-			CNRMEmail:    cnrmEmail,
+			Name:               string(team.Slug),
+			GcpProject:         gcpProjectID,
+			GroupEmail:         groupEmail,
+			AzureGroupID:       azureGroupID,
+			CNRMEmail:          cnrmEmail,
+			SlackAlertsChannel: team.SlackAlertsChannel,
 		},
 	}
 
