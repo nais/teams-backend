@@ -166,7 +166,7 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 				Action:        sqlc.AuditActionNaisNamespaceCreateNamespace,
 				CorrelationID: input.CorrelationID,
 			}
-			r.auditLogger.Logf(ctx, targets, fields, "Request namespace creation for team %q in environment %q", input.Team.Slug, environment)
+			r.auditLogger.Logf(ctx, r.database, targets, fields, "Request namespace creation for team %q in environment %q", input.Team.Slug, environment)
 			namespaceState.Namespaces[environment] = input.Team.Slug
 		}
 	}

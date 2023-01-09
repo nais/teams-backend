@@ -156,7 +156,7 @@ func (s *UserSynchronizer) Sync(ctx context.Context, correlationID uuid.UUID) er
 			Action:        entry.action,
 			CorrelationID: correlationID,
 		}
-		s.auditLogger.Logf(ctx, targets, fields, entry.message)
+		s.auditLogger.Logf(ctx, s.database, targets, fields, entry.message)
 	}
 
 	return nil

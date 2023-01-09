@@ -51,7 +51,7 @@ func TestNaisDeployReconciler_Reconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 
 		auditLogger.
-			On("Logf", ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
+			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
 				return t[0].Identifier == string(teamSlug)
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
 				return f.Action == sqlc.AuditActionNaisDeployProvisionDeployKey && f.CorrelationID == correlationID

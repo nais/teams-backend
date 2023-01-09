@@ -193,7 +193,7 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *rec
 		Action:        sqlc.AuditActionGoogleGcpProjectCreateProject,
 		CorrelationID: input.CorrelationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Created GCP project %q for team %q in environment %q", createdProject.ProjectId, input.Team.Slug, environment)
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Created GCP project %q for team %q in environment %q", createdProject.ProjectId, input.Team.Slug, environment)
 
 	return createdProject, nil
 }
@@ -257,7 +257,7 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 		Action:        sqlc.AuditActionGoogleGcpProjectAssignPermissions,
 		CorrelationID: input.CorrelationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Assigned GCP project IAM permissions for %q", project.ProjectId)
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Assigned GCP project IAM permissions for %q", project.ProjectId)
 
 	return nil
 }
@@ -285,7 +285,7 @@ func (r *googleGcpReconciler) deleteIncorrectlyNamedCnrmServiceAccount(ctx conte
 		Action:        sqlc.AuditActionGoogleGcpProjectDeleteCnrmServiceAccount,
 		CorrelationID: input.CorrelationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Delete incorrectly named CNRM service account for team %q in environment %q", input.Team.Slug, environment)
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Delete incorrectly named CNRM service account for team %q in environment %q", input.Team.Slug, environment)
 }
 
 // getOrCreateProjectCnrmServiceAccount Get the CNRM service account for the project in this env. If the service account
@@ -322,7 +322,7 @@ func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.C
 		Action:        sqlc.AuditActionGoogleGcpProjectCreateCnrmServiceAccount,
 		CorrelationID: input.CorrelationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Created CNRM service account for team %q in environment %q", input.Team.Slug, environment)
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Created CNRM service account for team %q in environment %q", input.Team.Slug, environment)
 
 	return serviceAccount, nil
 }
@@ -355,7 +355,7 @@ func (r *googleGcpReconciler) setTeamProjectBillingInfo(ctx context.Context, pro
 		Action:        sqlc.AuditActionGoogleGcpProjectSetBillingInfo,
 		CorrelationID: input.CorrelationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Set billing info for %q", project.ProjectId)
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Set billing info for %q", project.ProjectId)
 
 	return nil
 }

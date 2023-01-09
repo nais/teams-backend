@@ -46,7 +46,7 @@ func (r *mutationResolver) SetGitHubTeamSlug(ctx context.Context, teamSlug *slug
 		Actor:         authz.ActorFromContext(ctx),
 		CorrelationID: correlationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Update GitHub state, set team slug: %q", gitHubTeamSlug)
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Update GitHub state, set team slug: %q", gitHubTeamSlug)
 
 	r.reconcileTeam(ctx, correlationID, *team)
 
@@ -84,7 +84,7 @@ func (r *mutationResolver) SetGoogleWorkspaceGroupEmail(ctx context.Context, tea
 		Actor:         authz.ActorFromContext(ctx),
 		CorrelationID: correlationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Update Google Workspace state, set group email: %q", googleWorkspaceGroupEmail)
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Update Google Workspace state, set group email: %q", googleWorkspaceGroupEmail)
 
 	r.reconcileTeam(ctx, correlationID, *team)
 
@@ -118,7 +118,7 @@ func (r *mutationResolver) SetAzureADGroupID(ctx context.Context, teamSlug *slug
 		Actor:         authz.ActorFromContext(ctx),
 		CorrelationID: correlationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Update Azure AD state, set group ID: %q", azureADGroupID)
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Update Azure AD state, set group ID: %q", azureADGroupID)
 
 	r.reconcileTeam(ctx, correlationID, *team)
 
@@ -167,7 +167,7 @@ func (r *mutationResolver) SetGcpProjectID(ctx context.Context, teamSlug *slug.S
 		Actor:         authz.ActorFromContext(ctx),
 		CorrelationID: correlationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Update GCP project state, set project ID %q in environment %q", gcpProjectID, gcpEnvironment)
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Update GCP project state, set project ID %q in environment %q", gcpProjectID, gcpEnvironment)
 
 	r.reconcileTeam(ctx, correlationID, *team)
 
@@ -216,7 +216,7 @@ func (r *mutationResolver) SetNaisNamespace(ctx context.Context, teamSlug *slug.
 		Actor:         authz.ActorFromContext(ctx),
 		CorrelationID: correlationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Update NAIS namespace state, set namespace %q in environment %q", naisNamespace, gcpEnvironment)
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Update NAIS namespace state, set namespace %q in environment %q", naisNamespace, gcpEnvironment)
 
 	r.reconcileTeam(ctx, correlationID, *team)
 

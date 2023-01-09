@@ -170,23 +170,23 @@ func TestSync(t *testing.T) {
 			Once()
 
 		auditLogger.
-			On("Logf", ctx, targetIdentifier("user1@example.com"), auditAction(sqlc.AuditActionUsersyncUpdate), "Local user updated: \"user1@example.com\"").
+			On("Logf", ctx, database, targetIdentifier("user1@example.com"), auditAction(sqlc.AuditActionUsersyncUpdate), "Local user updated: \"user1@example.com\"").
 			Return(nil).
 			Once()
 		auditLogger.
-			On("Logf", ctx, targetIdentifier("user2@example.com"), auditAction(sqlc.AuditActionUsersyncCreate), "Local user created: \"user2@example.com\"").
+			On("Logf", ctx, database, targetIdentifier("user2@example.com"), auditAction(sqlc.AuditActionUsersyncCreate), "Local user created: \"user2@example.com\"").
 			Return(nil).
 			Once()
 		auditLogger.
-			On("Logf", ctx, targetIdentifier("user3@example.com"), auditAction(sqlc.AuditActionUsersyncUpdate), "Local user updated: \"user3@example.com\"").
+			On("Logf", ctx, database, targetIdentifier("user3@example.com"), auditAction(sqlc.AuditActionUsersyncUpdate), "Local user updated: \"user3@example.com\"").
 			Return(nil).
 			Once()
 		auditLogger.
-			On("Logf", ctx, targetIdentifier("delete-me@example.com"), auditAction(sqlc.AuditActionUsersyncDelete), "Local user deleted: \"delete-me@example.com\"").
+			On("Logf", ctx, database, targetIdentifier("delete-me@example.com"), auditAction(sqlc.AuditActionUsersyncDelete), "Local user deleted: \"delete-me@example.com\"").
 			Return(nil).
 			Once()
 		auditLogger.
-			On("Logf", ctx, targetIdentifier("user2@example.com"), auditAction(sqlc.AuditActionUsersyncAssignAdminRole), "Assign global admin role to user: \"user2@example.com\"").
+			On("Logf", ctx, database, targetIdentifier("user2@example.com"), auditAction(sqlc.AuditActionUsersyncAssignAdminRole), "Assign global admin role to user: \"user2@example.com\"").
 			Return(nil).
 			Once()
 

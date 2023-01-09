@@ -192,16 +192,6 @@ func TestReconcile(t *testing.T) {
 			Return(log).
 			Once()
 
-		auditLogger := auditlogger.NewMockAuditLogger(t)
-		auditLogger.
-			On("Logf", ctx, mock.MatchedBy(func(targets []auditlogger.Target) bool {
-				return targets[0].Type == "team" && targets[0].Identifier == string(team.Slug)
-			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
-				return fields.CorrelationID == input.CorrelationID && fields.Action == sqlc.AuditActionNaisNamespaceCreateNamespace
-			}), mock.Anything, team.Slug, environment).
-			Return(nil).
-			Once()
-
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, nais_namespace_reconciler.Name, team.Slug, mock.Anything).
@@ -237,6 +227,16 @@ func TestReconcile(t *testing.T) {
 			On("SetReconcilerStateForTeam", ctx, nais_namespace_reconciler.Name, team.Slug, mock.MatchedBy(func(state *reconcilers.GoogleGcpNaisNamespaceState) bool {
 				return state.Namespaces[environment] == team.Slug
 			})).
+			Return(nil).
+			Once()
+
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+				return targets[0].Type == "team" && targets[0].Identifier == string(team.Slug)
+			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
+				return fields.CorrelationID == input.CorrelationID && fields.Action == sqlc.AuditActionNaisNamespaceCreateNamespace
+			}), mock.Anything, team.Slug, environment).
 			Return(nil).
 			Once()
 
@@ -281,16 +281,6 @@ func TestReconcile(t *testing.T) {
 			Return(log).
 			Once()
 
-		auditLogger := auditlogger.NewMockAuditLogger(t)
-		auditLogger.
-			On("Logf", ctx, mock.MatchedBy(func(targets []auditlogger.Target) bool {
-				return targets[0].Type == "team" && targets[0].Identifier == string(team.Slug)
-			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
-				return fields.CorrelationID == input.CorrelationID && fields.Action == sqlc.AuditActionNaisNamespaceCreateNamespace
-			}), mock.Anything, team.Slug, environment).
-			Return(nil).
-			Once()
-
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, nais_namespace_reconciler.Name, team.Slug, mock.Anything).
@@ -329,6 +319,16 @@ func TestReconcile(t *testing.T) {
 			Return(nil).
 			Once()
 
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+				return targets[0].Type == "team" && targets[0].Identifier == string(team.Slug)
+			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
+				return fields.CorrelationID == input.CorrelationID && fields.Action == sqlc.AuditActionNaisNamespaceCreateNamespace
+			}), mock.Anything, team.Slug, environment).
+			Return(nil).
+			Once()
+
 		r := nais_namespace_reconciler.New(database, auditLogger, clusters, domain, managementProjectID, azureEnabled, pubsubClient, emptyMapping, log)
 		assert.NoError(t, r.Reconcile(ctx, input))
 
@@ -361,25 +361,6 @@ func TestReconcile(t *testing.T) {
 		log.
 			On("WithTeamSlug", teamSlug).
 			Return(log).
-			Once()
-
-		auditLogger := auditlogger.NewMockAuditLogger(t)
-		auditLogger.
-			On("Logf", ctx, mock.MatchedBy(func(targets []auditlogger.Target) bool {
-				return targets[0].Type == "team" && targets[0].Identifier == string(team.Slug)
-			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
-				return fields.CorrelationID == input.CorrelationID && fields.Action == sqlc.AuditActionNaisNamespaceCreateNamespace
-			}), mock.Anything, team.Slug, environment).
-			Return(nil).
-			Once()
-
-		auditLogger.
-			On("Logf", ctx, mock.MatchedBy(func(targets []auditlogger.Target) bool {
-				return targets[0].Type == "team" && targets[0].Identifier == string(team.Slug)
-			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
-				return fields.CorrelationID == input.CorrelationID && fields.Action == sqlc.AuditActionNaisNamespaceCreateNamespace
-			}), mock.Anything, team.Slug, virtualName).
-			Return(nil).
 			Once()
 
 		database := db.NewMockDatabase(t)
@@ -417,6 +398,25 @@ func TestReconcile(t *testing.T) {
 			On("SetReconcilerStateForTeam", ctx, nais_namespace_reconciler.Name, team.Slug, mock.MatchedBy(func(state *reconcilers.GoogleGcpNaisNamespaceState) bool {
 				return state.Namespaces[environment] == team.Slug && state.Namespaces[virtualName] == team.Slug
 			})).
+			Return(nil).
+			Once()
+
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+				return targets[0].Type == "team" && targets[0].Identifier == string(team.Slug)
+			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
+				return fields.CorrelationID == input.CorrelationID && fields.Action == sqlc.AuditActionNaisNamespaceCreateNamespace
+			}), mock.Anything, team.Slug, environment).
+			Return(nil).
+			Once()
+
+		auditLogger.
+			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+				return targets[0].Type == "team" && targets[0].Identifier == string(team.Slug)
+			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
+				return fields.CorrelationID == input.CorrelationID && fields.Action == sqlc.AuditActionNaisNamespaceCreateNamespace
+			}), mock.Anything, team.Slug, virtualName).
 			Return(nil).
 			Once()
 

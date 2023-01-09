@@ -28,6 +28,7 @@ generate-gql:
 
 generate-sqlc:
 	go run github.com/kyleconroy/sqlc/cmd/sqlc generate
+	go run mvdan.cc/gofumpt -w ./pkg/graph/
 
 generate-mocks:
 	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/azureclient --name Client
@@ -37,6 +38,7 @@ generate-mocks:
 	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/db --name Database
 	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/authn --name Handler
 	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/logger --name Logger
+	go run mvdan.cc/gofumpt -w ./pkg/graph/
 
 
 alpine:

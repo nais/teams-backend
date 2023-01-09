@@ -95,7 +95,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 	}
 
 	teamReconciler := make(chan reconcilers.Input, reconcilerQueueSize)
-	auditLogger := auditlogger.New(database, log)
+	auditLogger := auditlogger.New(log)
 
 	var userSyncer *usersync.UserSynchronizer
 	userSync := make(chan uuid.UUID, 1)

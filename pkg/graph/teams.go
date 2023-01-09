@@ -71,7 +71,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		CorrelationID: correlationID,
 		Actor:         actor,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Team created")
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Team created")
 
 	r.reconcileTeam(ctx, correlationID, *team)
 
@@ -116,7 +116,7 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, slug *slug.Slug, inpu
 		Actor:         actor,
 	}
 
-	r.auditLogger.Logf(ctx, targets, fields, "Team configuration saved")
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Team configuration saved")
 
 	r.reconcileTeam(ctx, correlationID, *team)
 
@@ -176,7 +176,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, slug *slug.S
 				CorrelationID: correlationID,
 				Actor:         actor,
 			}
-			r.auditLogger.Logf(ctx, targets, fields, "Removed user: %q", member.Email)
+			r.auditLogger.Logf(ctx, dbtx, targets, fields, "Removed user: %q", member.Email)
 		}
 		return nil
 	})
@@ -220,7 +220,7 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, slug *slug.Slug)
 		CorrelationID: correlationID,
 		Actor:         actor,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Manually scheduled for synchronization")
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Manually scheduled for synchronization")
 
 	r.reconcileTeam(ctx, correlationID, *team)
 
@@ -257,7 +257,7 @@ func (r *mutationResolver) SynchronizeAllTeams(ctx context.Context) ([]*model.Te
 		Actor:         actor,
 		CorrelationID: correlationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Manually scheduled for synchronization")
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Manually scheduled for synchronization")
 
 	return syncEntries, nil
 }
@@ -301,7 +301,7 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, slug *slug.Slug, 
 				CorrelationID: correlationID,
 				Actor:         actor,
 			}
-			r.auditLogger.Logf(ctx, targets, fields, "Add team member: %q", user.Email)
+			r.auditLogger.Logf(ctx, dbtx, targets, fields, "Add team member: %q", user.Email)
 		}
 		return nil
 	})
@@ -353,7 +353,7 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, slug *slug.Slug, u
 				CorrelationID: correlationID,
 				Actor:         actor,
 			}
-			r.auditLogger.Logf(ctx, targets, fields, "Add team owner: %q", user.Email)
+			r.auditLogger.Logf(ctx, dbtx, targets, fields, "Add team owner: %q", user.Email)
 		}
 		return nil
 	})
@@ -420,7 +420,7 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, slug *slug.Slu
 		Actor:         actor,
 	}
 
-	r.auditLogger.Logf(ctx, targets, fields, "Assign %q to %s", desiredRole, member.Email)
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Assign %q to %s", desiredRole, member.Email)
 
 	r.reconcileTeam(ctx, correlationID, *team)
 
@@ -458,7 +458,7 @@ func (r *mutationResolver) DisableTeam(ctx context.Context, slug *slug.Slug) (*d
 		Actor:         actor,
 		CorrelationID: correlationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Disable team")
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Disable team")
 
 	r.reconcileTeam(ctx, correlationID, *team)
 
@@ -496,7 +496,7 @@ func (r *mutationResolver) EnableTeam(ctx context.Context, slug *slug.Slug) (*db
 		Actor:         actor,
 		CorrelationID: correlationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Enable team")
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Enable team")
 
 	r.reconcileTeam(ctx, correlationID, *team)
 

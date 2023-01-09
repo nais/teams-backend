@@ -166,47 +166,6 @@ func TestReconcile(t *testing.T) {
 		service, _ := admin_directory_v1.NewService(ctx, option.WithoutAuthentication(), option.WithEndpoint(ts.URL))
 
 		log := logger.NewMockLogger(t)
-		auditLog := auditlogger.NewMockAuditLogger(t)
-		auditLog.
-			On("Logf", ctx, mock.MatchedBy(func(targets []auditlogger.Target) bool {
-				return targets[0].Identifier == string(teamSlug)
-			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
-				return fields.CorrelationID == correlationID && fields.Action == sqlc.AuditActionGoogleWorkspaceAdminCreate
-			}), mock.MatchedBy(func(msg string) bool {
-				return strings.HasPrefix(msg, "Created Google")
-			}), expectedGoogleGroupEmail).
-			Return(nil).
-			Once()
-		auditLog.
-			On("Logf", ctx, mock.MatchedBy(func(targets []auditlogger.Target) bool {
-				return targets[0].Identifier == string(teamSlug) && targets[1].Identifier == removeMe.Email
-			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
-				return fields.CorrelationID == correlationID && fields.Action == sqlc.AuditActionGoogleWorkspaceAdminDeleteMember
-			}), mock.MatchedBy(func(msg string) bool {
-				return strings.HasPrefix(msg, "Deleted member")
-			}), removeMe.Email, expectedGoogleGroupEmail).
-			Return(nil).
-			Once()
-		auditLog.
-			On("Logf", ctx, mock.MatchedBy(func(targets []auditlogger.Target) bool {
-				return targets[0].Identifier == string(teamSlug) && targets[1].Identifier == addMe.Email
-			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
-				return fields.CorrelationID == correlationID && fields.Action == sqlc.AuditActionGoogleWorkspaceAdminAddMember
-			}), mock.MatchedBy(func(msg string) bool {
-				return strings.HasPrefix(msg, "Added member")
-			}), addMe.Email, expectedGoogleGroupEmail).
-			Return(nil).
-			Once()
-		auditLog.
-			On("Logf", ctx, mock.MatchedBy(func(targets []auditlogger.Target) bool {
-				return targets[0].Identifier == string(teamSlug)
-			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
-				return fields.CorrelationID == correlationID && fields.Action == sqlc.AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup
-			}), mock.MatchedBy(func(msg string) bool {
-				return strings.HasPrefix(msg, "Added group")
-			}), expectedGoogleGroupEmail, gkeSecurityGroup).
-			Return(nil).
-			Once()
 
 		database := db.NewMockDatabase(t)
 		database.
@@ -222,6 +181,48 @@ func TestReconcile(t *testing.T) {
 		database.
 			On("GetUserByEmail", ctx, removeMe.Email).
 			Return(removeMe, nil).
+			Once()
+
+		auditLog := auditlogger.NewMockAuditLogger(t)
+		auditLog.
+			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+				return targets[0].Identifier == string(teamSlug)
+			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
+				return fields.CorrelationID == correlationID && fields.Action == sqlc.AuditActionGoogleWorkspaceAdminCreate
+			}), mock.MatchedBy(func(msg string) bool {
+				return strings.HasPrefix(msg, "Created Google")
+			}), expectedGoogleGroupEmail).
+			Return(nil).
+			Once()
+		auditLog.
+			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+				return targets[0].Identifier == string(teamSlug) && targets[1].Identifier == removeMe.Email
+			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
+				return fields.CorrelationID == correlationID && fields.Action == sqlc.AuditActionGoogleWorkspaceAdminDeleteMember
+			}), mock.MatchedBy(func(msg string) bool {
+				return strings.HasPrefix(msg, "Deleted member")
+			}), removeMe.Email, expectedGoogleGroupEmail).
+			Return(nil).
+			Once()
+		auditLog.
+			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+				return targets[0].Identifier == string(teamSlug) && targets[1].Identifier == addMe.Email
+			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
+				return fields.CorrelationID == correlationID && fields.Action == sqlc.AuditActionGoogleWorkspaceAdminAddMember
+			}), mock.MatchedBy(func(msg string) bool {
+				return strings.HasPrefix(msg, "Added member")
+			}), addMe.Email, expectedGoogleGroupEmail).
+			Return(nil).
+			Once()
+		auditLog.
+			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+				return targets[0].Identifier == string(teamSlug)
+			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
+				return fields.CorrelationID == correlationID && fields.Action == sqlc.AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup
+			}), mock.MatchedBy(func(msg string) bool {
+				return strings.HasPrefix(msg, "Added group")
+			}), expectedGoogleGroupEmail, gkeSecurityGroup).
+			Return(nil).
 			Once()
 
 		reconciler := google_workspace_admin_reconciler.New(database, auditLog, domain, service, log)

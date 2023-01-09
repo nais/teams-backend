@@ -102,7 +102,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Once()
 
 		auditLogger.
-			On("Logf", ctx, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Identifier == string(createdTeam.Slug)
 			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
 				return fields.Actor.User == user
@@ -148,7 +148,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Once()
 
 		auditLogger.
-			On("Logf", saCtx, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+			On("Logf", saCtx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Identifier == string(createdTeam.Slug)
 			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
 				return fields.Actor.User == serviceAccount

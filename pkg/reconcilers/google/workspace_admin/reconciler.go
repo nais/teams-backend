@@ -130,7 +130,7 @@ func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(ctx context.Context, s
 		Action:        sqlc.AuditActionGoogleWorkspaceAdminCreate,
 		CorrelationID: input.CorrelationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Created Google Directory group %q", group.Email)
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Created Google Directory group %q", group.Email)
 
 	return group, nil
 }
@@ -190,7 +190,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 			Action:        sqlc.AuditActionGoogleWorkspaceAdminDeleteMember,
 			CorrelationID: input.CorrelationID,
 		}
-		r.auditLogger.Logf(ctx, targets, fields, "Deleted member %q from Google Directory group %q", member.Email, grp.Email)
+		r.auditLogger.Logf(ctx, r.database, targets, fields, "Deleted member %q from Google Directory group %q", member.Email, grp.Email)
 	}
 
 	membersToAdd := localOnlyMembers(membersAccordingToGoogle, input.TeamMembers)
@@ -216,7 +216,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 			Action:        sqlc.AuditActionGoogleWorkspaceAdminAddMember,
 			CorrelationID: input.CorrelationID,
 		}
-		r.auditLogger.Logf(ctx, targets, fields, "Added member %q to Google Directory group %q", member.Email, grp.Email)
+		r.auditLogger.Logf(ctx, r.database, targets, fields, "Added member %q to Google Directory group %q", member.Email, grp.Email)
 	}
 
 	return nil
@@ -247,7 +247,7 @@ func (r *googleWorkspaceAdminReconciler) addToGKESecurityGroup(ctx context.Conte
 		Action:        sqlc.AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup,
 		CorrelationID: input.CorrelationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Added group %q to GKE security group %q", member.Email, groupKey)
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Added group %q to GKE security group %q", member.Email, groupKey)
 
 	return nil
 }
