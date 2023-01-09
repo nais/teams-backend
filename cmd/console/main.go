@@ -48,7 +48,7 @@ const (
 	reconcilerTimeout   = time.Minute * 15
 	immediateReconcile  = time.Second * 1
 
-	userSyncInterval = time.Hour * 1
+	userSyncInterval = time.Minute * 15
 	userSyncTimeout  = time.Second * 30
 )
 
