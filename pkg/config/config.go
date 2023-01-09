@@ -35,6 +35,9 @@ type UserSync struct {
 	// Enabled When set to true Console will keep the user database in sync with the connected Google organization. The
 	// Google organization will be treated as the master.
 	Enabled bool `envconfig:"CONSOLE_USERSYNC_ENABLED"`
+
+	// AdminGroupPrefix The prefix of the admin group email address. Defaults to "console-admins".
+	AdminGroupPrefix string `envconfig:"CONSOLE_USERSYNC_ADMIN_GROUP_PREFIX"`
 }
 
 type OAuth struct {
@@ -133,6 +136,9 @@ func Defaults() *Config {
 			Endpoint: "http://localhost:8080/api/v1/provision",
 		},
 		ReconcileRetryInterval: time.Minute * 1,
+		UserSync: UserSync{
+			AdminGroupPrefix: "console-admins",
+		},
 	}
 }
 

@@ -22,6 +22,7 @@ import (
 func TestSync(t *testing.T) {
 	correlationID := uuid.New()
 	domain := "example.com"
+	adminGroupPrefix := "console-admins"
 
 	t.Run("No remote users", func(t *testing.T) {
 		auditLogger := auditlogger.NewMockAuditLogger(t)
@@ -45,7 +46,7 @@ func TestSync(t *testing.T) {
 		svc, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(httpClient))
 		assert.NoError(t, err)
 
-		usersync := usersync.New(database, auditLogger, domain, svc, log)
+		usersync := usersync.New(database, auditLogger, adminGroupPrefix, domain, svc, log)
 		err = usersync.Sync(ctx, correlationID)
 		assert.NoError(t, err)
 	})
@@ -192,7 +193,7 @@ func TestSync(t *testing.T) {
 		svc, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(httpClient))
 		assert.NoError(t, err)
 
-		usersync := usersync.New(database, auditLogger, domain, svc, log)
+		usersync := usersync.New(database, auditLogger, adminGroupPrefix, domain, svc, log)
 		err = usersync.Sync(ctx, correlationID)
 		assert.NoError(t, err)
 	})

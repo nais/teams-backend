@@ -19,14 +19,13 @@ import (
 )
 
 type UserSynchronizer struct {
-	database     db.Database
-	auditLogger  auditlogger.AuditLogger
-	tenantDomain string
-	service      *admin_directory_v1.Service
-	log          logger.Logger
+	database         db.Database
+	auditLogger      auditlogger.AuditLogger
+	adminGroupPrefix string
+	tenantDomain     string
+	service          *admin_directory_v1.Service
+	log              logger.Logger
 }
-
-const adminGroupPrefix = "console-admins"
 
 var (
 	ErrNotEnabled    = errors.New("disabled by configuration")
@@ -38,13 +37,14 @@ var (
 	}
 )
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, service *admin_directory_v1.Service, log logger.Logger) *UserSynchronizer {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, adminGroupPrefix, tenantDomain string, service *admin_directory_v1.Service, log logger.Logger) *UserSynchronizer {
 	return &UserSynchronizer{
-		database:     database,
-		auditLogger:  auditLogger,
-		tenantDomain: domain,
-		service:      service,
-		log:          log,
+		database:         database,
+		auditLogger:      auditLogger,
+		adminGroupPrefix: adminGroupPrefix,
+		tenantDomain:     tenantDomain,
+		service:          service,
+		log:              log,
 	}
 }
 
@@ -67,7 +67,7 @@ func NewFromConfig(cfg *config.Config, database db.Database, auditLogger auditlo
 		return nil, fmt.Errorf("retrieve directory client: %w", err)
 	}
 
-	return New(database, auditLogger, cfg.TenantDomain, srv, log), nil
+	return New(database, auditLogger, cfg.UserSync.AdminGroupPrefix, cfg.TenantDomain, srv, log), nil
 }
 
 type auditLogEntry struct {
@@ -136,7 +136,7 @@ func (s *UserSynchronizer) Sync(ctx context.Context, correlationID uuid.UUID) er
 			return err
 		}
 
-		err = assignConsoleAdmins(ctx, dbtx, s.service.Members, s.tenantDomain, remoteUserMapping, &auditLogEntries, log)
+		err = assignConsoleAdmins(ctx, dbtx, s.service.Members, s.adminGroupPrefix, s.tenantDomain, remoteUserMapping, &auditLogEntries, log)
 		if err != nil {
 			return err
 		}
@@ -188,10 +188,10 @@ func deleteUnknownUsers(ctx context.Context, dbtx db.Database, upsertedUsers map
 	return nil
 }
 
-// assignConsoleAdmins Assign the global admin role to users based on the console-admins group. Existing admins that is
-// not present in the list of admins will get the admin role revoked.
-func assignConsoleAdmins(ctx context.Context, dbtx db.Database, membersService *admin_directory_v1.MembersService, domain string, remoteUserMapping map[string]*db.User, auditLogEntries *[]auditLogEntry, log logger.Logger) error {
-	admins, err := getAdminUsers(ctx, membersService, domain, remoteUserMapping, log)
+// assignConsoleAdmins Assign the global admin role to users based on the admin group. Existing admins that is not
+// present in the list of admins will get the admin role revoked.
+func assignConsoleAdmins(ctx context.Context, dbtx db.Database, membersService *admin_directory_v1.MembersService, adminGroupPrefix, tenantDomain string, remoteUserMapping map[string]*db.User, auditLogEntries *[]auditLogEntry, log logger.Logger) error {
+	admins, err := getAdminUsers(ctx, membersService, adminGroupPrefix, tenantDomain, remoteUserMapping, log)
 	if err != nil {
 		return err
 	}
@@ -249,8 +249,8 @@ func getExistingConsoleAdmins(ctx context.Context, dbtx db.Database) (map[uuid.U
 }
 
 // getAdminUsers Get a list of admin users based on the Console admins group in the Google Workspace
-func getAdminUsers(ctx context.Context, membersService *admin_directory_v1.MembersService, domain string, remoteUserMapping map[string]*db.User, log logger.Logger) (map[uuid.UUID]*db.User, error) {
-	adminGroupKey := adminGroupPrefix + "@" + domain
+func getAdminUsers(ctx context.Context, membersService *admin_directory_v1.MembersService, adminGroupPrefix, tenantDomain string, remoteUserMapping map[string]*db.User, log logger.Logger) (map[uuid.UUID]*db.User, error) {
+	adminGroupKey := adminGroupPrefix + "@" + tenantDomain
 	groupMembers := make([]*admin_directory_v1.Member, 0)
 	callback := func(fragments *admin_directory_v1.Members) error {
 		for _, member := range fragments.Members {
@@ -318,7 +318,7 @@ func getOrCreateLocalUserFromRemoteUser(ctx context.Context, dbtx db.Database, r
 	return localUser, true, nil
 }
 
-func getAllPaginatedUsers(ctx context.Context, svc *admin_directory_v1.UsersService, domain string) ([]*admin_directory_v1.User, error) {
+func getAllPaginatedUsers(ctx context.Context, svc *admin_directory_v1.UsersService, tenantDomain string) ([]*admin_directory_v1.User, error) {
 	users := make([]*admin_directory_v1.User, 0)
 
 	callback := func(fragments *admin_directory_v1.Users) error {
@@ -329,7 +329,7 @@ func getAllPaginatedUsers(ctx context.Context, svc *admin_directory_v1.UsersServ
 	err := svc.
 		List().
 		Context(ctx).
-		Domain(domain).
+		Domain(tenantDomain).
 		ShowDeleted("false").
 		Query("isSuspended=false").
 		Pages(ctx, callback)
