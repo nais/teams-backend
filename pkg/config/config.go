@@ -152,16 +152,3 @@ func New() (*Config, error) {
 
 	return cfg, nil
 }
-
-func NewImporterConfig() (*ImporterConfig, error) {
-	cfg := &ImporterConfig{
-		DatabaseURL:  "postgres://console:console@localhost:3002/console?sslmode=disable",
-		TenantDomain: "example.com",
-	}
-	err := envconfig.Process("", cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	return cfg, nil
-}
