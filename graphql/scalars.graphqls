@@ -21,6 +21,9 @@ Examples of valid slugs:
 """
 scalar Slug
 
+"String value representing a deploy key."
+scalar DeployKey
+
 "String value representing an audit action."
 scalar AuditAction
 

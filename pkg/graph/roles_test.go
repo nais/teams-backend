@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/nais/console/pkg/proxy"
+
 	"github.com/google/uuid"
 
 	"github.com/nais/console/pkg/auditlogger"
@@ -35,10 +37,11 @@ func TestMutationResolver_Role(t *testing.T) {
 	reconcilers := make(chan reconcilers.Input, 100)
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	database := db.NewMockDatabase(t)
+	deployProxy := proxy.NewMockDeploy(t)
 	log, err := logger.GetLogger("text", "info")
 	assert.NoError(t, err)
 	userSync := make(chan<- uuid.UUID)
-	resolver := graph.NewResolver(database, "example.com", reconcilers, userSync, auditLogger, []string{"env"}, log).Role()
+	resolver := graph.NewResolver(database, deployProxy, "example.com", reconcilers, userSync, auditLogger, []string{"env"}, log).Role()
 
 	t.Run("get role name", func(t *testing.T) {
 		role := &db.Role{

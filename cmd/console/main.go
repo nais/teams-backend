@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/nais/console/pkg/proxy"
 	"net/http"
 	"net/url"
 	"os"
@@ -120,13 +121,15 @@ func run(cfg *config.Config, log logger.Logger) error {
 		gcpEnvironments = append(gcpEnvironments, environment)
 	}
 
-	handler := setupGraphAPI(database, cfg.TenantDomain, teamReconciler, userSync, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi), gcpEnvironments, log)
+	deployProxy := proxy.NewDeploy()
+
+	handler := setupGraphAPI(database, deployProxy, cfg.TenantDomain, teamReconciler, userSync, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi), gcpEnvironments, log)
 	srv, err := setupHTTPServer(cfg, database, handler, authHandler)
 	if err != nil {
 		return err
 	}
 
-	log.Info("ready to accept requests.")
+	log.Infof("ready to accept requests at %s.", cfg.ListenAddress)
 
 	go func() {
 		err := srv.ListenAndServe()
@@ -370,8 +373,8 @@ func initReconcilers(
 	return recs, nil
 }
 
-func setupGraphAPI(database db.Database, domain string, teamReconciler chan<- reconcilers.Input, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *graphql_handler.Server {
-	resolver := graph.NewResolver(database, domain, teamReconciler, userSync, auditLogger, gcpEnvironments, log)
+func setupGraphAPI(database db.Database, deployProxy proxy.Deploy, domain string, teamReconciler chan<- reconcilers.Input, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *graphql_handler.Server {
+	resolver := graph.NewResolver(database, deployProxy, domain, teamReconciler, userSync, auditLogger, gcpEnvironments, log)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
 	gc.Directives.Admin = directives.Admin()

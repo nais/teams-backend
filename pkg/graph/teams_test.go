@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/nais/console/pkg/proxy"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
@@ -55,11 +57,12 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 	reconcilers := make(chan reconcilers.Input, 100)
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	database := db.NewMockDatabase(t)
+	deployProxy := proxy.NewMockDeploy(t)
 	gcpEnvironments := []string{"env"}
 	log, err := logger.GetLogger("text", "info")
 	assert.NoError(t, err)
 	userSync := make(chan<- uuid.UUID)
-	resolver := graph.NewResolver(database, "example.com", reconcilers, userSync, auditLogger, gcpEnvironments, log).Mutation()
+	resolver := graph.NewResolver(database, deployProxy, "example.com", reconcilers, userSync, auditLogger, gcpEnvironments, log).Mutation()
 	teamSlug := slug.Slug("some-slug")
 	slackChannel := "#my-slack-channel"
 

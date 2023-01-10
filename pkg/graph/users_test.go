@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/nais/console/pkg/proxy"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
@@ -18,13 +20,14 @@ import (
 func TestQueryResolver_Users(t *testing.T) {
 	ctx := context.Background()
 	database := db.NewMockDatabase(t)
+	deployProxy := proxy.NewMockDeploy(t)
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	ch := make(chan reconcilers.Input, 100)
 	gcpEnvironments := []string{"env"}
 	log, err := logger.GetLogger("text", "info")
 	assert.NoError(t, err)
 	userSync := make(chan<- uuid.UUID)
-	resolver := graph.NewResolver(database, "example.com", ch, userSync, auditLogger, gcpEnvironments, log).Query()
+	resolver := graph.NewResolver(database, deployProxy, "example.com", ch, userSync, auditLogger, gcpEnvironments, log).Query()
 
 	t.Run("unauthenticated user", func(t *testing.T) {
 		users, err := resolver.Users(ctx)

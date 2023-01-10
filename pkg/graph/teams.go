@@ -530,6 +530,22 @@ func (r *queryResolver) Team(ctx context.Context, slug *slug.Slug) (*db.Team, er
 	return team, nil
 }
 
+// DeployKey is the resolver for the deployKey field.
+func (r *queryResolver) DeployKey(ctx context.Context, slug *slug.Slug) (string, error) {
+	actor := authz.ActorFromContext(ctx)
+	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsRead, *slug)
+	if err != nil {
+		return "", err
+	}
+
+	deployKey, err := r.deployProxy.GetApiKey(*slug)
+	if err != nil {
+		return "", err
+	}
+
+	return deployKey, nil
+}
+
 // Metadata is the resolver for the metadata field.
 func (r *teamResolver) Metadata(ctx context.Context, obj *db.Team) ([]*db.TeamMetadata, error) {
 	actor := authz.ActorFromContext(ctx)

@@ -7,6 +7,12 @@ extend type Query {
         "Slug of the team."
         slug: Slug!
     ): Team! @auth
+
+    "Get deploy key for specific team."
+    deployKey(
+        "Slug of the team."
+        slug: Slug!
+    ): DeployKey! @auth
 }
 
 extend type Mutation {
