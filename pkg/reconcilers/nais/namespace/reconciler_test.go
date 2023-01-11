@@ -51,6 +51,7 @@ func TestReconcile(t *testing.T) {
 	azureEnabled := true
 	azureGroupID := uuid.New()
 	emptyMapping := make([]envmap.EnvironmentMapping, 0)
+	emptyMap := make(map[string]string, 0)
 	clusters := gcp.Clusters{
 		environment: gcp.Cluster{
 			TeamsFolderID: 123,
@@ -69,7 +70,7 @@ func TestReconcile(t *testing.T) {
 			On("LoadReconcilerStateForTeam", ctx, sqlc.ReconcilerNameNaisNamespace, team.Slug, mock.Anything).
 			Return(fmt.Errorf("some error")).
 			Once()
-		r := nais_namespace_reconciler.New(database, auditLogger, clusters, domain, managementProjectID, azureEnabled, pubsubClient, emptyMapping, log)
+		r := nais_namespace_reconciler.New(database, auditLogger, clusters, domain, managementProjectID, azureEnabled, pubsubClient, emptyMapping, emptyMap, log)
 		err := r.Reconcile(ctx, input)
 		assert.ErrorContains(t, err, `unable to load NAIS namespace state for team "slug"`)
 	})
@@ -89,7 +90,7 @@ func TestReconcile(t *testing.T) {
 			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.Slug, mock.Anything).
 			Return(fmt.Errorf("some error")).
 			Once()
-		r := nais_namespace_reconciler.New(database, auditLogger, clusters, domain, managementProjectID, azureEnabled, pubsubClient, emptyMapping, log)
+		r := nais_namespace_reconciler.New(database, auditLogger, clusters, domain, managementProjectID, azureEnabled, pubsubClient, emptyMapping, emptyMap, log)
 		err := r.Reconcile(ctx, input)
 		assert.ErrorContains(t, err, `unable to load GCP project state for team "slug"`)
 	})
@@ -109,7 +110,7 @@ func TestReconcile(t *testing.T) {
 			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.Slug, mock.Anything).
 			Return(nil).
 			Once()
-		r := nais_namespace_reconciler.New(database, auditLogger, clusters, domain, managementProjectID, azureEnabled, pubsubClient, emptyMapping, log)
+		r := nais_namespace_reconciler.New(database, auditLogger, clusters, domain, managementProjectID, azureEnabled, pubsubClient, emptyMapping, emptyMap, log)
 		err := r.Reconcile(ctx, input)
 		assert.ErrorContains(t, err, `no GCP project state exists for team "slug"`)
 	})
@@ -139,7 +140,7 @@ func TestReconcile(t *testing.T) {
 			On("LoadReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, team.Slug, mock.Anything).
 			Return(fmt.Errorf("some error")).
 			Once()
-		r := nais_namespace_reconciler.New(database, auditLogger, clusters, domain, managementProjectID, azureEnabled, pubsubClient, emptyMapping, log)
+		r := nais_namespace_reconciler.New(database, auditLogger, clusters, domain, managementProjectID, azureEnabled, pubsubClient, emptyMapping, emptyMap, log)
 		err := r.Reconcile(ctx, input)
 		assert.ErrorContains(t, err, `no workspace admin state exists for team "slug"`)
 	})
@@ -177,7 +178,7 @@ func TestReconcile(t *testing.T) {
 			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.Slug, mock.Anything).
 			Return(fmt.Errorf("some error")).
 			Once()
-		r := nais_namespace_reconciler.New(database, auditLogger, clusters, domain, managementProjectID, azureEnabled, pubsubClient, emptyMapping, log)
+		r := nais_namespace_reconciler.New(database, auditLogger, clusters, domain, managementProjectID, azureEnabled, pubsubClient, emptyMapping, emptyMap, log)
 		err := r.Reconcile(ctx, input)
 		assert.ErrorContains(t, err, `no Azure state exists for team "slug"`)
 	})
@@ -240,7 +241,7 @@ func TestReconcile(t *testing.T) {
 			Return(nil).
 			Once()
 
-		r := nais_namespace_reconciler.New(database, auditLogger, clusters, domain, managementProjectID, azureEnabled, pubsubClient, emptyMapping, log)
+		r := nais_namespace_reconciler.New(database, auditLogger, clusters, domain, managementProjectID, azureEnabled, pubsubClient, emptyMapping, emptyMap, log)
 		assert.NoError(t, r.Reconcile(ctx, input))
 
 		msgs := srv.Messages()
@@ -329,7 +330,7 @@ func TestReconcile(t *testing.T) {
 			Return(nil).
 			Once()
 
-		r := nais_namespace_reconciler.New(database, auditLogger, clusters, domain, managementProjectID, azureEnabled, pubsubClient, emptyMapping, log)
+		r := nais_namespace_reconciler.New(database, auditLogger, clusters, domain, managementProjectID, azureEnabled, pubsubClient, emptyMapping, emptyMap, log)
 		assert.NoError(t, r.Reconcile(ctx, input))
 
 		msgs := srv.Messages()
@@ -350,6 +351,9 @@ func TestReconcile(t *testing.T) {
 		defer close()
 
 		const virtualName = "virtual-1"
+		const legacyProject = "legacy-project-321"
+		projectMap := make(map[string]string, 0)
+		projectMap[virtualName] = legacyProject
 		mappings := []envmap.EnvironmentMapping{
 			{
 				Virtual: virtualName,
@@ -420,7 +424,7 @@ func TestReconcile(t *testing.T) {
 			Return(nil).
 			Once()
 
-		r := nais_namespace_reconciler.New(database, auditLogger, clusters, domain, managementProjectID, azureEnabled, pubsubClient, mappings, log)
+		r := nais_namespace_reconciler.New(database, auditLogger, clusters, domain, managementProjectID, azureEnabled, pubsubClient, mappings, projectMap, log)
 		assert.NoError(t, r.Reconcile(ctx, input))
 
 		msgs := srv.Messages()
@@ -428,13 +432,16 @@ func TestReconcile(t *testing.T) {
 
 		publishRequest := &nais_namespace_reconciler.NaisdRequest{}
 
-		for _, msg := range msgs {
+		expectedCNRMEmails := []string{"cnrm-slug-cd03@legacy-project-321.iam.gserviceaccount.com", "cnrm-slug-cd03@cluster-dev-123.iam.gserviceaccount.com"}
+
+		for i, msg := range msgs {
 			json.Unmarshal(msg.Data, publishRequest)
 
 			assert.Equal(t, teamSlug, publishRequest.Data.Name)
 			assert.Equal(t, teamProjectID, publishRequest.Data.GcpProject)
 			assert.Equal(t, googleWorkspaceEmail, publishRequest.Data.GroupEmail)
 			assert.Equal(t, azureGroupID.String(), publishRequest.Data.AzureGroupID)
+			assert.Equal(t, expectedCNRMEmails[i], publishRequest.Data.CNRMEmail)
 		}
 	})
 
@@ -499,7 +506,7 @@ func TestReconcile(t *testing.T) {
 			Return(nil).
 			Once()
 
-		r := nais_namespace_reconciler.New(database, auditLogger, gcp.Clusters{}, domain, managementProjectID, azureEnabled, pubsubClient, emptyMapping, log)
+		r := nais_namespace_reconciler.New(database, auditLogger, gcp.Clusters{}, domain, managementProjectID, azureEnabled, pubsubClient, emptyMapping, emptyMap, log)
 		assert.NoError(t, r.Reconcile(ctx, input))
 
 		msgs := srv.Messages()

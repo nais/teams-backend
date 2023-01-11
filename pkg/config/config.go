@@ -1,6 +1,7 @@
 package config
 
 import (
+	"strings"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -102,6 +103,10 @@ type Config struct {
 	// Example: "dev-fss:dev prod-fss:rod dev-gcp:dev prod-gcp:prod"
 	LegacyNaisNamespaces []envmap.EnvironmentMapping `envconfig:"CONSOLE_LEGACY_NAIS_NAMESPACES"`
 
+	// Legacy cluster mapping. env:project
+	// example: dev-gcp:nais-dev-123,prod-gcp:nais-prod-432
+	LegacyClusters map[string]string
+
 	// StaticServiceAccounts A JSON-encoded value describing a set of service accounts to be created when the
 	// application starts. Refer to the README for the format.
 	StaticServiceAccounts fixtures.ServiceAccounts `envconfig:"CONSOLE_STATIC_SERVICE_ACCOUNTS"`
@@ -154,6 +159,10 @@ func New() (*Config, error) {
 	err := envconfig.Process("", cfg)
 	if err != nil {
 		return nil, err
+	}
+
+	if strings.ToLower(cfg.TenantName) == "nav" {
+		// hack
 	}
 
 	return cfg, nil
