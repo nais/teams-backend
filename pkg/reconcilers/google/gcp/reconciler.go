@@ -36,7 +36,7 @@ const (
 
 const metricsSystemName = "gcp"
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, gcpServices *GcpServices, tenantName, domain, cnrmRoleName, billingAccount string, log logger.Logger) *googleGcpReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, gcpServices *GcpServices, tenantName, domain, cnrmRoleName, billingAccount string, legacyClusters map[string]string, log logger.Logger) *googleGcpReconciler {
 	return &googleGcpReconciler{
 		database:       database,
 		auditLogger:    auditLogger,
@@ -46,6 +46,7 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp
 		cnrmRoleName:   cnrmRoleName,
 		billingAccount: billingAccount,
 		tenantName:     tenantName,
+		legacyClusters: legacyClusters,
 		log:            log,
 	}
 }
@@ -58,7 +59,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		return nil, err
 	}
 
-	return New(database, auditLogger, cfg.GCP.Clusters, gcpServices, cfg.TenantName, cfg.TenantDomain, cfg.GCP.CnrmRole, cfg.GCP.BillingAccount, log), nil
+	return New(database, auditLogger, cfg.GCP.Clusters, gcpServices, cfg.TenantName, cfg.TenantDomain, cfg.GCP.CnrmRole, cfg.GCP.BillingAccount, cfg.LegacyClusters, log), nil
 }
 
 func (r *googleGcpReconciler) Name() sqlc.ReconcilerName {
@@ -117,8 +118,7 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 			return fmt.Errorf("set project billing info for project %q for team %q in environment %q: %w", project.ProjectId, input.Team.Slug, environment, err)
 		}
 
-		// Hack - remove when NAV is migrated to "platinum"
-		err = r.hackNAVLegacyGCP(ctx, input)
+		err = r.createLegacyClusterCNRMServiceAccount(ctx, input)
 		if err != nil {
 			return fmt.Errorf("hack NAVs legacy GCP projecs: %w", err)
 		}
@@ -127,18 +127,8 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 	return nil
 }
 
-// Hack - remove when NAV is migrated to "platinum"
-func (r *googleGcpReconciler) hackNAVLegacyGCP(ctx context.Context, input reconcilers.Input) error {
-	if strings.ToLower(r.tenantName) != "nav" {
-		return nil
-	}
-
-	projectForLegacyEnvironment := map[string]string{
-		"dev-gcp":  "nais-dev-2e7b",
-		"prod-gcp": "nais-prod-020f",
-		"ci-gcp":   "nais-ci-e17f",
-	}
-	for environment, clusterProject := range projectForLegacyEnvironment {
+func (r *googleGcpReconciler) createLegacyClusterCNRMServiceAccount(ctx context.Context, input reconcilers.Input) error {
+	for environment, clusterProject := range r.legacyClusters {
 		cnrmServiceAccount, err := r.getOrCreateProjectCnrmServiceAccount(ctx, input, environment, clusterProject)
 		if err != nil {
 			return fmt.Errorf("create legacy CNRM service account for team %q in environment %q: %w", input.Team.Slug, environment, err)

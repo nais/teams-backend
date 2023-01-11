@@ -162,7 +162,11 @@ func New() (*Config, error) {
 	}
 
 	if strings.ToLower(cfg.TenantName) == "nav" {
-		// hack
+		cfg.LegacyClusters = map[string]string{
+			"dev-gcp":  "nais-dev-2e7b",
+			"prod-gcp": "nais-prod-020f",
+			"ci-gcp":   "nais-ci-e17f",
+		}
 	}
 
 	return cfg, nil
