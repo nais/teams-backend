@@ -262,7 +262,7 @@ func TestReconcile(t *testing.T) {
 			teamSlug         = "slug"
 			environment      = "dev-gcp"
 			clusterProjectID = "nais-dev-2e7b"
-			cnrmEmail        = "cnrm-slug@nais-dev-2e7b.iam.gserviceaccount.com"
+			cnrmEmail        = "cnrm-slug-cd03@nais-dev-2e7b.iam.gserviceaccount.com"
 		)
 
 		emptyMapping := make([]envmap.EnvironmentMapping, 0)

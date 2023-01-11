@@ -186,25 +186,13 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	return nil
 }
 
-// Hack - remove when NAV is migrated to "platinum"
-var projectForLegacyEnvironment = map[string]string{
-	"dev-gcp":  "nais-dev-2e7b",
-	"prod-gcp": "nais-prod-020f",
-	"ci-gcp":   "nais-ci-e17f",
-}
-
 func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, team db.Team, environment, gcpProjectID string, groupEmail string, azureGroupID string) error {
 	const topicPrefix = "naisd-console-"
 
-	var cnrmEmail string
-	if project, found := projectForLegacyEnvironment[environment]; found {
-		cnrmEmail = fmt.Sprintf("cnrm-%s@%s.iam.gserviceaccount.com", team.Slug, project)
-	} else {
-		clusterProjectID := r.clusters[environment].ProjectID
-		cnrmAccountName, _ := google_gcp_reconciler.CnrmServiceAccountNameAndAccountID(team.Slug, clusterProjectID)
-		parts := strings.Split(cnrmAccountName, "/")
-		cnrmEmail = parts[len(parts)-1]
-	}
+	clusterProjectID := r.clusters[environment].ProjectID
+	cnrmAccountName, _ := google_gcp_reconciler.CnrmServiceAccountNameAndAccountID(team.Slug, clusterProjectID)
+	parts := strings.Split(cnrmAccountName, "/")
+	cnrmEmail := parts[len(parts)-1]
 
 	req := &NaisdRequest{
 		Type: NaisdCreateNamespace,

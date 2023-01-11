@@ -116,6 +116,51 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 		if err != nil {
 			return fmt.Errorf("set project billing info for project %q for team %q in environment %q: %w", project.ProjectId, input.Team.Slug, environment, err)
 		}
+
+		// Hack - remove when NAV is migrated to "platinum"
+		err = r.hackNAVLegacyGCP(ctx, input)
+		if err != nil {
+			return fmt.Errorf("hack NAVs legacy GCP projecs: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// Hack - remove when NAV is migrated to "platinum"
+func (r *googleGcpReconciler) hackNAVLegacyGCP(ctx context.Context, input reconcilers.Input) error {
+	if strings.ToLower(r.tenantName) != "nav" {
+		return nil
+	}
+
+	projectForLegacyEnvironment := map[string]string{
+		"dev-gcp":  "nais-dev-2e7b",
+		"prod-gcp": "nais-prod-020f",
+		"ci-gcp":   "nais-ci-e17f",
+	}
+	for environment, clusterProject := range projectForLegacyEnvironment {
+		cnrmServiceAccount, err := r.getOrCreateProjectCnrmServiceAccount(ctx, input, environment, clusterProject)
+		if err != nil {
+			return fmt.Errorf("create legacy CNRM service account for team %q in environment %q: %w", input.Team.Slug, environment, err)
+		}
+
+		// Set workload identity role to the CNRM service account
+		member := fmt.Sprintf("serviceAccount:%s.svc.id.goog[cnrm-system/cnrm-controller-manager-%s]", clusterProject, input.Team.Slug)
+		response, err := r.gcpServices.IamProjectsServiceAccountsService.SetIamPolicy(cnrmServiceAccount.Name, &iam.SetIamPolicyRequest{
+			Policy: &iam.Policy{
+				Bindings: []*iam.Binding{
+					{
+						Members: []string{member},
+						Role:    "roles/iam.workloadIdentityUser",
+					},
+				},
+			},
+		}).Do()
+		if err != nil {
+			metrics.IncExternalCallsByError(metricsSystemName, err)
+			return fmt.Errorf("assign roles for legacy CNRM service account: %w", err)
+		}
+		metrics.IncExternalCalls(metricsSystemName, response.HTTPStatusCode)
 	}
 
 	return nil
@@ -201,7 +246,7 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *rec
 // setProjectPermissions Make sure that the project has the necessary permissions, and don't remove permissions we don't
 // control
 func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project *cloudresourcemanager.Project, input reconcilers.Input, groupEmail, environment string, cluster gcp.Cluster) error {
-	cnrmServiceAccount, err := r.getOrCreateProjectCnrmServiceAccount(ctx, input, environment, cluster)
+	cnrmServiceAccount, err := r.getOrCreateProjectCnrmServiceAccount(ctx, input, environment, cluster.ProjectID)
 	if err != nil {
 		return fmt.Errorf("create CNRM service account for project %q for team %q in environment %q: %w", project.ProjectId, input.Team.Slug, environment, err)
 	}
@@ -262,38 +307,10 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 	return nil
 }
 
-// deleteIncorrectlyNamedCnrmServiceAccount Temporary function that will remove the old CNRM service account created by
-// Console with an incorrect name (the length could exceed the max length)
-func (r *googleGcpReconciler) deleteIncorrectlyNamedCnrmServiceAccount(ctx context.Context, input reconcilers.Input, projectID, environment string) {
-	accountID := fmt.Sprintf("cnrm-%s", input.Team.Slug)
-	cnrmEmailAddress := fmt.Sprintf("%s@%s.iam.gserviceaccount.com", accountID, projectID)
-	serviceAccountName := "projects/" + projectID + "/serviceAccounts/" + cnrmEmailAddress
-
-	resp, err := r.gcpServices.IamProjectsServiceAccountsService.Delete(serviceAccountName).Do()
-	if err != nil {
-		metrics.IncExternalCallsByError(metricsSystemName, err)
-		r.log.WithError(err).Errorf("delete incorrectly named CNRM service account for team %q in environment %q", input.Team.Slug, environment)
-		return
-	}
-
-	metrics.IncExternalCalls(metricsSystemName, resp.HTTPStatusCode)
-
-	targets := []auditlogger.Target{
-		auditlogger.TeamTarget(input.Team.Slug),
-	}
-	fields := auditlogger.Fields{
-		Action:        sqlc.AuditActionGoogleGcpProjectDeleteCnrmServiceAccount,
-		CorrelationID: input.CorrelationID,
-	}
-	r.auditLogger.Logf(ctx, r.database, targets, fields, "Delete incorrectly named CNRM service account for team %q in environment %q", input.Team.Slug, environment)
-}
-
 // getOrCreateProjectCnrmServiceAccount Get the CNRM service account for the project in this env. If the service account
 // does not exist, attempt to create it, and then return it.
-func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.Context, input reconcilers.Input, environment string, cluster gcp.Cluster) (*iam.ServiceAccount, error) {
-	r.deleteIncorrectlyNamedCnrmServiceAccount(ctx, input, cluster.ProjectID, environment)
-
-	name, accountID := CnrmServiceAccountNameAndAccountID(input.Team.Slug, cluster.ProjectID)
+func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.Context, input reconcilers.Input, environment string, clusterProjectID string) (*iam.ServiceAccount, error) {
+	name, accountID := CnrmServiceAccountNameAndAccountID(input.Team.Slug, clusterProjectID)
 	serviceAccount, err := r.gcpServices.IamProjectsServiceAccountsService.Get(name).Do()
 	if err == nil {
 		metrics.IncExternalCalls(metricsSystemName, serviceAccount.HTTPStatusCode)
@@ -308,7 +325,7 @@ func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.C
 			Description: fmt.Sprintf("CNRM service account for team %q in environment %q", input.Team.Slug, environment),
 		},
 	}
-	serviceAccount, err = r.gcpServices.IamProjectsServiceAccountsService.Create("projects/"+cluster.ProjectID, createServiceAccountRequest).Do()
+	serviceAccount, err = r.gcpServices.IamProjectsServiceAccountsService.Create("projects/"+clusterProjectID, createServiceAccountRequest).Do()
 	if err != nil {
 		metrics.IncExternalCallsByError(metricsSystemName, err)
 		return nil, err
