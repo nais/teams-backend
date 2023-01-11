@@ -432,17 +432,26 @@ func TestReconcile(t *testing.T) {
 
 		publishRequest := &nais_namespace_reconciler.NaisdRequest{}
 
-		expectedCNRMEmails := []string{"cnrm-slug-cd03@legacy-project-321.iam.gserviceaccount.com", "cnrm-slug-cd03@cluster-dev-123.iam.gserviceaccount.com"}
+		expectedCNRMEmails := map[string]struct{}{
+			"cnrm-slug-cd03@cluster-dev-123.iam.gserviceaccount.com":    {},
+			"cnrm-slug-cd03@legacy-project-321.iam.gserviceaccount.com": {},
+		}
 
-		for i, msg := range msgs {
+		for _, msg := range msgs {
 			json.Unmarshal(msg.Data, publishRequest)
 
 			assert.Equal(t, teamSlug, publishRequest.Data.Name)
 			assert.Equal(t, teamProjectID, publishRequest.Data.GcpProject)
 			assert.Equal(t, googleWorkspaceEmail, publishRequest.Data.GroupEmail)
 			assert.Equal(t, azureGroupID.String(), publishRequest.Data.AzureGroupID)
-			assert.Equal(t, expectedCNRMEmails[i], publishRequest.Data.CNRMEmail)
+			for email := range expectedCNRMEmails {
+				if email == publishRequest.Data.CNRMEmail {
+					delete(expectedCNRMEmails, email)
+					break
+				}
+			}
 		}
+		assert.Empty(t, expectedCNRMEmails)
 	})
 
 	t.Run("environment in state no longer active", func(t *testing.T) {
