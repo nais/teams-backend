@@ -37,11 +37,11 @@ func TestReconcile(t *testing.T) {
 		environment         = "dev"
 		clusterProjectID    = "cluster-dev-123"
 		cnrmEmail           = "cnrm-slug-cd03@cluster-dev-123.iam.gserviceaccount.com"
-		slackAlertChannel   = "team-alert-channel"
+		slackChannel        = "team-channel"
 	)
 
 	ctx := context.Background()
-	team := db.Team{Team: &sqlc.Team{Slug: teamSlug, SlackAlertsChannel: slackAlertChannel}}
+	team := db.Team{Team: &sqlc.Team{Slug: teamSlug, SlackChannel: slackChannel}}
 	input := reconcilers.Input{
 		CorrelationID: uuid.New(),
 		Team:          team,
@@ -254,7 +254,7 @@ func TestReconcile(t *testing.T) {
 		assert.Equal(t, teamProjectID, publishRequest.Data.GcpProject)
 		assert.Equal(t, googleWorkspaceEmail, publishRequest.Data.GroupEmail)
 		assert.Equal(t, cnrmEmail, publishRequest.Data.CNRMEmail)
-		assert.Equal(t, slackAlertChannel, publishRequest.Data.SlackAlertsChannel)
+		assert.Equal(t, slackChannel, publishRequest.Data.SlackAlertsChannel)
 		assert.Equal(t, azureGroupID.String(), publishRequest.Data.AzureGroupID)
 	})
 

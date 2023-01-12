@@ -788,7 +788,7 @@ type Team struct {
 	Purpose            string
 	Enabled            bool
 	LastSuccessfulSync sql.NullTime
-	SlackAlertsChannel string
+	SlackChannel       string
 }
 
 type TeamMetadatum struct {

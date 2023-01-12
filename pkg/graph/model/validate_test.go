@@ -12,7 +12,7 @@ func ptr[T any](value T) *T {
 	return &value
 }
 
-func TestCreateTeamInput_Validate_SlackAlertsChannel(t *testing.T) {
+func TestCreateTeamInput_Validate_SlackChannel(t *testing.T) {
 	tpl := model.CreateTeamInput{
 		Slug:    ptr(slug.Slug("valid-slug")),
 		Purpose: "valid purpose",
@@ -34,21 +34,21 @@ func TestCreateTeamInput_Validate_SlackAlertsChannel(t *testing.T) {
 	}
 
 	for _, s := range validChannels {
-		tpl.SlackAlertsChannel = s
-		assert.NoError(t, tpl.Validate(), "Slack alerts channel %q should pass validation, but didn't", tpl.SlackAlertsChannel)
+		tpl.SlackChannel = s
+		assert.NoError(t, tpl.Validate(), "Slack channel %q should pass validation, but didn't", tpl.SlackChannel)
 	}
 
 	for _, s := range invalidChannels {
-		tpl.SlackAlertsChannel = s
-		assert.Error(t, tpl.Validate(), "Slack alerts channel %q passed validation even if it should not", tpl.SlackAlertsChannel)
+		tpl.SlackChannel = s
+		assert.Error(t, tpl.Validate(), "Slack channel %q passed validation even if it should not", tpl.SlackChannel)
 	}
 }
 
 func TestCreateTeamInput_Validate_Slug(t *testing.T) {
 	tpl := model.CreateTeamInput{
-		Slug:               nil,
-		Purpose:            "valid purpose",
-		SlackAlertsChannel: "#channel",
+		Slug:         nil,
+		Purpose:      "valid purpose",
+		SlackChannel: "#channel",
 	}
 
 	validSlugs := []string{

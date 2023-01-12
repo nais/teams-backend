@@ -34,8 +34,8 @@ func (input CreateTeamInput) Validate() error {
 		return apierror.ErrTeamPrefixRedundant
 	}
 
-	if !slackChannelNameRegex.MatchString(input.SlackAlertsChannel) {
-		return apierror.ErrTeamSlackAlertsChannel
+	if !slackChannelNameRegex.MatchString(input.SlackChannel) {
+		return apierror.ErrTeamSlackChannel
 	}
 
 	return nil
@@ -46,8 +46,8 @@ func (input UpdateTeamInput) Validate() error {
 		return apierror.ErrTeamPurpose
 	}
 
-	if input.SlackAlertsChannel != nil && !slackChannelNameRegex.MatchString(*input.SlackAlertsChannel) {
-		return apierror.ErrTeamSlackAlertsChannel
+	if input.SlackChannel != nil && !slackChannelNameRegex.MatchString(*input.SlackChannel) {
+		return apierror.ErrTeamSlackChannel
 	}
 
 	return nil

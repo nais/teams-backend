@@ -53,11 +53,11 @@ func (d *database) RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, tea
 	})
 }
 
-func (d *database) UpdateTeam(ctx context.Context, teamSlug slug.Slug, purpose, slackAlertsChannel *string) (*Team, error) {
+func (d *database) UpdateTeam(ctx context.Context, teamSlug slug.Slug, purpose, slackChannel *string) (*Team, error) {
 	team, err := d.querier.UpdateTeam(ctx, sqlc.UpdateTeamParams{
-		Slug:               teamSlug,
-		Purpose:            nullString(purpose),
-		SlackAlertsChannel: nullString(slackAlertsChannel),
+		Slug:         teamSlug,
+		Purpose:      nullString(purpose),
+		SlackChannel: nullString(slackChannel),
 	})
 	if err != nil {
 		return nil, err
@@ -66,11 +66,11 @@ func (d *database) UpdateTeam(ctx context.Context, teamSlug slug.Slug, purpose, 
 	return &Team{Team: team}, nil
 }
 
-func (d *database) CreateTeam(ctx context.Context, slug slug.Slug, purpose, slackAlertsChannel string) (*Team, error) {
+func (d *database) CreateTeam(ctx context.Context, slug slug.Slug, purpose, slackChannel string) (*Team, error) {
 	team, err := d.querier.CreateTeam(ctx, sqlc.CreateTeamParams{
-		Slug:               slug,
-		Purpose:            purpose,
-		SlackAlertsChannel: slackAlertsChannel,
+		Slug:         slug,
+		Purpose:      purpose,
+		SlackChannel: slackChannel,
 	})
 	if err != nil {
 		return nil, err

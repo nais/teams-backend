@@ -20,8 +20,8 @@ type CreateTeamInput struct {
 	Slug *slug.Slug `json:"slug"`
 	// Team purpose.
 	Purpose string `json:"purpose"`
-	// Specify the Slack channel where NAIS alerts will be sent.
-	SlackAlertsChannel string `json:"slackAlertsChannel"`
+	// Specify the Slack channel for the team.
+	SlackChannel string `json:"slackChannel"`
 }
 
 // GCP project type.
@@ -105,7 +105,7 @@ type UpdateTeamInput struct {
 	// Specify team purpose to update the existing value.
 	Purpose *string `json:"purpose"`
 	// Specify the Slack channel to update the existing value.
-	SlackAlertsChannel *string `json:"slackAlertsChannel"`
+	SlackChannel *string `json:"slackChannel"`
 }
 
 // User sync type.

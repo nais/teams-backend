@@ -68,9 +68,9 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 
 	t.Run("create team with empty purpose", func(t *testing.T) {
 		_, err := resolver.CreateTeam(ctx, model.CreateTeamInput{
-			Slug:               &teamSlug,
-			Purpose:            "  ",
-			SlackAlertsChannel: slackChannel,
+			Slug:         &teamSlug,
+			Purpose:      "  ",
+			SlackChannel: slackChannel,
 		})
 		assert.ErrorContains(t, err, "You must specify the purpose for your team")
 	})
@@ -114,9 +114,9 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Once()
 
 		returnedTeam, err := resolver.CreateTeam(ctx, model.CreateTeamInput{
-			Slug:               &teamSlug,
-			Purpose:            " some purpose ",
-			SlackAlertsChannel: slackChannel,
+			Slug:         &teamSlug,
+			Purpose:      " some purpose ",
+			SlackChannel: slackChannel,
 		})
 		assert.NoError(t, err)
 		assert.Equal(t, createdTeam.Slug, returnedTeam.Slug)
@@ -160,9 +160,9 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Once()
 
 		returnedTeam, err := resolver.CreateTeam(saCtx, model.CreateTeamInput{
-			Slug:               &teamSlug,
-			Purpose:            " some purpose ",
-			SlackAlertsChannel: slackChannel,
+			Slug:         &teamSlug,
+			Purpose:      " some purpose ",
+			SlackChannel: slackChannel,
 		})
 
 		assert.NoError(t, err)

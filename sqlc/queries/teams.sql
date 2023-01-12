@@ -1,5 +1,5 @@
 -- name: CreateTeam :one
-INSERT INTO teams (slug, purpose, slack_alerts_channel)
+INSERT INTO teams (slug, purpose, slack_channel)
 VALUES ($1, $2, $3)
 RETURNING *;
 
@@ -32,7 +32,7 @@ ON CONFLICT (team_slug, key) DO
 -- name: UpdateTeam :one
 UPDATE teams
 SET purpose = COALESCE(sqlc.narg(purpose), purpose),
-    slack_alerts_channel = COALESCE(sqlc.narg(slack_alerts_channel), slack_alerts_channel)
+    slack_channel = COALESCE(sqlc.narg(slack_channel), slack_channel)
 WHERE slug = sqlc.arg(slug)
 RETURNING *;
 

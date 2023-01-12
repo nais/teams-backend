@@ -213,7 +213,7 @@ func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, team db.T
 			GroupEmail:         groupEmail,
 			AzureGroupID:       azureGroupID,
 			CNRMEmail:          cnrmEmail,
-			SlackAlertsChannel: team.SlackAlertsChannel,
+			SlackAlertsChannel: team.SlackChannel,
 		},
 	}
 
