@@ -783,6 +783,12 @@ type Session struct {
 	Expires time.Time
 }
 
+type SlackAlertsChannel struct {
+	TeamSlug    slug.Slug
+	Environment string
+	ChannelName string
+}
+
 type Team struct {
 	Slug               slug.Slug
 	Purpose            string

@@ -78,6 +78,32 @@ func (q *Queries) EnableTeam(ctx context.Context, slug slug.Slug) (*Team, error)
 	return &i, err
 }
 
+const getSlackAlertsChannels = `-- name: GetSlackAlertsChannels :many
+SELECT team_slug, environment, channel_name FROM slack_alerts_channels
+WHERE team_slug = $1
+ORDER BY environment ASC
+`
+
+func (q *Queries) GetSlackAlertsChannels(ctx context.Context, teamSlug slug.Slug) ([]*SlackAlertsChannel, error) {
+	rows, err := q.db.Query(ctx, getSlackAlertsChannels, teamSlug)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*SlackAlertsChannel
+	for rows.Next() {
+		var i SlackAlertsChannel
+		if err := rows.Scan(&i.TeamSlug, &i.Environment, &i.ChannelName); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTeamBySlug = `-- name: GetTeamBySlug :one
 SELECT slug, purpose, enabled, last_successful_sync, slack_channel FROM teams
 WHERE slug = $1
@@ -186,6 +212,21 @@ func (q *Queries) GetTeams(ctx context.Context) ([]*Team, error) {
 	return items, nil
 }
 
+const removeSlackAlertsChannel = `-- name: RemoveSlackAlertsChannel :exec
+DELETE FROM slack_alerts_channels
+WHERE team_slug = $1 AND environment = $2
+`
+
+type RemoveSlackAlertsChannelParams struct {
+	TeamSlug    slug.Slug
+	Environment string
+}
+
+func (q *Queries) RemoveSlackAlertsChannel(ctx context.Context, arg RemoveSlackAlertsChannelParams) error {
+	_, err := q.db.Exec(ctx, removeSlackAlertsChannel, arg.TeamSlug, arg.Environment)
+	return err
+}
+
 const removeUserFromTeam = `-- name: RemoveUserFromTeam :exec
 DELETE FROM user_roles
 WHERE user_id = $1 AND target_team_slug = $2
@@ -208,6 +249,24 @@ WHERE slug = $1
 
 func (q *Queries) SetLastSuccessfulSyncForTeam(ctx context.Context, slug slug.Slug) error {
 	_, err := q.db.Exec(ctx, setLastSuccessfulSyncForTeam, slug)
+	return err
+}
+
+const setSlackAlertsChannel = `-- name: SetSlackAlertsChannel :exec
+INSERT INTO slack_alerts_channels (team_slug, environment, channel_name)
+VALUES ($1, $2, $3)
+ON CONFLICT (team_slug, environment) DO
+    UPDATE SET channel_name = $3
+`
+
+type SetSlackAlertsChannelParams struct {
+	TeamSlug    slug.Slug
+	Environment string
+	ChannelName string
+}
+
+func (q *Queries) SetSlackAlertsChannel(ctx context.Context, arg SetSlackAlertsChannelParams) error {
+	_, err := q.db.Exec(ctx, setSlackAlertsChannel, arg.TeamSlug, arg.Environment, arg.ChannelName)
 	return err
 }
 

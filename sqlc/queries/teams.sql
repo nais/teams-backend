@@ -55,3 +55,18 @@ WHERE user_id = $1 AND target_team_slug = $2;
 -- name: SetLastSuccessfulSyncForTeam :exec
 UPDATE teams SET last_successful_sync = NOW()
 WHERE slug = $1;
+
+-- name: GetSlackAlertsChannels :many
+SELECT * FROM slack_alerts_channels
+WHERE team_slug = $1
+ORDER BY environment ASC;
+
+-- name: SetSlackAlertsChannel :exec
+INSERT INTO slack_alerts_channels (team_slug, environment, channel_name)
+VALUES ($1, $2, $3)
+ON CONFLICT (team_slug, environment) DO
+    UPDATE SET channel_name = $3;
+
+-- name: RemoveSlackAlertsChannel :exec
+DELETE FROM slack_alerts_channels
+WHERE team_slug = $1 AND environment = $2;

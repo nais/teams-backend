@@ -151,3 +151,32 @@ func (d *database) EnableTeam(ctx context.Context, teamSlug slug.Slug) (*Team, e
 func (d *database) SetLastSuccessfulSyncForTeam(ctx context.Context, teamSlug slug.Slug) error {
 	return d.querier.SetLastSuccessfulSyncForTeam(ctx, teamSlug)
 }
+
+func (d *database) GetSlackAlertsChannels(ctx context.Context, teamSlug slug.Slug) (map[string]string, error) {
+	channels := make(map[string]string)
+	rows, err := d.querier.GetSlackAlertsChannels(ctx, teamSlug)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, row := range rows {
+		channels[row.Environment] = row.ChannelName
+	}
+
+	return channels, nil
+}
+
+func (d *database) SetSlackAlertsChannel(ctx context.Context, teamSlug slug.Slug, environment, channelName string) error {
+	return d.querier.SetSlackAlertsChannel(ctx, sqlc.SetSlackAlertsChannelParams{
+		TeamSlug:    teamSlug,
+		Environment: environment,
+		ChannelName: channelName,
+	})
+}
+
+func (d *database) RemoveSlackAlertsChannel(ctx context.Context, teamSlug slug.Slug, environment string) error {
+	return d.querier.RemoveSlackAlertsChannel(ctx, sqlc.RemoveSlackAlertsChannelParams{
+		TeamSlug:    teamSlug,
+		Environment: environment,
+	})
+}

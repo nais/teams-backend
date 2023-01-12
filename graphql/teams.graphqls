@@ -19,7 +19,8 @@ extend type Mutation {
     """
     Create a new team
 
-    The user creating the team will be granted team ownership, unless the user is a service account, in which case the team will not get an initial owner. To add one or more owners to the team, refer to the `addTeamOwners` mutation.
+    The user creating the team will be granted team ownership, unless the user is a service account, in which case the
+    team will not get an initial owner. To add one or more owners to the team, refer to the `addTeamOwners` mutation.
 
     The new team will be returned on success.
     """
@@ -189,7 +190,19 @@ type Team {
     reconcilerState: ReconcilerState!
 
     "Slack channel for the team."
-    slackChannel: String
+    slackChannel: String!
+
+    "A list of Slack channels for NAIS alerts. If no channel is specified for a given environment, NAIS will fallback to the slackChannel value."
+    slackAlertsChannels: [SlackAlertsChannel!]!
+}
+
+"Slack alerts channel type."
+type SlackAlertsChannel {
+    "The environment for the alerts sent to the channel."
+    environment: String!
+
+    "The name of the Slack channel."
+    channelName: String
 }
 
 "Reconciler state type."
@@ -292,6 +305,18 @@ input UpdateTeamInput {
 
     "Specify the Slack channel to update the existing value."
     slackChannel: String
+
+    "A list of Slack channels for NAIS alerts."
+    slackAlertsChannels: [SlackAlertsChannelInput!]
+}
+
+"Slack alerts channel input."
+input SlackAlertsChannelInput {
+    "The environment for the alerts sent to the channel."
+    environment: String!
+
+    "The name of the Slack channel."
+    channelName: String
 }
 
 "Available team roles."

@@ -66,6 +66,22 @@ type ReconcilerState struct {
 	NaisDeployKeyProvisioned *time.Time `json:"naisDeployKeyProvisioned"`
 }
 
+// Slack alerts channel type.
+type SlackAlertsChannel struct {
+	// The environment for the alerts sent to the channel.
+	Environment string `json:"environment"`
+	// The name of the Slack channel.
+	ChannelName *string `json:"channelName"`
+}
+
+// Slack alerts channel input.
+type SlackAlertsChannelInput struct {
+	// The environment for the alerts sent to the channel.
+	Environment string `json:"environment"`
+	// The name of the Slack channel.
+	ChannelName *string `json:"channelName"`
+}
+
 // Sync error type.
 type SyncError struct {
 	// Creation time of the error.
@@ -106,6 +122,8 @@ type UpdateTeamInput struct {
 	Purpose *string `json:"purpose"`
 	// Specify the Slack channel to update the existing value.
 	SlackChannel *string `json:"slackChannel"`
+	// A list of Slack channels for NAIS alerts.
+	SlackAlertsChannels []*SlackAlertsChannelInput `json:"slackAlertsChannels"`
 }
 
 // User sync type.

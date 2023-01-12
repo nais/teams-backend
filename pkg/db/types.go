@@ -151,6 +151,9 @@ type Database interface {
 	GetUsersWithGloballyAssignedRole(ctx context.Context, roleName sqlc.RoleName) ([]*User, error)
 	IsFirstRun(ctx context.Context) (bool, error)
 	FirstRunComplete(ctx context.Context) error
+	GetSlackAlertsChannels(ctx context.Context, teamSlug slug.Slug) (map[string]string, error)
+	SetSlackAlertsChannel(ctx context.Context, teamSlug slug.Slug, environment, channelName string) error
+	RemoveSlackAlertsChannel(ctx context.Context, teamSlug slug.Slug, environment string) error
 }
 
 func (u User) GetID() uuid.UUID {

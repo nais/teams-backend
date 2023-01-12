@@ -650,6 +650,29 @@ func (_m *MockDatabase) GetSessionByID(ctx context.Context, sessionID uuid.UUID)
 	return r0, r1
 }
 
+// GetSlackAlertsChannels provides a mock function with given fields: ctx, teamSlug
+func (_m *MockDatabase) GetSlackAlertsChannels(ctx context.Context, teamSlug slug.Slug) (map[string]string, error) {
+	ret := _m.Called(ctx, teamSlug)
+
+	var r0 map[string]string
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug) map[string]string); ok {
+		r0 = rf(ctx, teamSlug)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]string)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug) error); ok {
+		r1 = rf(ctx, teamSlug)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetTeamBySlug provides a mock function with given fields: ctx, _a1
 func (_m *MockDatabase) GetTeamBySlug(ctx context.Context, _a1 slug.Slug) (*Team, error) {
 	ret := _m.Called(ctx, _a1)
@@ -989,6 +1012,20 @@ func (_m *MockDatabase) RemoveApiKeysFromServiceAccount(ctx context.Context, ser
 	return r0
 }
 
+// RemoveSlackAlertsChannel provides a mock function with given fields: ctx, teamSlug, environment
+func (_m *MockDatabase) RemoveSlackAlertsChannel(ctx context.Context, teamSlug slug.Slug, environment string) error {
+	ret := _m.Called(ctx, teamSlug, environment)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug, string) error); ok {
+		r0 = rf(ctx, teamSlug, environment)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // RemoveUserFromTeam provides a mock function with given fields: ctx, userID, teamSlug
 func (_m *MockDatabase) RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug) error {
 	ret := _m.Called(ctx, userID, teamSlug)
@@ -1075,6 +1112,20 @@ func (_m *MockDatabase) SetReconcilerStateForTeam(ctx context.Context, reconcile
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName, slug.Slug, interface{}) error); ok {
 		r0 = rf(ctx, reconcilerName, _a2, state)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// SetSlackAlertsChannel provides a mock function with given fields: ctx, teamSlug, environment, channelName
+func (_m *MockDatabase) SetSlackAlertsChannel(ctx context.Context, teamSlug slug.Slug, environment string, channelName string) error {
+	ret := _m.Called(ctx, teamSlug, environment, channelName)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug, string, string) error); ok {
+		r0 = rf(ctx, teamSlug, environment, channelName)
 	} else {
 		r0 = ret.Error(0)
 	}
