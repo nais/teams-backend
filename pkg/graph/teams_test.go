@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/nais/console/pkg/proxy"
+	nais_deploy_reconciler "github.com/nais/console/pkg/reconcilers/nais/deploy"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
@@ -57,7 +57,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 	reconcilers := make(chan reconcilers.Input, 100)
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	database := db.NewMockDatabase(t)
-	deployProxy := proxy.NewMockDeploy(t)
+	deployProxy := nais_deploy_reconciler.NewMockProxy(t)
 	gcpEnvironments := []string{"env"}
 	log, err := logger.GetLogger("text", "info")
 	assert.NoError(t, err)

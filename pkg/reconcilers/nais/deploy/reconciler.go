@@ -3,10 +3,7 @@ package nais_deploy_reconciler
 import (
 	"bytes"
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -17,15 +14,8 @@ import (
 	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/metrics"
 	"github.com/nais/console/pkg/reconcilers"
-	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 )
-
-type ProvisionApiKeyRequest struct {
-	Team      string
-	Rotate    bool
-	Timestamp int64
-}
 
 type naisDeployReconciler struct {
 	database     db.Database
@@ -114,25 +104,4 @@ func (r *naisDeployReconciler) Reconcile(ctx context.Context, input reconcilers.
 	default:
 		return fmt.Errorf("provision NAIS deploy API key for team %q: %s", input.Team.Slug, response.Status)
 	}
-}
-
-// getProvisionPayload get a payload for the NAIS deploy key provisioning request
-func getProvisionPayload(slug slug.Slug) ([]byte, error) {
-	payload, err := json.Marshal(&ProvisionApiKeyRequest{
-		Rotate:    false,
-		Team:      string(slug),
-		Timestamp: time.Now().Unix(),
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return payload, nil
-}
-
-// genMAC generates the HMAC signature for a message provided the secret key using SHA256
-func genMAC(message, key []byte) string {
-	mac := hmac.New(sha256.New, key)
-	mac.Write(message)
-	return hex.EncodeToString(mac.Sum(nil))
 }

@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/nais/console/pkg/proxy"
 	"net/http"
 	"net/url"
 	"os"
@@ -121,7 +120,10 @@ func run(cfg *config.Config, log logger.Logger) error {
 		gcpEnvironments = append(gcpEnvironments, environment)
 	}
 
-	deployProxy := proxy.NewDeploy()
+	deployProxy, err := nais_deploy_reconciler.NewProxy(cfg.NaisDeploy.DeployKeyEndpoint, cfg.NaisDeploy.ProvisionKey, log)
+	if err != nil {
+		log.Warnf("Deploy proxy is not configured: %v", err)
+	}
 
 	handler := setupGraphAPI(database, deployProxy, cfg.TenantDomain, teamReconciler, userSync, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi), gcpEnvironments, log)
 	srv, err := setupHTTPServer(cfg, database, handler, authHandler)
@@ -373,7 +375,7 @@ func initReconcilers(
 	return recs, nil
 }
 
-func setupGraphAPI(database db.Database, deployProxy proxy.Deploy, domain string, teamReconciler chan<- reconcilers.Input, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *graphql_handler.Server {
+func setupGraphAPI(database db.Database, deployProxy nais_deploy_reconciler.Proxy, domain string, teamReconciler chan<- reconcilers.Input, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *graphql_handler.Server {
 	resolver := graph.NewResolver(database, deployProxy, domain, teamReconciler, userSync, auditLogger, gcpEnvironments, log)
 	gc := generated.Config{}
 	gc.Resolvers = resolver

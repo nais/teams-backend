@@ -538,7 +538,11 @@ func (r *queryResolver) DeployKey(ctx context.Context, slug *slug.Slug) (string,
 		return "", err
 	}
 
-	deployKey, err := r.deployProxy.GetApiKey(*slug)
+	if r.deployProxy == nil {
+		return "", fmt.Errorf("deploy proxy is not configured")
+	}
+
+	deployKey, err := r.deployProxy.GetApiKey(ctx, *slug)
 	if err != nil {
 		return "", err
 	}
