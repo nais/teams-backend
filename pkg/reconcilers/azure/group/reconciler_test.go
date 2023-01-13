@@ -109,7 +109,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Once()
 
 		auditLogger.
-			On("Logf", ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
+			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
 				return len(t) == 1 && t[0].Identifier == string(teamSlug)
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
 				return f.Action == sqlc.AuditActionAzureGroupCreate && f.CorrelationID == correlationID
@@ -118,7 +118,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Once()
 
 		auditLogger.
-			On("Logf", ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
+			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
 				return len(t) == 2 && t[0].Identifier == string(teamSlug) && t[1].Identifier == removeMember.Mail
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
 				return f.Action == sqlc.AuditActionAzureGroupDeleteMember && f.CorrelationID == correlationID
@@ -127,7 +127,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Once()
 
 		auditLogger.
-			On("Logf", ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
+			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
 				return len(t) == 2 && t[0].Identifier == string(teamSlug) && t[1].Identifier == addUser.Email
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
 				return f.Action == sqlc.AuditActionAzureGroupAddMember && f.CorrelationID == correlationID
@@ -265,7 +265,7 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Once()
 
 		auditLogger.
-			On("Logf", ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
+			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
 				return t[0].Identifier == string(teamSlug) && t[1].Identifier == removeMember.Mail
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
 				return f.Action == sqlc.AuditActionAzureGroupDeleteMember && f.CorrelationID == correlationID

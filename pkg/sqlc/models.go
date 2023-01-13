@@ -723,6 +723,10 @@ type AuditLog struct {
 	TargetIdentifier string
 }
 
+type FirstRun struct {
+	FirstRun bool
+}
+
 type Reconciler struct {
 	Name        ReconcilerName
 	DisplayName string

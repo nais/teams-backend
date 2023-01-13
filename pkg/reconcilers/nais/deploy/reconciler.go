@@ -89,7 +89,7 @@ func (r *naisDeployReconciler) Reconcile(ctx context.Context, input reconcilers.
 			Action:        sqlc.AuditActionNaisDeployProvisionDeployKey,
 			CorrelationID: input.CorrelationID,
 		}
-		r.auditLogger.Logf(ctx, targets, fields, "Provisioned NAIS deploy API key for team %q", input.Team.Slug)
+		r.auditLogger.Logf(ctx, r.database, targets, fields, "Provisioned NAIS deploy API key for team %q", input.Team.Slug)
 
 		now := time.Now()
 		err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, &reconcilers.NaisDeployKeyState{

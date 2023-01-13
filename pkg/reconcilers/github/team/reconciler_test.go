@@ -91,7 +91,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 
 		slug := slug.Slug(teamSlug)
 		auditLogger.
-			On("Logf", ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
+			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
 				return t[0].Identifier == string(slug)
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
 				return f.Action == sqlc.AuditActionGithubTeamCreate && f.CorrelationID == correlationID
@@ -261,7 +261,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 
 		slug := slug.Slug(teamSlug)
 		auditLogger.
-			On("Logf", ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
+			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
 				return t[0].Identifier == string(slug)
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
 				return f.Action == sqlc.AuditActionGithubTeamCreate && f.CorrelationID == correlationID
@@ -315,7 +315,7 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	auditLogger.
-		On("Logf", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		On("Logf", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
 
 	// Give the reconciler enough data to create an entire team from scratch,

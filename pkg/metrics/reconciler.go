@@ -10,8 +10,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-const namespace = "nais"
-const subsystem = "console"
+const (
+	namespace = "nais"
+	subsystem = "console"
+)
 
 type ReconcilerState string
 

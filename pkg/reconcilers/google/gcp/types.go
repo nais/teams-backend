@@ -26,5 +26,6 @@ type googleGcpReconciler struct {
 	domain         string
 	cnrmRoleName   string
 	billingAccount string
+	legacyClusters map[string]string // key: environment, value: project id
 	log            logger.Logger
 }

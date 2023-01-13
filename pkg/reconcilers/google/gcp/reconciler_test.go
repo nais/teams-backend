@@ -39,6 +39,8 @@ func TestReconcile(t *testing.T) {
 		},
 	}
 
+	emptyMap := make(map[string]string, 0)
+
 	teamSlug := slug.Slug("slug")
 	correlationID := uuid.New()
 	team := db.Team{Team: &sqlc.Team{Slug: teamSlug}}
@@ -56,7 +58,7 @@ func TestReconcile(t *testing.T) {
 			Return(fmt.Errorf("some error")).
 			Once()
 		gcpServices := &google_gcp_reconciler.GcpServices{}
-		reconciler := google_gcp_reconciler.New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log)
+		reconciler := google_gcp_reconciler.New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, emptyMap, log)
 
 		err := reconciler.Reconcile(ctx, input)
 		assert.ErrorContains(t, err, "load system state")
@@ -75,7 +77,7 @@ func TestReconcile(t *testing.T) {
 			Return(fmt.Errorf("some error")).
 			Once()
 		gcpServices := &google_gcp_reconciler.GcpServices{}
-		reconciler := google_gcp_reconciler.New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log)
+		reconciler := google_gcp_reconciler.New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, emptyMap, log)
 
 		err := reconciler.Reconcile(ctx, input)
 		assert.ErrorContains(t, err, "load system state")
@@ -94,7 +96,7 @@ func TestReconcile(t *testing.T) {
 			Return(nil).
 			Once()
 		gcpServices := &google_gcp_reconciler.GcpServices{}
-		reconciler := google_gcp_reconciler.New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log)
+		reconciler := google_gcp_reconciler.New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, emptyMap, log)
 
 		err := reconciler.Reconcile(ctx, input)
 		assert.ErrorContains(t, err, "no Google Workspace group exists")
@@ -118,7 +120,7 @@ func TestReconcile(t *testing.T) {
 			Return(nil).
 			Once()
 		gcpServices := &google_gcp_reconciler.GcpServices{}
-		reconciler := google_gcp_reconciler.New(database, auditLogger, gcp.Clusters{}, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log)
+		reconciler := google_gcp_reconciler.New(database, auditLogger, gcp.Clusters{}, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, emptyMap, log)
 
 		err := reconciler.Reconcile(ctx, input)
 		assert.NoError(t, err)

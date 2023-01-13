@@ -1,6 +1,7 @@
 package config
 
 import (
+	"strings"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -35,6 +36,9 @@ type UserSync struct {
 	// Enabled When set to true Console will keep the user database in sync with the connected Google organization. The
 	// Google organization will be treated as the master.
 	Enabled bool `envconfig:"CONSOLE_USERSYNC_ENABLED"`
+
+	// AdminGroupPrefix The prefix of the admin group email address. Defaults to "console-admins".
+	AdminGroupPrefix string `envconfig:"CONSOLE_USERSYNC_ADMIN_GROUP_PREFIX"`
 }
 
 type OAuth struct {
@@ -80,6 +84,12 @@ type Config struct {
 	// Example: `http://localhost:3001`
 	FrontendURL string `envconfig:"CONSOLE_FRONTEND_URL"`
 
+	// Names of reconcilers to enable on first run of console
+	//
+	// Example: google:gcp:project,nais:namespace
+	// Valid: [google:gcp:project|google:workspace-admin|nais:namespace|nais:deploy]
+	FirstRunEnableReconcilers []fixtures.EnableableReconciler `envconfig:"CONSOLE_FIRST_RUN_ENABLE_RECONCILERS"`
+
 	// ListenAddress The host:port combination used by the http server.
 	//
 	// Example: `127.0.0.1:3000`
@@ -97,6 +107,10 @@ type Config struct {
 	// Maps an external Kubernetes cluster namespace onto permissions in a specific GCP project
 	// Example: "dev-fss:dev prod-fss:rod dev-gcp:dev prod-gcp:prod"
 	LegacyNaisNamespaces []envmap.EnvironmentMapping `envconfig:"CONSOLE_LEGACY_NAIS_NAMESPACES"`
+
+	// Legacy cluster mapping. env:project
+	// example: dev-gcp:nais-dev-123,prod-gcp:nais-prod-432
+	LegacyClusters map[string]string
 
 	// StaticServiceAccounts A JSON-encoded value describing a set of service accounts to be created when the
 	// application starts. Refer to the README for the format.
@@ -139,6 +153,9 @@ func Defaults() *Config {
 			DeployKeyEndpoint: "http://localhost:8080/internal/api/v1/apikey",
 		},
 		ReconcileRetryInterval: time.Minute * 1,
+		UserSync: UserSync{
+			AdminGroupPrefix: "console-admins",
+		},
 	}
 }
 
@@ -150,17 +167,12 @@ func New() (*Config, error) {
 		return nil, err
 	}
 
-	return cfg, nil
-}
-
-func NewImporterConfig() (*ImporterConfig, error) {
-	cfg := &ImporterConfig{
-		DatabaseURL:  "postgres://console:console@localhost:3002/console?sslmode=disable",
-		TenantDomain: "example.com",
-	}
-	err := envconfig.Process("", cfg)
-	if err != nil {
-		return nil, err
+	if strings.ToLower(cfg.TenantName) == "nav" {
+		cfg.LegacyClusters = map[string]string{
+			"dev-gcp":  "nais-dev-2e7b",
+			"prod-gcp": "nais-prod-020f",
+			"ci-gcp":   "nais-ci-e17f",
+		}
 	}
 
 	return cfg, nil

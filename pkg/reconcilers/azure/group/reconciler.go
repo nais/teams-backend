@@ -105,7 +105,7 @@ func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.
 			Action:        sqlc.AuditActionAzureGroupCreate,
 			CorrelationID: input.CorrelationID,
 		}
-		r.auditLogger.Logf(ctx, targets, fields, "Created Azure AD group %q with ID %q", grp.MailNickname, grp.ID)
+		r.auditLogger.Logf(ctx, r.database, targets, fields, "Created Azure AD group %q with ID %q", grp.MailNickname, grp.ID)
 
 		id, _ := uuid.Parse(grp.ID)
 		err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, reconcilers.AzureState{GroupID: &id})
@@ -155,7 +155,7 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 			Action:        sqlc.AuditActionAzureGroupDeleteMember,
 			CorrelationID: input.CorrelationID,
 		}
-		r.auditLogger.Logf(ctx, targets, fields, "Removed member %q from Azure group %q", remoteEmail, grp.MailNickname)
+		r.auditLogger.Logf(ctx, r.database, targets, fields, "Removed member %q from Azure group %q", remoteEmail, grp.MailNickname)
 	}
 
 	membersToAdd := localOnlyMembers(members, input.TeamMembers)
@@ -179,7 +179,7 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 			Action:        sqlc.AuditActionAzureGroupAddMember,
 			CorrelationID: input.CorrelationID,
 		}
-		r.auditLogger.Logf(ctx, targets, fields, "Added member %q to Azure group %q", consoleUser.Email, grp.MailNickname)
+		r.auditLogger.Logf(ctx, r.database, targets, fields, "Added member %q to Azure group %q", consoleUser.Email, grp.MailNickname)
 	}
 
 	return nil

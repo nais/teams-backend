@@ -22,6 +22,7 @@ import (
 func TestSync(t *testing.T) {
 	correlationID := uuid.New()
 	domain := "example.com"
+	adminGroupPrefix := "console-admins"
 
 	t.Run("No remote users", func(t *testing.T) {
 		auditLogger := auditlogger.NewMockAuditLogger(t)
@@ -45,7 +46,7 @@ func TestSync(t *testing.T) {
 		svc, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(httpClient))
 		assert.NoError(t, err)
 
-		usersync := usersync.New(database, auditLogger, domain, svc, log)
+		usersync := usersync.New(database, auditLogger, adminGroupPrefix, domain, svc, log)
 		err = usersync.Sync(ctx, correlationID)
 		assert.NoError(t, err)
 	})
@@ -169,30 +170,30 @@ func TestSync(t *testing.T) {
 			Once()
 
 		auditLogger.
-			On("Logf", ctx, targetIdentifier("user1@example.com"), auditAction(sqlc.AuditActionUsersyncUpdate), "Local user updated: \"user1@example.com\"").
+			On("Logf", ctx, database, targetIdentifier("user1@example.com"), auditAction(sqlc.AuditActionUsersyncUpdate), "Local user updated: \"user1@example.com\"").
 			Return(nil).
 			Once()
 		auditLogger.
-			On("Logf", ctx, targetIdentifier("user2@example.com"), auditAction(sqlc.AuditActionUsersyncCreate), "Local user created: \"user2@example.com\"").
+			On("Logf", ctx, database, targetIdentifier("user2@example.com"), auditAction(sqlc.AuditActionUsersyncCreate), "Local user created: \"user2@example.com\"").
 			Return(nil).
 			Once()
 		auditLogger.
-			On("Logf", ctx, targetIdentifier("user3@example.com"), auditAction(sqlc.AuditActionUsersyncUpdate), "Local user updated: \"user3@example.com\"").
+			On("Logf", ctx, database, targetIdentifier("user3@example.com"), auditAction(sqlc.AuditActionUsersyncUpdate), "Local user updated: \"user3@example.com\"").
 			Return(nil).
 			Once()
 		auditLogger.
-			On("Logf", ctx, targetIdentifier("delete-me@example.com"), auditAction(sqlc.AuditActionUsersyncDelete), "Local user deleted: \"delete-me@example.com\"").
+			On("Logf", ctx, database, targetIdentifier("delete-me@example.com"), auditAction(sqlc.AuditActionUsersyncDelete), "Local user deleted: \"delete-me@example.com\"").
 			Return(nil).
 			Once()
 		auditLogger.
-			On("Logf", ctx, targetIdentifier("user2@example.com"), auditAction(sqlc.AuditActionUsersyncAssignAdminRole), "Assign global admin role to user: \"user2@example.com\"").
+			On("Logf", ctx, database, targetIdentifier("user2@example.com"), auditAction(sqlc.AuditActionUsersyncAssignAdminRole), "Assign global admin role to user: \"user2@example.com\"").
 			Return(nil).
 			Once()
 
 		svc, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(httpClient))
 		assert.NoError(t, err)
 
-		usersync := usersync.New(database, auditLogger, domain, svc, log)
+		usersync := usersync.New(database, auditLogger, adminGroupPrefix, domain, svc, log)
 		err = usersync.Sync(ctx, correlationID)
 		assert.NoError(t, err)
 	})

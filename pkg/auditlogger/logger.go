@@ -15,28 +15,25 @@ import (
 )
 
 type auditLogger struct {
-	database   db.Database
 	systemName sqlc.SystemName
 	log        logger.Logger
 }
 
 func (l *auditLogger) WithSystemName(systemName sqlc.SystemName) AuditLogger {
 	return &auditLogger{
-		database:   l.database,
 		systemName: systemName,
 		log:        l.log.WithSystem(string(systemName)),
 	}
 }
 
 type AuditLogger interface {
-	Logf(ctx context.Context, targets []Target, entry Fields, message string, messageArgs ...interface{}) error
+	Logf(ctx context.Context, dbtx db.Database, targets []Target, entry Fields, message string, messageArgs ...interface{}) error
 	WithSystemName(systemName sqlc.SystemName) AuditLogger
 }
 
-func New(database db.Database, log logger.Logger) AuditLogger {
+func New(log logger.Logger) AuditLogger {
 	return &auditLogger{
-		database: database,
-		log:      log,
+		log: log,
 	}
 }
 
@@ -63,7 +60,7 @@ type Fields struct {
 	CorrelationID uuid.UUID
 }
 
-func (l *auditLogger) Logf(ctx context.Context, targets []Target, fields Fields, message string, messageArgs ...interface{}) error {
+func (l *auditLogger) Logf(ctx context.Context, dbtx db.Database, targets []Target, fields Fields, message string, messageArgs ...interface{}) error {
 	if l.systemName == "" || !l.systemName.Valid() {
 		return fmt.Errorf("unable to create auditlog entry: missing or invalid systemName")
 	}
@@ -87,7 +84,7 @@ func (l *auditLogger) Logf(ctx context.Context, targets []Target, fields Fields,
 		if fields.Actor != nil {
 			actor = console.Strp(fields.Actor.User.Identity())
 		}
-		err := l.database.CreateAuditLogEntry(
+		err := dbtx.CreateAuditLogEntry(
 			ctx,
 			fields.CorrelationID,
 			l.systemName,

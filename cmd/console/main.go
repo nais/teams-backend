@@ -48,7 +48,7 @@ const (
 	reconcilerTimeout   = time.Minute * 15
 	immediateReconcile  = time.Second * 1
 
-	userSyncInterval = time.Hour * 1
+	userSyncInterval = time.Minute * 15
 	userSyncTimeout  = time.Second * 30
 )
 
@@ -84,6 +84,22 @@ func run(cfg *config.Config, log logger.Logger) error {
 		return err
 	}
 
+	firstRun, err := database.IsFirstRun(ctx)
+	if err != nil {
+		return err
+	}
+	if firstRun {
+		log.Infof("first run detected ")
+		firstRunLogger := log.WithField("system", "first-run")
+		if err := fixtures.SetupDefaultReconcilers(ctx, firstRunLogger, cfg.FirstRunEnableReconcilers, database); err != nil {
+			return err
+		}
+
+		if err := database.FirstRunComplete(ctx); err != nil {
+			return err
+		}
+	}
+
 	err = fixtures.CreateNaisVerification(ctx, database)
 	if err != nil {
 		return err
@@ -95,7 +111,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 	}
 
 	teamReconciler := make(chan reconcilers.Input, reconcilerQueueSize)
-	auditLogger := auditlogger.New(database, log)
+	auditLogger := auditlogger.New(log)
 
 	var userSyncer *usersync.UserSynchronizer
 	userSync := make(chan uuid.UUID, 1)

@@ -31,6 +31,7 @@ type Querier interface {
 	DisableTeam(ctx context.Context, slug slug.Slug) (*Team, error)
 	EnableReconciler(ctx context.Context, name ReconcilerName) (*Reconciler, error)
 	EnableTeam(ctx context.Context, slug slug.Slug) (*Team, error)
+	FirstRunComplete(ctx context.Context) error
 	GetAuditLogsForReconciler(ctx context.Context, targetIdentifier string) ([]*AuditLog, error)
 	GetAuditLogsForTeam(ctx context.Context, targetIdentifier string) ([]*AuditLog, error)
 	GetEnabledReconcilers(ctx context.Context) ([]*Reconciler, error)
@@ -56,6 +57,7 @@ type Querier interface {
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error)
 	GetUsers(ctx context.Context) ([]*User, error)
 	GetUsersWithGloballyAssignedRole(ctx context.Context, roleName RoleName) ([]*User, error)
+	IsFirstRun(ctx context.Context) (bool, error)
 	RemoveAllServiceAccountRoles(ctx context.Context, serviceAccountID uuid.UUID) error
 	RemoveApiKeysFromServiceAccount(ctx context.Context, serviceAccountID uuid.UUID) error
 	RemoveUserFromTeam(ctx context.Context, arg RemoveUserFromTeamParams) error
