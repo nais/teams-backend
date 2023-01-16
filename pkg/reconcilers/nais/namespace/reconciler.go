@@ -144,9 +144,11 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	log := r.log.WithTeamSlug(string(input.Team.Slug))
 	updateGcpProjectState := false
 
-	// lag et merged array med environments
-
 	projects := GCPProjectsWithLegacyEnvironments(gcpProjectState.Projects, r.legacyMapping)
+	slackAlertsChannels, err := r.database.GetSlackAlertsChannels(ctx, input.Team.Slug)
+	if err != nil {
+		return err
+	}
 
 	for environment, project := range projects {
 		if !r.activeEnvironment(environment) {
@@ -155,7 +157,13 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 			delete(gcpProjectState.Projects, environment)
 			continue
 		}
-		err = r.createNamespace(ctx, input.Team, environment, project.ProjectID, googleGroupEmail, azureGroupID)
+
+		slackAlertsChannel := input.Team.SlackChannel
+		if channel, exists := slackAlertsChannels[environment]; exists {
+			slackAlertsChannel = channel
+		}
+
+		err = r.createNamespace(ctx, input.Team, environment, slackAlertsChannel, project.ProjectID, googleGroupEmail, azureGroupID)
 		if err != nil {
 			return fmt.Errorf("unable to create namespace for project %q in environment %q: %w", project.ProjectID, environment, err)
 		}
@@ -197,7 +205,7 @@ func (r *naisNamespaceReconciler) getClusterProjectForEnv(environment string) st
 	return r.legacyClusters[environment]
 }
 
-func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, team db.Team, environment, gcpProjectID string, groupEmail string, azureGroupID string) error {
+func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, team db.Team, environment, slackAlertsChannel, gcpProjectID, groupEmail, azureGroupID string) error {
 	const topicPrefix = "naisd-console-"
 
 	clusterProjectID := r.getClusterProjectForEnv(environment)
@@ -213,7 +221,7 @@ func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, team db.T
 			GroupEmail:         groupEmail,
 			AzureGroupID:       azureGroupID,
 			CNRMEmail:          cnrmEmail,
-			SlackAlertsChannel: team.SlackChannel,
+			SlackAlertsChannel: slackAlertsChannel,
 		},
 	}
 

@@ -37,7 +37,7 @@ func TestReconcile(t *testing.T) {
 		environment         = "dev"
 		clusterProjectID    = "cluster-dev-123"
 		cnrmEmail           = "cnrm-slug-cd03@cluster-dev-123.iam.gserviceaccount.com"
-		slackChannel        = "team-channel"
+		slackChannel        = "#team-channel"
 	)
 
 	ctx := context.Background()
@@ -230,6 +230,12 @@ func TestReconcile(t *testing.T) {
 			})).
 			Return(nil).
 			Once()
+		database.
+			On("GetSlackAlertsChannels", ctx, team.Slug).
+			Return(map[string]string{
+				environment: "#env-channel",
+			}, nil).
+			Once()
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
@@ -254,7 +260,7 @@ func TestReconcile(t *testing.T) {
 		assert.Equal(t, teamProjectID, publishRequest.Data.GcpProject)
 		assert.Equal(t, googleWorkspaceEmail, publishRequest.Data.GroupEmail)
 		assert.Equal(t, cnrmEmail, publishRequest.Data.CNRMEmail)
-		assert.Equal(t, slackChannel, publishRequest.Data.SlackAlertsChannel)
+		assert.Equal(t, "#env-channel", publishRequest.Data.SlackAlertsChannel)
 		assert.Equal(t, azureGroupID.String(), publishRequest.Data.AzureGroupID)
 	})
 
@@ -319,6 +325,10 @@ func TestReconcile(t *testing.T) {
 			})).
 			Return(nil).
 			Once()
+		database.
+			On("GetSlackAlertsChannels", ctx, team.Slug).
+			Return(map[string]string{}, nil).
+			Once()
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
@@ -344,6 +354,7 @@ func TestReconcile(t *testing.T) {
 		assert.Equal(t, googleWorkspaceEmail, publishRequest.Data.GroupEmail)
 		assert.Equal(t, cnrmEmail, publishRequest.Data.CNRMEmail)
 		assert.Equal(t, azureGroupID.String(), publishRequest.Data.AzureGroupID)
+		assert.Equal(t, slackChannel, publishRequest.Data.SlackAlertsChannel)
 	})
 
 	t.Run("create namespaces with additional legacy mappings", func(t *testing.T) {
@@ -404,6 +415,10 @@ func TestReconcile(t *testing.T) {
 			})).
 			Return(nil).
 			Once()
+		database.
+			On("GetSlackAlertsChannels", ctx, team.Slug).
+			Return(map[string]string{}, nil).
+			Once()
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
@@ -450,6 +465,7 @@ func TestReconcile(t *testing.T) {
 					break
 				}
 			}
+			assert.Equal(t, slackChannel, publishRequest.Data.SlackAlertsChannel)
 		}
 		assert.Empty(t, expectedCNRMEmails)
 	})
@@ -513,6 +529,10 @@ func TestReconcile(t *testing.T) {
 				return len(state.Projects) == 0
 			})).
 			Return(nil).
+			Once()
+		database.
+			On("GetSlackAlertsChannels", ctx, team.Slug).
+			Return(map[string]string{}, nil).
 			Once()
 
 		r := nais_namespace_reconciler.New(database, auditLogger, gcp.Clusters{}, domain, managementProjectID, azureEnabled, pubsubClient, emptyMapping, emptyMap, log)
