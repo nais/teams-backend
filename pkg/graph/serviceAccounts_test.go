@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	nais_deploy_reconciler "github.com/nais/console/pkg/reconcilers/nais/deploy"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
@@ -34,10 +36,11 @@ func TestMutationResolver_Roles(t *testing.T) {
 	reconcilers := make(chan reconcilers.Input, 100)
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	database := db.NewMockDatabase(t)
+	deployProxy := nais_deploy_reconciler.NewMockProxy(t)
 	log, err := logger.GetLogger("text", "info")
 	assert.NoError(t, err)
 	userSync := make(chan<- uuid.UUID)
-	resolver := graph.NewResolver(database, "example.com", reconcilers, userSync, auditLogger, []string{"env"}, log).ServiceAccount()
+	resolver := graph.NewResolver(database, deployProxy, "example.com", reconcilers, userSync, auditLogger, []string{"env"}, log).ServiceAccount()
 
 	t.Run("get roles for serviceAccount", func(t *testing.T) {
 		role := &db.Role{

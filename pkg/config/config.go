@@ -60,6 +60,11 @@ type NaisDeploy struct {
 
 	// ProvisionKey The API key used when provisioning deploy keys on behalf of NAIS teams.
 	ProvisionKey string `envconfig:"CONSOLE_NAIS_DEPLOY_PROVISION_KEY"`
+
+	// DeployKeyEndpoint URL to the NAIS deploy key endpoint
+	//
+	// Example: `http://localhost:8080/internal/api/v1/apikey`
+	DeployKeyEndpoint string `envconfig:"CONSOLE_NAIS_DEPLOY_DEPLOY_KEY_ENDPOINT"`
 }
 
 type Config struct {
@@ -144,7 +149,8 @@ func Defaults() *Config {
 		TenantDomain:  "example.com",
 		TenantName:    "example",
 		NaisDeploy: NaisDeploy{
-			Endpoint: "http://localhost:8080/api/v1/provision",
+			Endpoint:          "http://localhost:8080/api/v1/provision",
+			DeployKeyEndpoint: "http://localhost:8080/internal/api/v1/apikey",
 		},
 		ReconcileRetryInterval: time.Minute * 1,
 		UserSync: UserSync{
