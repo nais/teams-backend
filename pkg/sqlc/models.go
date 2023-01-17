@@ -72,6 +72,7 @@ const (
 	AuditActionGraphqlApiReconcilersUpdateTeamState      AuditAction = "graphql-api:reconcilers:update-team-state"
 	AuditActionNaisDeployProvisionDeployKey              AuditAction = "nais:deploy:provision-deploy-key"
 	AuditActionGoogleGcpProjectDeleteCnrmServiceAccount  AuditAction = "google:gcp:project:delete-cnrm-service-account"
+	AuditActionGoogleGcpProjectEnableGoogleApis          AuditAction = "google:gcp:project:enable-google-apis"
 )
 
 func (e *AuditAction) Scan(src interface{}) error {
@@ -164,7 +165,8 @@ func (e AuditAction) Valid() bool {
 		AuditActionUsersyncRevokeAdminRole,
 		AuditActionGraphqlApiReconcilersUpdateTeamState,
 		AuditActionNaisDeployProvisionDeployKey,
-		AuditActionGoogleGcpProjectDeleteCnrmServiceAccount:
+		AuditActionGoogleGcpProjectDeleteCnrmServiceAccount,
+		AuditActionGoogleGcpProjectEnableGoogleApis:
 		return true
 	}
 	return false
@@ -226,6 +228,7 @@ func AllAuditActionValues() []AuditAction {
 		AuditActionGraphqlApiReconcilersUpdateTeamState,
 		AuditActionNaisDeployProvisionDeployKey,
 		AuditActionGoogleGcpProjectDeleteCnrmServiceAccount,
+		AuditActionGoogleGcpProjectEnableGoogleApis,
 	}
 }
 
