@@ -27,14 +27,14 @@ import (
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iam/v1"
 	"google.golang.org/api/option"
+	"google.golang.org/api/serviceusage/v1"
 )
 
 const (
 	Name                              = sqlc.ReconcilerNameGoogleGcpProject
 	GoogleProjectDisplayNameMaxLength = 30
+	metricsSystemName                 = "gcp"
 )
-
-const metricsSystemName = "gcp"
 
 func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, gcpServices *GcpServices, tenantName, domain, cnrmRoleName, billingAccount string, legacyClusters map[string]string, log logger.Logger) *googleGcpReconciler {
 	return &googleGcpReconciler{
@@ -108,14 +108,19 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 			return fmt.Errorf("set project labels: %w", err)
 		}
 
+		err = r.setTeamProjectBillingInfo(ctx, project, input)
+		if err != nil {
+			return fmt.Errorf("set project billing info for project %q for team %q in environment %q: %w", project.ProjectId, input.Team.Slug, environment, err)
+		}
+
 		err = r.setProjectPermissions(ctx, project, input, *googleWorkspaceState.GroupEmail, environment, cluster)
 		if err != nil {
 			return fmt.Errorf("set group permissions to project %q for team %q in environment %q: %w", project.ProjectId, input.Team.Slug, environment, err)
 		}
 
-		err = r.setTeamProjectBillingInfo(ctx, project, input)
+		err = r.ensureProjectHasAccessToGoogleApis(ctx, project, input)
 		if err != nil {
-			return fmt.Errorf("set project billing info for project %q for team %q in environment %q: %w", project.ProjectId, input.Team.Slug, environment, err)
+			return fmt.Errorf("enable Google APIs access in project %q for team %q in environment %q: %w", project.ProjectId, input.Team.Slug, environment, err)
 		}
 
 		err = r.createLegacyClusterCNRMServiceAccount(ctx, input)
@@ -123,6 +128,55 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 			return fmt.Errorf("hack NAVs legacy GCP projecs: %w", err)
 		}
 	}
+
+	return nil
+}
+
+func (r *googleGcpReconciler) ensureProjectHasAccessToGoogleApis(ctx context.Context, project *cloudresourcemanager.Project, input reconcilers.Input) error {
+	req := &serviceusage.BatchEnableServicesRequest{
+		ServiceIds: []string{
+			"compute.googleapis.com",
+			"cloudbilling.googleapis.com",
+			"storage-component.googleapis.com",
+			"storage-api.googleapis.com",
+			"sqladmin.googleapis.com",
+			"sql-component.googleapis.com",
+			"cloudresourcemanager.googleapis.com",
+			"secretmanager.googleapis.com",
+			"pubsub.googleapis.com",
+			"logging.googleapis.com",
+			"bigquery.googleapis.com",
+		},
+	}
+	operation, err := r.gcpServices.ServiceUsageService.BatchEnable(project.Name, req).Do()
+	if err != nil {
+		metrics.IncExternalCallsByError(metricsSystemName, err)
+		return err
+	}
+	metrics.IncExternalCalls(metricsSystemName, operation.HTTPStatusCode)
+
+	for !operation.Done {
+		time.Sleep(1 * time.Second)
+		operation, err = r.gcpServices.ServiceUsageOperationsService.Get(operation.Name).Do()
+		if err != nil {
+			metrics.IncExternalCallsByError(metricsSystemName, err)
+			return fmt.Errorf("poll operation: %w", err)
+		}
+		metrics.IncExternalCalls(metricsSystemName, operation.HTTPStatusCode)
+	}
+
+	if operation.Error != nil {
+		return fmt.Errorf("complete operation: %s", operation.Error.Message)
+	}
+
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(input.Team.Slug),
+	}
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGoogleGcpProjectEnableGoogleApis,
+		CorrelationID: input.CorrelationID,
+	}
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Enable Google APIs for %q", project.ProjectId)
 
 	return nil
 }
@@ -444,11 +498,18 @@ func createGcpServices(ctx context.Context, cfg *config.Config) (*GcpServices, e
 		return nil, fmt.Errorf("retrieve cloud billing service: %w", err)
 	}
 
+	serviceUsageService, err := serviceusage.NewService(ctx, option.WithTokenSource(ts))
+	if err != nil {
+		return nil, fmt.Errorf("retrieve service usage service: %w", err)
+	}
+
 	return &GcpServices{
 		CloudBillingProjectsService:           cloudBillingService.Projects,
 		CloudResourceManagerProjectsService:   cloudResourceManagerService.Projects,
 		CloudResourceManagerOperationsService: cloudResourceManagerService.Operations,
 		IamProjectsServiceAccountsService:     iamService.Projects.ServiceAccounts,
+		ServiceUsageService:                   serviceUsageService.Services,
+		ServiceUsageOperationsService:         serviceUsageService.Operations,
 	}, nil
 }
 

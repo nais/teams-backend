@@ -8,6 +8,7 @@ import (
 	"google.golang.org/api/cloudbilling/v1"
 	"google.golang.org/api/cloudresourcemanager/v3"
 	"google.golang.org/api/iam/v1"
+	"google.golang.org/api/serviceusage/v1"
 )
 
 type GcpServices struct {
@@ -15,6 +16,8 @@ type GcpServices struct {
 	CloudResourceManagerProjectsService   *cloudresourcemanager.ProjectsService
 	CloudResourceManagerOperationsService *cloudresourcemanager.OperationsService
 	IamProjectsServiceAccountsService     *iam.ProjectsServiceAccountsService
+	ServiceUsageService                   *serviceusage.ServicesService
+	ServiceUsageOperationsService         *serviceusage.OperationsService
 }
 
 type googleGcpReconciler struct {
