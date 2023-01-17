@@ -102,10 +102,10 @@ type Database interface {
 	DeleteUser(ctx context.Context, userID uuid.UUID) error
 	GetUsers(ctx context.Context) ([]*User, error)
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error)
-	CreateTeam(ctx context.Context, slug slug.Slug, purpose, slackAlertsChannel string) (*Team, error)
+	CreateTeam(ctx context.Context, slug slug.Slug, purpose, slackChannel string) (*Team, error)
 	SetTeamMetadata(ctx context.Context, slug slug.Slug, metadata []TeamMetadata) error
 	GetTeamMetadata(ctx context.Context, slug slug.Slug) ([]*TeamMetadata, error)
-	UpdateTeam(ctx context.Context, teamSlug slug.Slug, purpose, slackAlertsChannel *string) (*Team, error)
+	UpdateTeam(ctx context.Context, teamSlug slug.Slug, purpose, slackChannel *string) (*Team, error)
 	GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)
 	GetTeams(ctx context.Context) ([]*Team, error)
 	GetTeamMembers(ctx context.Context, teamSlug slug.Slug) ([]*User, error)
@@ -151,6 +151,9 @@ type Database interface {
 	GetUsersWithGloballyAssignedRole(ctx context.Context, roleName sqlc.RoleName) ([]*User, error)
 	IsFirstRun(ctx context.Context) (bool, error)
 	FirstRunComplete(ctx context.Context) error
+	GetSlackAlertsChannels(ctx context.Context, teamSlug slug.Slug) (map[string]string, error)
+	SetSlackAlertsChannel(ctx context.Context, teamSlug slug.Slug, environment, channelName string) error
+	RemoveSlackAlertsChannel(ctx context.Context, teamSlug slug.Slug, environment string) error
 }
 
 func (u User) GetID() uuid.UUID {

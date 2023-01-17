@@ -43,7 +43,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 
 	var team *db.Team
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
-		team, err = dbtx.CreateTeam(ctx, *input.Slug, input.Purpose, input.SlackAlertsChannel)
+		team, err = dbtx.CreateTeam(ctx, *input.Slug, input.Purpose, input.SlackChannel)
 		if err != nil {
 			return err
 		}
@@ -92,7 +92,7 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, slug *slug.Slug, inpu
 	}
 
 	input = input.Sanitize()
-	err = input.Validate()
+	err = input.Validate(r.gcpEnvironments)
 	if err != nil {
 		return nil, err
 	}
@@ -102,21 +102,40 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, slug *slug.Slug, inpu
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	team, err = r.database.UpdateTeam(ctx, team.Slug, input.Purpose, input.SlackAlertsChannel)
+	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
+		team, err = dbtx.UpdateTeam(ctx, team.Slug, input.Purpose, input.SlackChannel)
+		if err != nil {
+			return err
+		}
+
+		if len(input.SlackAlertsChannels) > 0 {
+			for _, slackAlertsChannel := range input.SlackAlertsChannels {
+				var err error
+				if slackAlertsChannel.ChannelName == nil {
+					err = dbtx.RemoveSlackAlertsChannel(ctx, team.Slug, slackAlertsChannel.Environment)
+				} else {
+					err = dbtx.SetSlackAlertsChannel(ctx, team.Slug, slackAlertsChannel.Environment, *slackAlertsChannel.ChannelName)
+				}
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		targets := []auditlogger.Target{
+			auditlogger.TeamTarget(team.Slug),
+		}
+		fields := auditlogger.Fields{
+			Action:        sqlc.AuditActionGraphqlApiTeamUpdate,
+			CorrelationID: correlationID,
+			Actor:         actor,
+		}
+
+		return r.auditLogger.Logf(ctx, dbtx, targets, fields, "Team configuration saved")
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	targets := []auditlogger.Target{
-		auditlogger.TeamTarget(team.Slug),
-	}
-	fields := auditlogger.Fields{
-		Action:        sqlc.AuditActionGraphqlApiTeamUpdate,
-		CorrelationID: correlationID,
-		Actor:         actor,
-	}
-
-	r.auditLogger.Logf(ctx, r.database, targets, fields, "Team configuration saved")
 
 	r.reconcileTeam(ctx, correlationID, *team)
 
@@ -725,6 +744,27 @@ func (r *teamResolver) ReconcilerState(ctx context.Context, obj *db.Team) (*mode
 		AzureADGroupID:            azureADState.GroupID,
 		NaisDeployKeyProvisioned:  naisDeployKeyState.Provisioned,
 	}, nil
+}
+
+// SlackAlertsChannels is the resolver for the slackAlertsChannels field.
+func (r *teamResolver) SlackAlertsChannels(ctx context.Context, obj *db.Team) ([]*model.SlackAlertsChannel, error) {
+	channels := make([]*model.SlackAlertsChannel, 0, len(r.gcpEnvironments))
+	existingChannels, err := r.database.GetSlackAlertsChannels(ctx, obj.Slug)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, environment := range r.gcpEnvironments {
+		var channel *string
+		if value, exists := existingChannels[environment]; exists {
+			channel = &value
+		}
+		channels = append(channels, &model.SlackAlertsChannel{
+			Environment: environment,
+			ChannelName: channel,
+		})
+	}
+	return channels, nil
 }
 
 // Team returns generated.TeamResolver implementation.

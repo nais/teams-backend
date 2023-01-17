@@ -131,17 +131,12 @@ func run(cfg *config.Config, log logger.Logger) error {
 		return err
 	}
 
-	gcpEnvironments := make([]string, 0, len(cfg.GCP.Clusters))
-	for environment := range cfg.GCP.Clusters {
-		gcpEnvironments = append(gcpEnvironments, environment)
-	}
-
 	deployProxy, err := nais_deploy_reconciler.NewProxy(cfg.NaisDeploy.DeployKeyEndpoint, cfg.NaisDeploy.ProvisionKey, log)
 	if err != nil {
 		log.Warnf("Deploy proxy is not configured: %v", err)
 	}
 
-	handler := setupGraphAPI(database, deployProxy, cfg.TenantDomain, teamReconciler, userSync, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi), gcpEnvironments, log)
+	handler := setupGraphAPI(database, deployProxy, cfg.TenantDomain, teamReconciler, userSync, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi), cfg.Environments, log)
 	srv, err := setupHTTPServer(cfg, database, handler, authHandler)
 	if err != nil {
 		return err

@@ -74,6 +74,9 @@ type Config struct {
 	NaisNamespace NaisNamespace
 	OAuth         OAuth
 
+	// Environments A list of environment names used for instance in GCP
+	Environments []string
+
 	// DatabaseURL The URL for the database.
 	//
 	// Example: `postgres://console:console@localhost:3002/console?sslmode=disable`
@@ -167,13 +170,25 @@ func New() (*Config, error) {
 		return nil, err
 	}
 
+	environments := make([]string, 0)
 	if strings.ToLower(cfg.TenantName) == "nav" {
 		cfg.LegacyClusters = map[string]string{
 			"dev-gcp":  "nais-dev-2e7b",
 			"prod-gcp": "nais-prod-020f",
 			"ci-gcp":   "nais-ci-e17f",
 		}
+
+		for _, mapping := range cfg.LegacyNaisNamespaces {
+			environments = append(environments, mapping.Virtual)
+		}
+
+	} else {
+		for environment := range cfg.GCP.Clusters {
+			environments = append(environments, environment)
+		}
 	}
+
+	cfg.Environments = environments
 
 	return cfg, nil
 }

@@ -20,8 +20,8 @@ type CreateTeamInput struct {
 	Slug *slug.Slug `json:"slug"`
 	// Team purpose.
 	Purpose string `json:"purpose"`
-	// Specify the Slack channel where NAIS alerts will be sent.
-	SlackAlertsChannel string `json:"slackAlertsChannel"`
+	// Specify the Slack channel for the team.
+	SlackChannel string `json:"slackChannel"`
 }
 
 // GCP project type.
@@ -66,6 +66,22 @@ type ReconcilerState struct {
 	NaisDeployKeyProvisioned *time.Time `json:"naisDeployKeyProvisioned"`
 }
 
+// Slack alerts channel type.
+type SlackAlertsChannel struct {
+	// The environment for the alerts sent to the channel.
+	Environment string `json:"environment"`
+	// The name of the Slack channel.
+	ChannelName *string `json:"channelName"`
+}
+
+// Slack alerts channel input.
+type SlackAlertsChannelInput struct {
+	// The environment for the alerts sent to the channel.
+	Environment string `json:"environment"`
+	// The name of the Slack channel.
+	ChannelName *string `json:"channelName"`
+}
+
 // Sync error type.
 type SyncError struct {
 	// Creation time of the error.
@@ -105,7 +121,9 @@ type UpdateTeamInput struct {
 	// Specify team purpose to update the existing value.
 	Purpose *string `json:"purpose"`
 	// Specify the Slack channel to update the existing value.
-	SlackAlertsChannel *string `json:"slackAlertsChannel"`
+	SlackChannel *string `json:"slackChannel"`
+	// A list of Slack channels for NAIS alerts.
+	SlackAlertsChannels []*SlackAlertsChannelInput `json:"slackAlertsChannels"`
 }
 
 // User sync type.

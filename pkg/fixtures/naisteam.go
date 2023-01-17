@@ -8,16 +8,16 @@ import (
 )
 
 const (
-	Slug               = "nais-verification"
-	Purpose            = "A place for NAIS to run verification workloads"
-	SlackAlertsChannel = "#nais-alerts-prod"
+	slug         = "nais-verification"
+	purpose      = "A place for NAIS to run verification workloads"
+	slackChannel = "#nais-alerts-prod"
 )
 
 func CreateNaisVerification(ctx context.Context, database db.Database) error {
-	_, err := database.GetTeamBySlug(ctx, Slug)
+	_, err := database.GetTeamBySlug(ctx, slug)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			_, err = database.CreateTeam(ctx, Slug, Purpose, SlackAlertsChannel)
+			_, err = database.CreateTeam(ctx, slug, purpose, slackChannel)
 		}
 	}
 

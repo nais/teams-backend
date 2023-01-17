@@ -158,6 +158,11 @@ type ComplexityRoot struct {
 		Roles func(childComplexity int) int
 	}
 
+	SlackAlertsChannel struct {
+		ChannelName func(childComplexity int) int
+		Environment func(childComplexity int) int
+	}
+
 	SyncError struct {
 		CreatedAt  func(childComplexity int) int
 		Error      func(childComplexity int) int
@@ -165,16 +170,17 @@ type ComplexityRoot struct {
 	}
 
 	Team struct {
-		AuditLogs          func(childComplexity int) int
-		Enabled            func(childComplexity int) int
-		LastSuccessfulSync func(childComplexity int) int
-		Members            func(childComplexity int) int
-		Metadata           func(childComplexity int) int
-		Purpose            func(childComplexity int) int
-		ReconcilerState    func(childComplexity int) int
-		SlackAlertsChannel func(childComplexity int) int
-		Slug               func(childComplexity int) int
-		SyncErrors         func(childComplexity int) int
+		AuditLogs           func(childComplexity int) int
+		Enabled             func(childComplexity int) int
+		LastSuccessfulSync  func(childComplexity int) int
+		Members             func(childComplexity int) int
+		Metadata            func(childComplexity int) int
+		Purpose             func(childComplexity int) int
+		ReconcilerState     func(childComplexity int) int
+		SlackAlertsChannels func(childComplexity int) int
+		SlackChannel        func(childComplexity int) int
+		Slug                func(childComplexity int) int
+		SyncErrors          func(childComplexity int) int
 	}
 
 	TeamMember struct {
@@ -269,6 +275,8 @@ type TeamResolver interface {
 
 	LastSuccessfulSync(ctx context.Context, obj *db.Team) (*time.Time, error)
 	ReconcilerState(ctx context.Context, obj *db.Team) (*model.ReconcilerState, error)
+
+	SlackAlertsChannels(ctx context.Context, obj *db.Team) ([]*model.SlackAlertsChannel, error)
 }
 type UserResolver interface {
 	Teams(ctx context.Context, obj *db.User) ([]*model.TeamMembership, error)
@@ -890,6 +898,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.ServiceAccount.Roles(childComplexity), true
 
+	case "SlackAlertsChannel.channelName":
+		if e.complexity.SlackAlertsChannel.ChannelName == nil {
+			break
+		}
+
+		return e.complexity.SlackAlertsChannel.ChannelName(childComplexity), true
+
+	case "SlackAlertsChannel.environment":
+		if e.complexity.SlackAlertsChannel.Environment == nil {
+			break
+		}
+
+		return e.complexity.SlackAlertsChannel.Environment(childComplexity), true
+
 	case "SyncError.createdAt":
 		if e.complexity.SyncError.CreatedAt == nil {
 			break
@@ -960,12 +982,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Team.ReconcilerState(childComplexity), true
 
-	case "Team.slackAlertsChannel":
-		if e.complexity.Team.SlackAlertsChannel == nil {
+	case "Team.slackAlertsChannels":
+		if e.complexity.Team.SlackAlertsChannels == nil {
 			break
 		}
 
-		return e.complexity.Team.SlackAlertsChannel(childComplexity), true
+		return e.complexity.Team.SlackAlertsChannels(childComplexity), true
+
+	case "Team.slackChannel":
+		if e.complexity.Team.SlackChannel == nil {
+			break
+		}
+
+		return e.complexity.Team.SlackChannel(childComplexity), true
 
 	case "Team.slug":
 		if e.complexity.Team.Slug == nil {
@@ -1089,6 +1118,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputCreateTeamInput,
 		ec.unmarshalInputReconcilerConfigInput,
+		ec.unmarshalInputSlackAlertsChannelInput,
 		ec.unmarshalInputUpdateTeamInput,
 	)
 	first := true
@@ -1441,7 +1471,8 @@ extend type Mutation {
     """
     Create a new team
 
-    The user creating the team will be granted team ownership, unless the user is a service account, in which case the team will not get an initial owner. To add one or more owners to the team, refer to the ` + "`" + `addTeamOwners` + "`" + ` mutation.
+    The user creating the team will be granted team ownership, unless the user is a service account, in which case the
+    team will not get an initial owner. To add one or more owners to the team, refer to the ` + "`" + `addTeamOwners` + "`" + ` mutation.
 
     The new team will be returned on success.
     """
@@ -1610,8 +1641,20 @@ type Team {
     "Current reconciler state for the team."
     reconcilerState: ReconcilerState!
 
-    "Slack channel for NAIS alerts."
-    slackAlertsChannel: String
+    "Slack channel for the team."
+    slackChannel: String!
+
+    "A list of Slack channels for NAIS alerts. If no channel is specified for a given environment, NAIS will fallback to the slackChannel value."
+    slackAlertsChannels: [SlackAlertsChannel!]!
+}
+
+"Slack alerts channel type."
+type SlackAlertsChannel {
+    "The environment for the alerts sent to the channel."
+    environment: String!
+
+    "The name of the Slack channel."
+    channelName: String
 }
 
 "Reconciler state type."
@@ -1703,8 +1746,8 @@ input CreateTeamInput {
     "Team purpose."
     purpose: String!
 
-    "Specify the Slack channel where NAIS alerts will be sent."
-    slackAlertsChannel: String!
+    "Specify the Slack channel for the team."
+    slackChannel: String!
 }
 
 "Input for updating an existing team."
@@ -1713,7 +1756,19 @@ input UpdateTeamInput {
     purpose: String
 
     "Specify the Slack channel to update the existing value."
-    slackAlertsChannel: String
+    slackChannel: String
+
+    "A list of Slack channels for NAIS alerts."
+    slackAlertsChannels: [SlackAlertsChannelInput!]
+}
+
+"Slack alerts channel input."
+input SlackAlertsChannelInput {
+    "The environment for the alerts sent to the channel."
+    environment: String!
+
+    "The name of the Slack channel."
+    channelName: String
 }
 
 "Available team roles."
@@ -2894,8 +2949,10 @@ func (ec *executionContext) fieldContext_Mutation_setGitHubTeamSlug(ctx context.
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
 				return ec.fieldContext_Team_reconcilerState(ctx, field)
-			case "slackAlertsChannel":
-				return ec.fieldContext_Team_slackAlertsChannel(ctx, field)
+			case "slackChannel":
+				return ec.fieldContext_Team_slackChannel(ctx, field)
+			case "slackAlertsChannels":
+				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -2991,8 +3048,10 @@ func (ec *executionContext) fieldContext_Mutation_setGoogleWorkspaceGroupEmail(c
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
 				return ec.fieldContext_Team_reconcilerState(ctx, field)
-			case "slackAlertsChannel":
-				return ec.fieldContext_Team_slackAlertsChannel(ctx, field)
+			case "slackChannel":
+				return ec.fieldContext_Team_slackChannel(ctx, field)
+			case "slackAlertsChannels":
+				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3088,8 +3147,10 @@ func (ec *executionContext) fieldContext_Mutation_setAzureADGroupId(ctx context.
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
 				return ec.fieldContext_Team_reconcilerState(ctx, field)
-			case "slackAlertsChannel":
-				return ec.fieldContext_Team_slackAlertsChannel(ctx, field)
+			case "slackChannel":
+				return ec.fieldContext_Team_slackChannel(ctx, field)
+			case "slackAlertsChannels":
+				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3185,8 +3246,10 @@ func (ec *executionContext) fieldContext_Mutation_setGcpProjectId(ctx context.Co
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
 				return ec.fieldContext_Team_reconcilerState(ctx, field)
-			case "slackAlertsChannel":
-				return ec.fieldContext_Team_slackAlertsChannel(ctx, field)
+			case "slackChannel":
+				return ec.fieldContext_Team_slackChannel(ctx, field)
+			case "slackAlertsChannels":
+				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3282,8 +3345,10 @@ func (ec *executionContext) fieldContext_Mutation_setNaisNamespace(ctx context.C
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
 				return ec.fieldContext_Team_reconcilerState(ctx, field)
-			case "slackAlertsChannel":
-				return ec.fieldContext_Team_slackAlertsChannel(ctx, field)
+			case "slackChannel":
+				return ec.fieldContext_Team_slackChannel(ctx, field)
+			case "slackAlertsChannels":
+				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3751,8 +3816,10 @@ func (ec *executionContext) fieldContext_Mutation_createTeam(ctx context.Context
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
 				return ec.fieldContext_Team_reconcilerState(ctx, field)
-			case "slackAlertsChannel":
-				return ec.fieldContext_Team_slackAlertsChannel(ctx, field)
+			case "slackChannel":
+				return ec.fieldContext_Team_slackChannel(ctx, field)
+			case "slackAlertsChannels":
+				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3848,8 +3915,10 @@ func (ec *executionContext) fieldContext_Mutation_updateTeam(ctx context.Context
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
 				return ec.fieldContext_Team_reconcilerState(ctx, field)
-			case "slackAlertsChannel":
-				return ec.fieldContext_Team_slackAlertsChannel(ctx, field)
+			case "slackChannel":
+				return ec.fieldContext_Team_slackChannel(ctx, field)
+			case "slackAlertsChannels":
+				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3945,8 +4014,10 @@ func (ec *executionContext) fieldContext_Mutation_removeUsersFromTeam(ctx contex
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
 				return ec.fieldContext_Team_reconcilerState(ctx, field)
-			case "slackAlertsChannel":
-				return ec.fieldContext_Team_slackAlertsChannel(ctx, field)
+			case "slackChannel":
+				return ec.fieldContext_Team_slackChannel(ctx, field)
+			case "slackAlertsChannels":
+				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -4193,8 +4264,10 @@ func (ec *executionContext) fieldContext_Mutation_addTeamMembers(ctx context.Con
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
 				return ec.fieldContext_Team_reconcilerState(ctx, field)
-			case "slackAlertsChannel":
-				return ec.fieldContext_Team_slackAlertsChannel(ctx, field)
+			case "slackChannel":
+				return ec.fieldContext_Team_slackChannel(ctx, field)
+			case "slackAlertsChannels":
+				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -4290,8 +4363,10 @@ func (ec *executionContext) fieldContext_Mutation_addTeamOwners(ctx context.Cont
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
 				return ec.fieldContext_Team_reconcilerState(ctx, field)
-			case "slackAlertsChannel":
-				return ec.fieldContext_Team_slackAlertsChannel(ctx, field)
+			case "slackChannel":
+				return ec.fieldContext_Team_slackChannel(ctx, field)
+			case "slackAlertsChannels":
+				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -4387,8 +4462,10 @@ func (ec *executionContext) fieldContext_Mutation_setTeamMemberRole(ctx context.
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
 				return ec.fieldContext_Team_reconcilerState(ctx, field)
-			case "slackAlertsChannel":
-				return ec.fieldContext_Team_slackAlertsChannel(ctx, field)
+			case "slackChannel":
+				return ec.fieldContext_Team_slackChannel(ctx, field)
+			case "slackAlertsChannels":
+				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -4484,8 +4561,10 @@ func (ec *executionContext) fieldContext_Mutation_disableTeam(ctx context.Contex
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
 				return ec.fieldContext_Team_reconcilerState(ctx, field)
-			case "slackAlertsChannel":
-				return ec.fieldContext_Team_slackAlertsChannel(ctx, field)
+			case "slackChannel":
+				return ec.fieldContext_Team_slackChannel(ctx, field)
+			case "slackAlertsChannels":
+				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -4581,8 +4660,10 @@ func (ec *executionContext) fieldContext_Mutation_enableTeam(ctx context.Context
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
 				return ec.fieldContext_Team_reconcilerState(ctx, field)
-			case "slackAlertsChannel":
-				return ec.fieldContext_Team_slackAlertsChannel(ctx, field)
+			case "slackChannel":
+				return ec.fieldContext_Team_slackChannel(ctx, field)
+			case "slackAlertsChannels":
+				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -5024,8 +5105,10 @@ func (ec *executionContext) fieldContext_Query_teams(ctx context.Context, field 
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
 				return ec.fieldContext_Team_reconcilerState(ctx, field)
-			case "slackAlertsChannel":
-				return ec.fieldContext_Team_slackAlertsChannel(ctx, field)
+			case "slackChannel":
+				return ec.fieldContext_Team_slackChannel(ctx, field)
+			case "slackAlertsChannels":
+				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -5110,8 +5193,10 @@ func (ec *executionContext) fieldContext_Query_team(ctx context.Context, field g
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
 				return ec.fieldContext_Team_reconcilerState(ctx, field)
-			case "slackAlertsChannel":
-				return ec.fieldContext_Team_slackAlertsChannel(ctx, field)
+			case "slackChannel":
+				return ec.fieldContext_Team_slackChannel(ctx, field)
+			case "slackAlertsChannels":
+				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -6809,6 +6894,91 @@ func (ec *executionContext) fieldContext_ServiceAccount_roles(ctx context.Contex
 	return fc, nil
 }
 
+func (ec *executionContext) _SlackAlertsChannel_environment(ctx context.Context, field graphql.CollectedField, obj *model.SlackAlertsChannel) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SlackAlertsChannel_environment(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Environment, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SlackAlertsChannel_environment(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SlackAlertsChannel",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SlackAlertsChannel_channelName(ctx context.Context, field graphql.CollectedField, obj *model.SlackAlertsChannel) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SlackAlertsChannel_channelName(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ChannelName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SlackAlertsChannel_channelName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SlackAlertsChannel",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _SyncError_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.SyncError) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_SyncError_createdAt(ctx, field)
 	if err != nil {
@@ -7388,8 +7558,8 @@ func (ec *executionContext) fieldContext_Team_reconcilerState(ctx context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) _Team_slackAlertsChannel(ctx context.Context, field graphql.CollectedField, obj *db.Team) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Team_slackAlertsChannel(ctx, field)
+func (ec *executionContext) _Team_slackChannel(ctx context.Context, field graphql.CollectedField, obj *db.Team) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Team_slackChannel(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -7402,21 +7572,24 @@ func (ec *executionContext) _Team_slackAlertsChannel(ctx context.Context, field 
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.SlackAlertsChannel, nil
+		return obj.SlackChannel, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
 	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2string(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Team_slackAlertsChannel(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Team_slackChannel(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Team",
 		Field:      field,
@@ -7424,6 +7597,56 @@ func (ec *executionContext) fieldContext_Team_slackAlertsChannel(ctx context.Con
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Team_slackAlertsChannels(ctx context.Context, field graphql.CollectedField, obj *db.Team) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Team_slackAlertsChannels(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Team().SlackAlertsChannels(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.SlackAlertsChannel)
+	fc.Result = res
+	return ec.marshalNSlackAlertsChannel2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSlackAlertsChannelᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Team_slackAlertsChannels(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Team",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "environment":
+				return ec.fieldContext_SlackAlertsChannel_environment(ctx, field)
+			case "channelName":
+				return ec.fieldContext_SlackAlertsChannel_channelName(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type SlackAlertsChannel", field.Name)
 		},
 	}
 	return fc, nil
@@ -7586,8 +7809,10 @@ func (ec *executionContext) fieldContext_TeamMembership_team(ctx context.Context
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
 				return ec.fieldContext_Team_reconcilerState(ctx, field)
-			case "slackAlertsChannel":
-				return ec.fieldContext_Team_slackAlertsChannel(ctx, field)
+			case "slackChannel":
+				return ec.fieldContext_Team_slackChannel(ctx, field)
+			case "slackAlertsChannels":
+				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -7781,8 +8006,10 @@ func (ec *executionContext) fieldContext_TeamSync_team(ctx context.Context, fiel
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
 				return ec.fieldContext_Team_reconcilerState(ctx, field)
-			case "slackAlertsChannel":
-				return ec.fieldContext_Team_slackAlertsChannel(ctx, field)
+			case "slackChannel":
+				return ec.fieldContext_Team_slackChannel(ctx, field)
+			case "slackAlertsChannels":
+				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -9894,7 +10121,7 @@ func (ec *executionContext) unmarshalInputCreateTeamInput(ctx context.Context, o
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"slug", "purpose", "slackAlertsChannel"}
+	fieldsInOrder := [...]string{"slug", "purpose", "slackChannel"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -9917,11 +10144,11 @@ func (ec *executionContext) unmarshalInputCreateTeamInput(ctx context.Context, o
 			if err != nil {
 				return it, err
 			}
-		case "slackAlertsChannel":
+		case "slackChannel":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slackAlertsChannel"))
-			it.SlackAlertsChannel, err = ec.unmarshalNString2string(ctx, v)
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slackChannel"))
+			it.SlackChannel, err = ec.unmarshalNString2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -9967,6 +10194,42 @@ func (ec *executionContext) unmarshalInputReconcilerConfigInput(ctx context.Cont
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputSlackAlertsChannelInput(ctx context.Context, obj interface{}) (model.SlackAlertsChannelInput, error) {
+	var it model.SlackAlertsChannelInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"environment", "channelName"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "environment":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("environment"))
+			it.Environment, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "channelName":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("channelName"))
+			it.ChannelName, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputUpdateTeamInput(ctx context.Context, obj interface{}) (model.UpdateTeamInput, error) {
 	var it model.UpdateTeamInput
 	asMap := map[string]interface{}{}
@@ -9974,7 +10237,7 @@ func (ec *executionContext) unmarshalInputUpdateTeamInput(ctx context.Context, o
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"purpose", "slackAlertsChannel"}
+	fieldsInOrder := [...]string{"purpose", "slackChannel", "slackAlertsChannels"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -9989,11 +10252,19 @@ func (ec *executionContext) unmarshalInputUpdateTeamInput(ctx context.Context, o
 			if err != nil {
 				return it, err
 			}
-		case "slackAlertsChannel":
+		case "slackChannel":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slackAlertsChannel"))
-			it.SlackAlertsChannel, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slackChannel"))
+			it.SlackChannel, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "slackAlertsChannels":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slackAlertsChannels"))
+			it.SlackAlertsChannels, err = ec.unmarshalOSlackAlertsChannelInput2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSlackAlertsChannelInputᚄ(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -11015,6 +11286,38 @@ func (ec *executionContext) _ServiceAccount(ctx context.Context, sel ast.Selecti
 	return out
 }
 
+var slackAlertsChannelImplementors = []string{"SlackAlertsChannel"}
+
+func (ec *executionContext) _SlackAlertsChannel(ctx context.Context, sel ast.SelectionSet, obj *model.SlackAlertsChannel) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, slackAlertsChannelImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SlackAlertsChannel")
+		case "environment":
+
+			out.Values[i] = ec._SlackAlertsChannel_environment(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "channelName":
+
+			out.Values[i] = ec._SlackAlertsChannel_channelName(ctx, field, obj)
+
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var syncErrorImplementors = []string{"SyncError"}
 
 func (ec *executionContext) _SyncError(ctx context.Context, sel ast.SelectionSet, obj *model.SyncError) graphql.Marshaler {
@@ -11205,10 +11508,33 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 				return innerFunc(ctx)
 
 			})
-		case "slackAlertsChannel":
+		case "slackChannel":
 
-			out.Values[i] = ec._Team_slackAlertsChannel(ctx, field, obj)
+			out.Values[i] = ec._Team_slackChannel(ctx, field, obj)
 
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "slackAlertsChannels":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Team_slackAlertsChannels(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -12321,6 +12647,65 @@ func (ec *executionContext) marshalNRoleName2ᚕgithubᚗcomᚋnaisᚋconsoleᚋ
 	return ret
 }
 
+func (ec *executionContext) marshalNSlackAlertsChannel2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSlackAlertsChannelᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.SlackAlertsChannel) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNSlackAlertsChannel2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSlackAlertsChannel(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNSlackAlertsChannel2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSlackAlertsChannel(ctx context.Context, sel ast.SelectionSet, v *model.SlackAlertsChannel) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._SlackAlertsChannel(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNSlackAlertsChannelInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSlackAlertsChannelInput(ctx context.Context, v interface{}) (*model.SlackAlertsChannelInput, error) {
+	res, err := ec.unmarshalInputSlackAlertsChannelInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalNSlug2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx context.Context, v interface{}) (slug.Slug, error) {
 	res, err := slug.UnmarshalSlug(v)
 	return *res, graphql.ErrorOnPath(ctx, err)
@@ -13169,6 +13554,26 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	return res
 }
 
+func (ec *executionContext) unmarshalOSlackAlertsChannelInput2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSlackAlertsChannelInputᚄ(ctx context.Context, v interface{}) ([]*model.SlackAlertsChannelInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]*model.SlackAlertsChannelInput, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNSlackAlertsChannelInput2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSlackAlertsChannelInput(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
 func (ec *executionContext) unmarshalOSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx context.Context, v interface{}) (*slug.Slug, error) {
 	if v == nil {
 		return nil, nil
@@ -13182,16 +13587,6 @@ func (ec *executionContext) marshalOSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkg�
 		return graphql.Null
 	}
 	res := slug.MarshalSlug(v)
-	return res
-}
-
-func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {
-	res, err := graphql.UnmarshalString(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOString2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	res := graphql.MarshalString(v)
 	return res
 }
 

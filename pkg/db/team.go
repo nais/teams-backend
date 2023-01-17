@@ -53,11 +53,11 @@ func (d *database) RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, tea
 	})
 }
 
-func (d *database) UpdateTeam(ctx context.Context, teamSlug slug.Slug, purpose, slackAlertsChannel *string) (*Team, error) {
+func (d *database) UpdateTeam(ctx context.Context, teamSlug slug.Slug, purpose, slackChannel *string) (*Team, error) {
 	team, err := d.querier.UpdateTeam(ctx, sqlc.UpdateTeamParams{
-		Slug:               teamSlug,
-		Purpose:            nullString(purpose),
-		SlackAlertsChannel: nullString(slackAlertsChannel),
+		Slug:         teamSlug,
+		Purpose:      nullString(purpose),
+		SlackChannel: nullString(slackChannel),
 	})
 	if err != nil {
 		return nil, err
@@ -66,11 +66,11 @@ func (d *database) UpdateTeam(ctx context.Context, teamSlug slug.Slug, purpose, 
 	return &Team{Team: team}, nil
 }
 
-func (d *database) CreateTeam(ctx context.Context, slug slug.Slug, purpose, slackAlertsChannel string) (*Team, error) {
+func (d *database) CreateTeam(ctx context.Context, slug slug.Slug, purpose, slackChannel string) (*Team, error) {
 	team, err := d.querier.CreateTeam(ctx, sqlc.CreateTeamParams{
-		Slug:               slug,
-		Purpose:            purpose,
-		SlackAlertsChannel: slackAlertsChannel,
+		Slug:         slug,
+		Purpose:      purpose,
+		SlackChannel: slackChannel,
 	})
 	if err != nil {
 		return nil, err
@@ -150,4 +150,33 @@ func (d *database) EnableTeam(ctx context.Context, teamSlug slug.Slug) (*Team, e
 
 func (d *database) SetLastSuccessfulSyncForTeam(ctx context.Context, teamSlug slug.Slug) error {
 	return d.querier.SetLastSuccessfulSyncForTeam(ctx, teamSlug)
+}
+
+func (d *database) GetSlackAlertsChannels(ctx context.Context, teamSlug slug.Slug) (map[string]string, error) {
+	channels := make(map[string]string)
+	rows, err := d.querier.GetSlackAlertsChannels(ctx, teamSlug)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, row := range rows {
+		channels[row.Environment] = row.ChannelName
+	}
+
+	return channels, nil
+}
+
+func (d *database) SetSlackAlertsChannel(ctx context.Context, teamSlug slug.Slug, environment, channelName string) error {
+	return d.querier.SetSlackAlertsChannel(ctx, sqlc.SetSlackAlertsChannelParams{
+		TeamSlug:    teamSlug,
+		Environment: environment,
+		ChannelName: channelName,
+	})
+}
+
+func (d *database) RemoveSlackAlertsChannel(ctx context.Context, teamSlug slug.Slug, environment string) error {
+	return d.querier.RemoveSlackAlertsChannel(ctx, sqlc.RemoveSlackAlertsChannelParams{
+		TeamSlug:    teamSlug,
+		Environment: environment,
+	})
 }

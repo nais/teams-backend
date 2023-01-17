@@ -14,26 +14,26 @@ import (
 )
 
 const createTeam = `-- name: CreateTeam :one
-INSERT INTO teams (slug, purpose, slack_alerts_channel)
+INSERT INTO teams (slug, purpose, slack_channel)
 VALUES ($1, $2, $3)
-RETURNING slug, purpose, enabled, last_successful_sync, slack_alerts_channel
+RETURNING slug, purpose, enabled, last_successful_sync, slack_channel
 `
 
 type CreateTeamParams struct {
-	Slug               slug.Slug
-	Purpose            string
-	SlackAlertsChannel string
+	Slug         slug.Slug
+	Purpose      string
+	SlackChannel string
 }
 
 func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, error) {
-	row := q.db.QueryRow(ctx, createTeam, arg.Slug, arg.Purpose, arg.SlackAlertsChannel)
+	row := q.db.QueryRow(ctx, createTeam, arg.Slug, arg.Purpose, arg.SlackChannel)
 	var i Team
 	err := row.Scan(
 		&i.Slug,
 		&i.Purpose,
 		&i.Enabled,
 		&i.LastSuccessfulSync,
-		&i.SlackAlertsChannel,
+		&i.SlackChannel,
 	)
 	return &i, err
 }
@@ -42,7 +42,7 @@ const disableTeam = `-- name: DisableTeam :one
 UPDATE teams
 SET enabled = false
 WHERE slug = $1
-RETURNING slug, purpose, enabled, last_successful_sync, slack_alerts_channel
+RETURNING slug, purpose, enabled, last_successful_sync, slack_channel
 `
 
 func (q *Queries) DisableTeam(ctx context.Context, slug slug.Slug) (*Team, error) {
@@ -53,7 +53,7 @@ func (q *Queries) DisableTeam(ctx context.Context, slug slug.Slug) (*Team, error
 		&i.Purpose,
 		&i.Enabled,
 		&i.LastSuccessfulSync,
-		&i.SlackAlertsChannel,
+		&i.SlackChannel,
 	)
 	return &i, err
 }
@@ -62,7 +62,7 @@ const enableTeam = `-- name: EnableTeam :one
 UPDATE teams
 SET enabled = true
 WHERE slug = $1
-RETURNING slug, purpose, enabled, last_successful_sync, slack_alerts_channel
+RETURNING slug, purpose, enabled, last_successful_sync, slack_channel
 `
 
 func (q *Queries) EnableTeam(ctx context.Context, slug slug.Slug) (*Team, error) {
@@ -73,13 +73,39 @@ func (q *Queries) EnableTeam(ctx context.Context, slug slug.Slug) (*Team, error)
 		&i.Purpose,
 		&i.Enabled,
 		&i.LastSuccessfulSync,
-		&i.SlackAlertsChannel,
+		&i.SlackChannel,
 	)
 	return &i, err
 }
 
+const getSlackAlertsChannels = `-- name: GetSlackAlertsChannels :many
+SELECT team_slug, environment, channel_name FROM slack_alerts_channels
+WHERE team_slug = $1
+ORDER BY environment ASC
+`
+
+func (q *Queries) GetSlackAlertsChannels(ctx context.Context, teamSlug slug.Slug) ([]*SlackAlertsChannel, error) {
+	rows, err := q.db.Query(ctx, getSlackAlertsChannels, teamSlug)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*SlackAlertsChannel
+	for rows.Next() {
+		var i SlackAlertsChannel
+		if err := rows.Scan(&i.TeamSlug, &i.Environment, &i.ChannelName); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTeamBySlug = `-- name: GetTeamBySlug :one
-SELECT slug, purpose, enabled, last_successful_sync, slack_alerts_channel FROM teams
+SELECT slug, purpose, enabled, last_successful_sync, slack_channel FROM teams
 WHERE slug = $1
 `
 
@@ -91,7 +117,7 @@ func (q *Queries) GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, err
 		&i.Purpose,
 		&i.Enabled,
 		&i.LastSuccessfulSync,
-		&i.SlackAlertsChannel,
+		&i.SlackChannel,
 	)
 	return &i, err
 }
@@ -156,7 +182,7 @@ func (q *Queries) GetTeamMetadata(ctx context.Context, teamSlug slug.Slug) ([]*T
 }
 
 const getTeams = `-- name: GetTeams :many
-SELECT slug, purpose, enabled, last_successful_sync, slack_alerts_channel FROM teams
+SELECT slug, purpose, enabled, last_successful_sync, slack_channel FROM teams
 ORDER BY slug ASC
 `
 
@@ -174,7 +200,7 @@ func (q *Queries) GetTeams(ctx context.Context) ([]*Team, error) {
 			&i.Purpose,
 			&i.Enabled,
 			&i.LastSuccessfulSync,
-			&i.SlackAlertsChannel,
+			&i.SlackChannel,
 		); err != nil {
 			return nil, err
 		}
@@ -184,6 +210,21 @@ func (q *Queries) GetTeams(ctx context.Context) ([]*Team, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const removeSlackAlertsChannel = `-- name: RemoveSlackAlertsChannel :exec
+DELETE FROM slack_alerts_channels
+WHERE team_slug = $1 AND environment = $2
+`
+
+type RemoveSlackAlertsChannelParams struct {
+	TeamSlug    slug.Slug
+	Environment string
+}
+
+func (q *Queries) RemoveSlackAlertsChannel(ctx context.Context, arg RemoveSlackAlertsChannelParams) error {
+	_, err := q.db.Exec(ctx, removeSlackAlertsChannel, arg.TeamSlug, arg.Environment)
+	return err
 }
 
 const removeUserFromTeam = `-- name: RemoveUserFromTeam :exec
@@ -211,6 +252,24 @@ func (q *Queries) SetLastSuccessfulSyncForTeam(ctx context.Context, slug slug.Sl
 	return err
 }
 
+const setSlackAlertsChannel = `-- name: SetSlackAlertsChannel :exec
+INSERT INTO slack_alerts_channels (team_slug, environment, channel_name)
+VALUES ($1, $2, $3)
+ON CONFLICT (team_slug, environment) DO
+    UPDATE SET channel_name = $3
+`
+
+type SetSlackAlertsChannelParams struct {
+	TeamSlug    slug.Slug
+	Environment string
+	ChannelName string
+}
+
+func (q *Queries) SetSlackAlertsChannel(ctx context.Context, arg SetSlackAlertsChannelParams) error {
+	_, err := q.db.Exec(ctx, setSlackAlertsChannel, arg.TeamSlug, arg.Environment, arg.ChannelName)
+	return err
+}
+
 const setTeamMetadata = `-- name: SetTeamMetadata :exec
 INSERT INTO team_metadata (team_slug, key, value)
 VALUES ($1, $2, $3)
@@ -232,26 +291,26 @@ func (q *Queries) SetTeamMetadata(ctx context.Context, arg SetTeamMetadataParams
 const updateTeam = `-- name: UpdateTeam :one
 UPDATE teams
 SET purpose = COALESCE($1, purpose),
-    slack_alerts_channel = COALESCE($2, slack_alerts_channel)
+    slack_channel = COALESCE($2, slack_channel)
 WHERE slug = $3
-RETURNING slug, purpose, enabled, last_successful_sync, slack_alerts_channel
+RETURNING slug, purpose, enabled, last_successful_sync, slack_channel
 `
 
 type UpdateTeamParams struct {
-	Purpose            sql.NullString
-	SlackAlertsChannel sql.NullString
-	Slug               slug.Slug
+	Purpose      sql.NullString
+	SlackChannel sql.NullString
+	Slug         slug.Slug
 }
 
 func (q *Queries) UpdateTeam(ctx context.Context, arg UpdateTeamParams) (*Team, error) {
-	row := q.db.QueryRow(ctx, updateTeam, arg.Purpose, arg.SlackAlertsChannel, arg.Slug)
+	row := q.db.QueryRow(ctx, updateTeam, arg.Purpose, arg.SlackChannel, arg.Slug)
 	var i Team
 	err := row.Scan(
 		&i.Slug,
 		&i.Purpose,
 		&i.Enabled,
 		&i.LastSuccessfulSync,
-		&i.SlackAlertsChannel,
+		&i.SlackChannel,
 	)
 	return &i, err
 }
