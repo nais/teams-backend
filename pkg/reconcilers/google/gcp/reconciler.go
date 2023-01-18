@@ -168,7 +168,7 @@ func (r *googleGcpReconciler) ensureProjectHasAccessToGoogleApis(ctx context.Con
 		return nil
 	}
 
-	servicesToEnable := make([]string, len(desiredServiceIDs), 0)
+	servicesToEnable := make([]string, 0, len(desiredServiceIDs))
 	for key := range desiredServiceIDs {
 		servicesToEnable = append(servicesToEnable, key)
 	}
