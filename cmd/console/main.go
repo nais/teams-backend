@@ -100,11 +100,6 @@ func run(cfg *config.Config, log logger.Logger) error {
 		}
 	}
 
-	err = fixtures.CreateNaisVerification(ctx, database)
-	if err != nil {
-		return err
-	}
-
 	err = fixtures.SetupStaticServiceAccounts(ctx, database, cfg.StaticServiceAccounts)
 	if err != nil {
 		return err
