@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -133,21 +134,49 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 }
 
 func (r *googleGcpReconciler) ensureProjectHasAccessToGoogleApis(ctx context.Context, project *cloudresourcemanager.Project, input reconcilers.Input) error {
-	req := &serviceusage.BatchEnableServicesRequest{
-		ServiceIds: []string{
-			"compute.googleapis.com",
-			"cloudbilling.googleapis.com",
-			"storage-component.googleapis.com",
-			"storage-api.googleapis.com",
-			"sqladmin.googleapis.com",
-			"sql-component.googleapis.com",
-			"cloudresourcemanager.googleapis.com",
-			"secretmanager.googleapis.com",
-			"pubsub.googleapis.com",
-			"logging.googleapis.com",
-			"bigquery.googleapis.com",
-		},
+	desiredServiceIDs := map[string]struct{}{
+		"compute.googleapis.com":              {},
+		"cloudbilling.googleapis.com":         {},
+		"storage-component.googleapis.com":    {},
+		"storage-api.googleapis.com":          {},
+		"sqladmin.googleapis.com":             {},
+		"sql-component.googleapis.com":        {},
+		"cloudresourcemanager.googleapis.com": {},
+		"secretmanager.googleapis.com":        {},
+		"pubsub.googleapis.com":               {},
+		"logging.googleapis.com":              {},
+		"bigquery.googleapis.com":             {},
 	}
+
+	response, err := r.gcpServices.ServiceUsageService.List(project.Name).Filter("state:ENABLED").Do()
+	if err != nil {
+		metrics.IncExternalCallsByError(metricsSystemName, err)
+		return err
+	}
+	metrics.IncExternalCalls(metricsSystemName, response.HTTPStatusCode)
+
+	if response.HTTPStatusCode != http.StatusOK {
+		return fmt.Errorf("non OK http status: %v", response.HTTPStatusCode)
+	}
+
+	// Take already enabled services out of the list of services we want to enable
+	for _, enabledService := range response.Services {
+		delete(desiredServiceIDs, enabledService.Config.Name)
+	}
+
+	if len(desiredServiceIDs) == 0 {
+		return nil
+	}
+
+	servicesToEnable := make([]string, len(desiredServiceIDs), 0)
+	for key := range desiredServiceIDs {
+		servicesToEnable = append(servicesToEnable, key)
+	}
+
+	req := &serviceusage.BatchEnableServicesRequest{
+		ServiceIds: servicesToEnable,
+	}
+
 	operation, err := r.gcpServices.ServiceUsageService.BatchEnable(project.Name, req).Do()
 	if err != nil {
 		metrics.IncExternalCallsByError(metricsSystemName, err)
@@ -176,7 +205,9 @@ func (r *googleGcpReconciler) ensureProjectHasAccessToGoogleApis(ctx context.Con
 		Action:        sqlc.AuditActionGoogleGcpProjectEnableGoogleApis,
 		CorrelationID: input.CorrelationID,
 	}
-	r.auditLogger.Logf(ctx, r.database, targets, fields, "Enable Google APIs for %q", project.ProjectId)
+	for _, enabledApi := range servicesToEnable {
+		r.auditLogger.Logf(ctx, r.database, targets, fields, "Enable Google API %q for %q", enabledApi, project.ProjectId)
+	}
 
 	return nil
 }
