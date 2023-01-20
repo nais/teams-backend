@@ -179,7 +179,7 @@ func New() (*Config, error) {
 		}
 
 		for _, mapping := range cfg.LegacyNaisNamespaces {
-			environments = append(environments, mapping.Virtual)
+			environments = append(environments, mapping.Legacy)
 		}
 
 	} else {

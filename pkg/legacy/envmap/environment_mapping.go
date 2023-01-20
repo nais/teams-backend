@@ -6,8 +6,8 @@ import (
 )
 
 type EnvironmentMapping struct {
-	Virtual string
-	Real    string
+	Legacy   string
+	Platinum string
 }
 
 func (c *EnvironmentMapping) Decode(value string) error {
@@ -15,8 +15,8 @@ func (c *EnvironmentMapping) Decode(value string) error {
 	if len(parts) != 2 {
 		return fmt.Errorf("parse environment mapping: invalid value %q: expected 'virtual:real'", value)
 	}
-	(*c).Virtual = parts[0]
-	(*c).Real = parts[1]
+	(*c).Legacy = parts[0]
+	(*c).Platinum = parts[1]
 
 	return nil
 }

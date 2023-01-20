@@ -17,6 +17,7 @@ import (
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/gcp"
 	"github.com/nais/console/pkg/google_token_source"
+	"github.com/nais/console/pkg/legacy/envmap"
 	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/metrics"
 	"github.com/nais/console/pkg/reconcilers"
@@ -37,7 +38,7 @@ const (
 	metricsSystemName                 = "gcp"
 )
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, gcpServices *GcpServices, tenantName, domain, cnrmRoleName, billingAccount string, legacyClusters map[string]string, log logger.Logger) *googleGcpReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, gcpServices *GcpServices, tenantName, domain, cnrmRoleName, billingAccount string, legacyClusters map[string]string, legacyMapping []envmap.EnvironmentMapping, log logger.Logger) *googleGcpReconciler {
 	return &googleGcpReconciler{
 		database:       database,
 		auditLogger:    auditLogger,
@@ -48,6 +49,7 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp
 		billingAccount: billingAccount,
 		tenantName:     tenantName,
 		legacyClusters: legacyClusters,
+		legacyMapping:  legacyMapping,
 		log:            log,
 	}
 }
@@ -60,7 +62,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		return nil, err
 	}
 
-	return New(database, auditLogger, cfg.GCP.Clusters, gcpServices, cfg.TenantName, cfg.TenantDomain, cfg.GCP.CnrmRole, cfg.GCP.BillingAccount, cfg.LegacyClusters, log), nil
+	return New(database, auditLogger, cfg.GCP.Clusters, gcpServices, cfg.TenantName, cfg.TenantDomain, cfg.GCP.CnrmRole, cfg.GCP.BillingAccount, cfg.LegacyClusters, cfg.LegacyNaisNamespaces, log), nil
 }
 
 func (r *googleGcpReconciler) Name() sqlc.ReconcilerName {
@@ -220,14 +222,25 @@ func (r *googleGcpReconciler) ensureProjectHasAccessToGoogleApis(ctx context.Con
 }
 
 func (r *googleGcpReconciler) createLegacyClusterCNRMServiceAccount(ctx context.Context, input reconcilers.Input, teamProjects map[string]*cloudresourcemanager.Project, groupEmail string) error {
-	for environment, clusterProject := range r.legacyClusters {
-		cnrmServiceAccount, err := r.getOrCreateProjectCnrmServiceAccount(ctx, input, environment, clusterProject)
+	for legacyEnvironment, legacyClusterProject := range r.legacyClusters {
+		var teamProject *cloudresourcemanager.Project
+		for _, m := range r.legacyMapping {
+			if m.Legacy == legacyEnvironment {
+				teamProject = teamProjects[m.Platinum]
+				if teamProject == nil {
+					return nil
+				}
+				break
+			}
+		}
+
+		cnrmServiceAccount, err := r.getOrCreateProjectCnrmServiceAccount(ctx, input, legacyEnvironment, legacyClusterProject)
 		if err != nil {
-			return fmt.Errorf("create legacy CNRM service account for team %q in environment %q: %w", input.Team.Slug, environment, err)
+			return fmt.Errorf("create legacy CNRM service account for team %q in environment %q: %w", input.Team.Slug, legacyEnvironment, err)
 		}
 
 		// Set workload identity role to the CNRM service account
-		member := fmt.Sprintf("serviceAccount:%s.svc.id.goog[cnrm-system/cnrm-controller-manager-%s]", clusterProject, input.Team.Slug)
+		member := fmt.Sprintf("serviceAccount:%s.svc.id.goog[cnrm-system/cnrm-controller-manager-%s]", legacyClusterProject, input.Team.Slug)
 		response, err := r.gcpServices.IamProjectsServiceAccountsService.SetIamPolicy(cnrmServiceAccount.Name, &iam.SetIamPolicyRequest{
 			Policy: &iam.Policy{
 				Bindings: []*iam.Binding{
@@ -244,9 +257,9 @@ func (r *googleGcpReconciler) createLegacyClusterCNRMServiceAccount(ctx context.
 		}
 		metrics.IncExternalCalls(metricsSystemName, response.HTTPStatusCode)
 
-		err = r.setProjectPermissions(ctx, teamProjects[environment], input, groupEmail, environment, clusterProject, cnrmServiceAccount)
+		err = r.setProjectPermissions(ctx, teamProject, input, groupEmail, legacyEnvironment, legacyClusterProject, cnrmServiceAccount)
 		if err != nil {
-			return fmt.Errorf("set group permissions to project %q for team %q in environment %q: %w", teamProjects[environment], input.Team.Slug, environment, err)
+			return fmt.Errorf("set group permissions to project %q for team %q in environment %q: %w", teamProject, input.Team.Slug, legacyEnvironment, err)
 		}
 	}
 

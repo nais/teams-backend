@@ -6,12 +6,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+
 	"github.com/nais/console/pkg/graph/apierror"
 	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/metrics"
 	"github.com/nais/console/pkg/slug"
-	"io"
-	"net/http"
 )
 
 type Proxy interface {

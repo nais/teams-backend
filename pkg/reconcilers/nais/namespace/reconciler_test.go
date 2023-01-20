@@ -367,8 +367,8 @@ func TestReconcile(t *testing.T) {
 		projectMap[virtualName] = legacyProject
 		mappings := []envmap.EnvironmentMapping{
 			{
-				Virtual: virtualName,
-				Real:    environment,
+				Legacy:   virtualName,
+				Platinum: environment,
 			},
 		}
 

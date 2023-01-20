@@ -5,8 +5,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/nais/console/pkg/slug"
 	"time"
+
+	"github.com/nais/console/pkg/slug"
 )
 
 type ProvisionApiKeyRequest struct {

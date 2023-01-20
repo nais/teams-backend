@@ -102,7 +102,7 @@ func (r *naisNamespaceReconciler) Name() sqlc.ReconcilerName {
 func GCPProjectsWithLegacyEnvironments(projects map[string]reconcilers.GoogleGcpEnvironmentProject, mappings []envmap.EnvironmentMapping) map[string]reconcilers.GoogleGcpEnvironmentProject {
 	output := make(map[string]reconcilers.GoogleGcpEnvironmentProject)
 	for _, mapping := range mappings {
-		output[mapping.Virtual] = projects[mapping.Real]
+		output[mapping.Legacy] = projects[mapping.Platinum]
 	}
 	for k, v := range projects {
 		output[k] = v
@@ -281,8 +281,8 @@ func (r *naisNamespaceReconciler) activeEnvironment(environment string) bool {
 		return true
 	}
 	for _, mapping := range r.legacyMapping {
-		if mapping.Virtual == environment {
-			_, exists = r.clusters[mapping.Real]
+		if mapping.Legacy == environment {
+			_, exists = r.clusters[mapping.Platinum]
 			return exists
 		}
 	}
