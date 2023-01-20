@@ -94,6 +94,7 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 		if err != nil {
 			return fmt.Errorf("get or create a GCP project for team %q in environment %q: %w", input.Team.Slug, environment, err)
 		}
+		teamProjects[environment] = project
 		state.Projects[environment] = reconcilers.GoogleGcpEnvironmentProject{
 			ProjectID: project.ProjectId,
 		}
@@ -131,7 +132,6 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 		if err != nil {
 			return fmt.Errorf("enable Google APIs access in project %q for team %q in environment %q: %w", project.ProjectId, input.Team.Slug, environment, err)
 		}
-		teamProjects[environment] = project
 	}
 
 	err = r.createLegacyClusterCNRMServiceAccount(ctx, input, teamProjects, *googleWorkspaceState.GroupEmail)
@@ -222,16 +222,18 @@ func (r *googleGcpReconciler) ensureProjectHasAccessToGoogleApis(ctx context.Con
 }
 
 func (r *googleGcpReconciler) createLegacyClusterCNRMServiceAccount(ctx context.Context, input reconcilers.Input, teamProjects map[string]*cloudresourcemanager.Project, groupEmail string) error {
+OUTER:
 	for legacyEnvironment, legacyClusterProject := range r.legacyClusters {
 		var teamProject *cloudresourcemanager.Project
 		for _, m := range r.legacyMapping {
 			if m.Legacy == legacyEnvironment {
 				teamProject = teamProjects[m.Platinum]
-				if teamProject == nil {
-					return nil
-				}
 				break
 			}
+		}
+		if teamProject == nil {
+			r.log.Warnf("found no team project for cluster: %q. legacyClusters: %+v, legacyMapping: %+v, teamProjects: %+v", legacyEnvironment, r.legacyClusters, r.legacyMapping, teamProjects)
+			continue OUTER
 		}
 
 		cnrmServiceAccount, err := r.getOrCreateProjectCnrmServiceAccount(ctx, input, legacyEnvironment, legacyClusterProject)
