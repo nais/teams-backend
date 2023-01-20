@@ -114,7 +114,12 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 			return fmt.Errorf("set project billing info for project %q for team %q in environment %q: %w", project.ProjectId, input.Team.Slug, environment, err)
 		}
 
-		err = r.setProjectPermissions(ctx, project, input, *googleWorkspaceState.GroupEmail, environment, cluster)
+		cnrmServiceAccount, err := r.getOrCreateProjectCnrmServiceAccount(ctx, input, environment, cluster.ProjectID)
+		if err != nil {
+			return fmt.Errorf("create CNRM service account for project %q for team %q in environment %q: %w", project.ProjectId, input.Team.Slug, environment, err)
+		}
+
+		err = r.setProjectPermissions(ctx, project, input, *googleWorkspaceState.GroupEmail, environment, cluster.ProjectID, cnrmServiceAccount)
 		if err != nil {
 			return fmt.Errorf("set group permissions to project %q for team %q in environment %q: %w", project.ProjectId, input.Team.Slug, environment, err)
 		}
@@ -124,7 +129,7 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 			return fmt.Errorf("enable Google APIs access in project %q for team %q in environment %q: %w", project.ProjectId, input.Team.Slug, environment, err)
 		}
 
-		err = r.createLegacyClusterCNRMServiceAccount(ctx, input)
+		err = r.createLegacyClusterCNRMServiceAccount(ctx, input, project, *googleWorkspaceState.GroupEmail)
 		if err != nil {
 			return fmt.Errorf("hack NAVs legacy GCP projecs: %w", err)
 		}
@@ -212,7 +217,7 @@ func (r *googleGcpReconciler) ensureProjectHasAccessToGoogleApis(ctx context.Con
 	return nil
 }
 
-func (r *googleGcpReconciler) createLegacyClusterCNRMServiceAccount(ctx context.Context, input reconcilers.Input) error {
+func (r *googleGcpReconciler) createLegacyClusterCNRMServiceAccount(ctx context.Context, input reconcilers.Input, teamProject *cloudresourcemanager.Project, groupEmail string) error {
 	for environment, clusterProject := range r.legacyClusters {
 		cnrmServiceAccount, err := r.getOrCreateProjectCnrmServiceAccount(ctx, input, environment, clusterProject)
 		if err != nil {
@@ -236,6 +241,11 @@ func (r *googleGcpReconciler) createLegacyClusterCNRMServiceAccount(ctx context.
 			return fmt.Errorf("assign roles for legacy CNRM service account: %w", err)
 		}
 		metrics.IncExternalCalls(metricsSystemName, response.HTTPStatusCode)
+
+		err = r.setProjectPermissions(ctx, teamProject, input, groupEmail, environment, clusterProject, cnrmServiceAccount)
+		if err != nil {
+			return fmt.Errorf("set group permissions to project %q for team %q in environment %q: %w", teamProject, input.Team.Slug, environment, err)
+		}
 	}
 
 	return nil
@@ -320,14 +330,9 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *rec
 
 // setProjectPermissions Make sure that the project has the necessary permissions, and don't remove permissions we don't
 // control
-func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project *cloudresourcemanager.Project, input reconcilers.Input, groupEmail, environment string, cluster gcp.Cluster) error {
-	cnrmServiceAccount, err := r.getOrCreateProjectCnrmServiceAccount(ctx, input, environment, cluster.ProjectID)
-	if err != nil {
-		return fmt.Errorf("create CNRM service account for project %q for team %q in environment %q: %w", project.ProjectId, input.Team.Slug, environment, err)
-	}
-
+func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project *cloudresourcemanager.Project, input reconcilers.Input, groupEmail, environment string, clusterProjectID string, cnrmServiceAccount *iam.ServiceAccount) error {
 	// Set workload identity role to the CNRM service account
-	member := fmt.Sprintf("serviceAccount:%s.svc.id.goog[cnrm-system/cnrm-controller-manager-%s]", cluster.ProjectID, input.Team.Slug)
+	member := fmt.Sprintf("serviceAccount:%s.svc.id.goog[cnrm-system/cnrm-controller-manager-%s]", clusterProjectID, input.Team.Slug)
 	operation, err := r.gcpServices.IamProjectsServiceAccountsService.SetIamPolicy(cnrmServiceAccount.Name, &iam.SetIamPolicyRequest{
 		Policy: &iam.Policy{
 			Bindings: []*iam.Binding{
