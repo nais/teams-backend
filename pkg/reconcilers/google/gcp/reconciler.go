@@ -86,6 +86,7 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 		return fmt.Errorf("no Google Workspace group exists for team %q yet, is the %q reconciler enabled? ", input.Team.Slug, google_workspace_admin_reconciler.Name)
 	}
 
+	teamProjects := make(map[string]*cloudresourcemanager.Project, len(r.clusters))
 	for environment, cluster := range r.clusters {
 		project, err := r.getOrCreateProject(ctx, state, environment, cluster.TeamsFolderID, input)
 		if err != nil {
@@ -128,11 +129,12 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 		if err != nil {
 			return fmt.Errorf("enable Google APIs access in project %q for team %q in environment %q: %w", project.ProjectId, input.Team.Slug, environment, err)
 		}
+		teamProjects[environment] = project
+	}
 
-		err = r.createLegacyClusterCNRMServiceAccount(ctx, input, project, *googleWorkspaceState.GroupEmail)
-		if err != nil {
-			return fmt.Errorf("hack NAVs legacy GCP projecs: %w", err)
-		}
+	err = r.createLegacyClusterCNRMServiceAccount(ctx, input, teamProjects, *googleWorkspaceState.GroupEmail)
+	if err != nil {
+		return fmt.Errorf("hack NAVs legacy GCP projecs: %w", err)
 	}
 
 	return nil
@@ -217,7 +219,7 @@ func (r *googleGcpReconciler) ensureProjectHasAccessToGoogleApis(ctx context.Con
 	return nil
 }
 
-func (r *googleGcpReconciler) createLegacyClusterCNRMServiceAccount(ctx context.Context, input reconcilers.Input, teamProject *cloudresourcemanager.Project, groupEmail string) error {
+func (r *googleGcpReconciler) createLegacyClusterCNRMServiceAccount(ctx context.Context, input reconcilers.Input, teamProjects map[string]*cloudresourcemanager.Project, groupEmail string) error {
 	for environment, clusterProject := range r.legacyClusters {
 		cnrmServiceAccount, err := r.getOrCreateProjectCnrmServiceAccount(ctx, input, environment, clusterProject)
 		if err != nil {
@@ -242,9 +244,9 @@ func (r *googleGcpReconciler) createLegacyClusterCNRMServiceAccount(ctx context.
 		}
 		metrics.IncExternalCalls(metricsSystemName, response.HTTPStatusCode)
 
-		err = r.setProjectPermissions(ctx, teamProject, input, groupEmail, environment, clusterProject, cnrmServiceAccount)
+		err = r.setProjectPermissions(ctx, teamProjects[environment], input, groupEmail, environment, clusterProject, cnrmServiceAccount)
 		if err != nil {
-			return fmt.Errorf("set group permissions to project %q for team %q in environment %q: %w", teamProject, input.Team.Slug, environment, err)
+			return fmt.Errorf("set group permissions to project %q for team %q in environment %q: %w", teamProjects[environment], input.Team.Slug, environment, err)
 		}
 	}
 
