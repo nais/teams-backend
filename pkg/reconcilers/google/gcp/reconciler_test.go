@@ -2,7 +2,10 @@ package google_gcp_reconciler_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -12,11 +15,17 @@ import (
 	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/reconcilers/google/gcp"
-	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
+	"github.com/nais/console/pkg/reconcilers/google/workspace_admin"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"google.golang.org/api/cloudbilling/v1"
+	"google.golang.org/api/cloudresourcemanager/v3"
+	"google.golang.org/api/iam/v1"
+	"google.golang.org/api/option"
+	"google.golang.org/api/serviceusage/v1"
 )
 
 func TestReconcile(t *testing.T) {
@@ -123,6 +132,251 @@ func TestReconcile(t *testing.T) {
 		reconciler := google_gcp_reconciler.New(database, auditLogger, gcp.Clusters{}, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, emptyMap, nil, log)
 
 		err := reconciler.Reconcile(ctx, input)
+		assert.NoError(t, err)
+	})
+
+	t.Run("full reconcile, no existing project state", func(t *testing.T) {
+		clusters := gcp.Clusters{
+			env: gcp.Cluster{
+				TeamsFolderID: teamFolderID,
+				ProjectID:     clusterProjectID,
+			},
+		}
+		const expectedTeamProjectID = "slug-prod-ea99"
+		ctx := context.Background()
+		database := db.NewMockDatabase(t)
+		database.
+			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.Slug, mock.Anything).
+			Return(nil).
+			Once()
+		database.
+			On("LoadReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, team.Slug, mock.Anything).
+			Run(func(args mock.Arguments) {
+				email := "mail@example.com"
+				state := args.Get(3).(*reconcilers.GoogleWorkspaceState)
+				state.GroupEmail = &email
+			}).
+			Return(nil).
+			Once()
+		database.
+			On("SetReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.Slug, mock.MatchedBy(func(state *reconcilers.GoogleGcpProjectState) bool {
+				return state.Projects[env].ProjectID == expectedTeamProjectID
+			})).
+			Return(nil).
+			Once()
+
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+				return targets[0].Identifier == string(teamSlug)
+			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
+				return fields.CorrelationID == correlationID && fields.Action == sqlc.AuditActionGoogleGcpProjectCreateProject
+			}), mock.MatchedBy(func(msg string) bool {
+				return strings.HasPrefix(msg, "Created GCP project")
+			}), expectedTeamProjectID, teamSlug, env).
+			Return(nil).
+			Once()
+		auditLogger.
+			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+				return targets[0].Identifier == string(teamSlug)
+			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
+				return fields.CorrelationID == correlationID && fields.Action == sqlc.AuditActionGoogleGcpProjectSetBillingInfo
+			}), mock.MatchedBy(func(msg string) bool {
+				return strings.HasPrefix(msg, "Set billing info")
+			}), expectedTeamProjectID).
+			Return(nil).
+			Once()
+		auditLogger.
+			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+				return targets[0].Identifier == string(teamSlug)
+			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
+				return fields.CorrelationID == correlationID && fields.Action == sqlc.AuditActionGoogleGcpProjectCreateCnrmServiceAccount
+			}), mock.MatchedBy(func(msg string) bool {
+				return strings.HasPrefix(msg, "Created CNRM service account")
+			}), teamSlug, env).
+			Return(nil).
+			Once()
+		auditLogger.
+			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+				return targets[0].Identifier == string(teamSlug)
+			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
+				return fields.CorrelationID == correlationID && fields.Action == sqlc.AuditActionGoogleGcpProjectAssignPermissions
+			}), mock.MatchedBy(func(msg string) bool {
+				return strings.HasPrefix(msg, "Assigned GCP project IAM permissions")
+			}), expectedTeamProjectID).
+			Return(nil).
+			Once()
+		auditLogger.
+			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+				return targets[0].Identifier == string(teamSlug)
+			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
+				return fields.CorrelationID == correlationID && fields.Action == sqlc.AuditActionGoogleGcpProjectEnableGoogleApis
+			}), mock.MatchedBy(func(msg string) bool {
+				return strings.HasPrefix(msg, "Enable Google API")
+			}), mock.AnythingOfType("string"), expectedTeamProjectID).
+			Return(nil).
+			Times(11)
+
+		srv := test.HttpServerWithHandlers(t, []http.HandlerFunc{
+			// create project request
+			func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodPost, r.Method)
+				payload := cloudresourcemanager.Project{}
+				json.NewDecoder(r.Body).Decode(&payload)
+				assert.Equal(t, "slug-prod", payload.DisplayName)
+				assert.Equal(t, "folders/123", payload.Parent)
+				assert.Equal(t, expectedTeamProjectID, payload.ProjectId)
+
+				project := cloudresourcemanager.Project{
+					Name:      payload.DisplayName,
+					ProjectId: payload.ProjectId,
+				}
+				projectJson, _ := project.MarshalJSON()
+
+				op := cloudresourcemanager.Operation{
+					Done:     true,
+					Response: projectJson,
+				}
+				resp, _ := op.MarshalJSON()
+				w.Write(resp)
+			},
+
+			// set project labels
+			func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodPatch, r.Method)
+				payload := cloudresourcemanager.Project{}
+				json.NewDecoder(r.Body).Decode(&payload)
+				assert.Equal(t, env, payload.Labels["environment"])
+				assert.Equal(t, string(teamSlug), payload.Labels["team"])
+				assert.Equal(t, tenantName, payload.Labels["tenant"])
+
+				project, _ := payload.MarshalJSON()
+				op := cloudresourcemanager.Operation{
+					Done:     true,
+					Response: project,
+				}
+				resp, _ := op.MarshalJSON()
+				w.Write(resp)
+			},
+
+			// get existing billing info
+			func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodGet, r.Method)
+				info := cloudbilling.ProjectBillingInfo{}
+				resp, _ := info.MarshalJSON()
+				w.Write(resp)
+			},
+
+			// update billing info
+			func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodPut, r.Method)
+				payload := cloudbilling.ProjectBillingInfo{}
+				json.NewDecoder(r.Body).Decode(&payload)
+				assert.Equal(t, billingAccount, payload.BillingAccountName)
+
+				info := cloudbilling.ProjectBillingInfo{}
+				resp, _ := info.MarshalJSON()
+				w.Write(resp)
+			},
+
+			// get existing CNRM service account
+			func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodGet, r.Method)
+				w.WriteHeader(404)
+			},
+
+			// create CNRM service account
+			func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodPost, r.Method)
+				payload := iam.CreateServiceAccountRequest{}
+				json.NewDecoder(r.Body).Decode(&payload)
+				assert.Equal(t, "cnrm-slug-cd03", payload.AccountId)
+				assert.Equal(t, "slug CNRM service account (prod)", payload.ServiceAccount.DisplayName)
+
+				sa := iam.ServiceAccount{
+					Name:  "projects/some-project-123/serviceAccounts/cnrm-slug-cd03@some-project-123.iam.gserviceaccount.com",
+					Email: "cnrm-slug-cd03@some-project-123.iam.gserviceaccount.com",
+				}
+				resp, _ := sa.MarshalJSON()
+				w.Write(resp)
+			},
+
+			// set workload identity for service account
+			func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodPost, r.Method)
+				payload := iam.SetIamPolicyRequest{}
+				json.NewDecoder(r.Body).Decode(&payload)
+				assert.Equal(t, "serviceAccount:some-project-123.svc.id.goog[cnrm-system/cnrm-controller-manager-slug]", payload.Policy.Bindings[0].Members[0])
+				assert.Equal(t, "roles/iam.workloadIdentityUser", payload.Policy.Bindings[0].Role)
+
+				policy := iam.Policy{}
+				resp, _ := policy.MarshalJSON()
+				w.Write(resp)
+			},
+
+			// get existing IAM policy for the team project
+			func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodPost, r.Method)
+				policy := iam.Policy{}
+				resp, _ := policy.MarshalJSON()
+				w.Write(resp)
+			},
+
+			// set updated IAM policy for the team project
+			func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodPost, r.Method)
+				payload := iam.SetIamPolicyRequest{}
+				json.NewDecoder(r.Body).Decode(&payload)
+				expectedBindings := map[string]string{
+					payload.Policy.Bindings[0].Role: payload.Policy.Bindings[0].Members[0],
+					payload.Policy.Bindings[1].Role: payload.Policy.Bindings[1].Members[0],
+				}
+				assert.Equal(t, "group:mail@example.com", expectedBindings["roles/owner"])
+				assert.Equal(t, "serviceAccount:cnrm-slug-cd03@some-project-123.iam.gserviceaccount.com", expectedBindings[cnrmRoleName])
+
+				policy := iam.Policy{}
+				resp, _ := policy.MarshalJSON()
+				w.Write(resp)
+			},
+
+			// list existing Google APIs for the team project
+			func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodGet, r.Method)
+				services := serviceusage.ListServicesResponse{}
+				resp, _ := services.MarshalJSON()
+				w.Write(resp)
+			},
+
+			// enable Google APIs for the team project
+			func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodPost, r.Method)
+				payload := serviceusage.BatchEnableServicesRequest{}
+				json.NewDecoder(r.Body).Decode(&payload)
+				assert.Len(t, payload.ServiceIds, 11)
+
+				op := serviceusage.Operation{Done: true}
+				resp, _ := op.MarshalJSON()
+				w.Write(resp)
+			},
+		})
+		defer srv.Close()
+
+		cloudBillingService, _ := cloudbilling.NewService(ctx, option.WithoutAuthentication(), option.WithEndpoint(srv.URL))
+		cloudResourceManagerService, _ := cloudresourcemanager.NewService(ctx, option.WithoutAuthentication(), option.WithEndpoint(srv.URL))
+		iamService, _ := iam.NewService(ctx, option.WithoutAuthentication(), option.WithEndpoint(srv.URL))
+		serviceUsageService, _ := serviceusage.NewService(ctx, option.WithoutAuthentication(), option.WithEndpoint(srv.URL))
+
+		gcpServices := &google_gcp_reconciler.GcpServices{
+			CloudBillingProjectsService:           cloudBillingService.Projects,
+			CloudResourceManagerProjectsService:   cloudResourceManagerService.Projects,
+			CloudResourceManagerOperationsService: cloudResourceManagerService.Operations,
+			IamProjectsServiceAccountsService:     iamService.Projects.ServiceAccounts,
+			ServiceUsageService:                   serviceUsageService.Services,
+			ServiceUsageOperationsService:         serviceUsageService.Operations,
+		}
+		reconciler := google_gcp_reconciler.New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, emptyMap, nil, log)
+
+		err = reconciler.Reconcile(ctx, input)
 		assert.NoError(t, err)
 	})
 }

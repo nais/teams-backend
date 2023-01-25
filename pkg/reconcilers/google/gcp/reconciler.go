@@ -136,7 +136,7 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 
 	err = r.createLegacyClusterCNRMServiceAccount(ctx, input, teamProjects, *googleWorkspaceState.GroupEmail)
 	if err != nil {
-		return fmt.Errorf("hack NAVs legacy GCP projecs: %w", err)
+		return fmt.Errorf("hack for NAVs legacy GCP projects: %w", err)
 	}
 
 	return nil
@@ -453,14 +453,14 @@ func (r *googleGcpReconciler) setTeamProjectBillingInfo(ctx context.Context, pro
 		return nil
 	}
 
-	operation, err := r.gcpServices.CloudBillingProjectsService.UpdateBillingInfo(project.Name, &cloudbilling.ProjectBillingInfo{
+	updatedBillingInfo, err := r.gcpServices.CloudBillingProjectsService.UpdateBillingInfo(project.Name, &cloudbilling.ProjectBillingInfo{
 		BillingAccountName: r.billingAccount,
 	}).Do()
 	if err != nil {
 		metrics.IncExternalCallsByError(metricsSystemName, err)
 		return err
 	}
-	metrics.IncExternalCalls(metricsSystemName, operation.HTTPStatusCode)
+	metrics.IncExternalCalls(metricsSystemName, updatedBillingInfo.HTTPStatusCode)
 
 	targets := []auditlogger.Target{
 		auditlogger.TeamTarget(input.Team.Slug),
