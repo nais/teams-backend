@@ -22,28 +22,28 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	database        db.Database
-	deployProxy     deployproxy.Proxy
-	tenantDomain    string
-	teamReconciler  chan<- reconcilers.Input
-	userSync        chan<- uuid.UUID
-	systemName      sqlc.SystemName
-	auditLogger     auditlogger.AuditLogger
-	gcpEnvironments []string
-	log             logger.Logger
+	database            db.Database
+	deployProxy         deployproxy.Proxy
+	tenantDomain        string
+	teamReconcilerQueue reconcilers.ReconcilerQueue
+	userSync            chan<- uuid.UUID
+	systemName          sqlc.SystemName
+	auditLogger         auditlogger.AuditLogger
+	gcpEnvironments     []string
+	log                 logger.Logger
 }
 
-func NewResolver(database db.Database, deployProxy deployproxy.Proxy, tenantDomain string, teamReconciler chan<- reconcilers.Input, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *Resolver {
+func NewResolver(database db.Database, deployProxy deployproxy.Proxy, tenantDomain string, teamReconcilerQueue reconcilers.ReconcilerQueue, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *Resolver {
 	return &Resolver{
-		database:        database,
-		deployProxy:     deployProxy,
-		tenantDomain:    tenantDomain,
-		systemName:      sqlc.SystemNameGraphqlApi,
-		teamReconciler:  teamReconciler,
-		auditLogger:     auditLogger,
-		gcpEnvironments: gcpEnvironments,
-		log:             log.WithSystem(string(sqlc.SystemNameGraphqlApi)),
-		userSync:        userSync,
+		database:            database,
+		deployProxy:         deployProxy,
+		tenantDomain:        tenantDomain,
+		systemName:          sqlc.SystemNameGraphqlApi,
+		teamReconcilerQueue: teamReconcilerQueue,
+		auditLogger:         auditLogger,
+		gcpEnvironments:     gcpEnvironments,
+		log:                 log.WithSystem(string(sqlc.SystemNameGraphqlApi)),
+		userSync:            userSync,
 	}
 }
 
@@ -56,15 +56,25 @@ func GetQueriedFields(ctx context.Context) map[string]bool {
 	return fields
 }
 
+// addTeamToReconcilerQueue add a team (enclosed in an input) to the reconciler queue
+func (r *Resolver) addTeamToReconcilerQueue(input reconcilers.Input) error {
+	err := r.teamReconcilerQueue.Add(input)
+	if err != nil {
+		r.log.WithTeamSlug(string(input.Team.Slug)).WithError(err).Errorf("add team to reconciler queue")
+		return apierror.Errorf("Console is about to restart, unable to reconcile team: %q", input.Team.Slug)
+	}
+	return nil
+}
+
 // reconcileTeam Trigger team reconcilers for a given team
-func (r *Resolver) reconcileTeam(ctx context.Context, correlationID uuid.UUID, team db.Team) {
+func (r *Resolver) reconcileTeam(ctx context.Context, correlationID uuid.UUID, team db.Team) error {
 	reconcilerInput, err := reconcilers.CreateReconcilerInput(ctx, r.database, team)
 	if err != nil {
 		r.log.Errorf("unable to generate reconcile input for team %q: %s", team.Slug, err)
-		return
+		return nil
 	}
 
-	r.teamReconciler <- reconcilerInput.WithCorrelationID(correlationID)
+	return r.addTeamToReconcilerQueue(reconcilerInput.WithCorrelationID(correlationID))
 }
 
 // reconcileAllTeams Trigger reconcilers for all teams
@@ -81,7 +91,12 @@ func (r *Resolver) reconcileAllTeams(ctx context.Context, correlationID uuid.UUI
 			r.log.WithTeamSlug(string(team.Slug)).WithError(err).Error("unable to create reconciler input")
 			continue
 		}
-		r.teamReconciler <- input.WithCorrelationID(correlationID)
+
+		err = r.addTeamToReconcilerQueue(input.WithCorrelationID(correlationID))
+		if err != nil {
+			return syncEntries, err
+		}
+
 		syncEntries = append(syncEntries, &model.TeamSync{
 			Team:          team,
 			CorrelationID: &correlationID,

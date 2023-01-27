@@ -21,12 +21,12 @@ func TestQueryResolver_Users(t *testing.T) {
 	database := db.NewMockDatabase(t)
 	deployProxy := deployproxy.NewMockProxy(t)
 	auditLogger := auditlogger.NewMockAuditLogger(t)
-	ch := make(chan reconcilers.Input, 100)
+	reconcilerQueue := reconcilers.NewMockReconcilerQueue(t)
 	gcpEnvironments := []string{"env"}
 	log, err := logger.GetLogger("text", "info")
 	assert.NoError(t, err)
 	userSync := make(chan<- uuid.UUID)
-	resolver := graph.NewResolver(database, deployProxy, "example.com", ch, userSync, auditLogger, gcpEnvironments, log).Query()
+	resolver := graph.NewResolver(database, deployProxy, "example.com", reconcilerQueue, userSync, auditLogger, gcpEnvironments, log).Query()
 
 	t.Run("unauthenticated user", func(t *testing.T) {
 		users, err := resolver.Users(ctx)

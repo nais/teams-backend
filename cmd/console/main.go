@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -44,12 +45,10 @@ import (
 )
 
 const (
-	reconcilerQueueSize = 4096
-	reconcilerTimeout   = time.Minute * 15
-	immediateReconcile  = time.Second * 1
-
-	userSyncInterval = time.Minute * 15
-	userSyncTimeout  = time.Second * 30
+	reconcilerTimeout = time.Minute * 15
+	reconcilerWorkers = 10
+	userSyncInterval  = time.Minute * 15
+	userSyncTimeout   = time.Second * 30
 )
 
 func main() {
@@ -105,8 +104,31 @@ func run(cfg *config.Config, log logger.Logger) error {
 		return err
 	}
 
-	teamReconciler := make(chan reconcilers.Input, reconcilerQueueSize)
 	auditLogger := auditlogger.New(log)
+
+	teamReconcilerQueue, teamReconcilerQueueChannel := reconcilers.NewReconcilerQueue()
+	wg := sync.WaitGroup{}
+	defer func() {
+		teamReconcilerQueue.Close()
+		wg.Wait()
+	}()
+
+	for i := 0; i < reconcilerWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for input := range teamReconcilerQueueChannel {
+				ctx, cancel := context.WithTimeout(ctx, reconcilerTimeout)
+				err = reconcileTeam(ctx, database, input, cfg, auditLogger, log)
+				if err != nil {
+					log.WithTeamSlug(string(input.Team.Slug)).WithError(err).Error("reconcile team")
+					teamReconcilerQueue.Add(input)
+				}
+
+				cancel()
+			}
+		}()
+	}
 
 	var userSyncer *usersync.UserSynchronizer
 	userSync := make(chan uuid.UUID, 1)
@@ -131,7 +153,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 		log.Warnf("Deploy proxy is not configured: %v", err)
 	}
 
-	handler := setupGraphAPI(database, deployProxy, cfg.TenantDomain, teamReconciler, userSync, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi), cfg.Environments, log)
+	handler := setupGraphAPI(database, deployProxy, cfg.TenantDomain, teamReconcilerQueue, userSync, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi), cfg.Environments, log)
 	srv, err := setupHTTPServer(cfg, database, handler, authHandler)
 	if err != nil {
 		return err
@@ -159,25 +181,11 @@ func run(cfg *config.Config, log logger.Logger) error {
 	defer log.Info("main program context canceled; exiting.")
 
 	for ctx.Err() == nil {
-		metrics.SetPendingTeamCount(len(teamReconciler))
+		metrics.SetPendingTeamCount(len(teamReconcilerQueueChannel))
 
 		select {
 		case <-ctx.Done():
 			return nil
-
-		case input := <-teamReconciler:
-			err = reconcileTeam(ctx, database, input, cfg, auditLogger, log)
-			if err != nil {
-				log.WithTeamSlug(string(input.Team.Slug)).WithError(err).Error("reconcile team")
-				teamReconciler <- input
-			}
-
-			/*
-				if len(pendingTeams) > 0 {
-						log.Warnf("%d teams are not fully reconciled.", len(pendingTeams))
-					}
-
-					log.Debug("reconciliation complete.")*/
 
 		case correlationID := <-userSync:
 			if userSyncer == nil {
@@ -219,9 +227,6 @@ func reconcileTeam(ctx context.Context, database db.Database, input reconcilers.
 	if err != nil {
 		return err
 	}
-
-	ctx, cancel := context.WithTimeout(ctx, reconcilerTimeout)
-	defer cancel()
 
 	log = log.WithTeamSlug(string(input.Team.Slug))
 
@@ -340,8 +345,8 @@ func initReconcilers(
 	return recs, nil
 }
 
-func setupGraphAPI(database db.Database, deployProxy deployproxy.Proxy, domain string, teamReconciler chan<- reconcilers.Input, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *graphql_handler.Server {
-	resolver := graph.NewResolver(database, deployProxy, domain, teamReconciler, userSync, auditLogger, gcpEnvironments, log)
+func setupGraphAPI(database db.Database, deployProxy deployproxy.Proxy, domain string, teamReconcilerQueue reconcilers.ReconcilerQueue, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *graphql_handler.Server {
+	resolver := graph.NewResolver(database, deployProxy, domain, teamReconcilerQueue, userSync, auditLogger, gcpEnvironments, log)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
 	gc.Directives.Admin = directives.Admin()

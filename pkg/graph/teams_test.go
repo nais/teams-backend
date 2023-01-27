@@ -53,7 +53,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 		},
 	})
 
-	reconcilers := make(chan reconcilers.Input, 100)
+	reconcilerQueue := reconcilers.NewMockReconcilerQueue(t)
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	database := db.NewMockDatabase(t)
 	deployProxy := deployproxy.NewMockProxy(t)
@@ -61,7 +61,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 	log, err := logger.GetLogger("text", "info")
 	assert.NoError(t, err)
 	userSync := make(chan<- uuid.UUID)
-	resolver := graph.NewResolver(database, deployProxy, "example.com", reconcilers, userSync, auditLogger, gcpEnvironments, log).Mutation()
+	resolver := graph.NewResolver(database, deployProxy, "example.com", reconcilerQueue, userSync, auditLogger, gcpEnvironments, log).Mutation()
 	teamSlug := slug.Slug("some-slug")
 	slackChannel := "#my-slack-channel"
 
@@ -112,6 +112,13 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Return(nil).
 			Once()
 
+		reconcilerQueue.
+			On("Add", mock.MatchedBy(func(input reconcilers.Input) bool {
+				return input.Team.Slug == createdTeam.Slug
+			})).
+			Return(nil).
+			Once()
+
 		returnedTeam, err := resolver.CreateTeam(ctx, model.CreateTeamInput{
 			Slug:         &teamSlug,
 			Purpose:      " some purpose ",
@@ -119,9 +126,6 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		assert.Equal(t, createdTeam.Slug, returnedTeam.Slug)
-
-		input := <-reconcilers
-		assert.Equal(t, createdTeam.Slug, input.Team.Slug)
 	})
 
 	t.Run("calling with SA, does not change roles", func(t *testing.T) {
@@ -158,6 +162,13 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Return(nil).
 			Once()
 
+		reconcilerQueue.
+			On("Add", mock.MatchedBy(func(input reconcilers.Input) bool {
+				return input.Team.Slug == createdTeam.Slug
+			})).
+			Return(nil).
+			Once()
+
 		returnedTeam, err := resolver.CreateTeam(saCtx, model.CreateTeamInput{
 			Slug:         &teamSlug,
 			Purpose:      " some purpose ",
@@ -166,8 +177,5 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, createdTeam.Slug, returnedTeam.Slug)
-
-		input := <-reconcilers
-		assert.Equal(t, createdTeam.Slug, input.Team.Slug)
 	})
 }
