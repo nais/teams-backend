@@ -37,7 +37,6 @@ import (
 	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
 	nais_deploy_reconciler "github.com/nais/console/pkg/reconcilers/nais/deploy"
 	nais_namespace_reconciler "github.com/nais/console/pkg/reconcilers/nais/namespace"
-	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/pkg/usersync"
 	"github.com/nais/console/pkg/version"
@@ -157,46 +156,28 @@ func run(cfg *config.Config, log logger.Logger) error {
 		cancel()
 	}()
 
-	nextReconcile := time.Time{}
-	reconcileTimer := time.NewTimer(1 * time.Second)
-	reconcileTimer.Stop()
-
-	pendingTeams := make(map[slug.Slug]reconcilers.Input)
-
 	defer log.Info("main program context canceled; exiting.")
 
 	for ctx.Err() == nil {
+		metrics.SetPendingTeamCount(len(teamReconciler))
+
 		select {
 		case <-ctx.Done():
 			return nil
 
 		case input := <-teamReconciler:
-			if nextReconcile.Before(time.Now()) {
-				nextReconcile = time.Now().Add(immediateReconcile)
-				reconcileTimer.Reset(immediateReconcile)
-			}
-
-			log.WithTeamSlug(string(input.Team.Slug)).Debugf("scheduling team reconciliation in %s", time.Until(nextReconcile))
-			pendingTeams[input.Team.Slug] = input
-			metrics.SetPendingTeamCount(len(pendingTeams))
-
-		case <-reconcileTimer.C:
-			log.Debugf("running reconcile of %d teams...", len(pendingTeams))
-
-			err = reconcileTeams(ctx, database, &pendingTeams, cfg, auditLogger, log)
-
+			err = reconcileTeam(ctx, database, input, cfg, auditLogger, log)
 			if err != nil {
-				log.WithError(err).Error("reconcile teams")
-				reconcileTimer.Reset(cfg.ReconcileRetryInterval)
+				log.WithTeamSlug(string(input.Team.Slug)).WithError(err).Error("reconcile team")
+				teamReconciler <- input
 			}
 
-			metrics.SetPendingTeamCount(len(pendingTeams))
+			/*
+				if len(pendingTeams) > 0 {
+						log.Warnf("%d teams are not fully reconciled.", len(pendingTeams))
+					}
 
-			if len(pendingTeams) > 0 {
-				log.Warnf("%d teams are not fully reconciled.", len(pendingTeams))
-			}
-
-			log.Debug("reconciliation complete.")
+					log.Debug("reconciliation complete.")*/
 
 		case correlationID := <-userSync:
 			if userSyncer == nil {
@@ -233,14 +214,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 	return nil
 }
 
-func reconcileTeams(
-	ctx context.Context,
-	database db.Database,
-	reconcileInputs *map[slug.Slug]reconcilers.Input,
-	cfg *config.Config,
-	auditLogger auditlogger.AuditLogger,
-	log logger.Logger,
-) error {
+func reconcileTeam(ctx context.Context, database db.Database, input reconcilers.Input, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) error {
 	enabledReconcilers, err := initReconcilers(ctx, database, cfg, auditLogger, log)
 	if err != nil {
 		return err
@@ -249,66 +223,50 @@ func reconcileTeams(
 	ctx, cancel := context.WithTimeout(ctx, reconcilerTimeout)
 	defer cancel()
 
-	// Delete disabled teams from queue
-	for teamSlug, input := range *reconcileInputs {
-		log := log.WithTeamSlug(string(teamSlug))
-		if !input.Team.Enabled {
-			log.Info("team is not enabled, skipping and removing from queue")
-			delete(*reconcileInputs, teamSlug)
-			continue
-		}
+	log = log.WithTeamSlug(string(input.Team.Slug))
+
+	if !input.Team.Enabled {
+		log.Info("team is not enabled, skipping and removing from queue")
+		return nil
 	}
 
-	metrics.SetPendingTeamCount(len(*reconcileInputs))
-
 	errors := 0
-	for teamSlug, input := range *reconcileInputs {
-		teamErrors := 0
 
-		for _, reconciler := range enabledReconcilers {
-			if ctx.Err() != nil {
-				return ctx.Err()
-			}
-			name := reconciler.Name()
-			log := log.WithSystem(string(name))
-			metrics.IncReconcilerCounter(name, metrics.ReconcilerStateStarted, log)
+	for _, reconciler := range enabledReconcilers {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		name := reconciler.Name()
+		log = log.WithSystem(string(name))
+		metrics.IncReconcilerCounter(name, metrics.ReconcilerStateStarted, log)
 
-			err = reconciler.Reconcile(ctx, input)
+		err = reconciler.Reconcile(ctx, input)
+		if err != nil {
+			metrics.IncReconcilerCounter(name, metrics.ReconcilerStateFailed, log)
+			log.WithError(err).Error("reconcile")
+			errors++
+			err = database.SetReconcilerErrorForTeam(ctx, input.CorrelationID, input.Team.Slug, name, err)
 			if err != nil {
-				metrics.IncReconcilerCounter(name, metrics.ReconcilerStateFailed, log)
-				log.WithError(err).Error("reconcile")
-				teamErrors++
-				err = database.SetReconcilerErrorForTeam(ctx, input.CorrelationID, input.Team.Slug, name, err)
-				if err != nil {
-					log.WithError(err).Error("add reconcile error to database")
-				}
-				continue
+				log.WithError(err).Error("add reconcile error to database")
 			}
-
-			err = database.ClearReconcilerErrorsForTeam(ctx, input.Team.Slug, name)
-			if err != nil {
-				log.WithError(err).Error("purge reconcile errors")
-			}
-
-			metrics.IncReconcilerCounter(name, metrics.ReconcilerStateSuccessful, log)
+			continue
 		}
 
-		if teamErrors == 0 {
-			if err = database.SetLastSuccessfulSyncForTeam(ctx, teamSlug); err != nil {
-				log.WithError(err).Error("update last successful sync timestamp")
-			}
-			delete(*reconcileInputs, teamSlug)
+		err = database.ClearReconcilerErrorsForTeam(ctx, input.Team.Slug, name)
+		if err != nil {
+			log.WithError(err).Error("purge reconcile errors")
 		}
 
-		metrics.SetPendingTeamCount(len(*reconcileInputs))
-
-		errors += teamErrors
+		metrics.IncReconcilerCounter(name, metrics.ReconcilerStateSuccessful, log)
 	}
 
 	if errors > 0 {
 		return fmt.Errorf("%d error(s) occurred during reconcile", errors)
 	}
 
+	if err = database.SetLastSuccessfulSyncForTeam(ctx, input.Team.Slug); err != nil {
+		log.WithError(err).Error("update last successful sync timestamp")
+	}
 	return nil
 }
 
