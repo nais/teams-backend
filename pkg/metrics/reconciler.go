@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -53,7 +52,7 @@ var (
 	})
 )
 
-func IncReconcilerCounter(name sqlc.ReconcilerName, state ReconcilerState, log logger.Logger) {
+func IncReconcilerCounter(name sqlc.ReconcilerName, state ReconcilerState) {
 	labels := prometheus.Labels{
 		labelReconciler: string(name),
 		labelState:      string(state),

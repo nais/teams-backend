@@ -243,11 +243,11 @@ func reconcileTeam(ctx context.Context, database db.Database, input reconcilers.
 		}
 		name := reconciler.Name()
 		log = log.WithSystem(string(name))
-		metrics.IncReconcilerCounter(name, metrics.ReconcilerStateStarted, log)
+		metrics.IncReconcilerCounter(name, metrics.ReconcilerStateStarted)
 
 		err = reconciler.Reconcile(ctx, input)
 		if err != nil {
-			metrics.IncReconcilerCounter(name, metrics.ReconcilerStateFailed, log)
+			metrics.IncReconcilerCounter(name, metrics.ReconcilerStateFailed)
 			log.WithError(err).Error("reconcile")
 			errors++
 			err = database.SetReconcilerErrorForTeam(ctx, input.CorrelationID, input.Team.Slug, name, err)
@@ -262,7 +262,7 @@ func reconcileTeam(ctx context.Context, database db.Database, input reconcilers.
 			log.WithError(err).Error("purge reconcile errors")
 		}
 
-		metrics.IncReconcilerCounter(name, metrics.ReconcilerStateSuccessful, log)
+		metrics.IncReconcilerCounter(name, metrics.ReconcilerStateSuccessful)
 	}
 
 	if errors > 0 {
