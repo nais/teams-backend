@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -50,6 +51,22 @@ var (
 		Name:      "pending_teams",
 		Help:      "How many teams currently pending reconciliation with external systems",
 	})
+
+	reconcilerDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: namespace,
+		Subsystem: subsystem,
+		Name:      "reconciler_duration",
+		Help:      "Duration of a specific reconciler, regardless of team.",
+		Buckets:   prometheus.LinearBuckets(0, .5, 20),
+	}, []string{"reconciler"})
+
+	reconcileTeamDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: namespace,
+		Subsystem: subsystem,
+		Name:      "reconcile_team_duration",
+		Help:      "Reconcile duration of a specific team.",
+		Buckets:   prometheus.LinearBuckets(0, 2, 20),
+	}, []string{"team"})
 )
 
 func IncReconcilerCounter(name sqlc.ReconcilerName, state ReconcilerState) {
@@ -96,4 +113,12 @@ func IncExternalCallsByError(systemName string, err error) {
 
 func SetPendingTeamCount(numTeams int) {
 	pendingTeams.Set(float64(numTeams))
+}
+
+func MeasureReconcilerDuration(reconciler sqlc.ReconcilerName) *prometheus.Timer {
+	return prometheus.NewTimer(reconcilerDuration.WithLabelValues(string(reconciler)))
+}
+
+func MeasureReconcileTeamDuration(teamSlug slug.Slug) *prometheus.Timer {
+	return prometheus.NewTimer(reconcileTeamDuration.WithLabelValues(string(teamSlug)))
 }

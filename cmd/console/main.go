@@ -119,9 +119,11 @@ func run(cfg *config.Config, log logger.Logger) error {
 			defer wg.Done()
 			for input := range teamReconcilerQueueChannel {
 				ctx, cancel := context.WithTimeout(ctx, reconcilerTimeout)
+				log := log.WithTeamSlug(string(input.Team.Slug))
+
 				err = reconcileTeam(ctx, database, input, cfg, auditLogger, log)
 				if err != nil {
-					log.WithTeamSlug(string(input.Team.Slug)).WithError(err).Error("reconcile team")
+					log.WithError(err).Error("reconcile team")
 					teamReconcilerQueue.Add(input)
 				}
 
@@ -223,18 +225,23 @@ func run(cfg *config.Config, log logger.Logger) error {
 }
 
 func reconcileTeam(ctx context.Context, database db.Database, input reconcilers.Input, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) error {
+	if !input.Team.Enabled {
+		log.Infof("team is not enabled, skipping reconciliation")
+		return nil
+	}
+
+	teamReconcilerTimer := metrics.MeasureReconcileTeamDuration(input.Team.Slug)
 	enabledReconcilers, err := initReconcilers(ctx, database, cfg, auditLogger, log)
 	if err != nil {
 		return err
 	}
 
-	log = log.WithTeamSlug(string(input.Team.Slug))
-
-	if !input.Team.Enabled {
-		log.Info("team is not enabled, skipping and removing from queue")
+	if len(enabledReconcilers) == 0 {
+		log.Warnf("no reconcilers are currently enabled")
 		return nil
 	}
 
+	log.Infof("reconcile team")
 	errors := 0
 
 	for _, reconciler := range enabledReconcilers {
@@ -245,6 +252,7 @@ func reconcileTeam(ctx context.Context, database db.Database, input reconcilers.
 		log = log.WithSystem(string(name))
 		metrics.IncReconcilerCounter(name, metrics.ReconcilerStateStarted)
 
+		reconcileTimer := metrics.MeasureReconcilerDuration(name)
 		err = reconciler.Reconcile(ctx, input)
 		if err != nil {
 			metrics.IncReconcilerCounter(name, metrics.ReconcilerStateFailed)
@@ -256,6 +264,7 @@ func reconcileTeam(ctx context.Context, database db.Database, input reconcilers.
 			}
 			continue
 		}
+		reconcileTimer.ObserveDuration()
 
 		err = database.ClearReconcilerErrorsForTeam(ctx, input.Team.Slug, name)
 		if err != nil {
@@ -268,6 +277,8 @@ func reconcileTeam(ctx context.Context, database db.Database, input reconcilers.
 	if errors > 0 {
 		return fmt.Errorf("%d error(s) occurred during reconcile", errors)
 	}
+
+	teamReconcilerTimer.ObserveDuration()
 
 	if err = database.SetLastSuccessfulSyncForTeam(ctx, input.Team.Slug); err != nil {
 		log.WithError(err).Error("update last successful sync timestamp")
