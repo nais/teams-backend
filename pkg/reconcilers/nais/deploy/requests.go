@@ -16,11 +16,6 @@ type ProvisionApiKeyRequest struct {
 	Timestamp int64
 }
 
-type DeployKeyRequest struct {
-	Team      string
-	Timestamp int64
-}
-
 // getProvisionPayload get a payload for the NAIS deploy key provisioning request
 func getProvisionPayload(slug slug.Slug) ([]byte, error) {
 	payload, err := json.Marshal(&ProvisionApiKeyRequest{
@@ -33,14 +28,6 @@ func getProvisionPayload(slug slug.Slug) ([]byte, error) {
 	}
 
 	return payload, nil
-}
-
-// getDepoyKeyPayload get a payload for the NAIS deploy deploy key request
-func getDeployKeyPayload(slug slug.Slug) ([]byte, error) {
-	return json.Marshal(&DeployKeyRequest{
-		Team:      string(slug),
-		Timestamp: time.Now().Unix(),
-	})
 }
 
 // genMAC generates the HMAC signature for a message provided the secret key using SHA256

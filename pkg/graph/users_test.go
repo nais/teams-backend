@@ -4,12 +4,11 @@ import (
 	"context"
 	"testing"
 
-	nais_deploy_reconciler "github.com/nais/console/pkg/reconcilers/nais/deploy"
-
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/deployproxy"
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
@@ -20,7 +19,7 @@ import (
 func TestQueryResolver_Users(t *testing.T) {
 	ctx := context.Background()
 	database := db.NewMockDatabase(t)
-	deployProxy := nais_deploy_reconciler.NewMockProxy(t)
+	deployProxy := deployproxy.NewMockProxy(t)
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	ch := make(chan reconcilers.Input, 100)
 	gcpEnvironments := []string{"env"}

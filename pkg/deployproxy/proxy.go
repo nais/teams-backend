@@ -1,19 +1,24 @@
-package nais_deploy_reconciler
+package deployproxy
 
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/nais/console/pkg/graph/apierror"
 	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/metrics"
 	"github.com/nais/console/pkg/slug"
 )
+
+const metricSystemName = "deploy-proxy"
 
 type Proxy interface {
 	GetApiKey(ctx context.Context, slug slug.Slug) (string, error)
@@ -61,7 +66,7 @@ func (d *deploy) GetApiKey(ctx context.Context, slug slug.Slug) (string, error) 
 	request.Header.Set("Content-Type", "application/json")
 
 	resp, err := d.client.Do(request)
-	metrics.IncExternalHTTPCalls(metricsSystemName, resp, err)
+	metrics.IncExternalHTTPCalls(metricSystemName, resp, err)
 	if err != nil {
 		return "", err
 	}
@@ -87,4 +92,24 @@ func (d *deploy) GetApiKey(ctx context.Context, slug slug.Slug) (string, error) 
 	default:
 		return "", fmt.Errorf("failed to get deploy key for team %q: %s", slug, response.Message)
 	}
+}
+
+type DeployKeyRequest struct {
+	Team      string
+	Timestamp int64
+}
+
+// getDepoyKeyPayload get a payload for the NAIS deploy deploy key request
+func getDeployKeyPayload(slug slug.Slug) ([]byte, error) {
+	return json.Marshal(&DeployKeyRequest{
+		Team:      string(slug),
+		Timestamp: time.Now().Unix(),
+	})
+}
+
+// genMAC generates the HMAC signature for a message provided the secret key using SHA256
+func genMAC(message, key []byte) string {
+	mac := hmac.New(sha256.New, key)
+	mac.Write(message)
+	return hex.EncodeToString(mac.Sum(nil))
 }

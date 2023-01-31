@@ -4,12 +4,11 @@ import (
 	"context"
 	"testing"
 
-	nais_deploy_reconciler "github.com/nais/console/pkg/reconcilers/nais/deploy"
-
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/deployproxy"
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
@@ -36,7 +35,7 @@ func TestMutationResolver_Roles(t *testing.T) {
 	reconcilers := make(chan reconcilers.Input, 100)
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	database := db.NewMockDatabase(t)
-	deployProxy := nais_deploy_reconciler.NewMockProxy(t)
+	deployProxy := deployproxy.NewMockProxy(t)
 	log, err := logger.GetLogger("text", "info")
 	assert.NoError(t, err)
 	userSync := make(chan<- uuid.UUID)

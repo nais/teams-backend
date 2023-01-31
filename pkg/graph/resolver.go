@@ -4,12 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/nais/console/pkg/reconcilers/nais/deploy"
-
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/deployproxy"
 	"github.com/nais/console/pkg/graph/apierror"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/logger"
@@ -24,7 +23,7 @@ import (
 
 type Resolver struct {
 	database        db.Database
-	deployProxy     nais_deploy_reconciler.Proxy
+	deployProxy     deployproxy.Proxy
 	tenantDomain    string
 	teamReconciler  chan<- reconcilers.Input
 	userSync        chan<- uuid.UUID
@@ -34,7 +33,7 @@ type Resolver struct {
 	log             logger.Logger
 }
 
-func NewResolver(database db.Database, deployProxy nais_deploy_reconciler.Proxy, tenantDomain string, teamReconciler chan<- reconcilers.Input, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *Resolver {
+func NewResolver(database db.Database, deployProxy deployproxy.Proxy, tenantDomain string, teamReconciler chan<- reconcilers.Input, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *Resolver {
 	return &Resolver{
 		database:        database,
 		deployProxy:     deployProxy,
