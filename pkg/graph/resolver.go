@@ -15,6 +15,7 @@ import (
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/console/pkg/teamsync"
 )
 
 // This file will not be regenerated automatically.
@@ -22,28 +23,30 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	database            db.Database
-	deployProxy         deployproxy.Proxy
-	tenantDomain        string
-	teamReconcilerQueue reconcilers.ReconcilerQueue
-	userSync            chan<- uuid.UUID
-	systemName          sqlc.SystemName
-	auditLogger         auditlogger.AuditLogger
-	gcpEnvironments     []string
-	log                 logger.Logger
+	reconcilerHandler *teamsync.Handler
+	database          db.Database
+	deployProxy       deployproxy.Proxy
+	tenantDomain      string
+	teamSyncQueue     teamsync.Queue
+	userSync          chan<- uuid.UUID
+	systemName        sqlc.SystemName
+	auditLogger       auditlogger.AuditLogger
+	gcpEnvironments   []string
+	log               logger.Logger
 }
 
-func NewResolver(database db.Database, deployProxy deployproxy.Proxy, tenantDomain string, teamReconcilerQueue reconcilers.ReconcilerQueue, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *Resolver {
+func NewResolver(reconcilerHandler *teamsync.Handler, database db.Database, deployProxy deployproxy.Proxy, tenantDomain string, teamSyncQueue teamsync.Queue, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *Resolver {
 	return &Resolver{
-		database:            database,
-		deployProxy:         deployProxy,
-		tenantDomain:        tenantDomain,
-		systemName:          sqlc.SystemNameGraphqlApi,
-		teamReconcilerQueue: teamReconcilerQueue,
-		auditLogger:         auditLogger,
-		gcpEnvironments:     gcpEnvironments,
-		log:                 log.WithSystem(string(sqlc.SystemNameGraphqlApi)),
-		userSync:            userSync,
+		reconcilerHandler: reconcilerHandler,
+		database:          database,
+		deployProxy:       deployProxy,
+		tenantDomain:      tenantDomain,
+		systemName:        sqlc.SystemNameGraphqlApi,
+		teamSyncQueue:     teamSyncQueue,
+		auditLogger:       auditLogger,
+		gcpEnvironments:   gcpEnvironments,
+		log:               log.WithSystem(string(sqlc.SystemNameGraphqlApi)),
+		userSync:          userSync,
 	}
 }
 
@@ -58,7 +61,7 @@ func GetQueriedFields(ctx context.Context) map[string]bool {
 
 // addTeamToReconcilerQueue add a team (enclosed in an input) to the reconciler queue
 func (r *Resolver) addTeamToReconcilerQueue(input reconcilers.Input) error {
-	err := r.teamReconcilerQueue.Add(input)
+	err := r.teamSyncQueue.Add(input)
 	if err != nil {
 		r.log.WithTeamSlug(string(input.Team.Slug)).WithError(err).Errorf("add team to reconciler queue")
 		return apierror.Errorf("Console is about to restart, unable to reconcile team: %q", input.Team.Slug)

@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/nais/console/pkg/teamsync"
+
 	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/playground"
@@ -31,13 +33,6 @@ import (
 	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/metrics"
 	"github.com/nais/console/pkg/middleware"
-	"github.com/nais/console/pkg/reconcilers"
-	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
-	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
-	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
-	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
-	nais_deploy_reconciler "github.com/nais/console/pkg/reconcilers/nais/deploy"
-	nais_namespace_reconciler "github.com/nais/console/pkg/reconcilers/nais/namespace"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/pkg/usersync"
 	"github.com/nais/console/pkg/version"
@@ -106,10 +101,16 @@ func run(cfg *config.Config, log logger.Logger) error {
 
 	auditLogger := auditlogger.New(log)
 
-	teamReconcilerQueue, teamReconcilerQueueChannel := reconcilers.NewReconcilerQueue()
+	teamReconcilers := teamsync.NewHandler(database, cfg, auditLogger, log)
+	err = teamReconcilers.InitReconcilers(ctx)
+	if err != nil {
+		return err
+	}
+
+	teamSyncQueue, teamSyncQueueChannel := teamsync.NewQueue()
 	wg := sync.WaitGroup{}
 	defer func() {
-		teamReconcilerQueue.Close()
+		teamSyncQueue.Close()
 		wg.Wait()
 	}()
 
@@ -117,14 +118,14 @@ func run(cfg *config.Config, log logger.Logger) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for input := range teamReconcilerQueueChannel {
+			for input := range teamSyncQueueChannel {
 				ctx, cancel := context.WithTimeout(ctx, reconcilerTimeout)
 				log := log.WithTeamSlug(string(input.Team.Slug))
 
-				err = reconcileTeam(ctx, database, input, cfg, auditLogger, log)
+				err = teamReconcilers.ReconcileTeam(ctx, input)
 				if err != nil {
 					log.WithError(err).Error("reconcile team")
-					teamReconcilerQueue.Add(input)
+					teamSyncQueue.Add(input)
 				}
 
 				cancel()
@@ -155,7 +156,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 		log.Warnf("Deploy proxy is not configured: %v", err)
 	}
 
-	handler := setupGraphAPI(database, deployProxy, cfg.TenantDomain, teamReconcilerQueue, userSync, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi), cfg.Environments, log)
+	handler := setupGraphAPI(teamReconcilers, database, deployProxy, cfg.TenantDomain, teamSyncQueue, userSync, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi), cfg.Environments, log)
 	srv, err := setupHTTPServer(cfg, database, handler, authHandler)
 	if err != nil {
 		return err
@@ -183,7 +184,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 	defer log.Info("main program context canceled; exiting.")
 
 	for ctx.Err() == nil {
-		metrics.SetPendingTeamCount(len(teamReconcilerQueueChannel))
+		metrics.SetPendingTeamCount(len(teamSyncQueueChannel))
 
 		select {
 		case <-ctx.Done():
@@ -224,68 +225,6 @@ func run(cfg *config.Config, log logger.Logger) error {
 	return nil
 }
 
-func reconcileTeam(ctx context.Context, database db.Database, input reconcilers.Input, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) error {
-	if !input.Team.Enabled {
-		log.Infof("team is not enabled, skipping reconciliation")
-		return nil
-	}
-
-	teamReconcilerTimer := metrics.MeasureReconcileTeamDuration(input.Team.Slug)
-	enabledReconcilers, err := initReconcilers(ctx, database, cfg, auditLogger, log)
-	if err != nil {
-		return err
-	}
-
-	if len(enabledReconcilers) == 0 {
-		log.Warnf("no reconcilers are currently enabled")
-		return nil
-	}
-
-	log.Infof("reconcile team")
-	errors := 0
-
-	for _, reconciler := range enabledReconcilers {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		name := reconciler.Name()
-		log = log.WithSystem(string(name))
-		metrics.IncReconcilerCounter(name, metrics.ReconcilerStateStarted)
-
-		reconcileTimer := metrics.MeasureReconcilerDuration(name)
-		err = reconciler.Reconcile(ctx, input)
-		if err != nil {
-			metrics.IncReconcilerCounter(name, metrics.ReconcilerStateFailed)
-			log.WithError(err).Error("reconcile")
-			errors++
-			err = database.SetReconcilerErrorForTeam(ctx, input.CorrelationID, input.Team.Slug, name, err)
-			if err != nil {
-				log.WithError(err).Error("add reconcile error to database")
-			}
-			continue
-		}
-		reconcileTimer.ObserveDuration()
-
-		err = database.ClearReconcilerErrorsForTeam(ctx, input.Team.Slug, name)
-		if err != nil {
-			log.WithError(err).Error("purge reconcile errors")
-		}
-
-		metrics.IncReconcilerCounter(name, metrics.ReconcilerStateSuccessful)
-	}
-
-	if errors > 0 {
-		return fmt.Errorf("%d error(s) occurred during reconcile", errors)
-	}
-
-	teamReconcilerTimer.ObserveDuration()
-
-	if err = database.SetLastSuccessfulSyncForTeam(ctx, input.Team.Slug); err != nil {
-		log.WithError(err).Error("update last successful sync timestamp")
-	}
-	return nil
-}
-
 func setupAuthHandler(cfg *config.Config, database db.Database, log logger.Logger) (authn.Handler, error) {
 	cf := authn.NewGoogle(cfg.OAuth.ClientID, cfg.OAuth.ClientSecret, cfg.OAuth.RedirectURL)
 	frontendURL, err := url.Parse(cfg.FrontendURL)
@@ -311,53 +250,8 @@ func setupDatabase(ctx context.Context, dbUrl string) (db.Database, error) {
 	return db.NewDatabase(queries), nil
 }
 
-func initReconcilers(
-	ctx context.Context,
-	database db.Database,
-	cfg *config.Config,
-	auditLogger auditlogger.AuditLogger,
-	log logger.Logger,
-) ([]reconcilers.Reconciler, error) {
-	factories := map[sqlc.ReconcilerName]reconcilers.ReconcilerFactory{
-		azure_group_reconciler.Name:            azure_group_reconciler.NewFromConfig,
-		github_team_reconciler.Name:            github_team_reconciler.NewFromConfig,
-		google_workspace_admin_reconciler.Name: google_workspace_admin_reconciler.NewFromConfig,
-		google_gcp_reconciler.Name:             google_gcp_reconciler.NewFromConfig,
-		nais_namespace_reconciler.Name:         nais_namespace_reconciler.NewFromConfig,
-		nais_deploy_reconciler.Name:            nais_deploy_reconciler.NewFromConfig,
-	}
-
-	enabledReconcilers, err := database.GetEnabledReconcilers(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	recs := make([]reconcilers.Reconciler, 0)
-	for _, reconciler := range enabledReconcilers {
-		name := reconciler.Name
-		log := log.WithSystem(string(name))
-
-		factory, exists := factories[name]
-		if !exists {
-			log.WithError(fmt.Errorf("reconciler missing factory entry")).Error("check for factory")
-			continue
-		}
-
-		rec, err := factory(ctx, database, cfg, auditLogger.WithSystemName(reconcilers.ReconcilerNameToSystemName(name)), log)
-		if err != nil {
-			log.WithReconciler(string(name)).WithError(err).Error("initialize")
-			continue
-		}
-
-		recs = append(recs, rec)
-		log.WithReconciler(string(name)).Info("initialized")
-	}
-
-	return recs, nil
-}
-
-func setupGraphAPI(database db.Database, deployProxy deployproxy.Proxy, domain string, teamReconcilerQueue reconcilers.ReconcilerQueue, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *graphql_handler.Server {
-	resolver := graph.NewResolver(database, deployProxy, domain, teamReconcilerQueue, userSync, auditLogger, gcpEnvironments, log)
+func setupGraphAPI(teamReconcilers *teamsync.Handler, database db.Database, deployProxy deployproxy.Proxy, domain string, teamSyncQueue teamsync.Queue, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *graphql_handler.Server {
+	resolver := graph.NewResolver(teamReconcilers, database, deployProxy, domain, teamSyncQueue, userSync, auditLogger, gcpEnvironments, log)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
 	gc.Directives.Admin = directives.Admin()

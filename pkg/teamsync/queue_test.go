@@ -1,7 +1,9 @@
-package reconcilers_test
+package teamsync_test
 
 import (
 	"testing"
+
+	"github.com/nais/console/pkg/teamsync"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/db"
@@ -11,7 +13,7 @@ import (
 )
 
 func Test_Queue(t *testing.T) {
-	q, ch := reconcilers.NewReconcilerQueue()
+	q, ch := teamsync.NewQueue()
 	input := reconcilers.Input{
 		CorrelationID: uuid.New(),
 		Team:          db.Team{},

@@ -1,32 +1,34 @@
-package reconcilers
+package teamsync
 
 import (
 	"fmt"
 	"sync"
+
+	"github.com/nais/console/pkg/reconcilers"
 )
 
 const reconcilerQueueSize = 4096
 
-type ReconcilerQueue interface {
-	Add(input Input) error
+type Queue interface {
+	Add(input reconcilers.Input) error
 	Close()
 }
 
 type queue struct {
-	queue  chan Input
+	queue  chan reconcilers.Input
 	closed bool
 	lock   sync.Mutex
 }
 
-func NewReconcilerQueue() (ReconcilerQueue, <-chan Input) {
-	ch := make(chan Input, reconcilerQueueSize)
+func NewQueue() (Queue, <-chan reconcilers.Input) {
+	ch := make(chan reconcilers.Input, reconcilerQueueSize)
 	return &queue{
 		queue:  ch,
 		closed: false,
 	}, ch
 }
 
-func (q *queue) Add(input Input) error {
+func (q *queue) Add(input reconcilers.Input) error {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 

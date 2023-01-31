@@ -29,38 +29,45 @@ func (r *mutationResolver) EnableReconciler(ctx context.Context, name sqlc.Recon
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	var reconciler *db.Reconciler
-	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
-		reconciler, err = dbtx.GetReconciler(ctx, name)
-		if err != nil {
-			return err
-		}
-
-		configs, err := dbtx.GetReconcilerConfig(ctx, name)
-		if err != nil {
-			return err
-		}
-
-		missingOptions := make([]string, 0)
-		for _, config := range configs {
-			if !config.Configured {
-				missingOptions = append(missingOptions, string(config.Key))
-			}
-		}
-
-		if len(missingOptions) != 0 {
-			return fmt.Errorf("reconciler is not fully configured, missing one or more options: %s", strings.Join(missingOptions, ", "))
-		}
-
-		reconciler, err = dbtx.EnableReconciler(ctx, name)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
+	_, err = r.database.GetReconciler(ctx, name)
 	if err != nil {
-		return nil, err
+		r.log.WithError(err).Errorf("unable to get reconciler: %q", name)
+		return nil, apierror.Errorf("Unable to get reconciler: %q", name)
+	}
+
+	configs, err := r.database.GetReconcilerConfig(ctx, name)
+	if err != nil {
+		r.log.WithError(err).Errorf("unable to get reconciler config")
+		return nil, apierror.Errorf("Unable to get reconciler config")
+	}
+
+	missingOptions := make([]string, 0)
+	for _, config := range configs {
+		if !config.Configured {
+			missingOptions = append(missingOptions, string(config.Key))
+		}
+	}
+
+	if len(missingOptions) != 0 {
+		r.log.WithError(err).Errorf("reconciler is not fully configured")
+		return nil, apierror.Errorf("Reconciler is not fully configured, missing one or more options: %s", strings.Join(missingOptions, ", "))
+	}
+
+	reconciler, err := r.database.EnableReconciler(ctx, name)
+	if err != nil {
+		r.log.WithError(err).Errorf("unable to enable reconciler")
+		return nil, apierror.Errorf("Unable to enable reconciler")
+	}
+
+	err = r.reconcilerHandler.UseReconciler(ctx, *reconciler)
+	if err != nil {
+		if _, err := r.database.DisableReconciler(ctx, name); err != nil {
+			r.log.WithError(err).Errorf("reconciler was enabled, but initialization failed, and we were unable to disable the reconciler.")
+			return nil, apierror.Errorf("Reconciler was enabled, but initialization failed, and we were unable to disable the reconciler.")
+		}
+
+		r.log.WithError(err).Errorf("reconciler will not be enabled because of an initialization failure. Please verify that you have entered correct configuratiom values.")
+		return nil, apierror.Errorf("Reconciler will not be enabled because of an initialization failure. Please verify that you have entered correct configuratiom values.")
 	}
 
 	actor := authz.ActorFromContext(ctx)
@@ -116,6 +123,7 @@ func (r *mutationResolver) DisableReconciler(ctx context.Context, name sqlc.Reco
 		Actor:  actor,
 	}
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Disable reconciler: %q", name)
+	r.reconcilerHandler.RemoveReconciler(name)
 
 	return reconciler, nil
 }

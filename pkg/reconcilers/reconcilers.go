@@ -11,8 +11,8 @@ import (
 	"github.com/nais/console/pkg/sqlc"
 )
 
-// ErrReconcilerNotEnabled Custom error to use when a reconciler is not enabled via configuration
-var ErrReconcilerNotEnabled = errors.New("reconciler not enabled")
+// TeamNamePrefix Prefix that can be used for team-like objects in external systems
+const TeamNamePrefix = "nais-team-"
 
 // Reconciler Interface for all reconcilers
 type Reconciler interface {
@@ -20,25 +20,8 @@ type Reconciler interface {
 	Name() sqlc.ReconcilerName
 }
 
-// TeamNamePrefix Prefix that can be used for team-like objects in external systems
-const TeamNamePrefix = "nais-team-"
+// ErrReconcilerNotEnabled Custom error to use when a reconciler is not enabled via configuration
+var ErrReconcilerNotEnabled = errors.New("reconciler not enabled")
 
 // ReconcilerFactory The constructor function for all reconcilers
 type ReconcilerFactory func(context.Context, db.Database, *config.Config, auditlogger.AuditLogger, logger.Logger) (Reconciler, error)
-
-func ReconcilerNameToSystemName(name sqlc.ReconcilerName) sqlc.SystemName {
-	switch name {
-	case sqlc.ReconcilerNameAzureGroup:
-		return sqlc.SystemNameAzureGroup
-	case sqlc.ReconcilerNameGithubTeam:
-		return sqlc.SystemNameGithubTeam
-	case sqlc.ReconcilerNameGoogleGcpProject:
-		return sqlc.SystemNameGoogleGcpProject
-	case sqlc.ReconcilerNameGoogleWorkspaceAdmin:
-		return sqlc.SystemNameGoogleWorkspaceAdmin
-	case sqlc.ReconcilerNameNaisNamespace:
-		return sqlc.SystemNameNaisNamespace
-	}
-
-	return sqlc.SystemNameConsole
-}
