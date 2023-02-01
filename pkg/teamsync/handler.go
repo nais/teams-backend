@@ -29,6 +29,7 @@ type Handler struct {
 	log               logger.Logger
 	lock              sync.Mutex
 	cfg               *config.Config
+	factories         ReconcilerFactories
 }
 
 type ReconcilerWithRunOrder struct {
@@ -36,7 +37,9 @@ type ReconcilerWithRunOrder struct {
 	reconciler reconcilers.Reconciler
 }
 
-var factories = map[sqlc.ReconcilerName]reconcilers.ReconcilerFactory{
+type ReconcilerFactories map[sqlc.ReconcilerName]reconcilers.ReconcilerFactory
+
+var factories = ReconcilerFactories{
 	azure_group_reconciler.Name:            azure_group_reconciler.NewFromConfig,
 	github_team_reconciler.Name:            github_team_reconciler.NewFromConfig,
 	google_workspace_admin_reconciler.Name: google_workspace_admin_reconciler.NewFromConfig,
@@ -52,19 +55,26 @@ func NewHandler(database db.Database, cfg *config.Config, auditLogger auditlogge
 		cfg:               cfg,
 		auditLogger:       auditLogger,
 		log:               log,
+		factories:         factories,
 	}
 }
 
+func (h *Handler) SetReconcilerFactories(factories ReconcilerFactories) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+	h.factories = factories
+}
+
 // InitReconcilers initializes the currently enabled reconcilers during startup of Console
-func (r *Handler) InitReconcilers(ctx context.Context) error {
-	enabledReconcilers, err := r.database.GetEnabledReconcilers(ctx)
+func (h *Handler) InitReconcilers(ctx context.Context) error {
+	enabledReconcilers, err := h.database.GetEnabledReconcilers(ctx)
 	if err != nil {
 		return err
 	}
 
 	for _, reconciler := range enabledReconcilers {
-		if err = r.UseReconciler(ctx, *reconciler); err != nil {
-			r.log.WithReconciler(string(reconciler.Name)).WithError(err).Error("use reconciler")
+		if err = h.UseReconciler(ctx, *reconciler); err != nil {
+			h.log.WithReconciler(string(reconciler.Name)).WithError(err).Error("use reconciler")
 		}
 	}
 
@@ -73,21 +83,21 @@ func (r *Handler) InitReconcilers(ctx context.Context) error {
 
 // UseReconciler will include a reconciler in the list of currently active reconcilers. During the activation this
 // function will acquire a lock, preventing other processes from reading from the list of active reconcilers.
-func (r *Handler) UseReconciler(ctx context.Context, reconciler db.Reconciler) error {
-	r.lock.Lock()
-	defer r.lock.Unlock()
+func (h *Handler) UseReconciler(ctx context.Context, reconciler db.Reconciler) error {
+	h.lock.Lock()
+	defer h.lock.Unlock()
 
-	factory, err := getReconcilerFactory(reconciler.Name)
+	factory, err := h.getReconcilerFactory(reconciler.Name)
 	if err != nil {
 		return err
 	}
 
-	reconcilerImplementation, err := factory(ctx, r.database, r.cfg, r.auditLogger, r.log)
+	reconcilerImplementation, err := factory(ctx, h.database, h.cfg, h.auditLogger, h.log)
 	if err != nil {
 		return err
 	}
 
-	r.activeReconcilers[reconciler.Name] = ReconcilerWithRunOrder{
+	h.activeReconcilers[reconciler.Name] = ReconcilerWithRunOrder{
 		runOrder:   reconciler.RunOrder,
 		reconciler: reconcilerImplementation,
 	}
@@ -96,37 +106,32 @@ func (r *Handler) UseReconciler(ctx context.Context, reconciler db.Reconciler) e
 
 // RemoveReconciler will remove a reconciler from the list of currently active reconcilers. During the removal of the
 // reconciler this function will acquire a lock, preventing other processes from reading from the list.
-func (r *Handler) RemoveReconciler(reconcilerName sqlc.ReconcilerName) {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-	delete(r.activeReconcilers, reconcilerName)
+func (h *Handler) RemoveReconciler(reconcilerName sqlc.ReconcilerName) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+	delete(h.activeReconcilers, reconcilerName)
 }
 
-func (r *Handler) ReconcileTeam(ctx context.Context, input reconcilers.Input) error {
+func (h *Handler) ReconcileTeam(ctx context.Context, input reconcilers.Input) error {
 	if !input.Team.Enabled {
-		r.log.Infof("team is not enabled, skipping reconciliation")
+		h.log.Infof("team is not enabled, skipping reconciliation")
 		return nil
 	}
 
-	if len(r.activeReconcilers) == 0 {
-		r.log.Warnf("no reconcilers are currently enabled")
+	if len(h.activeReconcilers) == 0 {
+		h.log.Warnf("no reconcilers are currently enabled")
 		return nil
 	}
 
-	r.log.Infof("reconcile team")
+	log := h.log.WithTeamSlug(string(input.Team.Slug))
+
+	log.Infof("reconcile team")
 	errors := 0
 	teamReconcilerTimer := metrics.MeasureReconcileTeamDuration(input.Team.Slug)
 
-	r.lock.Lock()
-	var orderedReconcilers []ReconcilerWithRunOrder
-	for _, reconcilerWithOrder := range r.activeReconcilers {
-		orderedReconcilers = append(orderedReconcilers, reconcilerWithOrder)
-	}
-	r.lock.Unlock()
-
-	sort.Slice(orderedReconcilers, func(i, j int) bool {
-		return orderedReconcilers[i].runOrder < orderedReconcilers[j].runOrder
-	})
+	h.lock.Lock()
+	orderedReconcilers := getOrderedReconcilers(h.activeReconcilers)
+	h.lock.Unlock()
 
 	for _, reconcilerWithRunOrder := range orderedReconcilers {
 		if ctx.Err() != nil {
@@ -134,7 +139,7 @@ func (r *Handler) ReconcileTeam(ctx context.Context, input reconcilers.Input) er
 		}
 		reconcilerImpl := reconcilerWithRunOrder.reconciler
 		name := reconcilerImpl.Name()
-		log := r.log.WithSystem(string(name))
+		log := log.WithSystem(string(name))
 		metrics.IncReconcilerCounter(name, metrics.ReconcilerStateStarted)
 
 		reconcileTimer := metrics.MeasureReconcilerDuration(name)
@@ -143,7 +148,7 @@ func (r *Handler) ReconcileTeam(ctx context.Context, input reconcilers.Input) er
 			metrics.IncReconcilerCounter(name, metrics.ReconcilerStateFailed)
 			log.WithError(err).Error("reconcile")
 			errors++
-			err = r.database.SetReconcilerErrorForTeam(ctx, input.CorrelationID, input.Team.Slug, name, err)
+			err = h.database.SetReconcilerErrorForTeam(ctx, input.CorrelationID, input.Team.Slug, name, err)
 			if err != nil {
 				log.WithError(err).Error("add reconcile error to database")
 			}
@@ -151,7 +156,7 @@ func (r *Handler) ReconcileTeam(ctx context.Context, input reconcilers.Input) er
 		}
 		reconcileTimer.ObserveDuration()
 
-		err = r.database.ClearReconcilerErrorsForTeam(ctx, input.Team.Slug, name)
+		err = h.database.ClearReconcilerErrorsForTeam(ctx, input.Team.Slug, name)
 		if err != nil {
 			log.WithError(err).Error("purge reconcile errors")
 		}
@@ -165,16 +170,27 @@ func (r *Handler) ReconcileTeam(ctx context.Context, input reconcilers.Input) er
 
 	teamReconcilerTimer.ObserveDuration()
 
-	if err := r.database.SetLastSuccessfulSyncForTeam(ctx, input.Team.Slug); err != nil {
-		r.log.WithError(err).Error("update last successful sync timestamp")
+	if err := h.database.SetLastSuccessfulSyncForTeam(ctx, input.Team.Slug); err != nil {
+		h.log.WithError(err).Error("update last successful sync timestamp")
 	}
 	return nil
 }
 
-func getReconcilerFactory(reconcilerName sqlc.ReconcilerName) (reconcilers.ReconcilerFactory, error) {
-	factory, exists := factories[reconcilerName]
+func (h *Handler) getReconcilerFactory(reconcilerName sqlc.ReconcilerName) (reconcilers.ReconcilerFactory, error) {
+	factory, exists := h.factories[reconcilerName]
 	if !exists {
-		return nil, fmt.Errorf("reconciler missing factory entry: %q", reconcilerName)
+		return nil, fmt.Errorf("missing reconciler factory entry: %q", reconcilerName)
 	}
 	return factory, nil
+}
+
+func getOrderedReconcilers(reconcilers map[sqlc.ReconcilerName]ReconcilerWithRunOrder) []ReconcilerWithRunOrder {
+	var orderedReconcilers []ReconcilerWithRunOrder
+	for _, reconcilerWithOrder := range reconcilers {
+		orderedReconcilers = append(orderedReconcilers, reconcilerWithOrder)
+	}
+	sort.Slice(orderedReconcilers, func(i, j int) bool {
+		return orderedReconcilers[i].runOrder < orderedReconcilers[j].runOrder
+	})
+	return orderedReconcilers
 }

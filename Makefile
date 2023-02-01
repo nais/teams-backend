@@ -40,6 +40,7 @@ generate-mocks:
 	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/authn --name Handler
 	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/logger --name Logger
 	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/deployproxy --name Proxy
+	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/reconcilers --name Reconciler
 	go run mvdan.cc/gofumpt -w ./pkg/graph/
 
 alpine:
