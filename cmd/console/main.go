@@ -101,8 +101,8 @@ func run(cfg *config.Config, log logger.Logger) error {
 
 	auditLogger := auditlogger.New(log)
 
-	teamReconcilers := teamsync.NewHandler(database, cfg, auditLogger, log)
-	err = teamReconcilers.InitReconcilers(ctx)
+	teamSync := teamsync.NewHandler(database, cfg, auditLogger, log)
+	err = teamSync.InitReconcilers(ctx)
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 				ctx, cancel := context.WithTimeout(ctx, reconcilerTimeout)
 				log := log.WithTeamSlug(string(input.Team.Slug))
 
-				err = teamReconcilers.ReconcileTeam(ctx, input)
+				err = teamSync.ReconcileTeam(ctx, input)
 				if err != nil {
 					log.WithError(err).Error("reconcile team")
 					teamSyncQueue.Add(input)
@@ -156,7 +156,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 		log.Warnf("Deploy proxy is not configured: %v", err)
 	}
 
-	handler := setupGraphAPI(teamReconcilers, database, deployProxy, cfg.TenantDomain, teamSyncQueue, userSync, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi), cfg.Environments, log)
+	handler := setupGraphAPI(teamSync, database, deployProxy, cfg.TenantDomain, teamSyncQueue, userSync, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi), cfg.Environments, log)
 	srv, err := setupHTTPServer(cfg, database, handler, authHandler)
 	if err != nil {
 		return err
@@ -250,8 +250,8 @@ func setupDatabase(ctx context.Context, dbUrl string) (db.Database, error) {
 	return db.NewDatabase(queries), nil
 }
 
-func setupGraphAPI(teamReconcilers *teamsync.Handler, database db.Database, deployProxy deployproxy.Proxy, domain string, teamSyncQueue teamsync.Queue, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *graphql_handler.Server {
-	resolver := graph.NewResolver(teamReconcilers, database, deployProxy, domain, teamSyncQueue, userSync, auditLogger, gcpEnvironments, log)
+func setupGraphAPI(teamSync *teamsync.Handler, database db.Database, deployProxy deployproxy.Proxy, domain string, teamSyncQueue teamsync.Queue, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *graphql_handler.Server {
+	resolver := graph.NewResolver(teamSync, database, deployProxy, domain, teamSyncQueue, userSync, auditLogger, gcpEnvironments, log)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
 	gc.Directives.Admin = directives.Admin()
