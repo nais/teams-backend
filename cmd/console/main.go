@@ -40,10 +40,11 @@ import (
 )
 
 const (
-	reconcilerTimeout = time.Minute * 15
-	reconcilerWorkers = 10
-	userSyncInterval  = time.Minute * 15
-	userSyncTimeout   = time.Second * 30
+	reconcilerTimeout  = time.Minute * 15
+	reconcilerWorkers  = 10
+	userSyncInterval   = time.Minute * 15
+	userSyncTimeout    = time.Second * 30
+	teamSyncMaxRetries = 10
 )
 
 func main() {
@@ -119,11 +120,17 @@ func run(cfg *config.Config, log logger.Logger) error {
 		go func() {
 			defer wg.Done()
 			for input := range teamSyncQueueChannel {
-				ctx, cancel := context.WithTimeout(ctx, reconcilerTimeout)
 				log := log.WithTeamSlug(string(input.Team.Slug))
+				if input.NumSyncAttempts > teamSyncMaxRetries {
+					metrics.IncReconcilerMaxAttemptsExhaustion()
+					log.Errorf("reconcile has failed %d times for team %q, giving up", teamSyncMaxRetries, input.Team.Slug)
+					continue
+				}
 
+				ctx, cancel := context.WithTimeout(ctx, reconcilerTimeout)
 				err = teamSync.ReconcileTeam(ctx, input)
 				if err != nil {
+					input.NumSyncAttempts++
 					log.WithError(err).Error("reconcile team")
 					teamSyncQueue.Add(input)
 				}

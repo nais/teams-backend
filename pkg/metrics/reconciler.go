@@ -52,6 +52,13 @@ var (
 		Help:      "How many teams currently pending reconciliation with external systems",
 	})
 
+	reconcilerMaxAttemptsExhaustion = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: namespace,
+		Subsystem: subsystem,
+		Name:      "reconcile_max_attempts_exhaustion",
+		Help:      "Number of times a team has exhausted all its sync attempts",
+	})
+
 	reconcilerDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Namespace: namespace,
 		Subsystem: subsystem,
@@ -75,6 +82,10 @@ func IncReconcilerCounter(name sqlc.ReconcilerName, state ReconcilerState) {
 		labelState:      string(state),
 	}
 	reconcilerCounter.With(labels).Inc()
+}
+
+func IncReconcilerMaxAttemptsExhaustion() {
+	reconcilerMaxAttemptsExhaustion.Inc()
 }
 
 func IncExternalHTTPCalls(systemName string, resp *http.Response, err error) {
