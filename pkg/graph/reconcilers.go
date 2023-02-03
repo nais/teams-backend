@@ -59,7 +59,7 @@ func (r *mutationResolver) EnableReconciler(ctx context.Context, name sqlc.Recon
 		return nil, apierror.Errorf("Unable to enable reconciler")
 	}
 
-	err = r.teamSyncHandler.UseReconciler(ctx, *reconciler)
+	err = r.teamSyncHandler.UseReconciler(*reconciler)
 	if err != nil {
 		if _, err := r.database.DisableReconciler(ctx, name); err != nil {
 			r.log.WithError(err).Errorf("reconciler was enabled, but initialization failed, and we were unable to disable the reconciler.")

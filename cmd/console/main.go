@@ -102,7 +102,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 
 	auditLogger := auditlogger.New(log)
 
-	teamSync := teamsync.NewHandler(database, cfg, auditLogger, log)
+	teamSync := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
 	err = teamSync.InitReconcilers(ctx)
 	if err != nil {
 		return err
@@ -117,7 +117,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 
 	for i := 0; i < reconcilerWorkers; i++ {
 		wg.Add(1)
-		go func() {
+		go func(ctx context.Context) {
 			defer wg.Done()
 			for input := range teamSyncQueueChannel {
 				log := log.WithTeamSlug(string(input.Team.Slug))
@@ -137,7 +137,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 
 				cancel()
 			}
-		}()
+		}(ctx)
 	}
 
 	var userSyncer *usersync.UserSynchronizer

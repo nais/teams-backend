@@ -55,7 +55,7 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 			}},
 		}
 
-		handler := teamsync.NewHandler(database, cfg, auditLogger, log)
+		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
 		assert.Nil(t, handler.ReconcileTeam(ctx, input))
 	})
 
@@ -77,27 +77,27 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 			}},
 		}
 
-		handler := teamsync.NewHandler(database, cfg, auditLogger, log)
+		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
 		assert.Nil(t, handler.ReconcileTeam(ctx, input))
 	})
 
 	t.Run("use reconciler with missing factory", func(t *testing.T) {
-		handler := teamsync.NewHandler(database, cfg, auditLogger, log)
+		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
 		handler.SetReconcilerFactories(teamsync.ReconcilerFactories{})
 		reconciler := db.Reconciler{Reconciler: &sqlc.Reconciler{Name: nais_deploy_reconciler.Name}}
-		assert.ErrorContains(t, handler.UseReconciler(ctx, reconciler), "missing reconciler factory")
+		assert.ErrorContains(t, handler.UseReconciler(reconciler), "missing reconciler factory")
 	})
 
 	t.Run("use reconciler with failing factory", func(t *testing.T) {
 		err := errors.New("some error")
-		handler := teamsync.NewHandler(database, cfg, auditLogger, log)
+		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
 		handler.SetReconcilerFactories(teamsync.ReconcilerFactories{
 			nais_deploy_reconciler.Name: func(context.Context, db.Database, *config.Config, auditlogger.AuditLogger, logger.Logger) (reconcilers.Reconciler, error) {
 				return nil, err
 			},
 		})
 		reconciler := db.Reconciler{Reconciler: &sqlc.Reconciler{Name: nais_deploy_reconciler.Name}}
-		assert.ErrorIs(t, handler.UseReconciler(ctx, reconciler), err)
+		assert.ErrorIs(t, handler.UseReconciler(reconciler), err)
 	})
 
 	t.Run("multiple reconcilers", func(t *testing.T) {
@@ -121,6 +121,30 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 		log.
 			On("WithSystem", string(nais_deploy_reconciler.Name)).
 			Return(log).
+			Once()
+		log.
+			On("Debugf", mock.MatchedBy(func(msg string) bool {
+				return strings.HasPrefix(msg, "successful reconcile duration")
+			}), teamSlug, azure_group_reconciler.Name, mock.Anything).
+			Return(nil).
+			Once()
+		log.
+			On("Debugf", mock.MatchedBy(func(msg string) bool {
+				return strings.HasPrefix(msg, "successful reconcile duration")
+			}), teamSlug, github_team_reconciler.Name, mock.Anything).
+			Return(nil).
+			Once()
+		log.
+			On("Debugf", mock.MatchedBy(func(msg string) bool {
+				return strings.HasPrefix(msg, "successful reconcile duration")
+			}), teamSlug, nais_deploy_reconciler.Name, mock.Anything).
+			Return(nil).
+			Once()
+		log.
+			On("Debugf", mock.MatchedBy(func(msg string) bool {
+				return strings.HasPrefix(msg, "successful reconcile duration")
+			}), teamSlug, mock.Anything).
+			Return(nil).
 			Once()
 
 		database := db.NewMockDatabase(t)
@@ -200,16 +224,16 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 			return rec, nil
 		}
 
-		handler := teamsync.NewHandler(database, cfg, auditLogger, log)
+		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
 		handler.SetReconcilerFactories(teamsync.ReconcilerFactories{
 			azure_group_reconciler.Name: createAzureReconciler,
 			github_team_reconciler.Name: createGitHubReconciler,
 			nais_deploy_reconciler.Name: createNaisDeployReconciler,
 		})
 
-		assert.Nil(t, handler.UseReconciler(ctx, db.Reconciler{Reconciler: &sqlc.Reconciler{Name: nais_deploy_reconciler.Name, RunOrder: 3}}))
-		assert.Nil(t, handler.UseReconciler(ctx, db.Reconciler{Reconciler: &sqlc.Reconciler{Name: azure_group_reconciler.Name, RunOrder: 1}}))
-		assert.Nil(t, handler.UseReconciler(ctx, db.Reconciler{Reconciler: &sqlc.Reconciler{Name: github_team_reconciler.Name, RunOrder: 2}}))
+		assert.Nil(t, handler.UseReconciler(db.Reconciler{Reconciler: &sqlc.Reconciler{Name: nais_deploy_reconciler.Name, RunOrder: 3}}))
+		assert.Nil(t, handler.UseReconciler(db.Reconciler{Reconciler: &sqlc.Reconciler{Name: azure_group_reconciler.Name, RunOrder: 1}}))
+		assert.Nil(t, handler.UseReconciler(db.Reconciler{Reconciler: &sqlc.Reconciler{Name: github_team_reconciler.Name, RunOrder: 2}}))
 		assert.Nil(t, handler.ReconcileTeam(ctx, input))
 	})
 }

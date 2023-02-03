@@ -30,6 +30,7 @@ type Handler struct {
 	lock              sync.Mutex
 	cfg               *config.Config
 	factories         ReconcilerFactories
+	mainContext       context.Context
 }
 
 type ReconcilerWithRunOrder struct {
@@ -48,7 +49,7 @@ var factories = ReconcilerFactories{
 	nais_deploy_reconciler.Name:            nais_deploy_reconciler.NewFromConfig,
 }
 
-func NewHandler(database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) *Handler {
+func NewHandler(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) *Handler {
 	return &Handler{
 		activeReconcilers: make(map[sqlc.ReconcilerName]ReconcilerWithRunOrder),
 		database:          database,
@@ -56,6 +57,7 @@ func NewHandler(database db.Database, cfg *config.Config, auditLogger auditlogge
 		auditLogger:       auditLogger,
 		log:               log,
 		factories:         factories,
+		mainContext:       ctx,
 	}
 }
 
@@ -73,7 +75,7 @@ func (h *Handler) InitReconcilers(ctx context.Context) error {
 	}
 
 	for _, reconciler := range enabledReconcilers {
-		if err = h.UseReconciler(ctx, *reconciler); err != nil {
+		if err = h.UseReconciler(*reconciler); err != nil {
 			h.log.WithReconciler(string(reconciler.Name)).WithError(err).Error("use reconciler")
 		}
 	}
@@ -83,7 +85,7 @@ func (h *Handler) InitReconcilers(ctx context.Context) error {
 
 // UseReconciler will include a reconciler in the list of currently active reconcilers. During the activation this
 // function will acquire a lock, preventing other processes from reading from the list of active reconcilers.
-func (h *Handler) UseReconciler(ctx context.Context, reconciler db.Reconciler) error {
+func (h *Handler) UseReconciler(reconciler db.Reconciler) error {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 
@@ -92,7 +94,7 @@ func (h *Handler) UseReconciler(ctx context.Context, reconciler db.Reconciler) e
 		return err
 	}
 
-	reconcilerImplementation, err := factory(ctx, h.database, h.cfg, h.auditLogger, h.log)
+	reconcilerImplementation, err := factory(h.mainContext, h.database, h.cfg, h.auditLogger, h.log)
 	if err != nil {
 		return err
 	}
