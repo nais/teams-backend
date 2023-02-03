@@ -59,7 +59,7 @@ func (r *mutationResolver) EnableReconciler(ctx context.Context, name sqlc.Recon
 		return nil, apierror.Errorf("Unable to enable reconciler")
 	}
 
-	err = r.reconcilerHandler.UseReconciler(ctx, *reconciler)
+	err = r.teamSyncHandler.UseReconciler(ctx, *reconciler)
 	if err != nil {
 		if _, err := r.database.DisableReconciler(ctx, name); err != nil {
 			r.log.WithError(err).Errorf("reconciler was enabled, but initialization failed, and we were unable to disable the reconciler.")
@@ -123,7 +123,7 @@ func (r *mutationResolver) DisableReconciler(ctx context.Context, name sqlc.Reco
 		Actor:  actor,
 	}
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Disable reconciler: %q", name)
-	r.reconcilerHandler.RemoveReconciler(name)
+	r.teamSyncHandler.RemoveReconciler(name)
 
 	return reconciler, nil
 }

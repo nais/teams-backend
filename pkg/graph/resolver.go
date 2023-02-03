@@ -23,30 +23,30 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	reconcilerHandler *teamsync.Handler
-	database          db.Database
-	deployProxy       deployproxy.Proxy
-	tenantDomain      string
-	teamSyncQueue     teamsync.Queue
-	userSync          chan<- uuid.UUID
-	systemName        sqlc.SystemName
-	auditLogger       auditlogger.AuditLogger
-	gcpEnvironments   []string
-	log               logger.Logger
+	teamSyncHandler *teamsync.Handler
+	database        db.Database
+	deployProxy     deployproxy.Proxy
+	tenantDomain    string
+	teamSyncQueue   teamsync.Queue
+	userSync        chan<- uuid.UUID
+	systemName      sqlc.SystemName
+	auditLogger     auditlogger.AuditLogger
+	gcpEnvironments []string
+	log             logger.Logger
 }
 
-func NewResolver(reconcilerHandler *teamsync.Handler, database db.Database, deployProxy deployproxy.Proxy, tenantDomain string, teamSyncQueue teamsync.Queue, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *Resolver {
+func NewResolver(teamSyncHandler *teamsync.Handler, database db.Database, deployProxy deployproxy.Proxy, tenantDomain string, teamSyncQueue teamsync.Queue, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *Resolver {
 	return &Resolver{
-		reconcilerHandler: reconcilerHandler,
-		database:          database,
-		deployProxy:       deployProxy,
-		tenantDomain:      tenantDomain,
-		systemName:        sqlc.SystemNameGraphqlApi,
-		teamSyncQueue:     teamSyncQueue,
-		auditLogger:       auditLogger,
-		gcpEnvironments:   gcpEnvironments,
-		log:               log.WithSystem(string(sqlc.SystemNameGraphqlApi)),
-		userSync:          userSync,
+		teamSyncHandler: teamSyncHandler,
+		database:        database,
+		deployProxy:     deployProxy,
+		tenantDomain:    tenantDomain,
+		systemName:      sqlc.SystemNameGraphqlApi,
+		teamSyncQueue:   teamSyncQueue,
+		auditLogger:     auditLogger,
+		gcpEnvironments: gcpEnvironments,
+		log:             log.WithSystem(string(sqlc.SystemNameGraphqlApi)),
+		userSync:        userSync,
 	}
 }
 
