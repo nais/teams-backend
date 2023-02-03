@@ -90,9 +90,10 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 
 	teamProjects := make(map[string]*cloudresourcemanager.Project, len(r.clusters))
 	for environment, cluster := range r.clusters {
-		project, err := r.getOrCreateProject(ctx, state, environment, cluster.TeamsFolderID, input)
+		projectID := GenerateProjectID(r.domain, environment, input.Team.Slug)
+		project, err := r.getOrCreateProject(ctx, projectID, state, environment, cluster.TeamsFolderID, input)
 		if err != nil {
-			return fmt.Errorf("get or create a GCP project for team %q in environment %q: %w", input.Team.Slug, environment, err)
+			return fmt.Errorf("get or create a GCP project %q for team %q in environment %q: %w", projectID, input.Team.Slug, environment, err)
 		}
 		teamProjects[environment] = project
 		state.Projects[environment] = reconcilers.GoogleGcpEnvironmentProject{
@@ -268,7 +269,7 @@ OUTER:
 	return nil
 }
 
-func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *reconcilers.GoogleGcpProjectState, environment string, parentFolderID int64, input reconcilers.Input) (*cloudresourcemanager.Project, error) {
+func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, projectID string, state *reconcilers.GoogleGcpProjectState, environment string, parentFolderID int64, input reconcilers.Input) (*cloudresourcemanager.Project, error) {
 	if projectFromState, exists := state.Projects[environment]; exists {
 		response, err := r.gcpServices.CloudResourceManagerProjectsService.Search().Query("id:" + projectFromState.ProjectID).Do()
 		if err != nil {
@@ -286,7 +287,6 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *rec
 		}
 	}
 
-	projectID := GenerateProjectID(r.domain, environment, input.Team.Slug)
 	project := &cloudresourcemanager.Project{
 		DisplayName: GetProjectDisplayName(input.Team.Slug, environment),
 		Parent:      "folders/" + strconv.FormatInt(parentFolderID, 10),
@@ -297,28 +297,29 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, state *rec
 		googleError, ok := err.(*googleapi.Error)
 		if !ok {
 			metrics.IncExternalCallsByError(metricsSystemName, err)
-			return nil, fmt.Errorf("initiate creation of GCP project: %w", err)
+			return nil, fmt.Errorf("create GCP project: %w", err)
 		}
 
 		if googleError.Code != 409 {
 			metrics.IncExternalCallsByError(metricsSystemName, err)
-			return nil, fmt.Errorf("initiate creation of GCP project: %w", err)
+			return nil, fmt.Errorf("create GCP project: %w", err)
 		}
 
 		// the project already exists, adopt
 		response, err := r.gcpServices.CloudResourceManagerProjectsService.Search().Query("id:" + projectID).Do()
 		if err != nil {
 			metrics.IncExternalCallsByError(metricsSystemName, err)
-			return nil, fmt.Errorf("initiate creation of GCP project: %w", err)
+			return nil, fmt.Errorf("find existing GCP project: %w", err)
 		}
 
 		metrics.IncExternalCalls(metricsSystemName, response.HTTPStatusCode)
 
-		if len(response.Projects) == 1 {
-			return response.Projects[0], nil
+		if len(response.Projects) != 1 {
+			return nil, fmt.Errorf("invalid number of projects in response: %+v", response.Projects)
 		}
 
-		return nil, fmt.Errorf("initiate creation of GCP project: %w", err)
+		return response.Projects[0], nil
+
 	}
 	metrics.IncExternalCalls(metricsSystemName, operation.HTTPStatusCode)
 
