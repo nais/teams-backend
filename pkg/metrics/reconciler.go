@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -67,13 +66,13 @@ var (
 		Buckets:   prometheus.LinearBuckets(0, .5, 20),
 	}, []string{"reconciler"})
 
-	reconcileTeamDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+	reconcileTeamDuration = promauto.NewHistogram(prometheus.HistogramOpts{
 		Namespace: namespace,
 		Subsystem: subsystem,
 		Name:      "reconcile_team_duration",
 		Help:      "Reconcile duration of a specific team.",
 		Buckets:   prometheus.LinearBuckets(0, 2, 20),
-	}, []string{"team"})
+	})
 )
 
 func IncReconcilerCounter(name sqlc.ReconcilerName, state ReconcilerState) {
@@ -130,6 +129,6 @@ func MeasureReconcilerDuration(reconciler sqlc.ReconcilerName) *prometheus.Timer
 	return prometheus.NewTimer(reconcilerDuration.WithLabelValues(string(reconciler)))
 }
 
-func MeasureReconcileTeamDuration(teamSlug slug.Slug) *prometheus.Timer {
-	return prometheus.NewTimer(reconcileTeamDuration.WithLabelValues(string(teamSlug)))
+func MeasureReconcileTeamDuration() *prometheus.Timer {
+	return prometheus.NewTimer(reconcileTeamDuration)
 }

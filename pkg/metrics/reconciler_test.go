@@ -10,7 +10,4 @@ import (
 func Test_MeasureReconcilerDurations(t *testing.T) {
 	metrics.MeasureReconcilerDuration(sqlc.ReconcilerNameGithubTeam)
 	metrics.MeasureReconcilerDuration("")
-
-	metrics.MeasureReconcileTeamDuration("team-slug")
-	metrics.MeasureReconcileTeamDuration("")
 }

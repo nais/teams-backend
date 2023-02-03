@@ -127,7 +127,7 @@ func (h *Handler) ReconcileTeam(ctx context.Context, input reconcilers.Input) er
 
 	log.Infof("reconcile team")
 	errors := 0
-	teamReconcilerTimer := metrics.MeasureReconcileTeamDuration(input.Team.Slug)
+	teamReconcilerTimer := metrics.MeasureReconcileTeamDuration()
 
 	h.lock.Lock()
 	orderedReconcilers := getOrderedReconcilers(h.activeReconcilers)
