@@ -154,7 +154,8 @@ func (h *Handler) ReconcileTeam(ctx context.Context, input reconcilers.Input) er
 			}
 			continue
 		}
-		reconcileTimer.ObserveDuration()
+		duration := reconcileTimer.ObserveDuration()
+		h.log.Debugf("successful reconcile duration for team %q with reconciler %q: %s", input.Team.Slug, name, duration)
 
 		err = h.database.ClearReconcilerErrorsForTeam(ctx, input.Team.Slug, name)
 		if err != nil {
@@ -168,7 +169,8 @@ func (h *Handler) ReconcileTeam(ctx context.Context, input reconcilers.Input) er
 		return fmt.Errorf("%d error(s) occurred during reconcile", errors)
 	}
 
-	teamReconcilerTimer.ObserveDuration()
+	duration := teamReconcilerTimer.ObserveDuration()
+	h.log.Debugf("successful reconcile duration for team %q: %s", input.Team.Slug, duration)
 
 	if err := h.database.SetLastSuccessfulSyncForTeam(ctx, input.Team.Slug); err != nil {
 		h.log.WithError(err).Error("update last successful sync timestamp")
