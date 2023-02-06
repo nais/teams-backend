@@ -23,11 +23,10 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	teamSyncHandler *teamsync.Handler
+	teamSyncHandler teamsync.Handler
 	database        db.Database
 	deployProxy     deployproxy.Proxy
 	tenantDomain    string
-	teamSyncQueue   teamsync.Queue
 	userSync        chan<- uuid.UUID
 	systemName      sqlc.SystemName
 	auditLogger     auditlogger.AuditLogger
@@ -35,14 +34,13 @@ type Resolver struct {
 	log             logger.Logger
 }
 
-func NewResolver(teamSyncHandler *teamsync.Handler, database db.Database, deployProxy deployproxy.Proxy, tenantDomain string, teamSyncQueue teamsync.Queue, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *Resolver {
+func NewResolver(teamSyncHandler teamsync.Handler, database db.Database, deployProxy deployproxy.Proxy, tenantDomain string, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *Resolver {
 	return &Resolver{
 		teamSyncHandler: teamSyncHandler,
 		database:        database,
 		deployProxy:     deployProxy,
 		tenantDomain:    tenantDomain,
 		systemName:      sqlc.SystemNameGraphqlApi,
-		teamSyncQueue:   teamSyncQueue,
 		auditLogger:     auditLogger,
 		gcpEnvironments: gcpEnvironments,
 		log:             log.WithSystem(string(sqlc.SystemNameGraphqlApi)),
@@ -61,7 +59,7 @@ func GetQueriedFields(ctx context.Context) map[string]bool {
 
 // addTeamToReconcilerQueue add a team (enclosed in an input) to the reconciler queue
 func (r *Resolver) addTeamToReconcilerQueue(input reconcilers.Input) error {
-	err := r.teamSyncQueue.Add(input)
+	err := r.teamSyncHandler.Schedule(input)
 	if err != nil {
 		r.log.WithTeamSlug(string(input.Team.Slug)).WithError(err).Errorf("add team to reconciler queue")
 		return apierror.Errorf("Console is about to restart, unable to reconcile team: %q", input.Team.Slug)

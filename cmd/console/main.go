@@ -102,18 +102,18 @@ func run(cfg *config.Config, log logger.Logger) error {
 
 	auditLogger := auditlogger.New(log)
 
-	teamSync := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
-	err = teamSync.InitReconcilers(ctx)
-	if err != nil {
-		return err
-	}
-
 	teamSyncQueue, teamSyncQueueChannel := teamsync.NewQueue()
 	wg := sync.WaitGroup{}
 	defer func() {
 		teamSyncQueue.Close()
 		wg.Wait()
 	}()
+
+	teamSync := teamsync.NewHandler(ctx, teamSyncQueue, database, cfg, auditLogger, log)
+	err = teamSync.InitReconcilers(ctx)
+	if err != nil {
+		return err
+	}
 
 	for i := 0; i < reconcilerWorkers; i++ {
 		wg.Add(1)
@@ -163,7 +163,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 		log.Warnf("Deploy proxy is not configured: %v", err)
 	}
 
-	handler := setupGraphAPI(teamSync, database, deployProxy, cfg.TenantDomain, teamSyncQueue, userSync, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi), cfg.Environments, log)
+	handler := setupGraphAPI(teamSync, database, deployProxy, cfg.TenantDomain, userSync, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi), cfg.Environments, log)
 	srv, err := setupHTTPServer(cfg, database, handler, authHandler)
 	if err != nil {
 		return err
@@ -257,8 +257,8 @@ func setupDatabase(ctx context.Context, dbUrl string) (db.Database, error) {
 	return db.NewDatabase(queries), nil
 }
 
-func setupGraphAPI(teamSync *teamsync.Handler, database db.Database, deployProxy deployproxy.Proxy, domain string, teamSyncQueue teamsync.Queue, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *graphql_handler.Server {
-	resolver := graph.NewResolver(teamSync, database, deployProxy, domain, teamSyncQueue, userSync, auditLogger, gcpEnvironments, log)
+func setupGraphAPI(teamSync teamsync.Handler, database db.Database, deployProxy deployproxy.Proxy, domain string, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *graphql_handler.Server {
+	resolver := graph.NewResolver(teamSync, database, deployProxy, domain, userSync, auditLogger, gcpEnvironments, log)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
 	gc.Directives.Admin = directives.Admin()

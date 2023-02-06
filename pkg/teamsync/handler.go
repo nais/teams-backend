@@ -22,9 +22,19 @@ import (
 	"github.com/nais/console/pkg/sqlc"
 )
 
-type Handler struct {
+type Handler interface {
+	SetReconcilerFactories(factories ReconcilerFactories)
+	Schedule(input reconcilers.Input) error
+	InitReconcilers(ctx context.Context) error
+	UseReconciler(reconciler db.Reconciler) error
+	RemoveReconciler(reconcilerName sqlc.ReconcilerName)
+	ReconcileTeam(ctx context.Context, input reconcilers.Input) error
+}
+
+type handler struct {
 	activeReconcilers map[sqlc.ReconcilerName]ReconcilerWithRunOrder
 	database          db.Database
+	queue             Queue
 	auditLogger       auditlogger.AuditLogger
 	log               logger.Logger
 	lock              sync.Mutex
@@ -49,10 +59,11 @@ var factories = ReconcilerFactories{
 	nais_deploy_reconciler.Name:            nais_deploy_reconciler.NewFromConfig,
 }
 
-func NewHandler(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) *Handler {
-	return &Handler{
+func NewHandler(ctx context.Context, queue Queue, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) *handler {
+	return &handler{
 		activeReconcilers: make(map[sqlc.ReconcilerName]ReconcilerWithRunOrder),
 		database:          database,
+		queue:             queue,
 		cfg:               cfg,
 		auditLogger:       auditLogger,
 		log:               log,
@@ -61,14 +72,19 @@ func NewHandler(ctx context.Context, database db.Database, cfg *config.Config, a
 	}
 }
 
-func (h *Handler) SetReconcilerFactories(factories ReconcilerFactories) {
+func (h *handler) SetReconcilerFactories(factories ReconcilerFactories) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 	h.factories = factories
 }
 
+// Schedule a team for sync
+func (h *handler) Schedule(input reconcilers.Input) error {
+	return h.queue.Add(input)
+}
+
 // InitReconcilers initializes the currently enabled reconcilers during startup of Console
-func (h *Handler) InitReconcilers(ctx context.Context) error {
+func (h *handler) InitReconcilers(ctx context.Context) error {
 	enabledReconcilers, err := h.database.GetEnabledReconcilers(ctx)
 	if err != nil {
 		return err
@@ -85,7 +101,7 @@ func (h *Handler) InitReconcilers(ctx context.Context) error {
 
 // UseReconciler will include a reconciler in the list of currently active reconcilers. During the activation this
 // function will acquire a lock, preventing other processes from reading from the list of active reconcilers.
-func (h *Handler) UseReconciler(reconciler db.Reconciler) error {
+func (h *handler) UseReconciler(reconciler db.Reconciler) error {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 
@@ -108,13 +124,13 @@ func (h *Handler) UseReconciler(reconciler db.Reconciler) error {
 
 // RemoveReconciler will remove a reconciler from the list of currently active reconcilers. During the removal of the
 // reconciler this function will acquire a lock, preventing other processes from reading from the list.
-func (h *Handler) RemoveReconciler(reconcilerName sqlc.ReconcilerName) {
+func (h *handler) RemoveReconciler(reconcilerName sqlc.ReconcilerName) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 	delete(h.activeReconcilers, reconcilerName)
 }
 
-func (h *Handler) ReconcileTeam(ctx context.Context, input reconcilers.Input) error {
+func (h *handler) ReconcileTeam(ctx context.Context, input reconcilers.Input) error {
 	if !input.Team.Enabled {
 		h.log.Infof("team is not enabled, skipping reconciliation")
 		return nil
@@ -180,7 +196,7 @@ func (h *Handler) ReconcileTeam(ctx context.Context, input reconcilers.Input) er
 	return nil
 }
 
-func (h *Handler) getReconcilerFactory(reconcilerName sqlc.ReconcilerName) (reconcilers.ReconcilerFactory, error) {
+func (h *handler) getReconcilerFactory(reconcilerName sqlc.ReconcilerName) (reconcilers.ReconcilerFactory, error) {
 	factory, exists := h.factories[reconcilerName]
 	if !exists {
 		return nil, fmt.Errorf("missing reconciler factory entry: %q", reconcilerName)

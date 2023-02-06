@@ -36,6 +36,7 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 	cfg := config.Defaults()
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	log := logger.NewMockLogger(t)
+	queue := teamsync.NewMockQueue(t)
 
 	t.Run("team is not enabled", func(t *testing.T) {
 		log := logger.NewMockLogger(t)
@@ -55,7 +56,7 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 			}},
 		}
 
-		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
+		handler := teamsync.NewHandler(ctx, queue, database, cfg, auditLogger, log)
 		assert.Nil(t, handler.ReconcileTeam(ctx, input))
 	})
 
@@ -77,12 +78,12 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 			}},
 		}
 
-		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
+		handler := teamsync.NewHandler(ctx, queue, database, cfg, auditLogger, log)
 		assert.Nil(t, handler.ReconcileTeam(ctx, input))
 	})
 
 	t.Run("use reconciler with missing factory", func(t *testing.T) {
-		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
+		handler := teamsync.NewHandler(ctx, queue, database, cfg, auditLogger, log)
 		handler.SetReconcilerFactories(teamsync.ReconcilerFactories{})
 		reconciler := db.Reconciler{Reconciler: &sqlc.Reconciler{Name: nais_deploy_reconciler.Name}}
 		assert.ErrorContains(t, handler.UseReconciler(reconciler), "missing reconciler factory")
@@ -90,7 +91,7 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 
 	t.Run("use reconciler with failing factory", func(t *testing.T) {
 		err := errors.New("some error")
-		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
+		handler := teamsync.NewHandler(ctx, queue, database, cfg, auditLogger, log)
 		handler.SetReconcilerFactories(teamsync.ReconcilerFactories{
 			nais_deploy_reconciler.Name: func(context.Context, db.Database, *config.Config, auditlogger.AuditLogger, logger.Logger) (reconcilers.Reconciler, error) {
 				return nil, err
@@ -224,7 +225,7 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 			return rec, nil
 		}
 
-		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
+		handler := teamsync.NewHandler(ctx, queue, database, cfg, auditLogger, log)
 		handler.SetReconcilerFactories(teamsync.ReconcilerFactories{
 			azure_group_reconciler.Name: createAzureReconciler,
 			github_team_reconciler.Name: createGitHubReconciler,

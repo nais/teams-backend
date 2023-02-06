@@ -55,15 +55,16 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 		},
 	})
 
-	reconcilerQueue := teamsync.NewMockQueue(t)
-	auditLogger := auditlogger.NewMockAuditLogger(t)
 	database := db.NewMockDatabase(t)
+	teamSyncHandler := teamsync.NewMockHandler(t)
+	auditLogger := auditlogger.NewMockAuditLogger(t)
+
 	deployProxy := deployproxy.NewMockProxy(t)
 	gcpEnvironments := []string{"env"}
 	log, err := logger.GetLogger("text", "info")
 	assert.NoError(t, err)
 	userSync := make(chan<- uuid.UUID)
-	resolver := graph.NewResolver(nil, database, deployProxy, "example.com", reconcilerQueue, userSync, auditLogger, gcpEnvironments, log).Mutation()
+	resolver := graph.NewResolver(teamSyncHandler, database, deployProxy, "example.com", userSync, auditLogger, gcpEnvironments, log).Mutation()
 	teamSlug := slug.Slug("some-slug")
 	slackChannel := "#my-slack-channel"
 
@@ -114,8 +115,8 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Return(nil).
 			Once()
 
-		reconcilerQueue.
-			On("Add", mock.MatchedBy(func(input reconcilers.Input) bool {
+		teamSyncHandler.
+			On("Schedule", mock.MatchedBy(func(input reconcilers.Input) bool {
 				return input.Team.Slug == createdTeam.Slug
 			})).
 			Return(nil).
@@ -164,8 +165,8 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Return(nil).
 			Once()
 
-		reconcilerQueue.
-			On("Add", mock.MatchedBy(func(input reconcilers.Input) bool {
+		teamSyncHandler.
+			On("Schedule", mock.MatchedBy(func(input reconcilers.Input) bool {
 				return input.Team.Slug == createdTeam.Slug
 			})).
 			Return(nil).
