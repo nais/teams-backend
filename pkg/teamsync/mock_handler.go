@@ -61,6 +61,16 @@ func (_m *MockHandler) SetReconcilerFactories(factories ReconcilerFactories) {
 	_m.Called(factories)
 }
 
+// SyncTeams provides a mock function with given fields: ctx
+func (_m *MockHandler) SyncTeams(ctx context.Context) {
+	_m.Called(ctx)
+}
+
+// UpdateMetrics provides a mock function with given fields: ctx
+func (_m *MockHandler) UpdateMetrics(ctx context.Context) {
+	_m.Called(ctx)
+}
+
 // UseReconciler provides a mock function with given fields: reconciler
 func (_m *MockHandler) UseReconciler(reconciler db.Reconciler) error {
 	ret := _m.Called(reconciler)

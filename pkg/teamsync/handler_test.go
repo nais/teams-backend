@@ -247,4 +247,25 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 		handler.Close()
 		handler.SyncTeams(ctx)
 	})
+
+	t.Run("test re-schedule while reconciling aborts re-schedule of old input", func(t *testing.T) {
+	})
+
+	t.Run("test re-schedule while reconciling ends up with latest input reconciled", func(t *testing.T) {
+	})
+
+	t.Run("test re-schedule while reconciling ends up with 2 reconciles", func(t *testing.T) {
+	})
+
+	t.Run("test double schedule before sync only results in one reconcile", func(t *testing.T) {
+	})
+
+	t.Run("test n=1..5 schedule before sync only results in one reconcile", func(t *testing.T) {
+	})
+
+	t.Run("test reconcile failure ends up with re-scheduling (10 times)", func(t *testing.T) {
+	})
+
+	t.Run("test reconcile failure re-schedule is skipped when new input is in queue", func(t *testing.T) {
+	})
 }

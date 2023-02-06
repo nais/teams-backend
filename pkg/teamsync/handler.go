@@ -19,6 +19,7 @@ import (
 	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
 	nais_deploy_reconciler "github.com/nais/console/pkg/reconcilers/nais/deploy"
 	nais_namespace_reconciler "github.com/nais/console/pkg/reconcilers/nais/namespace"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 )
 
@@ -28,14 +29,18 @@ type Handler interface {
 	InitReconcilers(ctx context.Context) error
 	UseReconciler(reconciler db.Reconciler) error
 	RemoveReconciler(reconcilerName sqlc.ReconcilerName)
+	SyncTeams(ctx context.Context)
+	UpdateMetrics(ctx context.Context)
 	Close()
 }
 
 type handler struct {
 	activeReconcilers map[sqlc.ReconcilerName]ReconcilerWithRunOrder
 	database          db.Database
-	queue             Queue
-	queueChannel      <-chan reconcilers.Input
+	syncQueue         Queue
+	queueInputs       map[slug.Slug]reconcilers.Input
+	teamsInFlight     map[slug.Slug]bool
+	syncQueueChan     <-chan slug.Slug
 	auditLogger       auditlogger.AuditLogger
 	log               logger.Logger
 	lock              sync.Mutex
@@ -65,14 +70,15 @@ const (
 	teamSyncMaxRetries = 10
 )
 
-func NewHandler(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) *handler {
-	q, queueChannel := NewQueue()
-
+func NewHandler(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) Handler {
+	queue, channel := NewQueue()
 	return &handler{
 		activeReconcilers: make(map[sqlc.ReconcilerName]ReconcilerWithRunOrder),
 		database:          database,
-		queue:             q,
-		queueChannel:      queueChannel,
+		queueInputs:       make(map[slug.Slug]reconcilers.Input, 0),
+		syncQueue:         queue,
+		syncQueueChan:     channel,
+		teamsInFlight:     make(map[slug.Slug]bool),
 		cfg:               cfg,
 		auditLogger:       auditLogger,
 		log:               log,
@@ -82,18 +88,24 @@ func NewHandler(ctx context.Context, database db.Database, cfg *config.Config, a
 }
 
 func (h *handler) Close() {
-	h.queue.Close()
+	h.syncQueue.Close()
 }
 
 func (h *handler) SetReconcilerFactories(factories ReconcilerFactories) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
+
 	h.factories = factories
 }
 
 // Schedule a team for sync
 func (h *handler) Schedule(input reconcilers.Input) error {
-	return h.queue.Add(input)
+	h.lock.Lock()
+	defer h.lock.Unlock()
+
+	h.queueInputs[input.Team.Slug] = input
+	h.syncQueue.Add(input.Team.Slug)
+	return nil
 }
 
 // InitReconcilers initializes the currently enabled reconcilers during startup of Console
@@ -136,23 +148,32 @@ func (h *handler) UseReconciler(reconciler db.Reconciler) error {
 }
 
 func (h *handler) SyncTeams(ctx context.Context) {
-	for input := range h.queueChannel {
-		log := h.log.WithTeamSlug(string(input.Team.Slug))
+	for slug := range h.syncQueueChan {
+		if h.getTeamInFlight(slug) {
+			h.syncQueue.Add(slug)
+			continue
+		}
+
+		h.setTeamInFlight(slug, true)
+		input := h.popInput(slug)
+
+		log := h.log.WithTeamSlug(string(slug))
 		if input.NumSyncAttempts > teamSyncMaxRetries {
 			metrics.IncReconcilerMaxAttemptsExhaustion()
-			log.Errorf("reconcile has failed %d times for team %q, giving up", teamSyncMaxRetries, input.Team.Slug)
+			log.Errorf("reconcile has failed %d times for team %q, giving up", teamSyncMaxRetries, slug)
+			h.setTeamInFlight(slug, false)
 			continue
 		}
 
 		ctx, cancel := context.WithTimeout(ctx, reconcilerTimeout)
-		err := h.reconcileTeam(ctx, input)
+		err := h.reconcileTeam(ctx, *input)
 		if err != nil {
-			input.NumSyncAttempts++
+			h.requeueInput(slug, *input)
 			log.WithError(err).Error("reconcile team")
-			h.queue.Add(input)
 		}
 
 		cancel()
+		h.setTeamInFlight(slug, false)
 	}
 }
 
@@ -161,6 +182,7 @@ func (h *handler) SyncTeams(ctx context.Context) {
 func (h *handler) RemoveReconciler(reconcilerName sqlc.ReconcilerName) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
+
 	delete(h.activeReconcilers, reconcilerName)
 }
 
@@ -244,7 +266,7 @@ func (h *handler) UpdateMetrics(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-time.After(10 * time.Second):
-			metrics.SetPendingTeamCount(len(h.queueChannel))
+			metrics.SetPendingTeamCount(len(h.syncQueueChan))
 		}
 	}
 }
@@ -258,4 +280,42 @@ func getOrderedReconcilers(reconcilers map[sqlc.ReconcilerName]ReconcilerWithRun
 		return orderedReconcilers[i].runOrder < orderedReconcilers[j].runOrder
 	})
 	return orderedReconcilers
+}
+
+func (h *handler) setTeamInFlight(slug slug.Slug, inFlight bool) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+
+	h.teamsInFlight[slug] = inFlight
+}
+
+func (h *handler) getTeamInFlight(slug slug.Slug) bool {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+
+	return h.teamsInFlight[slug]
+}
+
+func (h *handler) popInput(slug slug.Slug) *reconcilers.Input {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+
+	input, ok := h.queueInputs[slug]
+	if !ok {
+		return nil
+	}
+	delete(h.queueInputs, slug)
+	return &input
+}
+
+func (h *handler) requeueInput(slug slug.Slug, input reconcilers.Input) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+
+	_, exists := h.queueInputs[slug]
+	if !exists {
+		input.NumSyncAttempts++
+		h.queueInputs[slug] = input
+	}
+	h.syncQueue.Add(slug)
 }

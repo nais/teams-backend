@@ -3,7 +3,7 @@
 package teamsync
 
 import (
-	reconcilers "github.com/nais/console/pkg/reconcilers"
+	slug "github.com/nais/console/pkg/slug"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -12,13 +12,13 @@ type MockQueue struct {
 	mock.Mock
 }
 
-// Add provides a mock function with given fields: input
-func (_m *MockQueue) Add(input reconcilers.Input) error {
-	ret := _m.Called(input)
+// Add provides a mock function with given fields: _a0
+func (_m *MockQueue) Add(_a0 slug.Slug) error {
+	ret := _m.Called(_a0)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(reconcilers.Input) error); ok {
-		r0 = rf(input)
+	if rf, ok := ret.Get(0).(func(slug.Slug) error); ok {
+		r0 = rf(_a0)
 	} else {
 		r0 = ret.Error(0)
 	}
