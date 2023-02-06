@@ -35,6 +35,7 @@ func (q *queue) Add(input reconcilers.Input) error {
 	if q.closed {
 		return fmt.Errorf("team reconciler channel is closed")
 	}
+
 	q.queue <- input
 	return nil
 }

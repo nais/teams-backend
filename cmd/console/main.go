@@ -31,7 +31,6 @@ import (
 	"github.com/nais/console/pkg/graph/apierror"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/logger"
-	"github.com/nais/console/pkg/metrics"
 	"github.com/nais/console/pkg/middleware"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/pkg/usersync"
@@ -40,11 +39,9 @@ import (
 )
 
 const (
-	reconcilerTimeout  = time.Minute * 15
-	reconcilerWorkers  = 10
-	userSyncInterval   = time.Minute * 15
-	userSyncTimeout    = time.Second * 30
-	teamSyncMaxRetries = 10
+	reconcilerWorkers = 10
+	userSyncInterval  = time.Minute * 15
+	userSyncTimeout   = time.Second * 30
 )
 
 func main() {
@@ -102,14 +99,12 @@ func run(cfg *config.Config, log logger.Logger) error {
 
 	auditLogger := auditlogger.New(log)
 
-	teamSyncQueue, teamSyncQueueChannel := teamsync.NewQueue()
 	wg := sync.WaitGroup{}
+	teamSync := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
 	defer func() {
-		teamSyncQueue.Close()
+		teamSync.Close()
 		wg.Wait()
 	}()
-
-	teamSync := teamsync.NewHandler(ctx, teamSyncQueue, database, cfg, auditLogger, log)
 	err = teamSync.InitReconcilers(ctx)
 	if err != nil {
 		return err
@@ -118,27 +113,12 @@ func run(cfg *config.Config, log logger.Logger) error {
 	for i := 0; i < reconcilerWorkers; i++ {
 		wg.Add(1)
 		go func(ctx context.Context) {
+			teamSync.SyncTeams(ctx)
 			defer wg.Done()
-			for input := range teamSyncQueueChannel {
-				log := log.WithTeamSlug(string(input.Team.Slug))
-				if input.NumSyncAttempts > teamSyncMaxRetries {
-					metrics.IncReconcilerMaxAttemptsExhaustion()
-					log.Errorf("reconcile has failed %d times for team %q, giving up", teamSyncMaxRetries, input.Team.Slug)
-					continue
-				}
-
-				ctx, cancel := context.WithTimeout(ctx, reconcilerTimeout)
-				err = teamSync.ReconcileTeam(ctx, input)
-				if err != nil {
-					input.NumSyncAttempts++
-					log.WithError(err).Error("reconcile team")
-					teamSyncQueue.Add(input)
-				}
-
-				cancel()
-			}
 		}(ctx)
 	}
+
+	go teamSync.UpdateMetrics(ctx)
 
 	var userSyncer *usersync.UserSynchronizer
 	userSync := make(chan uuid.UUID, 1)
@@ -191,8 +171,6 @@ func run(cfg *config.Config, log logger.Logger) error {
 	defer log.Info("main program context canceled; exiting.")
 
 	for ctx.Err() == nil {
-		metrics.SetPendingTeamCount(len(teamSyncQueueChannel))
-
 		select {
 		case <-ctx.Done():
 			return nil

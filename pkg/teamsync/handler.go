@@ -5,7 +5,13 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"time"
 
+	"github.com/nais/console/pkg/auditlogger"
+	"github.com/nais/console/pkg/config"
+	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/logger"
+	"github.com/nais/console/pkg/metrics"
 	"github.com/nais/console/pkg/reconcilers"
 	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
 	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
@@ -13,12 +19,6 @@ import (
 	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
 	nais_deploy_reconciler "github.com/nais/console/pkg/reconcilers/nais/deploy"
 	nais_namespace_reconciler "github.com/nais/console/pkg/reconcilers/nais/namespace"
-
-	"github.com/nais/console/pkg/auditlogger"
-	"github.com/nais/console/pkg/config"
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/logger"
-	"github.com/nais/console/pkg/metrics"
 	"github.com/nais/console/pkg/sqlc"
 )
 
@@ -28,13 +28,14 @@ type Handler interface {
 	InitReconcilers(ctx context.Context) error
 	UseReconciler(reconciler db.Reconciler) error
 	RemoveReconciler(reconcilerName sqlc.ReconcilerName)
-	ReconcileTeam(ctx context.Context, input reconcilers.Input) error
+	Close()
 }
 
 type handler struct {
 	activeReconcilers map[sqlc.ReconcilerName]ReconcilerWithRunOrder
 	database          db.Database
 	queue             Queue
+	queueChannel      <-chan reconcilers.Input
 	auditLogger       auditlogger.AuditLogger
 	log               logger.Logger
 	lock              sync.Mutex
@@ -59,17 +60,29 @@ var factories = ReconcilerFactories{
 	nais_deploy_reconciler.Name:            nais_deploy_reconciler.NewFromConfig,
 }
 
-func NewHandler(ctx context.Context, queue Queue, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) *handler {
+const (
+	reconcilerTimeout  = time.Minute * 15
+	teamSyncMaxRetries = 10
+)
+
+func NewHandler(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) *handler {
+	q, queueChannel := NewQueue()
+
 	return &handler{
 		activeReconcilers: make(map[sqlc.ReconcilerName]ReconcilerWithRunOrder),
 		database:          database,
-		queue:             queue,
+		queue:             q,
+		queueChannel:      queueChannel,
 		cfg:               cfg,
 		auditLogger:       auditLogger,
 		log:               log,
 		factories:         factories,
 		mainContext:       ctx,
 	}
+}
+
+func (h *handler) Close() {
+	h.queue.Close()
 }
 
 func (h *handler) SetReconcilerFactories(factories ReconcilerFactories) {
@@ -122,6 +135,27 @@ func (h *handler) UseReconciler(reconciler db.Reconciler) error {
 	return nil
 }
 
+func (h *handler) SyncTeams(ctx context.Context) {
+	for input := range h.queueChannel {
+		log := h.log.WithTeamSlug(string(input.Team.Slug))
+		if input.NumSyncAttempts > teamSyncMaxRetries {
+			metrics.IncReconcilerMaxAttemptsExhaustion()
+			log.Errorf("reconcile has failed %d times for team %q, giving up", teamSyncMaxRetries, input.Team.Slug)
+			continue
+		}
+
+		ctx, cancel := context.WithTimeout(ctx, reconcilerTimeout)
+		err := h.reconcileTeam(ctx, input)
+		if err != nil {
+			input.NumSyncAttempts++
+			log.WithError(err).Error("reconcile team")
+			h.queue.Add(input)
+		}
+
+		cancel()
+	}
+}
+
 // RemoveReconciler will remove a reconciler from the list of currently active reconcilers. During the removal of the
 // reconciler this function will acquire a lock, preventing other processes from reading from the list.
 func (h *handler) RemoveReconciler(reconcilerName sqlc.ReconcilerName) {
@@ -130,18 +164,18 @@ func (h *handler) RemoveReconciler(reconcilerName sqlc.ReconcilerName) {
 	delete(h.activeReconcilers, reconcilerName)
 }
 
-func (h *handler) ReconcileTeam(ctx context.Context, input reconcilers.Input) error {
+func (h *handler) reconcileTeam(ctx context.Context, input reconcilers.Input) error {
+	log := h.log.WithTeamSlug(string(input.Team.Slug))
+
 	if !input.Team.Enabled {
-		h.log.Infof("team is not enabled, skipping reconciliation")
+		log.Infof("team is not enabled, skipping reconciliation")
 		return nil
 	}
 
 	if len(h.activeReconcilers) == 0 {
-		h.log.Warnf("no reconcilers are currently enabled")
+		log.Warnf("no reconcilers are currently enabled")
 		return nil
 	}
-
-	log := h.log.WithTeamSlug(string(input.Team.Slug))
 
 	log.Infof("reconcile team")
 	errors := 0
@@ -173,7 +207,7 @@ func (h *handler) ReconcileTeam(ctx context.Context, input reconcilers.Input) er
 			continue
 		}
 		duration := reconcileTimer.ObserveDuration()
-		h.log.Debugf("successful reconcile duration for team %q with reconciler %q: %s", input.Team.Slug, name, duration)
+		log.Debugf("successful reconcile duration: %s", duration)
 
 		err = h.database.ClearReconcilerErrorsForTeam(ctx, input.Team.Slug, name)
 		if err != nil {
@@ -188,10 +222,10 @@ func (h *handler) ReconcileTeam(ctx context.Context, input reconcilers.Input) er
 	}
 
 	duration := teamReconcilerTimer.ObserveDuration()
-	h.log.Debugf("successful reconcile duration for team %q: %s", input.Team.Slug, duration)
+	log.Debugf("successful reconcile duration: %s", duration)
 
 	if err := h.database.SetLastSuccessfulSyncForTeam(ctx, input.Team.Slug); err != nil {
-		h.log.WithError(err).Error("update last successful sync timestamp")
+		log.WithError(err).Error("update last successful sync timestamp")
 	}
 	return nil
 }
@@ -202,6 +236,17 @@ func (h *handler) getReconcilerFactory(reconcilerName sqlc.ReconcilerName) (reco
 		return nil, fmt.Errorf("missing reconciler factory entry: %q", reconcilerName)
 	}
 	return factory, nil
+}
+
+func (h *handler) UpdateMetrics(ctx context.Context) {
+	for ctx.Err() == nil {
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(10 * time.Second):
+			metrics.SetPendingTeamCount(len(h.queueChannel))
+		}
+	}
 }
 
 func getOrderedReconcilers(reconcilers map[sqlc.ReconcilerName]ReconcilerWithRunOrder) []ReconcilerWithRunOrder {
