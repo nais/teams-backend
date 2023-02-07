@@ -73,7 +73,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 	}
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Team created")
 
-	r.reconcileTeam(ctx, correlationID, *team)
+	r.reconcileTeam(ctx, correlationID, team.Slug)
 
 	return team, nil
 }
@@ -137,7 +137,7 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, slug *slug.Slug, inpu
 		return nil, err
 	}
 
-	r.reconcileTeam(ctx, correlationID, *team)
+	r.reconcileTeam(ctx, correlationID, team.Slug)
 
 	return team, nil
 }
@@ -204,7 +204,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, slug *slug.S
 		return nil, err
 	}
 
-	r.reconcileTeam(ctx, correlationID, *team)
+	r.reconcileTeam(ctx, correlationID, team.Slug)
 
 	return team, nil
 }
@@ -241,7 +241,7 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, slug *slug.Slug)
 	}
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Manually scheduled for synchronization")
 
-	r.reconcileTeam(ctx, correlationID, *team)
+	r.reconcileTeam(ctx, correlationID, team.Slug)
 
 	return &model.TeamSync{
 		Team:          team,
@@ -328,7 +328,7 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, slug *slug.Slug, 
 		return nil, err
 	}
 
-	r.reconcileTeam(ctx, correlationID, *team)
+	r.reconcileTeam(ctx, correlationID, team.Slug)
 
 	return team, nil
 }
@@ -380,7 +380,7 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, slug *slug.Slug, u
 		return nil, err
 	}
 
-	r.reconcileTeam(ctx, correlationID, *team)
+	r.reconcileTeam(ctx, correlationID, team.Slug)
 
 	return team, nil
 }
@@ -441,7 +441,7 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, slug *slug.Slu
 
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Assign %q to %s", desiredRole, member.Email)
 
-	r.reconcileTeam(ctx, correlationID, *team)
+	r.reconcileTeam(ctx, correlationID, team.Slug)
 
 	return team, nil
 }
@@ -479,7 +479,7 @@ func (r *mutationResolver) DisableTeam(ctx context.Context, slug *slug.Slug) (*d
 	}
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Disable team")
 
-	r.reconcileTeam(ctx, correlationID, *team)
+	r.reconcileTeam(ctx, correlationID, team.Slug)
 
 	return team, nil
 }
@@ -517,7 +517,7 @@ func (r *mutationResolver) EnableTeam(ctx context.Context, slug *slug.Slug) (*db
 	}
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Enable team")
 
-	r.reconcileTeam(ctx, correlationID, *team)
+	r.reconcileTeam(ctx, correlationID, team.Slug)
 
 	return team, nil
 }

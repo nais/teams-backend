@@ -3,32 +3,30 @@ package teamsync
 import (
 	"fmt"
 	"sync"
-
-	"github.com/nais/console/pkg/slug"
 )
 
 const reconcilerQueueSize = 4096
 
 type Queue interface {
-	Add(slug.Slug) error
+	Add(Input) error
 	Close()
 }
 
 type queue struct {
-	queue  chan slug.Slug
+	queue  chan Input
 	closed bool
 	lock   sync.Mutex
 }
 
-func NewQueue() (Queue, <-chan slug.Slug) {
-	ch := make(chan slug.Slug, reconcilerQueueSize)
+func NewQueue() (Queue, <-chan Input) {
+	ch := make(chan Input, reconcilerQueueSize)
 	return &queue{
 		queue:  ch,
 		closed: false,
 	}, ch
 }
 
-func (q *queue) Add(slug slug.Slug) error {
+func (q *queue) Add(input Input) error {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
@@ -36,7 +34,7 @@ func (q *queue) Add(slug slug.Slug) error {
 		return fmt.Errorf("team reconciler channel is closed")
 	}
 
-	q.queue <- slug
+	q.queue <- input
 	return nil
 }
 

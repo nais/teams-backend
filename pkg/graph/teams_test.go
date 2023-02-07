@@ -14,7 +14,6 @@ import (
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/logger"
-	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/stretchr/testify/assert"
@@ -101,10 +100,6 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			}).
 			Return(nil).
 			Once()
-		database.
-			On("GetTeamMembers", ctx, createdTeam.Slug).
-			Return([]*db.User{&user}, nil).
-			Once()
 
 		auditLogger.
 			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
@@ -116,8 +111,8 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Once()
 
 		teamSyncHandler.
-			On("Schedule", mock.MatchedBy(func(input reconcilers.Input) bool {
-				return input.Team.Slug == createdTeam.Slug
+			On("Schedule", mock.MatchedBy(func(input teamsync.Input) bool {
+				return input.TeamSlug == createdTeam.Slug
 			})).
 			Return(nil).
 			Once()
@@ -151,10 +146,6 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			}).
 			Return(nil).
 			Once()
-		database.
-			On("GetTeamMembers", saCtx, createdTeam.Slug).
-			Return([]*db.User{&user}, nil).
-			Once()
 
 		auditLogger.
 			On("Logf", saCtx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
@@ -166,8 +157,8 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Once()
 
 		teamSyncHandler.
-			On("Schedule", mock.MatchedBy(func(input reconcilers.Input) bool {
-				return input.Team.Slug == createdTeam.Slug
+			On("Schedule", mock.MatchedBy(func(input teamsync.Input) bool {
+				return input.TeamSlug == createdTeam.Slug
 			})).
 			Return(nil).
 			Once()

@@ -12,7 +12,6 @@ import (
 	"github.com/nais/console/pkg/graph/apierror"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/logger"
-	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/pkg/teamsync"
@@ -58,24 +57,23 @@ func GetQueriedFields(ctx context.Context) map[string]bool {
 }
 
 // addTeamToReconcilerQueue add a team (enclosed in an input) to the reconciler queue
-func (r *Resolver) addTeamToReconcilerQueue(input reconcilers.Input) error {
+func (r *Resolver) addTeamToReconcilerQueue(input teamsync.Input) error {
 	err := r.teamSyncHandler.Schedule(input)
 	if err != nil {
-		r.log.WithTeamSlug(string(input.Team.Slug)).WithError(err).Errorf("add team to reconciler queue")
-		return apierror.Errorf("Console is about to restart, unable to reconcile team: %q", input.Team.Slug)
+		r.log.WithTeamSlug(string(input.TeamSlug)).WithError(err).Errorf("add team to reconciler queue")
+		return apierror.Errorf("Console is about to restart, unable to reconcile team: %q", input.TeamSlug)
 	}
 	return nil
 }
 
 // reconcileTeam Trigger team reconcilers for a given team
-func (r *Resolver) reconcileTeam(ctx context.Context, correlationID uuid.UUID, team db.Team) error {
-	reconcilerInput, err := reconcilers.CreateReconcilerInput(ctx, r.database, team)
-	if err != nil {
-		r.log.Errorf("unable to generate reconcile input for team %q: %s", team.Slug, err)
-		return nil
+func (r *Resolver) reconcileTeam(ctx context.Context, correlationID uuid.UUID, slug slug.Slug) error {
+	input := teamsync.Input{
+		TeamSlug:      slug,
+		CorrelationID: correlationID,
 	}
 
-	return r.addTeamToReconcilerQueue(reconcilerInput.WithCorrelationID(correlationID))
+	return r.addTeamToReconcilerQueue(input)
 }
 
 // reconcileAllTeams Trigger reconcilers for all teams
@@ -87,10 +85,8 @@ func (r *Resolver) reconcileAllTeams(ctx context.Context, correlationID uuid.UUI
 
 	syncEntries := make([]*model.TeamSync, 0, len(teams))
 	for _, team := range teams {
-		input, err := reconcilers.CreateReconcilerInput(ctx, r.database, *team)
-		if err != nil {
-			r.log.WithTeamSlug(string(team.Slug)).WithError(err).Error("unable to create reconciler input")
-			continue
+		input := teamsync.Input{
+			TeamSlug: team.Slug,
 		}
 
 		err = r.addTeamToReconcilerQueue(input.WithCorrelationID(correlationID))

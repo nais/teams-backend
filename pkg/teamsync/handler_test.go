@@ -49,14 +49,17 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 			Return(nil).
 			Once()
 
-		input := reconcilers.Input{
+		input := teamsync.Input{
 			CorrelationID: uuid.New(),
-			Team: db.Team{Team: &sqlc.Team{
-				Slug:    teamSlug,
-				Purpose: "some purpose",
-				Enabled: false,
-			}},
+			TeamSlug:      teamSlug,
 		}
+		team := &db.Team{
+			&sqlc.Team{
+				Slug:    teamSlug,
+				Enabled: false,
+			},
+		}
+		database.On("GetTeamBySlug", mock.Anything, teamSlug).Return(team, nil).Once()
 
 		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
 		handler.Schedule(input)
@@ -69,21 +72,26 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 		log.
 			On("WithTeamSlug", string(teamSlug)).
 			Return(log)
-		log.
-			On("Warnf", mock.MatchedBy(func(msg string) bool {
-				return strings.HasPrefix(msg, "no reconcilers")
-			})).
+
+		log.On("Infof", "reconcile team").Once()
+		log.On("Debugf", mock.Anything, mock.Anything).Maybe()
+
+		database.
+			On("SetLastSuccessfulSyncForTeam", mock.Anything, teamSlug).
 			Return(nil).
 			Once()
 
-		input := reconcilers.Input{
+		input := teamsync.Input{
 			CorrelationID: uuid.New(),
-			Team: db.Team{Team: &sqlc.Team{
-				Slug:    teamSlug,
-				Purpose: "some purpose",
-				Enabled: true,
-			}},
+			TeamSlug:      teamSlug,
 		}
+		team := &db.Team{Team: &sqlc.Team{
+			Slug:    teamSlug,
+			Purpose: "some purpose",
+			Enabled: true,
+		}}
+		database.On("GetTeamBySlug", mock.Anything, teamSlug).Return(team, nil).Once()
+		database.On("GetTeamMembers", mock.Anything, teamSlug).Return(nil, nil).Once()
 
 		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
 		handler.Schedule(input)
@@ -174,14 +182,17 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 			Return(nil).
 			Once()
 
-		input := reconcilers.Input{
+		team := &db.Team{&sqlc.Team{
+			Slug:    teamSlug,
+			Purpose: "some purpose",
+			Enabled: true,
+		}}
+		input := teamsync.Input{
 			CorrelationID: uuid.New(),
-			Team: db.Team{Team: &sqlc.Team{
-				Slug:    teamSlug,
-				Purpose: "some purpose",
-				Enabled: true,
-			}},
+			TeamSlug:      teamSlug,
 		}
+		database.On("GetTeamBySlug", mock.Anything, teamSlug).Return(team, nil).Once()
+		database.On("GetTeamMembers", mock.Anything, teamSlug).Return(nil, nil).Once()
 
 		runOrder := 1
 
@@ -192,7 +203,7 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 				Return(azure_group_reconciler.Name).
 				Once()
 			reconciler.
-				On("Reconcile", mock.Anything, input).
+				On("Reconcile", mock.Anything, mock.MatchedBy(func(in reconcilers.Input) bool { return in.Team.Slug == teamSlug })).
 				Run(func(args mock.Arguments) {
 					assert.Equal(t, 1, runOrder)
 					runOrder++
@@ -208,7 +219,7 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 				Return(github_team_reconciler.Name).
 				Once()
 			reconciler.
-				On("Reconcile", mock.Anything, input).
+				On("Reconcile", mock.Anything, mock.MatchedBy(func(in reconcilers.Input) bool { return in.Team.Slug == teamSlug })).
 				Run(func(args mock.Arguments) {
 					assert.Equal(t, 2, runOrder)
 					runOrder++
@@ -224,7 +235,7 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 				Return(nais_deploy_reconciler.Name).
 				Once()
 			rec.
-				On("Reconcile", mock.Anything, input).
+				On("Reconcile", mock.Anything, mock.MatchedBy(func(in reconcilers.Input) bool { return in.Team.Slug == teamSlug })).
 				Run(func(args mock.Arguments) {
 					assert.Equal(t, 3, runOrder)
 				}).
@@ -248,24 +259,38 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 		handler.SyncTeams(ctx)
 	})
 
-	t.Run("test re-schedule while reconciling aborts re-schedule of old input", func(t *testing.T) {
-	})
+	t.Run("test double schedule ends up with 2 reconciles", func(t *testing.T) {
+		log := logger.NewMockLogger(t)
+		log.On("WithTeamSlug", mock.Anything).Return(log)
+		log.On("Infof", mock.AnythingOfType("string"))
+		log.On("Debugf", mock.Anything, mock.Anything)
 
-	t.Run("test re-schedule while reconciling ends up with latest input reconciled", func(t *testing.T) {
-	})
+		input := teamsync.Input{
+			CorrelationID: uuid.New(),
+			TeamSlug:      teamSlug,
+		}
+		team := &db.Team{Team: &sqlc.Team{
+			Slug:    teamSlug,
+			Purpose: "some purpose",
+			Enabled: true,
+		}}
+		database.
+			On("GetTeamBySlug", mock.Anything, teamSlug).
+			Return(team, nil).
+			Twice()
+		database.
+			On("GetTeamMembers", mock.Anything, teamSlug).
+			Return(nil, nil).
+			Twice()
+		database.
+			On("SetLastSuccessfulSyncForTeam", mock.Anything, teamSlug).
+			Return(nil).
+			Twice()
 
-	t.Run("test re-schedule while reconciling ends up with 2 reconciles", func(t *testing.T) {
-	})
-
-	t.Run("test double schedule before sync only results in one reconcile", func(t *testing.T) {
-	})
-
-	t.Run("test n=1..5 schedule before sync only results in one reconcile", func(t *testing.T) {
-	})
-
-	t.Run("test reconcile failure ends up with re-scheduling (10 times)", func(t *testing.T) {
-	})
-
-	t.Run("test reconcile failure re-schedule is skipped when new input is in queue", func(t *testing.T) {
+		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
+		handler.Schedule(input)
+		handler.Schedule(input)
+		handler.Close()
+		handler.SyncTeams(ctx)
 	})
 }

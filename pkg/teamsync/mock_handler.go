@@ -8,8 +8,6 @@ import (
 	db "github.com/nais/console/pkg/db"
 	mock "github.com/stretchr/testify/mock"
 
-	reconcilers "github.com/nais/console/pkg/reconcilers"
-
 	sqlc "github.com/nais/console/pkg/sqlc"
 )
 
@@ -43,11 +41,11 @@ func (_m *MockHandler) RemoveReconciler(reconcilerName sqlc.ReconcilerName) {
 }
 
 // Schedule provides a mock function with given fields: input
-func (_m *MockHandler) Schedule(input reconcilers.Input) error {
+func (_m *MockHandler) Schedule(input Input) error {
 	ret := _m.Called(input)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(reconcilers.Input) error); ok {
+	if rf, ok := ret.Get(0).(func(Input) error); ok {
 		r0 = rf(input)
 	} else {
 		r0 = ret.Error(0)

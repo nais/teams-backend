@@ -25,7 +25,7 @@ import (
 
 type Handler interface {
 	SetReconcilerFactories(factories ReconcilerFactories)
-	Schedule(input reconcilers.Input) error
+	Schedule(input Input) error
 	InitReconcilers(ctx context.Context) error
 	UseReconciler(reconciler db.Reconciler) error
 	RemoveReconciler(reconcilerName sqlc.ReconcilerName)
@@ -38,15 +38,16 @@ type handler struct {
 	activeReconcilers map[sqlc.ReconcilerName]ReconcilerWithRunOrder
 	database          db.Database
 	syncQueue         Queue
-	queueInputs       map[slug.Slug]reconcilers.Input
-	teamsInFlight     map[slug.Slug]bool
-	syncQueueChan     <-chan slug.Slug
+	syncQueueChan     <-chan Input
 	auditLogger       auditlogger.AuditLogger
 	log               logger.Logger
 	lock              sync.Mutex
 	cfg               *config.Config
 	factories         ReconcilerFactories
 	mainContext       context.Context
+
+	teamsInFlight     map[slug.Slug]struct{}
+	teamsInFlightLock sync.Mutex
 }
 
 type ReconcilerWithRunOrder struct {
@@ -75,10 +76,9 @@ func NewHandler(ctx context.Context, database db.Database, cfg *config.Config, a
 	return &handler{
 		activeReconcilers: make(map[sqlc.ReconcilerName]ReconcilerWithRunOrder),
 		database:          database,
-		queueInputs:       make(map[slug.Slug]reconcilers.Input, 0),
 		syncQueue:         queue,
 		syncQueueChan:     channel,
-		teamsInFlight:     make(map[slug.Slug]bool),
+		teamsInFlight:     make(map[slug.Slug]struct{}),
 		cfg:               cfg,
 		auditLogger:       auditLogger,
 		log:               log,
@@ -99,12 +99,8 @@ func (h *handler) SetReconcilerFactories(factories ReconcilerFactories) {
 }
 
 // Schedule a team for sync
-func (h *handler) Schedule(input reconcilers.Input) error {
-	h.lock.Lock()
-	defer h.lock.Unlock()
-
-	h.queueInputs[input.Team.Slug] = input
-	h.syncQueue.Add(input.Team.Slug)
+func (h *handler) Schedule(input Input) error {
+	h.syncQueue.Add(input)
 	return nil
 }
 
@@ -148,32 +144,26 @@ func (h *handler) UseReconciler(reconciler db.Reconciler) error {
 }
 
 func (h *handler) SyncTeams(ctx context.Context) {
-	for slug := range h.syncQueueChan {
-		if h.getTeamInFlight(slug) {
-			h.syncQueue.Add(slug)
-			continue
-		}
+	for input := range h.syncQueueChan {
+		log := h.log.WithTeamSlug(string(input.TeamSlug))
 
-		h.setTeamInFlight(slug, true)
-		input := h.popInput(slug)
-
-		log := h.log.WithTeamSlug(string(slug))
-		if input.NumSyncAttempts > teamSyncMaxRetries {
-			metrics.IncReconcilerMaxAttemptsExhaustion()
-			log.Errorf("reconcile has failed %d times for team %q, giving up", teamSyncMaxRetries, slug)
-			h.setTeamInFlight(slug, false)
+		if !h.setTeamInFlight(input.TeamSlug) {
+			log.Info("already in flight - adding to back of queue")
+			time.Sleep(100 * time.Millisecond)
+			if err := h.syncQueue.Add(input); err != nil {
+				log.WithError(err).Error("failed while re-queueing team that is in flight")
+			}
 			continue
 		}
 
 		ctx, cancel := context.WithTimeout(ctx, reconcilerTimeout)
-		err := h.reconcileTeam(ctx, *input)
+		err := h.reconcileTeam(ctx, input)
 		if err != nil {
-			h.requeueInput(slug, *input)
 			log.WithError(err).Error("reconcile team")
 		}
 
 		cancel()
-		h.setTeamInFlight(slug, false)
+		h.unsetTeamInFlight(input.TeamSlug)
 	}
 }
 
@@ -186,17 +176,28 @@ func (h *handler) RemoveReconciler(reconcilerName sqlc.ReconcilerName) {
 	delete(h.activeReconcilers, reconcilerName)
 }
 
-func (h *handler) reconcileTeam(ctx context.Context, input reconcilers.Input) error {
-	log := h.log.WithTeamSlug(string(input.Team.Slug))
+func (h *handler) reconcileTeam(ctx context.Context, input Input) error {
+	log := h.log.WithTeamSlug(string(input.TeamSlug))
 
-	if !input.Team.Enabled {
+	team, err := h.database.GetTeamBySlug(ctx, input.TeamSlug)
+	if err != nil {
+		return err
+	}
+
+	if !team.Enabled {
 		log.Infof("team is not enabled, skipping reconciliation")
 		return nil
 	}
 
-	if len(h.activeReconcilers) == 0 {
-		log.Warnf("no reconcilers are currently enabled")
-		return nil
+	members, err := h.database.GetTeamMembers(ctx, input.TeamSlug)
+	if err != nil {
+		return err
+	}
+
+	reconcilerInput := reconcilers.Input{
+		Team:          *team,
+		TeamMembers:   members,
+		CorrelationID: input.CorrelationID,
 	}
 
 	log.Infof("reconcile team")
@@ -217,12 +218,12 @@ func (h *handler) reconcileTeam(ctx context.Context, input reconcilers.Input) er
 		metrics.IncReconcilerCounter(name, metrics.ReconcilerStateStarted)
 
 		reconcileTimer := metrics.MeasureReconcilerDuration(name)
-		err := reconcilerImpl.Reconcile(ctx, input)
+		err := reconcilerImpl.Reconcile(ctx, reconcilerInput)
 		if err != nil {
 			metrics.IncReconcilerCounter(name, metrics.ReconcilerStateFailed)
 			log.WithError(err).Error("reconcile")
 			errors++
-			err = h.database.SetReconcilerErrorForTeam(ctx, input.CorrelationID, input.Team.Slug, name, err)
+			err = h.database.SetReconcilerErrorForTeam(ctx, input.CorrelationID, team.Slug, name, err)
 			if err != nil {
 				log.WithError(err).Error("add reconcile error to database")
 			}
@@ -231,7 +232,7 @@ func (h *handler) reconcileTeam(ctx context.Context, input reconcilers.Input) er
 		duration := reconcileTimer.ObserveDuration()
 		log.Debugf("successful reconcile duration: %s", duration)
 
-		err = h.database.ClearReconcilerErrorsForTeam(ctx, input.Team.Slug, name)
+		err = h.database.ClearReconcilerErrorsForTeam(ctx, team.Slug, name)
 		if err != nil {
 			log.WithError(err).Error("purge reconcile errors")
 		}
@@ -246,7 +247,7 @@ func (h *handler) reconcileTeam(ctx context.Context, input reconcilers.Input) er
 	duration := teamReconcilerTimer.ObserveDuration()
 	log.Debugf("successful reconcile duration: %s", duration)
 
-	if err := h.database.SetLastSuccessfulSyncForTeam(ctx, input.Team.Slug); err != nil {
+	if err := h.database.SetLastSuccessfulSyncForTeam(ctx, team.Slug); err != nil {
 		log.WithError(err).Error("update last successful sync timestamp")
 	}
 	return nil
@@ -282,40 +283,20 @@ func getOrderedReconcilers(reconcilers map[sqlc.ReconcilerName]ReconcilerWithRun
 	return orderedReconcilers
 }
 
-func (h *handler) setTeamInFlight(slug slug.Slug, inFlight bool) {
-	h.lock.Lock()
-	defer h.lock.Unlock()
+func (h *handler) setTeamInFlight(slug slug.Slug) bool {
+	h.teamsInFlightLock.Lock()
+	defer h.teamsInFlightLock.Unlock()
 
-	h.teamsInFlight[slug] = inFlight
-}
-
-func (h *handler) getTeamInFlight(slug slug.Slug) bool {
-	h.lock.Lock()
-	defer h.lock.Unlock()
-
-	return h.teamsInFlight[slug]
-}
-
-func (h *handler) popInput(slug slug.Slug) *reconcilers.Input {
-	h.lock.Lock()
-	defer h.lock.Unlock()
-
-	input, ok := h.queueInputs[slug]
-	if !ok {
-		return nil
+	if _, inFlight := h.teamsInFlight[slug]; !inFlight {
+		h.teamsInFlight[slug] = struct{}{}
+		return true
 	}
-	delete(h.queueInputs, slug)
-	return &input
+	return false
 }
 
-func (h *handler) requeueInput(slug slug.Slug, input reconcilers.Input) {
-	h.lock.Lock()
-	defer h.lock.Unlock()
+func (h *handler) unsetTeamInFlight(slug slug.Slug) {
+	h.teamsInFlightLock.Lock()
+	defer h.teamsInFlightLock.Unlock()
 
-	_, exists := h.queueInputs[slug]
-	if !exists {
-		input.NumSyncAttempts++
-		h.queueInputs[slug] = input
-	}
-	h.syncQueue.Add(slug)
+	delete(h.teamsInFlight, slug)
 }
