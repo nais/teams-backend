@@ -370,6 +370,10 @@ func (r *githubTeamReconciler) getGitHubUsernameFromEmail(ctx context.Context, e
 	}
 
 	username := string(nodes[0].User.Login)
+	if len(username) == 0 {
+		return nil, errGitHubUserNotFound
+	}
+
 	return &username, nil
 }
 
