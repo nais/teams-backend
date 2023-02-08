@@ -145,10 +145,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 	}
 
 	handler := setupGraphAPI(teamSync, database, deployProxy, cfg.TenantDomain, userSync, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi), cfg.Environments, log)
-	srv, err := setupHTTPServer(cfg, database, handler, authHandler)
-	if err != nil {
-		return err
-	}
+	srv := setupHTTPServer(cfg, database, handler, authHandler)
 
 	log.Infof("ready to accept requests at %s.", cfg.ListenAddress)
 
@@ -284,7 +281,7 @@ func corsConfig(frontendUrl string) cors.Options {
 	}
 }
 
-func setupHTTPServer(cfg *config.Config, database db.Database, graphApi *graphql_handler.Server, authHandler authn.Handler) (*http.Server, error) {
+func setupHTTPServer(cfg *config.Config, database db.Database, graphApi *graphql_handler.Server, authHandler authn.Handler) *http.Server {
 	r := chi.NewRouter()
 
 	r.Handle("/metrics", promhttp.Handler())
@@ -309,9 +306,8 @@ func setupHTTPServer(cfg *config.Config, database db.Database, graphApi *graphql
 		r.Get("/callback", authHandler.Callback)
 	})
 
-	srv := &http.Server{
+	return &http.Server{
 		Addr:    cfg.ListenAddress,
 		Handler: r,
 	}
-	return srv, nil
 }
