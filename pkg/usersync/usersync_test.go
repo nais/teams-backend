@@ -71,9 +71,9 @@ func TestSync(t *testing.T) {
 		localUserWithCorrectName := &db.User{User: &sqlc.User{ID: serialUuid(1), Email: "user1@example.com", ExternalID: "123", Name: "Correct Name"}}
 
 		localUserWithIncorrectEmail := &db.User{User: &sqlc.User{ID: serialUuid(2), Email: "user-123@example.com", Name: "Some Name"}}
-		localUserWithCorrectEmail := &db.User{User: &sqlc.User{ID: serialUuid(2), Email: "user3@example.com", Name: "Some Name"}}
+		localUserWithCorrectEmail := &db.User{User: &sqlc.User{ID: serialUuid(2), Email: "user3@example.com", Name: "Some Name", ExternalID: "789"}}
 
-		localUserThatWillBeDeleted := &db.User{User: &sqlc.User{ID: serialUuid(3), Email: "delete-me@example.com", Name: "Delete Me"}}
+		localUserThatWillBeDeleted := &db.User{User: &sqlc.User{ID: serialUuid(3), Email: "delete-me@example.com", Name: "Delete Me", ExternalID: "321"}}
 
 		createdLocalUser := &db.User{User: &sqlc.User{ID: serialUuid(4), Email: "user2@example.com", ExternalID: "456", Name: "Create Me"}}
 
@@ -176,19 +176,19 @@ func TestSync(t *testing.T) {
 			Once()
 
 		auditLogger.
-			On("Logf", ctx, database, targetIdentifier("user1@example.com"), auditAction(sqlc.AuditActionUsersyncUpdate), "Local user updated: \"user1@example.com\"").
+			On("Logf", ctx, database, targetIdentifier("user1@example.com"), auditAction(sqlc.AuditActionUsersyncUpdate), "Local user updated: \"user1@example.com\", external ID: \"123\"").
 			Return(nil).
 			Once()
 		auditLogger.
-			On("Logf", ctx, database, targetIdentifier("user2@example.com"), auditAction(sqlc.AuditActionUsersyncCreate), "Local user created: \"user2@example.com\"").
+			On("Logf", ctx, database, targetIdentifier("user2@example.com"), auditAction(sqlc.AuditActionUsersyncCreate), "Local user created: \"user2@example.com\", external ID: \"456\"").
 			Return(nil).
 			Once()
 		auditLogger.
-			On("Logf", ctx, database, targetIdentifier("user3@example.com"), auditAction(sqlc.AuditActionUsersyncUpdate), "Local user updated: \"user3@example.com\"").
+			On("Logf", ctx, database, targetIdentifier("user3@example.com"), auditAction(sqlc.AuditActionUsersyncUpdate), "Local user updated: \"user3@example.com\", external ID: \"789\"").
 			Return(nil).
 			Once()
 		auditLogger.
-			On("Logf", ctx, database, targetIdentifier("delete-me@example.com"), auditAction(sqlc.AuditActionUsersyncDelete), "Local user deleted: \"delete-me@example.com\"").
+			On("Logf", ctx, database, targetIdentifier("delete-me@example.com"), auditAction(sqlc.AuditActionUsersyncDelete), "Local user deleted: \"delete-me@example.com\", external ID: \"321\"").
 			Return(nil).
 			Once()
 		auditLogger.

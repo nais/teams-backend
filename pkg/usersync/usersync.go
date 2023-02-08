@@ -102,7 +102,7 @@ func (s *UserSynchronizer) Sync(ctx context.Context, correlationID uuid.UUID) er
 			if created {
 				auditLogEntries = append(auditLogEntries, auditLogEntry{
 					action:    sqlc.AuditActionUsersyncCreate,
-					message:   fmt.Sprintf("Local user created: %q", localUser.Email),
+					message:   fmt.Sprintf("Local user created: %q, external ID: %q", localUser.Email, localUser.ExternalID),
 					userEmail: localUser.Email,
 				})
 			}
@@ -115,7 +115,7 @@ func (s *UserSynchronizer) Sync(ctx context.Context, correlationID uuid.UUID) er
 
 				auditLogEntries = append(auditLogEntries, auditLogEntry{
 					action:    sqlc.AuditActionUsersyncUpdate,
-					message:   fmt.Sprintf("Local user updated: %q", updatedUser.Email),
+					message:   fmt.Sprintf("Local user updated: %q, external ID: %q", updatedUser.Email, updatedUser.ExternalID),
 					userEmail: updatedUser.Email,
 				})
 			}
@@ -180,7 +180,7 @@ func deleteUnknownUsers(ctx context.Context, dbtx db.Database, upsertedUsers map
 		}
 		*auditLogEntries = append(*auditLogEntries, auditLogEntry{
 			action:    sqlc.AuditActionUsersyncDelete,
-			message:   fmt.Sprintf("Local user deleted: %q", localUser.Email),
+			message:   fmt.Sprintf("Local user deleted: %q, external ID: %q", localUser.Email, localUser.ExternalID),
 			userEmail: localUser.Email,
 		})
 	}
