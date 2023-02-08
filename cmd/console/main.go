@@ -39,9 +39,10 @@ import (
 )
 
 const (
-	reconcilerWorkers = 10
-	userSyncInterval  = time.Minute * 15
-	userSyncTimeout   = time.Second * 30
+	databaseConnectRetries = 5
+	reconcilerWorkers      = 10
+	userSyncInterval       = time.Minute * 15
+	userSyncTimeout        = time.Second * 30
 )
 
 func main() {
@@ -71,7 +72,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 	bt, _ := version.BuildTime()
 	log.Infof("console.nais.io version %s built on %s", version.Version(), bt)
 
-	database, err := setupDatabase(ctx, cfg.DatabaseURL)
+	database, err := setupDatabase(ctx, cfg.DatabaseURL, log)
 	if err != nil {
 		return err
 	}
@@ -220,10 +221,25 @@ func setupAuthHandler(cfg *config.Config, database db.Database, log logger.Logge
 	return handler, nil
 }
 
-func setupDatabase(ctx context.Context, dbUrl string) (db.Database, error) {
-	dbc, err := pgxpool.Connect(ctx, dbUrl)
+func setupDatabase(ctx context.Context, dbUrl string, log logger.Logger) (db.Database, error) {
+	config, err := pgxpool.ParseConfig(dbUrl)
 	if err != nil {
 		return nil, err
+	}
+
+	var dbc *pgxpool.Pool
+	for i := 0; i < databaseConnectRetries; i++ {
+		dbc, err = pgxpool.ConnectConfig(ctx, config)
+		if err == nil {
+			break
+		}
+
+		log.Warnf("unable to connect to the database: %s", err)
+		time.Sleep(time.Second * time.Duration(i+1))
+	}
+
+	if dbc == nil {
+		return nil, fmt.Errorf("giving up connecting to the database after %d attempts: %w", databaseConnectRetries, err)
 	}
 
 	err = db.Migrate(dbc.Config().ConnString())
