@@ -60,6 +60,10 @@ func TestSync(t *testing.T) {
 			On("WithCorrelationID", correlationID).
 			Return(log).
 			Once()
+		log.
+			On("Errorf", mock.AnythingOfType("string"), "unknown-admin@example.com").
+			Return(nil).
+			Once()
 
 		numDefaultRoleNames := len(usersync.DefaultRoleNames)
 
@@ -84,8 +88,10 @@ func TestSync(t *testing.T) {
 			// admin group members
 			func(req *http.Request) *http.Response {
 				return test.Response("200 OK", `{"members":[`+
-					`{"id": "456", "email":"user2@example.com","type":"USER"},`+ // Will be granted admin role
-					`{"Id": "666", "email":"some-group@example.com","type":"GROUP"}]}`) // Group type, will be ignored
+					`{"id": "456", "email":"user2@example.com", "status": "ACTIVE", "type": "USER"},`+ // Will be granted admin role
+					`{"Id": "666", "email":"some-group@example.com", "type": "GROUP"},`+ // Group type, will be ignored
+					`{"Id": "111", "email":"unknown-admin@example.com", "status": "ACTIVE", "type": "USER"},`+ // Unknown user, will be logged
+					`{"Id": "789", "email":"inactive-user@example.com", "status":"SUSPENDED", "type": "USER"}]}`) // Invalid status, will be ignored
 			},
 		)
 

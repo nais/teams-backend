@@ -254,7 +254,7 @@ func getAdminUsers(ctx context.Context, membersService *admin_directory_v1.Membe
 	groupMembers := make([]*admin_directory_v1.Member, 0)
 	callback := func(fragments *admin_directory_v1.Members) error {
 		for _, member := range fragments.Members {
-			if member.Type == "USER" {
+			if member.Type == "USER" && member.Status == "ACTIVE" {
 				groupMembers = append(groupMembers, member)
 			}
 		}
@@ -280,7 +280,8 @@ func getAdminUsers(ctx context.Context, membersService *admin_directory_v1.Membe
 	for _, member := range groupMembers {
 		admin, exists := remoteUserMapping[member.Id]
 		if !exists {
-			return nil, fmt.Errorf("uknown remote user")
+			log.Errorf("unknown user %q in admins groups", member.Email)
+			continue
 		}
 
 		admins[admin.ID] = admin
