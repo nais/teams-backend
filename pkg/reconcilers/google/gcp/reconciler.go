@@ -124,7 +124,7 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 			return fmt.Errorf("create CNRM service account for project %q for team %q in environment %q: %w", project.ProjectId, input.Team.Slug, environment, err)
 		}
 
-		err = r.setProjectPermissions(ctx, project, input, *googleWorkspaceState.GroupEmail, environment, cluster.ProjectID, cnrmServiceAccount)
+		err = r.setProjectPermissions(ctx, project, input, *googleWorkspaceState.GroupEmail, cluster.ProjectID, cnrmServiceAccount)
 		if err != nil {
 			return fmt.Errorf("set group permissions to project %q for team %q in environment %q: %w", project.ProjectId, input.Team.Slug, environment, err)
 		}
@@ -260,7 +260,7 @@ OUTER:
 		}
 		metrics.IncExternalCalls(metricsSystemName, response.HTTPStatusCode)
 
-		err = r.setProjectPermissions(ctx, teamProject, input, groupEmail, legacyEnvironment, legacyClusterProject, cnrmServiceAccount)
+		err = r.setProjectPermissions(ctx, teamProject, input, groupEmail, legacyClusterProject, cnrmServiceAccount)
 		if err != nil {
 			return fmt.Errorf("set group permissions to project %q for team %q in environment %q: %w", teamProject, input.Team.Slug, legacyEnvironment, err)
 		}
@@ -348,7 +348,7 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, projectID 
 
 // setProjectPermissions Make sure that the project has the necessary permissions, and don't remove permissions we don't
 // control
-func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project *cloudresourcemanager.Project, input reconcilers.Input, groupEmail, environment string, clusterProjectID string, cnrmServiceAccount *iam.ServiceAccount) error {
+func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project *cloudresourcemanager.Project, input reconcilers.Input, groupEmail, clusterProjectID string, cnrmServiceAccount *iam.ServiceAccount) error {
 	// Set workload identity role to the CNRM service account
 	member := fmt.Sprintf("serviceAccount:%s.svc.id.goog[cnrm-system/cnrm-controller-manager-%s]", clusterProjectID, input.Team.Slug)
 	operation, err := r.gcpServices.IamProjectsServiceAccountsService.SetIamPolicy(cnrmServiceAccount.Name, &iam.SetIamPolicyRequest{
