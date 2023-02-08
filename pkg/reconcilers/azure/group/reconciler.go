@@ -5,17 +5,15 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/logger"
-	"github.com/nais/console/pkg/slug"
-
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/sqlc"
-
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/azureclient"
 	"github.com/nais/console/pkg/config"
+	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/slug"
+	"github.com/nais/console/pkg/sqlc"
 	"golang.org/x/oauth2/clientcredentials"
 	"golang.org/x/oauth2/microsoft"
 )
@@ -92,7 +90,7 @@ func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.
 	}
 
 	prefixedName := teamNameWithPrefix(input.Team.Slug)
-	grp, created, err := r.client.GetOrCreateGroup(ctx, *state, prefixedName, input.Team.Purpose)
+	grp, created, err := r.client.GetOrCreateGroup(ctx, state.GroupID, prefixedName, input.Team.Purpose)
 	if err != nil {
 		return err
 	}

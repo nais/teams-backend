@@ -104,6 +104,7 @@ func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(ctx context.Context, s
 		grp, err := r.adminService.Groups.Get(*state.GroupEmail).Do()
 		if err != nil {
 			metrics.IncExternalCallsByError(metricsSystemName, err)
+			return nil, err
 		}
 		metrics.IncExternalCalls(metricsSystemName, grp.HTTPStatusCode)
 		return grp, err

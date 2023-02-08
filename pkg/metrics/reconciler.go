@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -51,14 +50,41 @@ var (
 		Name:      "pending_teams",
 		Help:      "How many teams currently pending reconciliation with external systems",
 	})
+
+	reconcilerMaxAttemptsExhaustion = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: namespace,
+		Subsystem: subsystem,
+		Name:      "reconcile_max_attempts_exhaustion",
+		Help:      "Number of times a team has exhausted all its sync attempts",
+	})
+
+	reconcilerDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: namespace,
+		Subsystem: subsystem,
+		Name:      "reconciler_duration",
+		Help:      "Duration of a specific reconciler, regardless of team.",
+		Buckets:   prometheus.LinearBuckets(0, .5, 20),
+	}, []string{"reconciler"})
+
+	reconcileTeamDuration = promauto.NewHistogram(prometheus.HistogramOpts{
+		Namespace: namespace,
+		Subsystem: subsystem,
+		Name:      "reconcile_team_duration",
+		Help:      "Reconcile duration of a specific team.",
+		Buckets:   prometheus.LinearBuckets(0, 2, 20),
+	})
 )
 
-func IncReconcilerCounter(name sqlc.ReconcilerName, state ReconcilerState, log logger.Logger) {
+func IncReconcilerCounter(name sqlc.ReconcilerName, state ReconcilerState) {
 	labels := prometheus.Labels{
 		labelReconciler: string(name),
 		labelState:      string(state),
 	}
 	reconcilerCounter.With(labels).Inc()
+}
+
+func IncReconcilerMaxAttemptsExhaustion() {
+	reconcilerMaxAttemptsExhaustion.Inc()
 }
 
 func IncExternalHTTPCalls(systemName string, resp *http.Response, err error) {
@@ -97,4 +123,12 @@ func IncExternalCallsByError(systemName string, err error) {
 
 func SetPendingTeamCount(numTeams int) {
 	pendingTeams.Set(float64(numTeams))
+}
+
+func MeasureReconcilerDuration(reconciler sqlc.ReconcilerName) *prometheus.Timer {
+	return prometheus.NewTimer(reconcilerDuration.WithLabelValues(string(reconciler)))
+}
+
+func MeasureReconcileTeamDuration() *prometheus.Timer {
+	return prometheus.NewTimer(reconcileTeamDuration)
 }

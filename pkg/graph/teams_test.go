@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/nais/console/pkg/teamsync"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
@@ -12,7 +14,6 @@ import (
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/logger"
-	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/stretchr/testify/assert"
@@ -53,15 +54,16 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 		},
 	})
 
-	reconcilers := make(chan reconcilers.Input, 100)
-	auditLogger := auditlogger.NewMockAuditLogger(t)
 	database := db.NewMockDatabase(t)
+	teamSyncHandler := teamsync.NewMockHandler(t)
+	auditLogger := auditlogger.NewMockAuditLogger(t)
+
 	deployProxy := deployproxy.NewMockProxy(t)
 	gcpEnvironments := []string{"env"}
 	log, err := logger.GetLogger("text", "info")
 	assert.NoError(t, err)
 	userSync := make(chan<- uuid.UUID)
-	resolver := graph.NewResolver(database, deployProxy, "example.com", reconcilers, userSync, auditLogger, gcpEnvironments, log).Mutation()
+	resolver := graph.NewResolver(teamSyncHandler, database, deployProxy, "example.com", userSync, auditLogger, gcpEnvironments, log).Mutation()
 	teamSlug := slug.Slug("some-slug")
 	slackChannel := "#my-slack-channel"
 
@@ -98,10 +100,6 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			}).
 			Return(nil).
 			Once()
-		database.
-			On("GetTeamMembers", ctx, createdTeam.Slug).
-			Return([]*db.User{&user}, nil).
-			Once()
 
 		auditLogger.
 			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
@@ -112,6 +110,13 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Return(nil).
 			Once()
 
+		teamSyncHandler.
+			On("Schedule", mock.MatchedBy(func(input teamsync.Input) bool {
+				return input.TeamSlug == createdTeam.Slug
+			})).
+			Return(nil).
+			Once()
+
 		returnedTeam, err := resolver.CreateTeam(ctx, model.CreateTeamInput{
 			Slug:         &teamSlug,
 			Purpose:      " some purpose ",
@@ -119,9 +124,6 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		assert.Equal(t, createdTeam.Slug, returnedTeam.Slug)
-
-		input := <-reconcilers
-		assert.Equal(t, createdTeam.Slug, input.Team.Slug)
 	})
 
 	t.Run("calling with SA, does not change roles", func(t *testing.T) {
@@ -144,10 +146,6 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			}).
 			Return(nil).
 			Once()
-		database.
-			On("GetTeamMembers", saCtx, createdTeam.Slug).
-			Return([]*db.User{&user}, nil).
-			Once()
 
 		auditLogger.
 			On("Logf", saCtx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
@@ -155,6 +153,13 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
 				return fields.Actor.User == serviceAccount
 			}), "Team created").
+			Return(nil).
+			Once()
+
+		teamSyncHandler.
+			On("Schedule", mock.MatchedBy(func(input teamsync.Input) bool {
+				return input.TeamSlug == createdTeam.Slug
+			})).
 			Return(nil).
 			Once()
 
@@ -166,8 +171,5 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, createdTeam.Slug, returnedTeam.Slug)
-
-		input := <-reconcilers
-		assert.Equal(t, createdTeam.Slug, input.Team.Slug)
 	})
 }
