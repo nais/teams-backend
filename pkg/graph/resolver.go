@@ -67,7 +67,7 @@ func (r *Resolver) addTeamToReconcilerQueue(input teamsync.Input) error {
 }
 
 // reconcileTeam Trigger team reconcilers for a given team
-func (r *Resolver) reconcileTeam(ctx context.Context, correlationID uuid.UUID, slug slug.Slug) error {
+func (r *Resolver) reconcileTeam(_ context.Context, correlationID uuid.UUID, slug slug.Slug) error {
 	input := teamsync.Input{
 		TeamSlug:      slug,
 		CorrelationID: correlationID,
@@ -86,10 +86,11 @@ func (r *Resolver) reconcileAllTeams(ctx context.Context, correlationID uuid.UUI
 	syncEntries := make([]*model.TeamSync, 0, len(teams))
 	for _, team := range teams {
 		input := teamsync.Input{
-			TeamSlug: team.Slug,
+			TeamSlug:      team.Slug,
+			CorrelationID: correlationID,
 		}
 
-		err = r.addTeamToReconcilerQueue(input.WithCorrelationID(correlationID))
+		err = r.addTeamToReconcilerQueue(input)
 		if err != nil {
 			return syncEntries, err
 		}

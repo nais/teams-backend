@@ -66,10 +66,7 @@ var factories = ReconcilerFactories{
 	nais_deploy_reconciler.Name:            nais_deploy_reconciler.NewFromConfig,
 }
 
-const (
-	reconcilerTimeout  = time.Minute * 15
-	teamSyncMaxRetries = 10
-)
+const reconcilerTimeout = time.Minute * 15
 
 func NewHandler(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) Handler {
 	queue, channel := NewQueue()
