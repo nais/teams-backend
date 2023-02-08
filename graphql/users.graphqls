@@ -47,4 +47,7 @@ type User {
 
     "Roles attached to the user."
     roles: [Role!]!
+
+    "The external ID of the user."
+    externalId: String!
 }
