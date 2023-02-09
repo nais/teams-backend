@@ -76,7 +76,7 @@ extend type Mutation {
     This action will trigger a full synchronization of all teams against the configured third party systems. The action
     is asynchronous. The operation can take a while, depending on the amount of teams currently enabled in Console.
     """
-    synchronizeAllTeams: [TeamSync!]! @auth
+    synchronizeAllTeams: TeamSync! @auth
 
     """
     Add users to a team as regular team members
@@ -153,9 +153,6 @@ extend type Mutation {
 
 "Team sync type."
 type TeamSync {
-    "The team that will be synced."
-    team: Team!
-
     "The correlation ID for the sync."
     correlationID: UUID!
 }

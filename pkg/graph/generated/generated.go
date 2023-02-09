@@ -200,7 +200,6 @@ type ComplexityRoot struct {
 
 	TeamSync struct {
 		CorrelationID func(childComplexity int) int
-		Team          func(childComplexity int) int
 	}
 
 	User struct {
@@ -234,7 +233,7 @@ type MutationResolver interface {
 	UpdateTeam(ctx context.Context, slug *slug.Slug, input model.UpdateTeamInput) (*db.Team, error)
 	RemoveUsersFromTeam(ctx context.Context, slug *slug.Slug, userIds []*uuid.UUID) (*db.Team, error)
 	SynchronizeTeam(ctx context.Context, slug *slug.Slug) (*model.TeamSync, error)
-	SynchronizeAllTeams(ctx context.Context) ([]*model.TeamSync, error)
+	SynchronizeAllTeams(ctx context.Context) (*model.TeamSync, error)
 	AddTeamMembers(ctx context.Context, slug *slug.Slug, userIds []*uuid.UUID) (*db.Team, error)
 	AddTeamOwners(ctx context.Context, slug *slug.Slug, userIds []*uuid.UUID) (*db.Team, error)
 	SetTeamMemberRole(ctx context.Context, slug *slug.Slug, userID *uuid.UUID, role model.TeamRole) (*db.Team, error)
@@ -1060,13 +1059,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.TeamSync.CorrelationID(childComplexity), true
 
-	case "TeamSync.team":
-		if e.complexity.TeamSync.Team == nil {
-			break
-		}
-
-		return e.complexity.TeamSync.Team(childComplexity), true
-
 	case "User.email":
 		if e.complexity.User.Email == nil {
 			break
@@ -1536,7 +1528,7 @@ extend type Mutation {
     This action will trigger a full synchronization of all teams against the configured third party systems. The action
     is asynchronous. The operation can take a while, depending on the amount of teams currently enabled in Console.
     """
-    synchronizeAllTeams: [TeamSync!]! @auth
+    synchronizeAllTeams: TeamSync! @auth
 
     """
     Add users to a team as regular team members
@@ -1613,9 +1605,6 @@ extend type Mutation {
 
 "Team sync type."
 type TeamSync {
-    "The team that will be synced."
-    team: Team!
-
     "The correlation ID for the sync."
     correlationID: UUID!
 }
@@ -4106,8 +4095,6 @@ func (ec *executionContext) fieldContext_Mutation_synchronizeTeam(ctx context.Co
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "team":
-				return ec.fieldContext_TeamSync_team(ctx, field)
 			case "correlationID":
 				return ec.fieldContext_TeamSync_correlationID(ctx, field)
 			}
@@ -4159,10 +4146,10 @@ func (ec *executionContext) _Mutation_synchronizeAllTeams(ctx context.Context, f
 		if tmp == nil {
 			return nil, nil
 		}
-		if data, ok := tmp.([]*model.TeamSync); ok {
+		if data, ok := tmp.(*model.TeamSync); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/nais/console/pkg/graph/model.TeamSync`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/graph/model.TeamSync`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4174,9 +4161,9 @@ func (ec *executionContext) _Mutation_synchronizeAllTeams(ctx context.Context, f
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*model.TeamSync)
+	res := resTmp.(*model.TeamSync)
 	fc.Result = res
-	return ec.marshalNTeamSync2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamSyncᚄ(ctx, field.Selections, res)
+	return ec.marshalNTeamSync2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamSync(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_synchronizeAllTeams(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4187,8 +4174,6 @@ func (ec *executionContext) fieldContext_Mutation_synchronizeAllTeams(ctx contex
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "team":
-				return ec.fieldContext_TeamSync_team(ctx, field)
 			case "correlationID":
 				return ec.fieldContext_TeamSync_correlationID(ctx, field)
 			}
@@ -7968,74 +7953,6 @@ func (ec *executionContext) fieldContext_TeamMetadata_value(ctx context.Context,
 	return fc, nil
 }
 
-func (ec *executionContext) _TeamSync_team(ctx context.Context, field graphql.CollectedField, obj *model.TeamSync) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_TeamSync_team(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Team, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*db.Team)
-	fc.Result = res
-	return ec.marshalNTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐTeam(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_TeamSync_team(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TeamSync",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "slug":
-				return ec.fieldContext_Team_slug(ctx, field)
-			case "purpose":
-				return ec.fieldContext_Team_purpose(ctx, field)
-			case "metadata":
-				return ec.fieldContext_Team_metadata(ctx, field)
-			case "auditLogs":
-				return ec.fieldContext_Team_auditLogs(ctx, field)
-			case "members":
-				return ec.fieldContext_Team_members(ctx, field)
-			case "syncErrors":
-				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "enabled":
-				return ec.fieldContext_Team_enabled(ctx, field)
-			case "lastSuccessfulSync":
-				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
-			case "reconcilerState":
-				return ec.fieldContext_Team_reconcilerState(ctx, field)
-			case "slackChannel":
-				return ec.fieldContext_Team_slackChannel(ctx, field)
-			case "slackAlertsChannels":
-				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _TeamSync_correlationID(ctx context.Context, field graphql.CollectedField, obj *model.TeamSync) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_TeamSync_correlationID(ctx, field)
 	if err != nil {
@@ -11721,13 +11638,6 @@ func (ec *executionContext) _TeamSync(ctx context.Context, sel ast.SelectionSet,
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("TeamSync")
-		case "team":
-
-			out.Values[i] = ec._TeamSync_team(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
 		case "correlationID":
 
 			out.Values[i] = ec._TeamSync_correlationID(ctx, field, obj)
@@ -13129,50 +13039,6 @@ func (ec *executionContext) marshalNTeamRole2githubᚗcomᚋnaisᚋconsoleᚋpkg
 
 func (ec *executionContext) marshalNTeamSync2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamSync(ctx context.Context, sel ast.SelectionSet, v model.TeamSync) graphql.Marshaler {
 	return ec._TeamSync(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNTeamSync2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamSyncᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.TeamSync) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNTeamSync2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamSync(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
 }
 
 func (ec *executionContext) marshalNTeamSync2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamSync(ctx context.Context, sel ast.SelectionSet, v *model.TeamSync) graphql.Marshaler {

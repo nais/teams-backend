@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
@@ -26,6 +28,7 @@ import (
 type Handler interface {
 	SetReconcilerFactories(factories ReconcilerFactories)
 	Schedule(input Input) error
+	ScheduleAllTeams(ctx context.Context, correlationID uuid.UUID) ([]*db.Team, error)
 	InitReconcilers(ctx context.Context) error
 	UseReconciler(reconciler db.Reconciler) error
 	RemoveReconciler(reconcilerName sqlc.ReconcilerName)
@@ -97,8 +100,7 @@ func (h *handler) SetReconcilerFactories(factories ReconcilerFactories) {
 
 // Schedule a team for sync
 func (h *handler) Schedule(input Input) error {
-	h.syncQueue.Add(input)
-	return nil
+	return h.syncQueue.Add(input)
 }
 
 // InitReconcilers initializes the currently enabled reconcilers during startup of Console
@@ -171,6 +173,27 @@ func (h *handler) RemoveReconciler(reconcilerName sqlc.ReconcilerName) {
 	defer h.lock.Unlock()
 
 	delete(h.activeReconcilers, reconcilerName)
+}
+
+func (h *handler) ScheduleAllTeams(ctx context.Context, correlationID uuid.UUID) ([]*db.Team, error) {
+	teams, err := h.database.GetTeams(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, team := range teams {
+		input := Input{
+			TeamSlug:      team.Slug,
+			CorrelationID: correlationID,
+		}
+
+		err = h.Schedule(input)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return teams, nil
 }
 
 func (h *handler) reconcileTeam(ctx context.Context, input Input) error {

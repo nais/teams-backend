@@ -41,6 +41,7 @@ import (
 const (
 	databaseConnectRetries = 5
 	reconcilerWorkers      = 10
+	fullTeamSyncInterval   = time.Minute * 30
 	userSyncInterval       = time.Minute * 15
 	userSyncTimeout        = time.Second * 30
 )
@@ -119,6 +120,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 		}(ctx)
 	}
 
+	fullTeamSyncTimer := time.NewTimer(time.Second * 1)
 	go teamSync.UpdateMetrics(ctx)
 
 	var userSyncer *usersync.UserSynchronizer
@@ -202,6 +204,26 @@ func run(cfg *config.Config, log logger.Logger) error {
 			}
 
 			userSync <- correlationID
+
+		case <-fullTeamSyncTimer.C:
+			log.Infof("start full team sync")
+
+			correlationID, err := uuid.NewUUID()
+			if err != nil {
+				log.WithError(err).Errorf("create correlation ID for full team sync")
+				fullTeamSyncTimer.Reset(time.Second * 1)
+				break
+			}
+
+			teams, err := teamSync.ScheduleAllTeams(ctx, correlationID)
+			if err != nil {
+				log.WithError(err).Errorf("full team sync")
+				fullTeamSyncTimer.Reset(time.Second * 1)
+				break
+			}
+
+			log.Infof("%d teams scheduled for sync", len(teams))
+			fullTeamSyncTimer.Reset(fullTeamSyncInterval)
 		}
 	}
 

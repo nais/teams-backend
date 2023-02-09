@@ -76,34 +76,6 @@ func (r *Resolver) reconcileTeam(_ context.Context, correlationID uuid.UUID, slu
 	return r.addTeamToReconcilerQueue(input)
 }
 
-// reconcileAllTeams Trigger reconcilers for all teams
-func (r *Resolver) reconcileAllTeams(ctx context.Context, correlationID uuid.UUID) ([]*model.TeamSync, error) {
-	teams, err := r.database.GetTeams(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("unable to get teams for reconcile loop: %w", err)
-	}
-
-	syncEntries := make([]*model.TeamSync, 0, len(teams))
-	for _, team := range teams {
-		input := teamsync.Input{
-			TeamSlug:      team.Slug,
-			CorrelationID: correlationID,
-		}
-
-		err = r.addTeamToReconcilerQueue(input)
-		if err != nil {
-			return syncEntries, err
-		}
-
-		syncEntries = append(syncEntries, &model.TeamSync{
-			Team:          team,
-			CorrelationID: &correlationID,
-		})
-	}
-
-	return syncEntries, nil
-}
-
 // getTeam helper to get team by slug, or log if err
 func (r *Resolver) getTeamBySlugOrLog(ctx context.Context, slug slug.Slug) (*db.Team, error) {
 	team, err := r.database.GetTeamBySlug(ctx, slug)
