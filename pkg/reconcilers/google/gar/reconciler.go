@@ -68,6 +68,8 @@ func (r *garReconciler) Name() sqlc.ReconcilerName {
 
 func (r *garReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	slugStr := string(input.Team.Slug)
+	log := r.log.WithTeamSlug(slugStr)
+
 	parent := fmt.Sprintf("projects/%s/locations/europe-north1", r.managementProjectID)
 	repositoryName := fmt.Sprintf("%s/repositories/%s", parent, slugStr)
 	repositoryDescription := fmt.Sprintf("Docker repository for team %q. Managed by NAIS Console.", slugStr)
@@ -91,8 +93,9 @@ func (r *garReconciler) Reconcile(ctx context.Context, input reconcilers.Input) 
 		}
 
 		createRequest := &artifactregistrypb.CreateRepositoryRequest{
-			Parent:     parent,
-			Repository: template,
+			Parent:       parent,
+			Repository:   template,
+			RepositoryId: slugStr,
 		}
 
 		createResponse, err := r.artifactRegistry.CreateRepository(ctx, createRequest)
@@ -108,10 +111,10 @@ func (r *garReconciler) Reconcile(ctx context.Context, input reconcilers.Input) 
 		return fmt.Errorf("existing repo has invalid format: %q %q", repositoryName, existing.Format)
 	}
 
-	return r.updateRepository(ctx, existing, input.Team.Slug, repositoryDescription)
+	return r.updateRepository(ctx, existing, input.Team.Slug, repositoryDescription, log)
 }
 
-func (r *garReconciler) updateRepository(ctx context.Context, repo *artifactregistrypb.Repository, slug slug.Slug, description string) error {
+func (r *garReconciler) updateRepository(ctx context.Context, repo *artifactregistrypb.Repository, slug slug.Slug, description string, log logger.Logger) error {
 	var changes []string
 	if repo.Labels["team"] != string(slug) {
 		repo.Labels["team"] = string(slug)
@@ -135,5 +138,6 @@ func (r *garReconciler) updateRepository(ctx context.Context, repo *artifactregi
 		return err
 	}
 
+	log.Debugf("existing repository is up to date")
 	return nil
 }
