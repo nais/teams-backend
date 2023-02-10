@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	cloud.google.com/go/artifactregistry v1.10.0
+	cloud.google.com/go/longrunning v0.3.0
 	cloud.google.com/go/pubsub v1.27.1
 	github.com/99designs/gqlgen v0.17.16
 	github.com/bradleyfalzon/ghinstallation/v2 v2.0.4
@@ -13,7 +14,6 @@ require (
 	github.com/golang-migrate/migrate/v4 v4.15.2
 	github.com/google/go-github/v48 v48.2.0
 	github.com/google/uuid v1.3.0
-	github.com/googleapis/gax-go/v2 v2.7.0
 	github.com/jackc/pgconn v1.13.0
 	github.com/jackc/pgtype v1.12.0
 	github.com/jackc/pgx/v4 v4.17.2
@@ -39,7 +39,6 @@ require (
 	cloud.google.com/go/compute v1.13.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.1 // indirect
 	cloud.google.com/go/iam v0.8.0 // indirect
-	cloud.google.com/go/longrunning v0.3.0 // indirect
 	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/Microsoft/go-winio v0.6.0 // indirect
 	github.com/agnivade/levenshtein v1.1.1 // indirect
@@ -59,6 +58,7 @@ require (
 	github.com/google/go-github/v41 v41.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.0 // indirect
+	github.com/googleapis/gax-go/v2 v2.7.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
