@@ -3,8 +3,9 @@ package gar
 import (
 	"context"
 	"fmt"
-	"net/http"
 
+	artifactregistry "cloud.google.com/go/artifactregistry/apiv1"
+	"cloud.google.com/go/artifactregistry/apiv1/artifactregistrypb"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
@@ -13,9 +14,10 @@ import (
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
-	"google.golang.org/api/artifactregistry/v1"
-	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 const (
@@ -24,18 +26,18 @@ const (
 )
 
 type garReconciler struct {
-	auditLogger             auditlogger.AuditLogger
-	managementProjectID     string
-	log                     logger.Logger
-	artifactregistryService *artifactregistry.ProjectsLocationsRepositoriesService
+	auditLogger         auditlogger.AuditLogger
+	managementProjectID string
+	log                 logger.Logger
+	artifactRegistry    *artifactregistry.Client
 }
 
-func New(auditLogger auditlogger.AuditLogger, managementProjectID string, artifactregistryService *artifactregistry.ProjectsLocationsRepositoriesService, log logger.Logger) *garReconciler {
+func New(auditLogger auditlogger.AuditLogger, managementProjectID string, garClient *artifactregistry.Client, log logger.Logger) *garReconciler {
 	return &garReconciler{
-		auditLogger:             auditLogger,
-		log:                     log,
-		managementProjectID:     managementProjectID,
-		artifactregistryService: artifactregistryService,
+		auditLogger:         auditLogger,
+		log:                 log,
+		managementProjectID: managementProjectID,
+		artifactRegistry:    garClient,
 	}
 }
 
@@ -52,14 +54,12 @@ func NewFromConfig(ctx context.Context, _ db.Database, cfg *config.Config, audit
 		return nil, fmt.Errorf("get delegated token source: %w", err)
 	}
 
-	baseService, err := artifactregistry.NewService(ctx, option.WithTokenSource(ts))
+	garClient, err := artifactregistry.NewClient(ctx, option.WithTokenSource(ts))
 	if err != nil {
 		return nil, err
 	}
 
-	artifactregistryService := artifactregistry.NewProjectsLocationsRepositoriesService(baseService)
-
-	return New(auditLogger, cfg.GoogleManagementProjectID, artifactregistryService, log), nil
+	return New(auditLogger, cfg.GoogleManagementProjectID, garClient, log), nil
 }
 
 func (r *garReconciler) Name() sqlc.ReconcilerName {
@@ -68,55 +68,72 @@ func (r *garReconciler) Name() sqlc.ReconcilerName {
 
 func (r *garReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	slugStr := string(input.Team.Slug)
-	repositoryName := fmt.Sprintf("projects/%s/locations/europe-north1/repositories/%s", r.managementProjectID, slugStr)
+	parent := fmt.Sprintf("projects/%s/locations/europe-north1", r.managementProjectID)
+	repositoryName := fmt.Sprintf("%s/repositories/%s", parent, slugStr)
+	repositoryDescription := fmt.Sprintf("Docker repository for team %q. Managed by NAIS Console.", slugStr)
 
-	existing, err := r.artifactregistryService.Get(repositoryName).Do()
-	if googleError, ok := err.(*googleapi.Error); ok {
-		if googleError.Code != http.StatusNotFound {
-			return googleError
-		}
-	} else if err != nil {
-		return err
+	getRequest := &artifactregistrypb.GetRepositoryRequest{
+		Name: repositoryName,
 	}
-
-	template := &artifactregistry.Repository{
-		Format:      RepositoryFormat,
-		Name:        repositoryName,
-		Description: fmt.Sprintf("Docker repository for team %q. Managed by NAIS Console.", slugStr),
-		Labels: map[string]string{
-			"team": slugStr,
-		},
+	existing, err := r.artifactRegistry.GetRepository(ctx, getRequest)
+	if err != nil && status.Code(err) != codes.NotFound {
+		return err
 	}
 
 	if existing == nil {
-		_, err := r.artifactregistryService.Create("projects/"+r.managementProjectID, template).Do()
+		template := &artifactregistrypb.Repository{
+			Format:      artifactregistrypb.Repository_DOCKER,
+			Name:        repositoryName,
+			Description: repositoryDescription,
+			Labels: map[string]string{
+				"team": slugStr,
+			},
+		}
+
+		createRequest := &artifactregistrypb.CreateRepositoryRequest{
+			Parent:     parent,
+			Repository: template,
+		}
+
+		createResponse, err := r.artifactRegistry.CreateRepository(ctx, createRequest)
+		if err != nil {
+			return err
+		}
+
+		_, err = createResponse.Wait(ctx)
 		return err
 	}
 
-	if existing.Format != RepositoryFormat {
+	if existing.Format != artifactregistrypb.Repository_DOCKER {
 		return fmt.Errorf("existing repo has invalid format: %q %q", repositoryName, existing.Format)
 	}
 
-	hasChanges := r.ensureRepoConfig(existing, input.Team.Slug, template.Description)
-	if !hasChanges {
-		r.log.WithTeamSlug(slugStr).Debugf("repository exists and is correct")
-		return nil
-	}
-
-	_, err = r.artifactregistryService.Patch(repositoryName, existing).Do()
-	return err
+	return r.updateRepository(ctx, existing, input.Team.Slug, repositoryDescription)
 }
 
-func (r *garReconciler) ensureRepoConfig(repo *artifactregistry.Repository, slug slug.Slug, description string) (hasChanges bool) {
+func (r *garReconciler) updateRepository(ctx context.Context, repo *artifactregistrypb.Repository, slug slug.Slug, description string) error {
+	var changes []string
 	if repo.Labels["team"] != string(slug) {
 		repo.Labels["team"] = string(slug)
-		hasChanges = true
+		changes = append(changes, "labels.team")
 	}
 
 	if repo.Description != description {
 		repo.Description = fmt.Sprintf("Docker repository for team %q. Managed by NAIS Console.", slug)
-		hasChanges = true
+		changes = append(changes, "description")
 	}
 
-	return
+	if len(changes) > 0 {
+		updateRequest := &artifactregistrypb.UpdateRepositoryRequest{
+			Repository: repo,
+			UpdateMask: &fieldmaskpb.FieldMask{
+				Paths: changes,
+			},
+		}
+
+		_, err := r.artifactRegistry.UpdateRepository(ctx, updateRequest)
+		return err
+	}
+
+	return nil
 }
