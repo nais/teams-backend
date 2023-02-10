@@ -21,6 +21,7 @@ import (
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -83,7 +84,7 @@ func (f *fakeArtifaceRegistry) start(t *testing.T, ctx context.Context) (*artifa
 	return artifactregistry.NewClient(ctx,
 		option.WithEndpoint(l.Addr().String()),
 		option.WithoutAuthentication(),
-		option.WithGRPCDialOption(grpc.WithInsecure()),
+		option.WithGRPCDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())),
 	)
 }
 
