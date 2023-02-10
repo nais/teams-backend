@@ -17,6 +17,7 @@ import (
 	"github.com/nais/console/pkg/reconcilers"
 	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
 	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
+	"github.com/nais/console/pkg/reconcilers/google/gar"
 	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
 	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
 	nais_deploy_reconciler "github.com/nais/console/pkg/reconcilers/nais/deploy"
@@ -67,6 +68,7 @@ var factories = ReconcilerFactories{
 	google_gcp_reconciler.Name:             google_gcp_reconciler.NewFromConfig,
 	nais_namespace_reconciler.Name:         nais_namespace_reconciler.NewFromConfig,
 	nais_deploy_reconciler.Name:            nais_deploy_reconciler.NewFromConfig,
+	gar.Name:                               gar.NewFromConfig,
 }
 
 const reconcilerTimeout = time.Minute * 15

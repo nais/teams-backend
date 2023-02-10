@@ -484,6 +484,7 @@ const (
 	ReconcilerNameGoogleWorkspaceAdmin ReconcilerName = "google:workspace-admin"
 	ReconcilerNameNaisNamespace        ReconcilerName = "nais:namespace"
 	ReconcilerNameNaisDeploy           ReconcilerName = "nais:deploy"
+	ReconcilerNameGoogleGcpGar         ReconcilerName = "google:gcp:gar"
 )
 
 func (e *ReconcilerName) Scan(src interface{}) error {
@@ -528,7 +529,8 @@ func (e ReconcilerName) Valid() bool {
 		ReconcilerNameGoogleGcpProject,
 		ReconcilerNameGoogleWorkspaceAdmin,
 		ReconcilerNameNaisNamespace,
-		ReconcilerNameNaisDeploy:
+		ReconcilerNameNaisDeploy,
+		ReconcilerNameGoogleGcpGar:
 		return true
 	}
 	return false
@@ -542,6 +544,7 @@ func AllReconcilerNameValues() []ReconcilerName {
 		ReconcilerNameGoogleWorkspaceAdmin,
 		ReconcilerNameNaisNamespace,
 		ReconcilerNameNaisDeploy,
+		ReconcilerNameGoogleGcpGar,
 	}
 }
 
