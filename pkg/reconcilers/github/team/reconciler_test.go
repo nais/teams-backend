@@ -54,7 +54,11 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			Return(nil).
 			Once()
 		database.
-			On("SetReconcilerStateForTeam", ctx, systemName, team.Slug, mock.Anything).
+			On("SetReconcilerStateForTeam", ctx, systemName, team.Slug, mock.MatchedBy(func(state reconcilers.GitHubState) bool {
+				return state.Repositories[0].Name == "org/some-repo" &&
+					state.Repositories[1].Name == "org/some-other-repo" &&
+					len(state.Repositories) == 2
+			})).
 			Return(nil).
 			Once()
 
@@ -91,10 +95,32 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 				ctx,
 				org,
 				teamSlug,
-				mock.Anything,
+				mock.MatchedBy(func(opts *github.ListOptions) bool {
+					return opts.Page == 0
+				}),
 			).
 			Return(
-				[]*github.Repository{},
+				[]*github.Repository{
+					{FullName: helpers.Strp(org + "/some-repo")},
+				},
+				&github.Response{Response: &http.Response{StatusCode: http.StatusOK}, NextPage: 1},
+				nil,
+			).
+			Once()
+		teamsService.
+			On(
+				"ListTeamReposBySlug",
+				ctx,
+				org,
+				teamSlug,
+				mock.MatchedBy(func(opts *github.ListOptions) bool {
+					return opts.Page == 1
+				}),
+			).
+			Return(
+				[]*github.Repository{
+					{FullName: helpers.Strp(org + "/some-other-repo")},
+				},
 				&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
 				nil,
 			).
