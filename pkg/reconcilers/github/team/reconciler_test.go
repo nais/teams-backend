@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/go-github/v48/github"
+	"github.com/google/go-github/v50/github"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	helpers "github.com/nais/console/pkg/console"
@@ -54,7 +54,11 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			Return(nil).
 			Once()
 		database.
-			On("SetReconcilerStateForTeam", ctx, systemName, team.Slug, mock.Anything).
+			On("SetReconcilerStateForTeam", ctx, systemName, team.Slug, mock.MatchedBy(func(state reconcilers.GitHubState) bool {
+				return state.Repositories[0].Name == "org/some-repo" &&
+					state.Repositories[1].Name == "org/some-other-repo" &&
+					len(state.Repositories) == 2
+			})).
 			Return(nil).
 			Once()
 
@@ -81,6 +85,42 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			).
 			Return(
 				[]*github.User{},
+				&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
+				nil,
+			).
+			Once()
+		teamsService.
+			On(
+				"ListTeamReposBySlug",
+				ctx,
+				org,
+				teamSlug,
+				mock.MatchedBy(func(opts *github.ListOptions) bool {
+					return opts.Page == 0
+				}),
+			).
+			Return(
+				[]*github.Repository{
+					{FullName: helpers.Strp(org + "/some-repo")},
+				},
+				&github.Response{Response: &http.Response{StatusCode: http.StatusOK}, NextPage: 1},
+				nil,
+			).
+			Once()
+		teamsService.
+			On(
+				"ListTeamReposBySlug",
+				ctx,
+				org,
+				teamSlug,
+				mock.MatchedBy(func(opts *github.ListOptions) bool {
+					return opts.Page == 1
+				}),
+			).
+			Return(
+				[]*github.Repository{
+					{FullName: helpers.Strp(org + "/some-other-repo")},
+				},
 				&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
 				nil,
 			).
@@ -183,6 +223,20 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 				nil,
 			).
 			Once()
+		teamsService.
+			On(
+				"ListTeamReposBySlug",
+				ctx,
+				org,
+				teamSlug,
+				mock.Anything,
+			).
+			Return(
+				[]*github.Repository{},
+				&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
+				nil,
+			).
+			Once()
 
 		configureSyncTeamInfo(teamsService, org, teamSlug, teamPurpose)
 		configureDeleteTeamIDP(teamsService, org, teamSlug)
@@ -255,6 +309,20 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 				nil,
 			).
 			Once()
+		teamsService.
+			On(
+				"ListTeamReposBySlug",
+				ctx,
+				org,
+				existingSlug,
+				mock.Anything,
+			).
+			Return(
+				[]*github.Repository{},
+				&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
+				nil,
+			).
+			Once()
 
 		configureSyncTeamInfo(teamsService, org, existingSlug, teamPurpose)
 		configureDeleteTeamIDP(teamsService, org, existingSlug)
@@ -313,11 +381,6 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 
 	systemName := github_team_reconciler.Name
 
-	auditLogger := auditlogger.NewMockAuditLogger(t)
-	auditLogger.
-		On("Logf", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(nil)
-
 	// Give the reconciler enough data to create an entire team from scratch,
 	// remove members that shouldn't be present, and add members that should.
 	t.Run("create everything from scratch", func(t *testing.T) {
@@ -354,6 +417,26 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 
 		configureDeleteTeamIDP(teamsService, org, teamName)
 
+		teamsService.
+			On(
+				"ListTeamReposBySlug",
+				ctx,
+				org,
+				teamName,
+				mock.Anything,
+			).
+			Return(
+				[]*github.Repository{},
+				&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
+				nil,
+			).
+			Once()
+
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("Logf", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+
 		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, graphClient, log)
 		err := reconciler.Reconcile(ctx, input)
 		assert.NoError(t, err)
@@ -363,6 +446,8 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
 		graphClient := github_team_reconciler.NewMockGraphClient(t)
 		database := db.NewMockDatabase(t)
+		log = logger.NewMockLogger(t)
+		auditLogger := auditlogger.NewMockAuditLogger(t)
 
 		database.
 			On("LoadReconcilerStateForTeam", ctx, systemName, team.Slug, mock.Anything).
@@ -374,16 +459,16 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 			Return(nil).
 			Once()
 
-		teamsService.On("GetTeamBySlug", mock.Anything, org, "slug-from-state").
+		teamsService.
+			On("GetTeamBySlug", mock.Anything, org, "slug-from-state").
 			Return(nil, &github.Response{
 				Response: &http.Response{
 					StatusCode: http.StatusTeapot,
 					Status:     "418: I'm a teapot",
 					Body:       io.NopCloser(strings.NewReader("this is a body")),
 				},
-			}, nil).Once()
-
-		log = logger.NewMockLogger(t)
+			}, nil).
+			Once()
 
 		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, graphClient, log)
 		err := reconciler.Reconcile(ctx, input)

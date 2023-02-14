@@ -768,6 +768,16 @@ func (r *teamResolver) SlackAlertsChannels(ctx context.Context, obj *db.Team) ([
 	return channels, nil
 }
 
+// GitHubRepositories is the resolver for the gitHubRepositories field.
+func (r *teamResolver) GitHubRepositories(ctx context.Context, obj *db.Team) ([]*reconcilers.GitHubRepository, error) {
+	state := &reconcilers.GitHubState{}
+	err := r.database.LoadReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGithubTeam, obj.Slug, state)
+	if err != nil {
+		return nil, apierror.Errorf("Unable to load the GitHub state for the team.")
+	}
+	return state.Repositories, nil
+}
+
 // Team returns generated.TeamResolver implementation.
 func (r *Resolver) Team() generated.TeamResolver { return &teamResolver{r} }
 
