@@ -191,6 +191,27 @@ type Team {
 
     "A list of Slack channels for NAIS alerts. If no channel is specified for a given environment, NAIS will fallback to the slackChannel value."
     slackAlertsChannels: [SlackAlertsChannel!]!
+
+    "A list of GitHub repositories for the team."
+    gitHubRepositories: [GitHubRepository!]!
+}
+
+"GitHub repository type."
+type GitHubRepository {
+    "Name of the repository, with the org prefix."
+    name: String!
+
+    "A list of permissions given to the team for this repository."
+    permissions: [GitHubRepositoryPermission!]!
+}
+
+"GitHub repository permission type."
+type GitHubRepositoryPermission {
+    "Name of the permission."
+    name: String!
+
+    "Whether or not the permission is granted for the repository."
+    granted: Boolean!
 }
 
 "Slack alerts channel type."

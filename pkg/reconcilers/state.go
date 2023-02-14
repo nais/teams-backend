@@ -12,7 +12,18 @@ type AzureState struct {
 }
 
 type GitHubState struct {
-	Slug *slug.Slug `json:"slug"`
+	Slug         *slug.Slug          `json:"slug"`
+	Repositories []*GitHubRepository `json:"repositories"`
+}
+
+type GitHubRepository struct {
+	Name        string                        `json:"name"`
+	Permissions []*GitHubRepositoryPermission `json:"permissions"`
+}
+
+type GitHubRepositoryPermission struct {
+	Name    string `json:"name"`
+	Granted bool   `json:"granted"`
 }
 
 type GoogleWorkspaceState struct {

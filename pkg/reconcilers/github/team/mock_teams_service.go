@@ -5,7 +5,7 @@ package github_team_reconciler
 import (
 	context "context"
 
-	github "github.com/google/go-github/v48/github"
+	github "github.com/google/go-github/v50/github"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -198,6 +198,38 @@ func (_m *MockTeamsService) ListTeamMembersBySlug(ctx context.Context, org strin
 
 	var r2 error
 	if rf, ok := ret.Get(2).(func(context.Context, string, string, *github.TeamListTeamMembersOptions) error); ok {
+		r2 = rf(ctx, org, slug, opts)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// ListTeamReposBySlug provides a mock function with given fields: ctx, org, slug, opts
+func (_m *MockTeamsService) ListTeamReposBySlug(ctx context.Context, org string, slug string, opts *github.ListOptions) ([]*github.Repository, *github.Response, error) {
+	ret := _m.Called(ctx, org, slug, opts)
+
+	var r0 []*github.Repository
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, *github.ListOptions) []*github.Repository); ok {
+		r0 = rf(ctx, org, slug, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*github.Repository)
+		}
+	}
+
+	var r1 *github.Response
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, *github.ListOptions) *github.Response); ok {
+		r1 = rf(ctx, org, slug, opts)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*github.Response)
+		}
+	}
+
+	var r2 error
+	if rf, ok := ret.Get(2).(func(context.Context, string, string, *github.ListOptions) error); ok {
 		r2 = rf(ctx, org, slug, opts)
 	} else {
 		r2 = ret.Error(2)

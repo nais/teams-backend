@@ -17,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/graph/model"
+	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	gqlparser "github.com/vektah/gqlparser/v2"
@@ -74,6 +75,16 @@ type ComplexityRoot struct {
 		Environment func(childComplexity int) int
 		ProjectID   func(childComplexity int) int
 		ProjectName func(childComplexity int) int
+	}
+
+	GitHubRepository struct {
+		Name        func(childComplexity int) int
+		Permissions func(childComplexity int) int
+	}
+
+	GitHubRepositoryPermission struct {
+		Granted func(childComplexity int) int
+		Name    func(childComplexity int) int
 	}
 
 	Mutation struct {
@@ -172,6 +183,7 @@ type ComplexityRoot struct {
 	Team struct {
 		AuditLogs           func(childComplexity int) int
 		Enabled             func(childComplexity int) int
+		GitHubRepositories  func(childComplexity int) int
 		LastSuccessfulSync  func(childComplexity int) int
 		Members             func(childComplexity int) int
 		Metadata            func(childComplexity int) int
@@ -277,6 +289,7 @@ type TeamResolver interface {
 	ReconcilerState(ctx context.Context, obj *db.Team) (*model.ReconcilerState, error)
 
 	SlackAlertsChannels(ctx context.Context, obj *db.Team) ([]*model.SlackAlertsChannel, error)
+	GitHubRepositories(ctx context.Context, obj *db.Team) ([]*reconcilers.GitHubRepository, error)
 }
 type UserResolver interface {
 	Teams(ctx context.Context, obj *db.User) ([]*model.TeamMembership, error)
@@ -381,6 +394,34 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.GcpProject.ProjectName(childComplexity), true
+
+	case "GitHubRepository.name":
+		if e.complexity.GitHubRepository.Name == nil {
+			break
+		}
+
+		return e.complexity.GitHubRepository.Name(childComplexity), true
+
+	case "GitHubRepository.permissions":
+		if e.complexity.GitHubRepository.Permissions == nil {
+			break
+		}
+
+		return e.complexity.GitHubRepository.Permissions(childComplexity), true
+
+	case "GitHubRepositoryPermission.granted":
+		if e.complexity.GitHubRepositoryPermission.Granted == nil {
+			break
+		}
+
+		return e.complexity.GitHubRepositoryPermission.Granted(childComplexity), true
+
+	case "GitHubRepositoryPermission.name":
+		if e.complexity.GitHubRepositoryPermission.Name == nil {
+			break
+		}
+
+		return e.complexity.GitHubRepositoryPermission.Name(childComplexity), true
 
 	case "Mutation.addTeamMembers":
 		if e.complexity.Mutation.AddTeamMembers == nil {
@@ -946,6 +987,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Team.Enabled(childComplexity), true
+
+	case "Team.gitHubRepositories":
+		if e.complexity.Team.GitHubRepositories == nil {
+			break
+		}
+
+		return e.complexity.Team.GitHubRepositories(childComplexity), true
 
 	case "Team.lastSuccessfulSync":
 		if e.complexity.Team.LastSuccessfulSync == nil {
@@ -1643,6 +1691,27 @@ type Team {
 
     "A list of Slack channels for NAIS alerts. If no channel is specified for a given environment, NAIS will fallback to the slackChannel value."
     slackAlertsChannels: [SlackAlertsChannel!]!
+
+    "A list of GitHub repositories for the team."
+    gitHubRepositories: [GitHubRepository!]!
+}
+
+"GitHub repository type."
+type GitHubRepository {
+    "Name of the repository, with the org prefix."
+    name: String!
+
+    "A list of permissions given to the team for this repository."
+    permissions: [GitHubRepositoryPermission!]!
+}
+
+"GitHub repository permission type."
+type GitHubRepositoryPermission {
+    "Name of the permission."
+    name: String!
+
+    "Whether or not the permission is granted for the repository."
+    granted: Boolean!
 }
 
 "Slack alerts channel type."
@@ -2872,6 +2941,188 @@ func (ec *executionContext) fieldContext_GcpProject_projectId(ctx context.Contex
 	return fc, nil
 }
 
+func (ec *executionContext) _GitHubRepository_name(ctx context.Context, field graphql.CollectedField, obj *reconcilers.GitHubRepository) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GitHubRepository_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GitHubRepository_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GitHubRepository",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GitHubRepository_permissions(ctx context.Context, field graphql.CollectedField, obj *reconcilers.GitHubRepository) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GitHubRepository_permissions(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Permissions, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*reconcilers.GitHubRepositoryPermission)
+	fc.Result = res
+	return ec.marshalNGitHubRepositoryPermission2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋreconcilersᚐGitHubRepositoryPermissionᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GitHubRepository_permissions(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GitHubRepository",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "name":
+				return ec.fieldContext_GitHubRepositoryPermission_name(ctx, field)
+			case "granted":
+				return ec.fieldContext_GitHubRepositoryPermission_granted(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type GitHubRepositoryPermission", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GitHubRepositoryPermission_name(ctx context.Context, field graphql.CollectedField, obj *reconcilers.GitHubRepositoryPermission) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GitHubRepositoryPermission_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GitHubRepositoryPermission_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GitHubRepositoryPermission",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GitHubRepositoryPermission_granted(ctx context.Context, field graphql.CollectedField, obj *reconcilers.GitHubRepositoryPermission) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GitHubRepositoryPermission_granted(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Granted, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GitHubRepositoryPermission_granted(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GitHubRepositoryPermission",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_setGitHubTeamSlug(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_setGitHubTeamSlug(ctx, field)
 	if err != nil {
@@ -2953,6 +3204,8 @@ func (ec *executionContext) fieldContext_Mutation_setGitHubTeamSlug(ctx context.
 				return ec.fieldContext_Team_slackChannel(ctx, field)
 			case "slackAlertsChannels":
 				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
+			case "gitHubRepositories":
+				return ec.fieldContext_Team_gitHubRepositories(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3052,6 +3305,8 @@ func (ec *executionContext) fieldContext_Mutation_setGoogleWorkspaceGroupEmail(c
 				return ec.fieldContext_Team_slackChannel(ctx, field)
 			case "slackAlertsChannels":
 				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
+			case "gitHubRepositories":
+				return ec.fieldContext_Team_gitHubRepositories(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3151,6 +3406,8 @@ func (ec *executionContext) fieldContext_Mutation_setAzureADGroupId(ctx context.
 				return ec.fieldContext_Team_slackChannel(ctx, field)
 			case "slackAlertsChannels":
 				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
+			case "gitHubRepositories":
+				return ec.fieldContext_Team_gitHubRepositories(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3250,6 +3507,8 @@ func (ec *executionContext) fieldContext_Mutation_setGcpProjectId(ctx context.Co
 				return ec.fieldContext_Team_slackChannel(ctx, field)
 			case "slackAlertsChannels":
 				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
+			case "gitHubRepositories":
+				return ec.fieldContext_Team_gitHubRepositories(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3349,6 +3608,8 @@ func (ec *executionContext) fieldContext_Mutation_setNaisNamespace(ctx context.C
 				return ec.fieldContext_Team_slackChannel(ctx, field)
 			case "slackAlertsChannels":
 				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
+			case "gitHubRepositories":
+				return ec.fieldContext_Team_gitHubRepositories(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3820,6 +4081,8 @@ func (ec *executionContext) fieldContext_Mutation_createTeam(ctx context.Context
 				return ec.fieldContext_Team_slackChannel(ctx, field)
 			case "slackAlertsChannels":
 				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
+			case "gitHubRepositories":
+				return ec.fieldContext_Team_gitHubRepositories(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -3919,6 +4182,8 @@ func (ec *executionContext) fieldContext_Mutation_updateTeam(ctx context.Context
 				return ec.fieldContext_Team_slackChannel(ctx, field)
 			case "slackAlertsChannels":
 				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
+			case "gitHubRepositories":
+				return ec.fieldContext_Team_gitHubRepositories(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -4018,6 +4283,8 @@ func (ec *executionContext) fieldContext_Mutation_removeUsersFromTeam(ctx contex
 				return ec.fieldContext_Team_slackChannel(ctx, field)
 			case "slackAlertsChannels":
 				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
+			case "gitHubRepositories":
+				return ec.fieldContext_Team_gitHubRepositories(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -4264,6 +4531,8 @@ func (ec *executionContext) fieldContext_Mutation_addTeamMembers(ctx context.Con
 				return ec.fieldContext_Team_slackChannel(ctx, field)
 			case "slackAlertsChannels":
 				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
+			case "gitHubRepositories":
+				return ec.fieldContext_Team_gitHubRepositories(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -4363,6 +4632,8 @@ func (ec *executionContext) fieldContext_Mutation_addTeamOwners(ctx context.Cont
 				return ec.fieldContext_Team_slackChannel(ctx, field)
 			case "slackAlertsChannels":
 				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
+			case "gitHubRepositories":
+				return ec.fieldContext_Team_gitHubRepositories(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -4462,6 +4733,8 @@ func (ec *executionContext) fieldContext_Mutation_setTeamMemberRole(ctx context.
 				return ec.fieldContext_Team_slackChannel(ctx, field)
 			case "slackAlertsChannels":
 				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
+			case "gitHubRepositories":
+				return ec.fieldContext_Team_gitHubRepositories(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -4561,6 +4834,8 @@ func (ec *executionContext) fieldContext_Mutation_disableTeam(ctx context.Contex
 				return ec.fieldContext_Team_slackChannel(ctx, field)
 			case "slackAlertsChannels":
 				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
+			case "gitHubRepositories":
+				return ec.fieldContext_Team_gitHubRepositories(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -4660,6 +4935,8 @@ func (ec *executionContext) fieldContext_Mutation_enableTeam(ctx context.Context
 				return ec.fieldContext_Team_slackChannel(ctx, field)
 			case "slackAlertsChannels":
 				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
+			case "gitHubRepositories":
+				return ec.fieldContext_Team_gitHubRepositories(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -5105,6 +5382,8 @@ func (ec *executionContext) fieldContext_Query_teams(ctx context.Context, field 
 				return ec.fieldContext_Team_slackChannel(ctx, field)
 			case "slackAlertsChannels":
 				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
+			case "gitHubRepositories":
+				return ec.fieldContext_Team_gitHubRepositories(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -5193,6 +5472,8 @@ func (ec *executionContext) fieldContext_Query_team(ctx context.Context, field g
 				return ec.fieldContext_Team_slackChannel(ctx, field)
 			case "slackAlertsChannels":
 				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
+			case "gitHubRepositories":
+				return ec.fieldContext_Team_gitHubRepositories(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -7654,6 +7935,56 @@ func (ec *executionContext) fieldContext_Team_slackAlertsChannels(ctx context.Co
 	return fc, nil
 }
 
+func (ec *executionContext) _Team_gitHubRepositories(ctx context.Context, field graphql.CollectedField, obj *db.Team) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Team_gitHubRepositories(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Team().GitHubRepositories(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*reconcilers.GitHubRepository)
+	fc.Result = res
+	return ec.marshalNGitHubRepository2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋreconcilersᚐGitHubRepositoryᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Team_gitHubRepositories(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Team",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "name":
+				return ec.fieldContext_GitHubRepository_name(ctx, field)
+			case "permissions":
+				return ec.fieldContext_GitHubRepository_permissions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type GitHubRepository", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _TeamMember_user(ctx context.Context, field graphql.CollectedField, obj *model.TeamMember) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_TeamMember_user(ctx, field)
 	if err != nil {
@@ -7817,6 +8148,8 @@ func (ec *executionContext) fieldContext_TeamMembership_team(ctx context.Context
 				return ec.fieldContext_Team_slackChannel(ctx, field)
 			case "slackAlertsChannels":
 				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
+			case "gitHubRepositories":
+				return ec.fieldContext_Team_gitHubRepositories(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
@@ -10421,6 +10754,76 @@ func (ec *executionContext) _GcpProject(ctx context.Context, sel ast.SelectionSe
 	return out
 }
 
+var gitHubRepositoryImplementors = []string{"GitHubRepository"}
+
+func (ec *executionContext) _GitHubRepository(ctx context.Context, sel ast.SelectionSet, obj *reconcilers.GitHubRepository) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, gitHubRepositoryImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("GitHubRepository")
+		case "name":
+
+			out.Values[i] = ec._GitHubRepository_name(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "permissions":
+
+			out.Values[i] = ec._GitHubRepository_permissions(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var gitHubRepositoryPermissionImplementors = []string{"GitHubRepositoryPermission"}
+
+func (ec *executionContext) _GitHubRepositoryPermission(ctx context.Context, sel ast.SelectionSet, obj *reconcilers.GitHubRepositoryPermission) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, gitHubRepositoryPermissionImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("GitHubRepositoryPermission")
+		case "name":
+
+			out.Values[i] = ec._GitHubRepositoryPermission_name(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "granted":
+
+			out.Values[i] = ec._GitHubRepositoryPermission_granted(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var mutationImplementors = []string{"Mutation"}
 
 func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -11515,6 +11918,26 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 				return innerFunc(ctx)
 
 			})
+		case "gitHubRepositories":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Team_gitHubRepositories(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -12274,6 +12697,114 @@ func (ec *executionContext) marshalNGcpProject2ᚖgithubᚗcomᚋnaisᚋconsole�
 		return graphql.Null
 	}
 	return ec._GcpProject(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNGitHubRepository2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋreconcilersᚐGitHubRepositoryᚄ(ctx context.Context, sel ast.SelectionSet, v []*reconcilers.GitHubRepository) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNGitHubRepository2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋreconcilersᚐGitHubRepository(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNGitHubRepository2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋreconcilersᚐGitHubRepository(ctx context.Context, sel ast.SelectionSet, v *reconcilers.GitHubRepository) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._GitHubRepository(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNGitHubRepositoryPermission2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋreconcilersᚐGitHubRepositoryPermissionᚄ(ctx context.Context, sel ast.SelectionSet, v []*reconcilers.GitHubRepositoryPermission) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNGitHubRepositoryPermission2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋreconcilersᚐGitHubRepositoryPermission(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNGitHubRepositoryPermission2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋreconcilersᚐGitHubRepositoryPermission(ctx context.Context, sel ast.SelectionSet, v *reconcilers.GitHubRepositoryPermission) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._GitHubRepositoryPermission(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNInt2int32(ctx context.Context, v interface{}) (int32, error) {

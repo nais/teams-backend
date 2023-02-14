@@ -44,6 +44,14 @@ autobind:
 # modelgen, the others will be allowed when binding to fields. Configure them to
 # your liking
 models:
+  GitHubRepository:
+    model:
+      - github.com/nais/console/pkg/reconcilers.GitHubRepository
+
+  GitHubRepositoryPermission:
+    model:
+      - github.com/nais/console/pkg/reconcilers.GitHubRepositoryPermission
+
   AuditAction:
     model:
       - github.com/nais/console/pkg/sqlc.AuditAction

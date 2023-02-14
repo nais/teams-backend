@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
-	"github.com/google/go-github/v48/github"
+	"github.com/google/go-github/v50/github"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
@@ -97,8 +97,18 @@ func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.
 		return err
 	}
 
+	repos, err := r.getTeamRepositories(ctx, *githubTeam.Slug)
+	if err != nil {
+		return err
+	}
+
 	slug := slug.Slug(*githubTeam.Slug)
-	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, reconcilers.GitHubState{Slug: &slug})
+	updatedState := reconcilers.GitHubState{
+		Slug:         &slug,
+		Repositories: repos,
+	}
+
+	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, updatedState)
 	if err != nil {
 		r.log.WithError(err).Error("persist system state")
 	}
@@ -399,6 +409,42 @@ func (r *githubTeamReconciler) getEmailFromGitHubUsername(ctx context.Context, u
 
 	email := strings.ToLower(string(nodes[0].SamlIdentity.Username))
 	return &email, nil
+}
+
+func (r *githubTeamReconciler) getTeamRepositories(ctx context.Context, teamSlug string) ([]*reconcilers.GitHubRepository, error) {
+	const maxPerPage = 100
+	opts := &github.ListOptions{
+		PerPage: maxPerPage,
+	}
+
+	allRepos := make([]*reconcilers.GitHubRepository, 0)
+	for {
+		repos, resp, err := r.teamsService.ListTeamReposBySlug(ctx, r.org, teamSlug, opts)
+		metrics.IncExternalHTTPCalls(metricsSystemName, unwrapResponse(resp), err)
+		err = httpError(http.StatusOK, resp, err)
+		if err != nil {
+			return nil, err
+		}
+		for _, repo := range repos {
+			permissions := make([]*reconcilers.GitHubRepositoryPermission, 0)
+			for name, granted := range repo.GetPermissions() {
+				permissions = append(permissions, &reconcilers.GitHubRepositoryPermission{
+					Name:    name,
+					Granted: granted,
+				})
+			}
+			allRepos = append(allRepos, &reconcilers.GitHubRepository{
+				Name:        repo.GetFullName(),
+				Permissions: permissions,
+			})
+		}
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
+	}
+
+	return allRepos, nil
 }
 
 func convertDatabaseConfig(ctx context.Context, database db.Database) (*reconcilerConfig, error) {

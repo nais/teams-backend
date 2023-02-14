@@ -3,7 +3,7 @@ package github_team_reconciler
 import (
 	"context"
 
-	"github.com/google/go-github/v48/github"
+	"github.com/google/go-github/v50/github"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/logger"
@@ -22,6 +22,7 @@ type TeamsService interface {
 	ListTeamMembersBySlug(ctx context.Context, org, slug string, opts *github.TeamListTeamMembersOptions) ([]*github.User, *github.Response, error)
 	RemoveTeamMembershipBySlug(ctx context.Context, org, slug, user string) (*github.Response, error)
 	CreateOrUpdateIDPGroupConnectionsBySlug(ctx context.Context, org, team string, opts github.IDPGroupList) (*github.IDPGroupList, *github.Response, error)
+	ListTeamReposBySlug(ctx context.Context, org, slug string, opts *github.ListOptions) ([]*github.Repository, *github.Response, error)
 }
 
 // githubTeamReconciler creates teams on GitHub and connects users to them.
