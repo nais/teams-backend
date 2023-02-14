@@ -133,15 +133,6 @@ type Config struct {
 	ReconcileRetryInterval time.Duration `envconfig:"CONSOLE_RECONCILE_RETRY_INTERVAL"`
 }
 
-type ImporterConfig struct {
-	AzureClientID     string       `envconfig:"CONSOLE_IMPORTER_AZURE_CLIENT_ID"`
-	AzureClientSecret string       `envconfig:"CONSOLE_IMPORTER_AZURE_CLIENT_SECRET"`
-	AzureTenantID     string       `envconfig:"CONSOLE_IMPORTER_AZURE_TENANT_ID"`
-	DatabaseURL       string       `envconfig:"CONSOLE_DATABASE_URL"`
-	TenantDomain      string       `envconfig:"CONSOLE_TENANT_DOMAIN"`
-	GCPClusters       gcp.Clusters `envconfig:"CONSOLE_GCP_CLUSTERS"`
-}
-
 func Defaults() *Config {
 	return &Config{
 		DatabaseURL:   "postgres://console:console@localhost:3002/console?sslmode=disable",
