@@ -102,7 +102,7 @@ func (m *mocks) start(t *testing.T, ctx context.Context) (*artifactregistry.Clie
 		assert.NoError(t, err)
 	}
 
-	fakeIamService, err := iam.NewService(ctx, option.WithEndpoint(m.iam.URL))
+	fakeIamService, err := iam.NewService(ctx, option.WithoutAuthentication(), option.WithEndpoint(m.iam.URL))
 	assert.NoError(t, err)
 
 	return artifactRegistryClient, fakeIamService
