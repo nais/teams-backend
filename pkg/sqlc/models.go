@@ -409,9 +409,7 @@ const (
 	ReconcilerConfigKeyAzureClientSecret       ReconcilerConfigKey = "azure:client_secret"
 	ReconcilerConfigKeyAzureTenantID           ReconcilerConfigKey = "azure:tenant_id"
 	ReconcilerConfigKeyGithubOrg               ReconcilerConfigKey = "github:org"
-	ReconcilerConfigKeyGithubAppID             ReconcilerConfigKey = "github:app_id"
 	ReconcilerConfigKeyGithubAppInstallationID ReconcilerConfigKey = "github:app_installation_id"
-	ReconcilerConfigKeyGithubAppPrivateKey     ReconcilerConfigKey = "github:app_private_key"
 )
 
 func (e *ReconcilerConfigKey) Scan(src interface{}) error {
@@ -455,9 +453,7 @@ func (e ReconcilerConfigKey) Valid() bool {
 		ReconcilerConfigKeyAzureClientSecret,
 		ReconcilerConfigKeyAzureTenantID,
 		ReconcilerConfigKeyGithubOrg,
-		ReconcilerConfigKeyGithubAppID,
-		ReconcilerConfigKeyGithubAppInstallationID,
-		ReconcilerConfigKeyGithubAppPrivateKey:
+		ReconcilerConfigKeyGithubAppInstallationID:
 		return true
 	}
 	return false
@@ -469,9 +465,7 @@ func AllReconcilerConfigKeyValues() []ReconcilerConfigKey {
 		ReconcilerConfigKeyAzureClientSecret,
 		ReconcilerConfigKeyAzureTenantID,
 		ReconcilerConfigKeyGithubOrg,
-		ReconcilerConfigKeyGithubAppID,
 		ReconcilerConfigKeyGithubAppInstallationID,
-		ReconcilerConfigKeyGithubAppPrivateKey,
 	}
 }
 

@@ -10,6 +10,14 @@ import (
 	"github.com/nais/console/pkg/legacy/envmap"
 )
 
+type GitHub struct {
+	// ApplicationID The ID of the GitHub Application that is used when communicating with the GitHub APIs.
+	ApplicationID int64 `envconfig:"CONSOLE_GITHUB_APPLICATION_ID"`
+
+	// PrivateKeyPath A path to the private key in PEM format that is used when communicating with the GitHub APIs.
+	PrivateKeyPath string `envconfig:"CONSOLE_GITHUB_PRIVATE_KEY_PATH"`
+}
+
 type GCP struct {
 	// Clusters A JSON-encoded value describing the GCP clusters to use. Refer to the README for the format.
 	Clusters gcp.Clusters `envconfig:"CONSOLE_GCP_CLUSTERS"`
@@ -68,6 +76,7 @@ type NaisDeploy struct {
 }
 
 type Config struct {
+	GitHub        GitHub
 	GCP           GCP
 	UserSync      UserSync
 	NaisDeploy    NaisDeploy

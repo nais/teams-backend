@@ -73,5 +73,5 @@ type reconcilerConfig struct {
 	org            string
 	appID          int64
 	installationID int64
-	privateKey     []byte
+	privateKeyPath string
 }
