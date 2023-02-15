@@ -55,8 +55,11 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			Once()
 		database.
 			On("SetReconcilerStateForTeam", ctx, systemName, team.Slug, mock.MatchedBy(func(state reconcilers.GitHubState) bool {
-				return state.Repositories[0].Name == "org/some-repo" &&
-					state.Repositories[1].Name == "org/some-other-repo" &&
+				return state.Repositories[0].Name == "org/some-repo-a" &&
+					state.Repositories[1].Name == "org/some-repo-b" &&
+					state.Repositories[0].Permissions[0].Name == "admin" &&
+					state.Repositories[0].Permissions[1].Name == "pull" &&
+					state.Repositories[0].Permissions[2].Name == "push" &&
 					len(state.Repositories) == 2
 			})).
 			Return(nil).
@@ -101,7 +104,14 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			).
 			Return(
 				[]*github.Repository{
-					{FullName: helpers.Strp(org + "/some-repo")},
+					{
+						FullName: helpers.Strp(org + "/some-repo-b"),
+						Permissions: map[string]bool{
+							"push":  true,
+							"pull":  false,
+							"admin": true,
+						},
+					},
 				},
 				&github.Response{Response: &http.Response{StatusCode: http.StatusOK}, NextPage: 1},
 				nil,
@@ -119,7 +129,14 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			).
 			Return(
 				[]*github.Repository{
-					{FullName: helpers.Strp(org + "/some-other-repo")},
+					{
+						FullName: helpers.Strp(org + "/some-repo-a"),
+						Permissions: map[string]bool{
+							"push":  true,
+							"pull":  false,
+							"admin": true,
+						},
+					},
 				},
 				&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
 				nil,

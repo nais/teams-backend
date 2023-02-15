@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -433,6 +434,11 @@ func (r *githubTeamReconciler) getTeamRepositories(ctx context.Context, teamSlug
 					Granted: granted,
 				})
 			}
+
+			sort.SliceStable(permissions, func(a, b int) bool {
+				return permissions[a].Name < permissions[b].Name
+			})
+
 			allRepos = append(allRepos, &reconcilers.GitHubRepository{
 				Name:        repo.GetFullName(),
 				Permissions: permissions,
@@ -443,6 +449,10 @@ func (r *githubTeamReconciler) getTeamRepositories(ctx context.Context, teamSlug
 		}
 		opts.Page = resp.NextPage
 	}
+
+	sort.SliceStable(allRepos, func(a, b int) bool {
+		return allRepos[a].Name < allRepos[b].Name
+	})
 
 	return allRepos, nil
 }
