@@ -2,7 +2,6 @@ package config
 
 import (
 	"strings"
-	"time"
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/nais/console/pkg/fixtures"
@@ -137,9 +136,6 @@ type Config struct {
 	//
 	// Example: `nav`.
 	TenantName string `envconfig:"CONSOLE_TENANT_NAME"`
-
-	// How long to wait until retrying a failed reconcile.
-	ReconcileRetryInterval time.Duration `envconfig:"CONSOLE_RECONCILE_RETRY_INTERVAL"`
 }
 
 func Defaults() *Config {
@@ -155,7 +151,6 @@ func Defaults() *Config {
 			Endpoint:          "http://localhost:8080/api/v1/provision",
 			DeployKeyEndpoint: "http://localhost:8080/internal/api/v1/apikey",
 		},
-		ReconcileRetryInterval: time.Minute * 1,
 		UserSync: UserSync{
 			AdminGroupPrefix: "console-admins",
 		},
