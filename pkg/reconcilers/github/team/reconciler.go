@@ -46,16 +46,16 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, org, domain 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
 	log = log.WithSystem(string(Name))
 
-	config, err := convertDatabaseConfig(ctx, database)
+	config, err := getReconfilerConfig(ctx, cfg, database)
 	if err != nil {
 		return nil, err
 	}
 
-	transport, err := ghinstallation.New(
+	transport, err := ghinstallation.NewKeyFromFile(
 		http.DefaultTransport,
 		config.appID,
 		config.installationID,
-		config.privateKey,
+		config.privateKeyPath,
 	)
 	if err != nil {
 		return nil, err
@@ -457,15 +457,10 @@ func (r *githubTeamReconciler) getTeamRepositories(ctx context.Context, teamSlug
 	return allRepos, nil
 }
 
-func convertDatabaseConfig(ctx context.Context, database db.Database) (*reconcilerConfig, error) {
+func getReconfilerConfig(ctx context.Context, cfg *config.Config, database db.Database) (*reconcilerConfig, error) {
 	config, err := database.DangerousGetReconcilerConfigValues(ctx, Name)
 	if err != nil {
 		return nil, err
-	}
-
-	appID, err := strconv.ParseInt(config.GetValue(sqlc.ReconcilerConfigKeyGithubAppID), 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("unable to convert app ID %q to an integer", config.GetValue(sqlc.ReconcilerConfigKeyGithubAppID))
 	}
 
 	installationID, err := strconv.ParseInt(config.GetValue(sqlc.ReconcilerConfigKeyGithubAppInstallationID), 10, 64)
@@ -474,10 +469,10 @@ func convertDatabaseConfig(ctx context.Context, database db.Database) (*reconcil
 	}
 
 	return &reconcilerConfig{
+		appID:          cfg.GitHub.ApplicationID,
+		privateKeyPath: cfg.GitHub.PrivateKeyPath,
 		org:            config.GetValue(sqlc.ReconcilerConfigKeyGithubOrg),
-		appID:          appID,
 		installationID: installationID,
-		privateKey:     []byte(config.GetValue(sqlc.ReconcilerConfigKeyGithubAppPrivateKey)),
 	}, nil
 }
 
