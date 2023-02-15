@@ -16,6 +16,7 @@ var enableableReconcilers = []sqlc.ReconcilerName{
 	sqlc.ReconcilerNameGoogleWorkspaceAdmin,
 	sqlc.ReconcilerNameNaisDeploy,
 	sqlc.ReconcilerNameNaisNamespace,
+	sqlc.ReconcilerNameGoogleGcpGar,
 }
 
 func (e *EnableableReconciler) Decode(s string) error {

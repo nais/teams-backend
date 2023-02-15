@@ -6,6 +6,6 @@ COMMIT;
 BEGIN;
 
 INSERT INTO reconcilers (name, display_name, description, run_order, enabled)
-VALUES ('google:gcp:gar', 'Google Artifact Registry', 'Provision artifact registry repositories for Console teams.', 7, true);
+VALUES ('google:gcp:gar', 'Google Artifact Registry', 'Provision artifact registry repositories for Console teams.', 7, false);
 
 COMMIT;
