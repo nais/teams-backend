@@ -63,7 +63,7 @@ var (
 		Subsystem: subsystem,
 		Name:      "reconciler_duration",
 		Help:      "Duration of a specific reconciler, regardless of team.",
-		Buckets:   prometheus.LinearBuckets(0, .5, 20),
+		Buckets:   prometheus.LinearBuckets(0, .5, 40),
 	}, []string{"reconciler"})
 
 	reconcileTeamDuration = promauto.NewHistogram(prometheus.HistogramOpts{
@@ -71,7 +71,7 @@ var (
 		Subsystem: subsystem,
 		Name:      "reconcile_team_duration",
 		Help:      "Reconcile duration of a specific team.",
-		Buckets:   prometheus.LinearBuckets(0, 2, 20),
+		Buckets:   prometheus.LinearBuckets(0, 2, 30),
 	})
 )
 
