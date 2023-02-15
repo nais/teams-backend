@@ -122,7 +122,8 @@ func (h *handler) InitReconcilers(ctx context.Context) error {
 }
 
 // UseReconciler will include a reconciler in the list of currently active reconcilers. During the activation this
-// function will acquire a lock, preventing other processes from reading from the list of active reconcilers.
+// function will acquire a lock, preventing other processes from reading from the list of active reconcilers. If the
+// reconciler is already active it will be re-initialized using its factory function.
 func (h *handler) UseReconciler(reconciler db.Reconciler) error {
 	h.lock.Lock()
 	defer h.lock.Unlock()

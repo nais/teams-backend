@@ -144,6 +144,13 @@ func (r *mutationResolver) ConfigureReconciler(ctx context.Context, name sqlc.Re
 		return nil, err
 	}
 
+	if reconciler.Enabled {
+		err = r.teamSyncHandler.UseReconciler(*reconciler)
+		if err != nil {
+			r.log.WithError(err).Errorf("use reconciler: %q", reconciler.Name)
+		}
+	}
+
 	actor := authz.ActorFromContext(ctx)
 	targets := []auditlogger.Target{
 		auditlogger.ReconcilerTarget(name),
