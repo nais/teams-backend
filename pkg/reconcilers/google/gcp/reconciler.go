@@ -510,16 +510,7 @@ func (r *googleGcpReconciler) ensureProjectHasLabels(_ context.Context, project 
 
 // CnrmServiceAccountNameAndAccountID Generate a name and an account ID for a CNRM service account
 func CnrmServiceAccountNameAndAccountID(slug slug.Slug, projectID string) (name, accountID string) {
-	hasher := sha256.New()
-	hasher.Write([]byte(slug))
-
-	parts := []string{
-		"cnrm",
-		strings.TrimSuffix(console.Truncate(string(slug), 20), "-"),
-		console.Truncate(hex.EncodeToString(hasher.Sum(nil)), 4),
-	}
-
-	accountID = strings.Join(parts, "-")
+	accountID = console.SlugHashPrefixTruncate(slug, "cnrm", gcp.GoogleServiceAccountMaxLength)
 	cnrmEmailAddress := fmt.Sprintf("%s@%s.iam.gserviceaccount.com", accountID, projectID)
 	name = "projects/" + projectID + "/serviceAccounts/" + cnrmEmailAddress
 	return

@@ -31,6 +31,11 @@ type GCP struct {
 	//
 	// Example: `billingAccounts/123456789ABC`
 	BillingAccount string `envconfig:"CONSOLE_GCP_BILLING_ACCOUNT"`
+
+	// WorkloadIdentityPoolName The name of the workload identity pool used in the management project.
+	//
+	// Example: projects/{project_number}/locations/global/workloadIdentityPools/{workload_identity_pool_id}
+	WorkloadIdentityPoolName string `envconfig:"CONSOLE_GCP_WORKLOAD_IDENTITY_POOL_NAME"`
 }
 
 type NaisNamespace struct {
