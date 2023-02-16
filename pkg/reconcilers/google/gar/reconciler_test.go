@@ -11,6 +11,7 @@ import (
 
 	artifactregistry "cloud.google.com/go/artifactregistry/apiv1"
 	"cloud.google.com/go/artifactregistry/apiv1/artifactregistrypb"
+	"cloud.google.com/go/iam/apiv1/iampb"
 	"cloud.google.com/go/longrunning/autogen/longrunningpb"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
@@ -26,10 +27,14 @@ import (
 	"google.golang.org/api/iam/v1"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
-type fakeArtifaceRegistry struct {
+type fakeArtifactRegistry struct {
 	createCounter int
 	create        func(ctx context.Context, r *artifactregistrypb.CreateRepositoryRequest) (*longrunningpb.Operation, error)
 
@@ -39,38 +44,49 @@ type fakeArtifaceRegistry struct {
 	updateCounter int
 	update        func(ctx context.Context, r *artifactregistrypb.UpdateRepositoryRequest) (*artifactregistrypb.Repository, error)
 
+	setIamPolicy  func(context.Context, *iampb.SetIamPolicyRequest) (*iampb.Policy, error) 
+  setIamPolicyCounter int
+
 	artifactregistrypb.UnimplementedArtifactRegistryServer
 }
 
 type mocks struct {
-	artifaceRegistry *fakeArtifaceRegistry
+	artifactRegistry *fakeArtifactRegistry
 	iam              *httptest.Server
 }
 
-func (f *fakeArtifaceRegistry) CreateRepository(ctx context.Context, r *artifactregistrypb.CreateRepositoryRequest) (*longrunningpb.Operation, error) {
+func (f *fakeArtifactRegistry) CreateRepository(ctx context.Context, r *artifactregistrypb.CreateRepositoryRequest) (*longrunningpb.Operation, error) {
 	f.createCounter++
 	return f.create(ctx, r)
 }
 
-func (f *fakeArtifaceRegistry) GetRepository(ctx context.Context, r *artifactregistrypb.GetRepositoryRequest) (*artifactregistrypb.Repository, error) {
+func (f *fakeArtifactRegistry) GetRepository(ctx context.Context, r *artifactregistrypb.GetRepositoryRequest) (*artifactregistrypb.Repository, error) {
 	f.getCounter++
 	return f.get(ctx, r)
 }
 
-func (f *fakeArtifaceRegistry) UpdateRepository(ctx context.Context, r *artifactregistrypb.UpdateRepositoryRequest) (*artifactregistrypb.Repository, error) {
+func (f *fakeArtifactRegistry) UpdateRepository(ctx context.Context, r *artifactregistrypb.UpdateRepositoryRequest) (*artifactregistrypb.Repository, error) {
 	f.updateCounter++
 	return f.update(ctx, r)
 }
 
-func (f *fakeArtifaceRegistry) assert(t *testing.T) {
+func (f *fakeArtifactRegistry) SetIamPolicy(ctx context.Context, r *iampb.SetIamPolicyRequest) (*iampb.Policy, error) {
+	f.setIamPolicyCounter++
+	return f.setIamPolicy(ctx, r)
+}
+
+func (f *fakeArtifactRegistry) assert(t *testing.T) {
 	if f.create != nil {
-		assert.Equal(t, f.createCounter, 1, "expected 1 call to create")
+		assert.Equal(t, f.createCounter, 1, "mock expected 1 call to create")
 	}
 	if f.update != nil {
-		assert.Equal(t, f.updateCounter, 1, "expected 1 call to update")
+		assert.Equal(t, f.updateCounter, 1, "mock expected 1 call to update")
 	}
 	if f.get != nil {
-		assert.Equal(t, f.getCounter, 1, "expected 1 call to get")
+		assert.Equal(t, f.getCounter, 1, "mock expected 1 call to get")
+	}
+	if f.setIamPolicy != nil {
+		assert.Equal(t, f.setIamPolicyCounter, 1, "mock expected 1 call to setIamPolicy")
 	}
 }
 
@@ -78,19 +94,19 @@ func (m *mocks) start(t *testing.T, ctx context.Context) (*artifactregistry.Clie
 	t.Helper()
 
 	var artifactRegistryClient *artifactregistry.Client
-	if m.artifaceRegistry != nil {
+	if m.artifactRegistry != nil {
 		l, err := net.Listen("tcp", "localhost:0")
 		assert.NoError(t, err)
 
 		srv := grpc.NewServer()
-		artifactregistrypb.RegisterArtifactRegistryServer(srv, m.artifaceRegistry)
+		artifactregistrypb.RegisterArtifactRegistryServer(srv, m.artifactRegistry)
 		go func() {
 			if err := srv.Serve(l); err != nil {
 				panic(err)
 			}
 		}()
 		t.Cleanup(func() {
-			m.artifaceRegistry.assert(t)
+			m.artifactRegistry.assert(t)
 			srv.Stop()
 		})
 
@@ -117,8 +133,9 @@ func TestReconcile(t *testing.T) {
 	assert.NoError(t, err)
 
 	const (
-		managementProjectID = "management-project-123"
-		abortReconcilerCode = 418
+		managementProjectID      = "management-project-123"
+		workloadIdentityPoolName = "projects/123456789/locations/global/workloadIdentityPools/some-identity-pool"
+		abortReconcilerCode      = 418
 	)
 
 	correlationID := uuid.New()
@@ -126,6 +143,24 @@ func TestReconcile(t *testing.T) {
 	input := reconcilers.Input{
 		CorrelationID: correlationID,
 		Team:          team,
+	}
+
+	email := fmt.Sprintf("%s@%s.iam.gserviceaccount.com", team.Slug, managementProjectID)
+	expectedServiceAccount := &iam.ServiceAccount{
+		Email:       email,
+		Name:        fmt.Sprintf("projects/%s/serviceAccounts/%s", managementProjectID, email),
+		Description: fmt.Sprintf("Service Account used to push images to Google Artifact Registry for %s", team.Slug),
+		DisplayName: fmt.Sprintf("Artifact Pusher for %s", team.Slug),
+	}
+
+	garRepositoryParent := fmt.Sprintf("projects/%s/locations/europe-north1", managementProjectID)
+	expectedRepository := artifactregistrypb.Repository{
+		Name:        fmt.Sprintf("%s/repositories/%s", garRepositoryParent, string(team.Slug)),
+		Format:      artifactregistrypb.Repository_DOCKER,
+		Description: fmt.Sprintf("Docker repository for team %q. Managed by NAIS Console.", team.Slug),
+		Labels: map[string]string{
+			"team": string(team.Slug),
+		},
 	}
 
 	ctx := context.Background()
@@ -139,15 +174,10 @@ func TestReconcile(t *testing.T) {
 					w.WriteHeader(404)
 				},
 				func(w http.ResponseWriter, r *http.Request) {
-					expected := &iam.ServiceAccount{
-						Description: fmt.Sprintf("Service Account used to push images to Google Artifact Registry for %s", team.Slug),
-						DisplayName: fmt.Sprintf("Artifact Pusher for %s", team.Slug),
-					}
-
 					var req iam.CreateServiceAccountRequest
 					assert.NoError(t, json.NewDecoder(r.Body).Decode(&req))
-					assert.Equal(t, expected.Description, req.ServiceAccount.Description)
-					assert.Equal(t, expected.DisplayName, req.ServiceAccount.DisplayName)
+					assert.Equal(t, expectedServiceAccount.Description, req.ServiceAccount.Description)
+					assert.Equal(t, expectedServiceAccount.DisplayName, req.ServiceAccount.DisplayName)
 					w.WriteHeader(abortReconcilerCode) // abort test - we have asserted what we are interested in already
 				},
 			}),
@@ -156,29 +186,25 @@ func TestReconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 
-		reconciler := gar.New(auditLogger, database, managementProjectID, nil, iamService, log)
+		reconciler := gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, nil, iamService, log)
 		err = reconciler.Reconcile(ctx, input)
 		assert.ErrorContains(t, err, fmt.Sprintf("googleapi: got HTTP response code %d", abortReconcilerCode))
 	})
 
 	t.Run("after getOrCreateServiceAccount, set policy", func(t *testing.T) {
-		email := fmt.Sprintf("%s@%s.iam.gserviceaccount.com", team.Slug, managementProjectID)
-		expected := &iam.ServiceAccount{
-			Email:       email,
-			Name:        fmt.Sprintf("projects/%s/serviceAccounts/%s", managementProjectID, email),
-			Description: fmt.Sprintf("Service Account used to push images to Google Artifact Registry for %s", team.Slug),
-			DisplayName: fmt.Sprintf("Artifact Pusher for %s", team.Slug),
-		}
-
 		mocks := mocks{
 			iam: test.HttpServerWithHandlers(t, []http.HandlerFunc{
 				func(w http.ResponseWriter, r *http.Request) {
-					assert.NoError(t, json.NewEncoder(w).Encode(&expected))
+					assert.NoError(t, json.NewEncoder(w).Encode(&expectedServiceAccount))
 				},
 				func(w http.ResponseWriter, r *http.Request) {
 					var req iam.SetIamPolicyRequest
 					assert.NoError(t, json.NewDecoder(r.Body).Decode(&req))
-					assert.Contains(t, r.URL.Path, expected.Name)
+					assert.Contains(t, r.URL.Path, expectedServiceAccount.Name)
+					assert.Contains(t, req.Policy.Bindings[0].Members, workloadIdentityPoolName+"/test/repository")
+					assert.Contains(t, req.Policy.Bindings[0].Members, workloadIdentityPoolName+"/test/admin-repository")
+					assert.NotContains(t, req.Policy.Bindings[0].Members, workloadIdentityPoolName+"/test/ro-repository")
+					assert.NotContains(t, req.Policy.Bindings[0].Members, workloadIdentityPoolName+"/test/no-permissions-repository")
 					w.WriteHeader(abortReconcilerCode)
 				},
 			}),
@@ -196,35 +222,63 @@ func TestReconcile(t *testing.T) {
 							{Name: "push", Granted: true},
 						},
 					},
+					{
+						Name: "test/ro-repository",
+						Permissions: []*reconcilers.GitHubRepositoryPermission{
+							{Name: "push", Granted: false},
+						},
+					},
+					{
+						Name: "test/admin-repository",
+						Permissions: []*reconcilers.GitHubRepositoryPermission{
+							{Name: "push", Granted: true},
+							{Name: "admin", Granted: true},
+						},
+					},
+					{
+						Name: "test/no-permissions-repository",
+					},
 				}
 			}).
 			Return(nil).
 			Once()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 
-		reconciler := gar.New(auditLogger, database, managementProjectID, nil, iamService, log)
+		reconciler := gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, nil, iamService, log)
 		err = reconciler.Reconcile(ctx, input)
 		assert.ErrorContains(t, err, fmt.Sprintf("googleapi: got HTTP response code %d", abortReconcilerCode))
 	})
 
-	t.Run("after getOrCreateServiceAccount, set iam ", func(t *testing.T) {
-		email := fmt.Sprintf("%s@%s.iam.gserviceaccount.com", team.Slug, managementProjectID)
-		expected := &iam.ServiceAccount{
-			Email:       email,
-			Name:        fmt.Sprintf("projects/%s/serviceAccounts/%s", managementProjectID, email),
-			Description: fmt.Sprintf("Service Account used to push images to Google Artifact Registry for %s", team.Slug),
-			DisplayName: fmt.Sprintf("Artifact Pusher for %s", team.Slug),
-		}
+	t.Run("if no gar repository exists, create it", func(t *testing.T) {
 		mocks := mocks{
-			artifaceRegistry: &fakeArtifaceRegistry{
+			artifactRegistry: &fakeArtifactRegistry{
 				get: func(ctx context.Context, r *artifactregistrypb.GetRepositoryRequest) (*artifactregistrypb.Repository, error) {
-					return nil, fmt.Errorf("test error")
+					return nil, status.Error(codes.NotFound, "not found")
+				},
+				create: func(ctx context.Context, r *artifactregistrypb.CreateRepositoryRequest) (*longrunningpb.Operation, error) {
+					assert.Equal(t, r.Repository.Name, expectedRepository.Name)
+					assert.Equal(t, r.Repository.Description, expectedRepository.Description)
+					assert.Equal(t, r.Parent, garRepositoryParent)
+					assert.Equal(t, r.Repository.Format, expectedRepository.Format)
+
+					payload := anypb.Any{}
+					err := anypb.MarshalFrom(&payload, r.Repository, proto.MarshalOptions{})
+					assert.NoError(t, err)
+
+					return &longrunningpb.Operation{
+						Done: true,
+						Result: &longrunningpb.Operation_Response{
+							Response: &payload,
+						},
+					}, fmt.Errorf("abort test")
 				},
 			},
 			iam: test.HttpServerWithHandlers(t, []http.HandlerFunc{
+				// get service account
 				func(w http.ResponseWriter, r *http.Request) {
-					assert.NoError(t, json.NewEncoder(w).Encode(expected))
+					assert.NoError(t, json.NewEncoder(w).Encode(expectedServiceAccount))
 				},
+				// set iam policy
 				func(w http.ResponseWriter, r *http.Request) {
 					json.NewEncoder(w).Encode(&iam.Policy{})
 				},
@@ -234,117 +288,51 @@ func TestReconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, sqlc.ReconcilerNameGithubTeam, team.Slug, mock.Anything).
-			Run(func(args mock.Arguments) {
-				state := args.Get(3).(*reconcilers.GitHubState)
-				state.Repositories = []*reconcilers.GitHubRepository{
-					{
-						Name: "test/repository",
-						Permissions: []*reconcilers.GitHubRepositoryPermission{
-							{
-								Name:    "push",
-								Granted: true,
-							},
-						},
-					},
-				}
-			}).
 			Return(nil).
 			Once()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 
-		reconciler := gar.New(auditLogger, database, managementProjectID, artifactregistryClient, iamService, log)
+		reconciler := gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, artifactregistryClient, iamService, log)
 		err = reconciler.Reconcile(ctx, input)
-		assert.ErrorContains(t, err, "test error")
+		assert.ErrorContains(t, err, "abort test")
 	})
 
-	//		t.Run("create when no repository already exists", func(t *testing.T) {
-	//
-	//			fake := &fakeArtifaceRegistry{
-	//				get: func(ctx context.Context, r *artifactregistrypb.GetRepositoryRequest) (*artifactregistrypb.Repository, error) {
-	//					return nil, status.Errorf(codes.NotFound, "test error")
-	//				},
-	//				create: func(ctx context.Context, r *artifactregistrypb.CreateRepositoryRequest) (*longrunningpb.Operation, error) {
-	//					assert.Equal(t, repositoryName, r.Repository.Name)
-	//					assert.Equal(t, repositoryDescription, r.Repository.Description)
-	//					assert.Equal(t, artifactregistrypb.Repository_DOCKER, r.Repository.Format)
-	//					assert.Equal(t, string(slug), r.Repository.Labels["team"])
-	//
-	//					payload := anypb.Any{}
-	//					err := anypb.MarshalFrom(&payload, r.Repository, proto.MarshalOptions{})
-	//					assert.NoError(t, err)
-	//
-	//					return &longrunningpb.Operation{
-	//						Done: true,
-	//						Result: &longrunningpb.Operation_Response{
-	//							Response: &payload,
-	//						},
-	//					}, nil
-	//				},
-	//			}
-	//
-	//			client, err := fake.start(t, ctx)
-	//			assert.NoError(t, err)
-	//			defer fake.stop()
-	//
-	//			auditLogger := auditlogger.NewMockAuditLogger(t)
-	//			reconciler := gar.New(auditLogger, managementProjectID, client, log)
-	//			err = reconciler.Reconcile(ctx, input)
-	//			assert.NoError(t, err)
-	//			fake.assert(t)
-	//		})
-	//
-	//		t.Run("no update when existing repository is up to date", func(t *testing.T) {
-	//			repo := &artifactregistrypb.Repository{
-	//				Name:        repositoryName,
-	//				Format:      artifactregistrypb.Repository_DOCKER,
-	//				Description: repositoryDescription,
-	//				Labels:      map[string]string{"team": string(slug)},
-	//			}
-	//			fake := &fakeArtifaceRegistry{
-	//				get: func(ctx context.Context, r *artifactregistrypb.GetRepositoryRequest) (*artifactregistrypb.Repository, error) {
-	//					return repo, nil
-	//				},
-	//			}
-	//
-	//			client, err := fake.start(t, ctx)
-	//			assert.NoError(t, err)
-	//			defer fake.stop()
-	//
-	//			auditLogger := auditlogger.NewMockAuditLogger(t)
-	//			reconciler := gar.New(auditLogger, managementProjectID, client, log)
-	//			err = reconciler.Reconcile(ctx, input)
-	//			assert.NoError(t, err)
-	//			fake.assert(t)
-	//		})
-	//
-	//		t.Run("update when existing repository has incorrect desc", func(t *testing.T) {
-	//			repo := &artifactregistrypb.Repository{
-	//				Name:        repositoryName,
-	//				Format:      artifactregistrypb.Repository_DOCKER,
-	//				Description: repositoryDescription + "invalid",
-	//				Labels:      map[string]string{"team": string(slug)},
-	//			}
-	//
-	//			fake := &fakeArtifaceRegistry{
-	//				get: func(ctx context.Context, r *artifactregistrypb.GetRepositoryRequest) (*artifactregistrypb.Repository, error) {
-	//					return repo, nil
-	//				},
-	//				update: func(ctx context.Context, r *artifactregistrypb.UpdateRepositoryRequest) (*artifactregistrypb.Repository, error) {
-	//					assert.Len(t, r.UpdateMask.Paths, 1)
-	//					r.Repository.Description = repositoryDescription
-	//
-	//					return r.Repository, nil
-	//				},
-	//			}
-	//
-	//			client, err := fake.start(t, ctx)
-	//			assert.NoError(t, err)
-	//			defer fake.stop()
-	//
-	//			auditLogger := auditlogger.NewMockAuditLogger(t)
-	//			reconciler := gar.New(auditLogger, managementProjectID, client, log)
-	//			err = reconciler.Reconcile(ctx, input)
-	//			assert.NoError(t, err)
-	//			fake.assert(t)
-	//	})
+	t.Run("if gar repository exists, set iam policy", func(t *testing.T) {
+		mocks := mocks{
+			artifactRegistry: &fakeArtifactRegistry{
+				get: func(ctx context.Context, r *artifactregistrypb.GetRepositoryRequest) (*artifactregistrypb.Repository, error) {
+					return &expectedRepository, nil
+				},
+        setIamPolicy: func(ctx context.Context, r *iampb.SetIamPolicyRequest) (*iampb.Policy, error) {
+          assert.Equal(t, expectedRepository.Name, r.Resource)
+          assert.Equal(t, expectedServiceAccount.Email, r.Policy.Bindings[0].Members[0])
+          assert.Equal(t, "roles/artifactregistry.writer", r.Policy.Bindings[0].Role)
+
+          return &iampb.Policy{}, fmt.Errorf("abort test")
+        },
+			},
+			iam: test.HttpServerWithHandlers(t, []http.HandlerFunc{
+				// get service account
+				func(w http.ResponseWriter, r *http.Request) {
+					assert.NoError(t, json.NewEncoder(w).Encode(expectedServiceAccount))
+				},
+				// set iam policy
+				func(w http.ResponseWriter, r *http.Request) {
+					json.NewEncoder(w).Encode(&iam.Policy{})
+				},
+			}),
+		}
+
+		artifactregistryClient, iamService := mocks.start(t, ctx)
+		database := db.NewMockDatabase(t)
+		database.
+			On("LoadReconcilerStateForTeam", ctx, sqlc.ReconcilerNameGithubTeam, team.Slug, mock.Anything).
+			Return(nil).
+			Once()
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+
+		reconciler := gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, artifactregistryClient, iamService, log)
+		err = reconciler.Reconcile(ctx, input)
+		assert.ErrorContains(t, err, "abort test")
+	})
 }

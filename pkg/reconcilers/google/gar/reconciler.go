@@ -25,27 +25,28 @@ import (
 )
 
 const (
-	Name             = sqlc.ReconcilerNameGoogleGcpGar
+	Name = sqlc.ReconcilerNameGoogleGcpGar
 )
 
 type garReconciler struct {
-	database            db.Database
-	auditLogger         auditlogger.AuditLogger
-	managementProjectID string
-  workloadIdeneityPoolName string
-	log                 logger.Logger
-	artifactRegistry    *artifactregistry.Client
-	iamService          *iam.Service
+	database                 db.Database
+	auditLogger              auditlogger.AuditLogger
+	managementProjectID      string
+	workloadIdentityPoolName string
+	log                      logger.Logger
+	artifactRegistry         *artifactregistry.Client
+	iamService               *iam.Service
 }
 
-func New(auditLogger auditlogger.AuditLogger, database db.Database, managementProjectID string, garClient *artifactregistry.Client, iamService *iam.Service, log logger.Logger) *garReconciler {
+func New(auditLogger auditlogger.AuditLogger, database db.Database, managementProjectID, workloadIdentityPoolName string, garClient *artifactregistry.Client, iamService *iam.Service, log logger.Logger) *garReconciler {
 	return &garReconciler{
-		database:            database,
-		auditLogger:         auditLogger,
-		log:                 log,
-		managementProjectID: managementProjectID,
-		artifactRegistry:    garClient,
-		iamService:          iamService,
+		database:                 database,
+		auditLogger:              auditLogger,
+		log:                      log,
+		managementProjectID:      managementProjectID,
+		workloadIdentityPoolName: workloadIdentityPoolName,
+		artifactRegistry:         garClient,
+		iamService:               iamService,
 	}
 }
 
@@ -72,7 +73,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		return nil, err
 	}
 
-	return New(auditLogger, database, cfg.GoogleManagementProjectID, garClient, iamService, log), nil
+	return New(auditLogger, database, cfg.GoogleManagementProjectID, cfg.GCP.WorkloadIdentityPoolName, garClient, iamService, log), nil
 }
 
 func (r *garReconciler) Name() sqlc.ReconcilerName {
@@ -82,24 +83,24 @@ func (r *garReconciler) Name() sqlc.ReconcilerName {
 func (r *garReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	log := r.log.WithTeamSlug(string(input.Team.Slug))
 	serviceAccount, err := r.getOrCreateServiceAccount(ctx, input, log)
-  if err != nil {
+	if err != nil {
 		return err
 	}
 
 	err = r.setServiceAccountPolicy(ctx, serviceAccount, input.Team.Slug)
-  if err != nil {
+	if err != nil {
 		return err
 	}
 
-	repository, err := r.getOrCreateOrUpdateRepository(ctx, input, log)
-  if err != nil {
+	garRepository, err := r.getOrCreateOrUpdateGarRepository(ctx, input, log)
+	if err != nil {
 		return err
 	}
 
-  err = r.setRepositoryPolicy(ctx, repository, serviceAccount)
-  if err != nil {
-    return err
-  }
+	err = r.setGarRepositoryPolicy(ctx, garRepository, serviceAccount)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -125,35 +126,33 @@ func (r *garReconciler) getOrCreateServiceAccount(ctx context.Context, input rec
 }
 
 func (r *garReconciler) setServiceAccountPolicy(ctx context.Context, serviceAccount *iam.ServiceAccount, teamSlug slug.Slug) error {
-  members, err := r.getServiceAccountPolicyMembers(ctx, teamSlug)
-  if err != nil {
-    return err
-  }
+	members, err := r.getServiceAccountPolicyMembers(ctx, teamSlug)
+	if err != nil {
+		return err
+	}
 
-  req := iam.SetIamPolicyRequest{
-  	Policy:          &iam.Policy{
-  		Bindings:        []*iam.Binding{
-        {
-          Members: members,
-          Role: "roles/iam.workloadIdentityUser",
-        },
-      },
-  	},
-  }
+	req := iam.SetIamPolicyRequest{
+		Policy: &iam.Policy{
+			Bindings: []*iam.Binding{
+				{
+					Members: members,
+					Role:    "roles/iam.workloadIdentityUser",
+				},
+			},
+		},
+	}
 
-  _, err = r.iamService.Projects.ServiceAccounts.SetIamPolicy(serviceAccount.Name, &req).Do()
-  return err
+	_, err = r.iamService.Projects.ServiceAccounts.SetIamPolicy(serviceAccount.Name, &req).Do()
+	return err
 }
 
-func (r *garReconciler) getOrCreateOrUpdateRepository(ctx context.Context, input reconcilers.Input, log logger.Logger) (*artifactregistrypb.Repository, error) {
-	slugStr := string(input.Team.Slug)
-
+func (r *garReconciler) getOrCreateOrUpdateGarRepository(ctx context.Context, input reconcilers.Input, log logger.Logger) (*artifactregistrypb.Repository, error) {
 	parent := fmt.Sprintf("projects/%s/locations/europe-north1", r.managementProjectID)
-	repositoryName := fmt.Sprintf("%s/repositories/%s", parent, slugStr)
-	repositoryDescription := fmt.Sprintf("Docker repository for team %q. Managed by NAIS Console.", slugStr)
+	name := fmt.Sprintf("%s/repositories/%s", parent, input.Team.Slug)
+	description := fmt.Sprintf("Docker repository for team %q. Managed by NAIS Console.", input.Team.Slug)
 
 	getRequest := &artifactregistrypb.GetRepositoryRequest{
-		Name: repositoryName,
+		Name: name,
 	}
 	existing, err := r.artifactRegistry.GetRepository(ctx, getRequest)
 	if err != nil && status.Code(err) != codes.NotFound {
@@ -163,17 +162,17 @@ func (r *garReconciler) getOrCreateOrUpdateRepository(ctx context.Context, input
 	if existing == nil {
 		template := &artifactregistrypb.Repository{
 			Format:      artifactregistrypb.Repository_DOCKER,
-			Name:        repositoryName,
-			Description: repositoryDescription,
+			Name:        name,
+			Description: description,
 			Labels: map[string]string{
-				"team": slugStr,
+				"team": string(input.Team.Slug),
 			},
 		}
 
 		createRequest := &artifactregistrypb.CreateRepositoryRequest{
 			Parent:       parent,
 			Repository:   template,
-			RepositoryId: slugStr,
+			RepositoryId: string(input.Team.Slug),
 		}
 
 		createResponse, err := r.artifactRegistry.CreateRepository(ctx, createRequest)
@@ -185,10 +184,10 @@ func (r *garReconciler) getOrCreateOrUpdateRepository(ctx context.Context, input
 	}
 
 	if existing.Format != artifactregistrypb.Repository_DOCKER {
-		return nil, fmt.Errorf("existing repo has invalid format: %q %q", repositoryName, existing.Format)
+		return nil, fmt.Errorf("existing repo has invalid format: %q %q", name, existing.Format)
 	}
 
-	return r.updateRepository(ctx, existing, input.Team.Slug, repositoryDescription, log)
+	return r.updateGarRepository(ctx, existing, input.Team.Slug, description, log)
 }
 
 func (r *garReconciler) getServiceAccountPolicyMembers(ctx context.Context, teamSlug slug.Slug) ([]string, error) {
@@ -202,7 +201,7 @@ func (r *garReconciler) getServiceAccountPolicyMembers(ctx context.Context, team
 	for _, githubRepo := range state.Repositories {
 		for _, perm := range githubRepo.Permissions {
 			if perm.Name == "push" && perm.Granted {
-        member := fmt.Sprintf("%s/%s", r.workloadIdeneityPoolName,githubRepo.Name)
+				member := fmt.Sprintf("%s/%s", r.workloadIdentityPoolName, githubRepo.Name)
 				members = append(members, member)
 				break
 			}
@@ -212,7 +211,7 @@ func (r *garReconciler) getServiceAccountPolicyMembers(ctx context.Context, team
 	return members, nil
 }
 
-func (r *garReconciler) updateRepository(ctx context.Context, repository *artifactregistrypb.Repository, slug slug.Slug, description string, log logger.Logger) (*artifactregistrypb.Repository, error) {
+func (r *garReconciler) updateGarRepository(ctx context.Context, repository *artifactregistrypb.Repository, slug slug.Slug, description string, log logger.Logger) (*artifactregistrypb.Repository, error) {
 	var changes []string
 	if repository.Labels["team"] != string(slug) {
 		repository.Labels["team"] = string(slug)
@@ -239,17 +238,17 @@ func (r *garReconciler) updateRepository(ctx context.Context, repository *artifa
 	return repository, nil
 }
 
-func (r *garReconciler) setRepositoryPolicy(ctx context.Context, repository *artifactregistrypb.Repository, serviceAccount *iam.ServiceAccount) error {
-  _, err := r.artifactRegistry.SetIamPolicy(ctx, &iampb.SetIamPolicyRequest{
-    Resource: repository.Name,
-    Policy: &iampb.Policy{
-      Bindings: []*iampb.Binding{
-        {
-          Role: "roles/artifactregistry.writer",
-          Members: []string{serviceAccount.Email},
-        },
-      },
-    },
-  })
-  return err
+func (r *garReconciler) setGarRepositoryPolicy(ctx context.Context, repository *artifactregistrypb.Repository, serviceAccount *iam.ServiceAccount) error {
+	_, err := r.artifactRegistry.SetIamPolicy(ctx, &iampb.SetIamPolicyRequest{
+		Resource: repository.Name,
+		Policy: &iampb.Policy{
+			Bindings: []*iampb.Binding{
+				{
+					Role:    "roles/artifactregistry.writer",
+					Members: []string{serviceAccount.Email},
+				},
+			},
+		},
+	})
+	return err
 }
