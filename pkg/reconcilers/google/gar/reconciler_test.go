@@ -195,12 +195,13 @@ func TestReconcile(t *testing.T) {
 				},
 				func(w http.ResponseWriter, r *http.Request) {
 					var req iam.SetIamPolicyRequest
+					prefix := "principalSet://iam.googleapis.com/" + workloadIdentityPoolName + "/attribute.repository"
 					assert.NoError(t, json.NewDecoder(r.Body).Decode(&req))
 					assert.Contains(t, r.URL.Path, expectedServiceAccount.Name)
-					assert.Contains(t, req.Policy.Bindings[0].Members, workloadIdentityPoolName+"/test/repository")
-					assert.Contains(t, req.Policy.Bindings[0].Members, workloadIdentityPoolName+"/test/admin-repository")
-					assert.NotContains(t, req.Policy.Bindings[0].Members, workloadIdentityPoolName+"/test/ro-repository")
-					assert.NotContains(t, req.Policy.Bindings[0].Members, workloadIdentityPoolName+"/test/no-permissions-repository")
+					assert.Contains(t, req.Policy.Bindings[0].Members, prefix+"/test/repository")
+					assert.Contains(t, req.Policy.Bindings[0].Members, prefix+"/test/admin-repository")
+					assert.NotContains(t, req.Policy.Bindings[0].Members, prefix+"/test/ro-repository")
+					assert.NotContains(t, req.Policy.Bindings[0].Members, prefix+"/test/no-permissions-repository")
 					w.WriteHeader(abortReconcilerCode)
 				},
 			}),

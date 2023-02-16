@@ -201,7 +201,7 @@ func (r *garReconciler) getServiceAccountPolicyMembers(ctx context.Context, team
 	for _, githubRepo := range state.Repositories {
 		for _, perm := range githubRepo.Permissions {
 			if perm.Name == "push" && perm.Granted {
-				member := fmt.Sprintf("%s/%s", r.workloadIdentityPoolName, githubRepo.Name)
+				member := fmt.Sprintf("principalSet://iam.googleapis.com/%s/attribute.repository/%s", r.workloadIdentityPoolName, githubRepo.Name)
 				members = append(members, member)
 				break
 			}
