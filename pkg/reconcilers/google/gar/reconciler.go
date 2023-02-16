@@ -245,7 +245,7 @@ func (r *garReconciler) setGarRepositoryPolicy(ctx context.Context, repository *
 			Bindings: []*iampb.Binding{
 				{
 					Role:    "roles/artifactregistry.writer",
-					Members: []string{serviceAccount.Email},
+					Members: []string{"serviceAccount:" + serviceAccount.Email},
 				},
 			},
 		},

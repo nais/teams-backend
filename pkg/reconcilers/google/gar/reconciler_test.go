@@ -302,7 +302,7 @@ func TestReconcile(t *testing.T) {
 				},
 				setIamPolicy: func(ctx context.Context, r *iampb.SetIamPolicyRequest) (*iampb.Policy, error) {
 					assert.Equal(t, expectedRepository.Name, r.Resource)
-					assert.Equal(t, expectedServiceAccount.Email, r.Policy.Bindings[0].Members[0])
+					assert.Equal(t, "serviceAccount:"+expectedServiceAccount.Email, r.Policy.Bindings[0].Members[0])
 					assert.Equal(t, "roles/artifactregistry.writer", r.Policy.Bindings[0].Role)
 
 					return &iampb.Policy{}, abortTestErr
