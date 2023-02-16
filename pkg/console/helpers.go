@@ -41,9 +41,9 @@ func SlugHashPrefixTruncate(slug slug.Slug, prefix string, maxLength int) string
 	hasher := sha256.New()
 	hasher.Write([]byte(slug))
 
-  prefixLength :=len(prefix)
-  hashLength := 4
-  slugLength := maxLength - prefixLength - hashLength - 2 // 2 becasue we join parts with '-'
+	prefixLength := len(prefix)
+	hashLength := 4
+	slugLength := maxLength - prefixLength - hashLength - 2 // 2 becasue we join parts with '-'
 
 	parts := []string{
 		prefix,
@@ -51,5 +51,5 @@ func SlugHashPrefixTruncate(slug slug.Slug, prefix string, maxLength int) string
 		Truncate(hex.EncodeToString(hasher.Sum(nil)), hashLength),
 	}
 
-  return strings.Join(parts, "-")
+	return strings.Join(parts, "-")
 }

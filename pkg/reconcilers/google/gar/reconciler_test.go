@@ -44,8 +44,8 @@ type fakeArtifactRegistry struct {
 	updateCounter int
 	update        func(ctx context.Context, r *artifactregistrypb.UpdateRepositoryRequest) (*artifactregistrypb.Repository, error)
 
-	setIamPolicy  func(context.Context, *iampb.SetIamPolicyRequest) (*iampb.Policy, error) 
-  setIamPolicyCounter int
+	setIamPolicy        func(context.Context, *iampb.SetIamPolicyRequest) (*iampb.Policy, error)
+	setIamPolicyCounter int
 
 	artifactregistrypb.UnimplementedArtifactRegistryServer
 }
@@ -303,13 +303,13 @@ func TestReconcile(t *testing.T) {
 				get: func(ctx context.Context, r *artifactregistrypb.GetRepositoryRequest) (*artifactregistrypb.Repository, error) {
 					return &expectedRepository, nil
 				},
-        setIamPolicy: func(ctx context.Context, r *iampb.SetIamPolicyRequest) (*iampb.Policy, error) {
-          assert.Equal(t, expectedRepository.Name, r.Resource)
-          assert.Equal(t, expectedServiceAccount.Email, r.Policy.Bindings[0].Members[0])
-          assert.Equal(t, "roles/artifactregistry.writer", r.Policy.Bindings[0].Role)
+				setIamPolicy: func(ctx context.Context, r *iampb.SetIamPolicyRequest) (*iampb.Policy, error) {
+					assert.Equal(t, expectedRepository.Name, r.Resource)
+					assert.Equal(t, expectedServiceAccount.Email, r.Policy.Bindings[0].Members[0])
+					assert.Equal(t, "roles/artifactregistry.writer", r.Policy.Bindings[0].Role)
 
-          return &iampb.Policy{}, fmt.Errorf("abort test")
-        },
+					return &iampb.Policy{}, fmt.Errorf("abort test")
+				},
 			},
 			iam: test.HttpServerWithHandlers(t, []http.HandlerFunc{
 				// get service account
