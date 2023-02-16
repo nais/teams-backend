@@ -124,10 +124,6 @@ func (m *mocks) start(t *testing.T, ctx context.Context) (*artifactregistry.Clie
 	return artifactRegistryClient, fakeIamService
 }
 
-// fakeIamServer := test.HttpServerWithHandlers(t, []http.HandlerFunc{
-//   func(w http.ResponseWriter, r *http.Request) {},
-// })
-
 func TestReconcile(t *testing.T) {
 	log, err := logger.GetLogger("text", "info")
 	assert.NoError(t, err)
@@ -137,6 +133,8 @@ func TestReconcile(t *testing.T) {
 		workloadIdentityPoolName = "projects/123456789/locations/global/workloadIdentityPools/some-identity-pool"
 		abortReconcilerCode      = 418
 	)
+
+	abortTestErr := fmt.Errorf("abort test")
 
 	correlationID := uuid.New()
 	team := db.Team{Team: &sqlc.Team{Slug: slug.Slug("team")}}
@@ -164,8 +162,6 @@ func TestReconcile(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	// repositoryName := fmt.Sprintf("projects/%s/locations/europe-north1/repositories/%s", managementProjectID, string(slug))
-	// repositoryDescription := fmt.Sprintf("Docker repository for team %q. Managed by NAIS Console.", string(slug))
 
 	t.Run("when service account does not exist, create it", func(t *testing.T) {
 		mocks := mocks{
@@ -270,7 +266,7 @@ func TestReconcile(t *testing.T) {
 						Result: &longrunningpb.Operation_Response{
 							Response: &payload,
 						},
-					}, fmt.Errorf("abort test")
+					}, abortTestErr
 				},
 			},
 			iam: test.HttpServerWithHandlers(t, []http.HandlerFunc{
@@ -280,7 +276,7 @@ func TestReconcile(t *testing.T) {
 				},
 				// set iam policy
 				func(w http.ResponseWriter, r *http.Request) {
-					json.NewEncoder(w).Encode(&iam.Policy{})
+					assert.NoError(t, json.NewEncoder(w).Encode(&iam.Policy{}))
 				},
 			}),
 		}
@@ -308,7 +304,7 @@ func TestReconcile(t *testing.T) {
 					assert.Equal(t, expectedServiceAccount.Email, r.Policy.Bindings[0].Members[0])
 					assert.Equal(t, "roles/artifactregistry.writer", r.Policy.Bindings[0].Role)
 
-					return &iampb.Policy{}, fmt.Errorf("abort test")
+					return &iampb.Policy{}, abortTestErr
 				},
 			},
 			iam: test.HttpServerWithHandlers(t, []http.HandlerFunc{
@@ -318,7 +314,53 @@ func TestReconcile(t *testing.T) {
 				},
 				// set iam policy
 				func(w http.ResponseWriter, r *http.Request) {
-					json.NewEncoder(w).Encode(&iam.Policy{})
+					assert.NoError(t, json.NewEncoder(w).Encode(&iam.Policy{}))
+				},
+			}),
+		}
+
+		artifactregistryClient, iamService := mocks.start(t, ctx)
+		database := db.NewMockDatabase(t)
+		database.
+			On("LoadReconcilerStateForTeam", ctx, sqlc.ReconcilerNameGithubTeam, team.Slug, mock.Anything).
+			Return(nil).
+			Once()
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+
+		reconciler := gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, artifactregistryClient, iamService, log)
+		err = reconciler.Reconcile(ctx, input)
+		assert.ErrorContains(t, err, "abort test")
+	})
+
+	t.Run("gar repository exists, but has outdated info", func(t *testing.T) {
+		mocks := mocks{
+			artifactRegistry: &fakeArtifactRegistry{
+				get: func(ctx context.Context, r *artifactregistrypb.GetRepositoryRequest) (*artifactregistrypb.Repository, error) {
+					assert.Equal(t, expectedRepository.Name, r.Name)
+
+					repo := expectedRepository
+					repo.Description = "some incorrect description"
+					repo.Labels = map[string]string{
+						"team": "some-incorrect-team",
+					}
+					return &repo, nil
+				},
+				update: func(ctx context.Context, r *artifactregistrypb.UpdateRepositoryRequest) (*artifactregistrypb.Repository, error) {
+					assert.Equal(t, expectedRepository.Description, r.Repository.Description)
+					assert.Equal(t, expectedRepository.Name, r.Repository.Name)
+					assert.Equal(t, string(team.Slug), r.Repository.Labels["team"])
+
+					return nil, abortTestErr
+				},
+			},
+			iam: test.HttpServerWithHandlers(t, []http.HandlerFunc{
+				// get service account
+				func(w http.ResponseWriter, r *http.Request) {
+					assert.NoError(t, json.NewEncoder(w).Encode(expectedServiceAccount))
+				},
+				// set iam policy
+				func(w http.ResponseWriter, r *http.Request) {
+					assert.NoError(t, json.NewEncoder(w).Encode(&iam.Policy{}))
 				},
 			}),
 		}

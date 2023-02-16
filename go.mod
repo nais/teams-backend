@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	cloud.google.com/go/artifactregistry v1.10.0
+	cloud.google.com/go/iam v0.8.0
 	cloud.google.com/go/longrunning v0.3.0
 	cloud.google.com/go/pubsub v1.27.1
 	github.com/99designs/gqlgen v0.17.16
@@ -38,7 +39,6 @@ require (
 	cloud.google.com/go v0.105.0 // indirect
 	cloud.google.com/go/compute v1.13.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.1 // indirect
-	cloud.google.com/go/iam v0.8.0 // indirect
 	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/Microsoft/go-winio v0.6.0 // indirect
 	github.com/agnivade/levenshtein v1.1.1 // indirect
