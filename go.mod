@@ -1,6 +1,6 @@
 module github.com/nais/console
 
-go 1.19
+go 1.20
 
 require (
 	cloud.google.com/go/artifactregistry v1.10.0
