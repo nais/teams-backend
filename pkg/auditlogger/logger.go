@@ -14,9 +14,31 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type AuditLogger interface {
+	Logf(ctx context.Context, dbtx db.Database, targets []Target, entry Fields, message string, messageArgs ...interface{}) error
+	WithSystemName(systemName sqlc.SystemName) AuditLogger
+}
+
 type auditLogger struct {
 	systemName sqlc.SystemName
 	log        logger.Logger
+}
+
+type Target struct {
+	Type       sqlc.AuditLogsTargetType
+	Identifier string
+}
+
+type Fields struct {
+	Action        sqlc.AuditAction
+	Actor         *authz.Actor
+	CorrelationID uuid.UUID
+}
+
+func New(log logger.Logger) AuditLogger {
+	return &auditLogger{
+		log: log,
+	}
 }
 
 func (l *auditLogger) WithSystemName(systemName sqlc.SystemName) AuditLogger {
@@ -26,43 +48,9 @@ func (l *auditLogger) WithSystemName(systemName sqlc.SystemName) AuditLogger {
 	}
 }
 
-type AuditLogger interface {
-	Logf(ctx context.Context, dbtx db.Database, targets []Target, entry Fields, message string, messageArgs ...interface{}) error
-	WithSystemName(systemName sqlc.SystemName) AuditLogger
-}
-
-func New(log logger.Logger) AuditLogger {
-	return &auditLogger{
-		log: log,
-	}
-}
-
-type Target struct {
-	Type       sqlc.AuditLogsTargetType
-	Identifier string
-}
-
-func UserTarget(email string) Target {
-	return Target{Type: sqlc.AuditLogsTargetTypeUser, Identifier: email}
-}
-
-func TeamTarget(slug slug.Slug) Target {
-	return Target{Type: sqlc.AuditLogsTargetTypeTeam, Identifier: string(slug)}
-}
-
-func ReconcilerTarget(name sqlc.ReconcilerName) Target {
-	return Target{Type: sqlc.AuditLogsTargetTypeReconciler, Identifier: string(name)}
-}
-
-type Fields struct {
-	Action        sqlc.AuditAction
-	Actor         *authz.Actor
-	CorrelationID uuid.UUID
-}
-
 func (l *auditLogger) Logf(ctx context.Context, dbtx db.Database, targets []Target, fields Fields, message string, messageArgs ...interface{}) error {
 	if l.systemName == "" || !l.systemName.Valid() {
-		return fmt.Errorf("unable to create auditlog entry: missing or invalid systemName")
+		return fmt.Errorf("unable to create auditlog entry: missing or invalid system name")
 	}
 
 	if fields.Action == "" || !fields.Action.Valid() {
@@ -79,11 +67,12 @@ func (l *auditLogger) Logf(ctx context.Context, dbtx db.Database, targets []Targ
 
 	message = fmt.Sprintf(message, messageArgs...)
 
+	var actor *string
+	if fields.Actor != nil {
+		actor = console.Strp(fields.Actor.User.Identity())
+	}
+
 	for _, target := range targets {
-		var actor *string
-		if fields.Actor != nil {
-			actor = console.Strp(fields.Actor.User.Identity())
-		}
 		err := dbtx.CreateAuditLogEntry(
 			ctx,
 			fields.CorrelationID,
@@ -125,4 +114,20 @@ func (l *auditLogger) Logf(ctx context.Context, dbtx db.Database, targets []Targ
 	}
 
 	return nil
+}
+
+func UserTarget(email string) Target {
+	return Target{Type: sqlc.AuditLogsTargetTypeUser, Identifier: email}
+}
+
+func TeamTarget(slug slug.Slug) Target {
+	return Target{Type: sqlc.AuditLogsTargetTypeTeam, Identifier: string(slug)}
+}
+
+func ReconcilerTarget(name sqlc.ReconcilerName) Target {
+	return Target{Type: sqlc.AuditLogsTargetTypeReconciler, Identifier: string(name)}
+}
+
+func SystemTarget(name sqlc.SystemName) Target {
+	return Target{Type: sqlc.AuditLogsTargetTypeSystem, Identifier: string(name)}
 }

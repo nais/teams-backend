@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/graph/generated"
@@ -28,7 +29,15 @@ func (r *mutationResolver) SynchronizeUsers(ctx context.Context) (*model.UserSyn
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	r.log.WithCorrelationID(correlationID).WithActor(actor.User.Identity()).Infof("trigger user sync")
+	targets := []auditlogger.Target{
+		auditlogger.SystemTarget(sqlc.SystemNameUsersync),
+	}
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGraphqlApiUsersSync,
+		Actor:         actor,
+		CorrelationID: correlationID,
+	}
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Trigger user sync")
 	r.userSync <- correlationID
 
 	return &model.UserSync{

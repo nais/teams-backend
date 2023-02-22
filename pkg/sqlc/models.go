@@ -73,6 +73,7 @@ const (
 	AuditActionNaisDeployProvisionDeployKey              AuditAction = "nais:deploy:provision-deploy-key"
 	AuditActionGoogleGcpProjectDeleteCnrmServiceAccount  AuditAction = "google:gcp:project:delete-cnrm-service-account"
 	AuditActionGoogleGcpProjectEnableGoogleApis          AuditAction = "google:gcp:project:enable-google-apis"
+	AuditActionGraphqlApiUsersSync                       AuditAction = "graphql-api:users:sync"
 )
 
 func (e *AuditAction) Scan(src interface{}) error {
@@ -166,7 +167,8 @@ func (e AuditAction) Valid() bool {
 		AuditActionGraphqlApiReconcilersUpdateTeamState,
 		AuditActionNaisDeployProvisionDeployKey,
 		AuditActionGoogleGcpProjectDeleteCnrmServiceAccount,
-		AuditActionGoogleGcpProjectEnableGoogleApis:
+		AuditActionGoogleGcpProjectEnableGoogleApis,
+		AuditActionGraphqlApiUsersSync:
 		return true
 	}
 	return false
@@ -229,6 +231,7 @@ func AllAuditActionValues() []AuditAction {
 		AuditActionNaisDeployProvisionDeployKey,
 		AuditActionGoogleGcpProjectDeleteCnrmServiceAccount,
 		AuditActionGoogleGcpProjectEnableGoogleApis,
+		AuditActionGraphqlApiUsersSync,
 	}
 }
 
@@ -239,6 +242,7 @@ const (
 	AuditLogsTargetTypeTeam           AuditLogsTargetType = "team"
 	AuditLogsTargetTypeServiceAccount AuditLogsTargetType = "service_account"
 	AuditLogsTargetTypeReconciler     AuditLogsTargetType = "reconciler"
+	AuditLogsTargetTypeSystem         AuditLogsTargetType = "system"
 )
 
 func (e *AuditLogsTargetType) Scan(src interface{}) error {
@@ -281,7 +285,8 @@ func (e AuditLogsTargetType) Valid() bool {
 	case AuditLogsTargetTypeUser,
 		AuditLogsTargetTypeTeam,
 		AuditLogsTargetTypeServiceAccount,
-		AuditLogsTargetTypeReconciler:
+		AuditLogsTargetTypeReconciler,
+		AuditLogsTargetTypeSystem:
 		return true
 	}
 	return false
@@ -293,6 +298,7 @@ func AllAuditLogsTargetTypeValues() []AuditLogsTargetType {
 		AuditLogsTargetTypeTeam,
 		AuditLogsTargetTypeServiceAccount,
 		AuditLogsTargetTypeReconciler,
+		AuditLogsTargetTypeSystem,
 	}
 }
 
