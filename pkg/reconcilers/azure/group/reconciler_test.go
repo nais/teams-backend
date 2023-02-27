@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -310,5 +311,116 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 
 		err := reconciler.Reconcile(ctx, input)
 		assert.NoError(t, err)
+	})
+}
+
+func TestAzureReconciler_Delete(t *testing.T) {
+	const tenantDomain = "example.com"
+
+	correlationID := uuid.New()
+	teamSlug := slug.Slug("slug")
+	ctx := context.Background()
+	log := logger.NewMockLogger(t)
+	azureClient := azureclient.NewMockClient(t)
+	auditLogger := auditlogger.NewMockAuditLogger(t)
+
+	t.Run("Unable to load state", func(t *testing.T) {
+		database := db.NewMockDatabase(t)
+		database.
+			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, teamSlug, mock.Anything).
+			Return(fmt.Errorf("some error")).
+			Once()
+
+		reconciler := azure_group_reconciler.New(database, auditLogger, azureClient, tenantDomain, log)
+
+		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		assert.ErrorContains(t, err, "load reconciler state")
+	})
+
+	t.Run("Empty state", func(t *testing.T) {
+		database := db.NewMockDatabase(t)
+		database.
+			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, teamSlug, mock.Anything).
+			Return(nil).
+			Once()
+
+		reconciler := azure_group_reconciler.New(database, auditLogger, azureClient, tenantDomain, log)
+
+		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		assert.ErrorContains(t, err, "missing group ID in reconciler state")
+	})
+
+	t.Run("Azure client error", func(t *testing.T) {
+		grpID := uuid.New()
+
+		database := db.NewMockDatabase(t)
+		database.
+			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, teamSlug, mock.Anything).
+			Run(func(args mock.Arguments) {
+
+				state := args.Get(3).(*reconcilers.AzureState)
+				state.GroupID = &grpID
+			}).
+			Return(nil).
+			Once()
+
+		azureClient := azureclient.NewMockClient(t)
+		azureClient.
+			On("DeleteGroup", ctx, grpID).
+			Return(fmt.Errorf("some error")).
+			Once()
+
+		reconciler := azure_group_reconciler.New(database, auditLogger, azureClient, tenantDomain, log)
+
+		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		assert.ErrorContains(t, err, "delete Azure AD group with ID")
+	})
+
+	t.Run("Successful delete", func(t *testing.T) {
+		grpID := uuid.New()
+
+		database := db.NewMockDatabase(t)
+		database.
+			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, teamSlug, mock.Anything).
+			Run(func(args mock.Arguments) {
+
+				state := args.Get(3).(*reconcilers.AzureState)
+				state.GroupID = &grpID
+			}).
+			Return(nil).
+			Once()
+		database.
+			On("RemoveReconcilerStateForTeam", ctx, azure_group_reconciler.Name, teamSlug).
+			Return(nil).
+			Once()
+
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On(
+				"Logf",
+				ctx,
+				database,
+				mock.MatchedBy(func(targets []auditlogger.Target) bool {
+					return targets[0].Type == sqlc.AuditLogsTargetTypeTeam && targets[0].Identifier == string(teamSlug)
+				}),
+				mock.MatchedBy(func(fields auditlogger.Fields) bool {
+					return fields.CorrelationID == correlationID && fields.Action == sqlc.AuditActionAzureGroupDelete
+				}),
+				mock.MatchedBy(func(msg string) bool {
+					return strings.HasPrefix(msg, "Delete Azure AD group")
+				}),
+				grpID,
+			).
+			Return(nil).
+			Once()
+
+		azureClient := azureclient.NewMockClient(t)
+		azureClient.
+			On("DeleteGroup", ctx, grpID).
+			Return(nil).
+			Once()
+
+		reconciler := azure_group_reconciler.New(database, auditLogger, azureClient, tenantDomain, log)
+		assert.Nil(t, reconciler.Delete(ctx, teamSlug, correlationID))
 	})
 }

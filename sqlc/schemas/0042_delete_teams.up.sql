@@ -2,6 +2,7 @@ BEGIN;
 
 ALTER TYPE audit_action ADD VALUE IF NOT EXISTS 'graphql-api:teams:request-delete';
 ALTER TYPE audit_action ADD VALUE IF NOT EXISTS 'graphql-api:teams:delete';
+ALTER TYPE audit_action ADD VALUE IF NOT EXISTS 'azure:group:delete';
 
 CREATE TABLE team_delete_keys (
    key UUID PRIMARY KEY DEFAULT gen_random_uuid(),

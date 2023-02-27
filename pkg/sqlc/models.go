@@ -76,6 +76,7 @@ const (
 	AuditActionGraphqlApiUsersSync                       AuditAction = "graphql-api:users:sync"
 	AuditActionGraphqlApiTeamsRequestDelete              AuditAction = "graphql-api:teams:request-delete"
 	AuditActionGraphqlApiTeamsDelete                     AuditAction = "graphql-api:teams:delete"
+	AuditActionAzureGroupDelete                          AuditAction = "azure:group:delete"
 )
 
 func (e *AuditAction) Scan(src interface{}) error {
@@ -172,7 +173,8 @@ func (e AuditAction) Valid() bool {
 		AuditActionGoogleGcpProjectEnableGoogleApis,
 		AuditActionGraphqlApiUsersSync,
 		AuditActionGraphqlApiTeamsRequestDelete,
-		AuditActionGraphqlApiTeamsDelete:
+		AuditActionGraphqlApiTeamsDelete,
+		AuditActionAzureGroupDelete:
 		return true
 	}
 	return false
@@ -238,6 +240,7 @@ func AllAuditActionValues() []AuditAction {
 		AuditActionGraphqlApiUsersSync,
 		AuditActionGraphqlApiTeamsRequestDelete,
 		AuditActionGraphqlApiTeamsDelete,
+		AuditActionAzureGroupDelete,
 	}
 }
 
