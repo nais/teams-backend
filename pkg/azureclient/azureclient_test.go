@@ -436,3 +436,35 @@ func Test_RemoveMemberFromGroupWithInvalidResponse(t *testing.T) {
 
 	assert.EqualError(t, err, `remove member "mail" from azure group "mail@example.com": 200 OK: some response body`)
 }
+
+func Test_DeleteGroup(t *testing.T) {
+	ctx := context.Background()
+	grpID := uuid.New()
+
+	t.Run("Successful delete", func(t *testing.T) {
+		httpClient := test.NewTestHttpClient(
+			func(req *http.Request) *http.Response {
+				assert.Equal(t, fmt.Sprintf("https://graph.microsoft.com/v1.0/groups/%s", grpID), req.URL.String())
+				assert.Equal(t, http.MethodDelete, req.Method)
+				assert.Equal(t, ctx, req.Context())
+				return test.Response("204 No Content", "some response body")
+			},
+		)
+
+		client := azureclient.New(httpClient)
+		assert.NoError(t, client.DeleteGroup(ctx, grpID))
+	})
+
+	t.Run("Delete error", func(t *testing.T) {
+		httpClient := test.NewTestHttpClient(
+			func(req *http.Request) *http.Response {
+				return test.Response("200 OK", "some response body")
+			},
+		)
+
+		client := azureclient.New(httpClient)
+		err := client.DeleteGroup(ctx, grpID)
+		assert.ErrorContains(t, err, "remove azure group with ID")
+		assert.ErrorContains(t, err, grpID.String())
+	})
+}
