@@ -43,3 +43,10 @@ func (d *database) SetReconcilerStateForTeam(ctx context.Context, reconcilerName
 		State:      newState,
 	})
 }
+
+func (d *database) RemoveReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, slug slug.Slug) error {
+	return d.querier.RemoveReconcilerStateForTeam(ctx, sqlc.RemoveReconcilerStateForTeamParams{
+		Reconciler: reconcilerName,
+		TeamSlug:   slug,
+	})
+}

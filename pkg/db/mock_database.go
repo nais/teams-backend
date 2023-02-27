@@ -1086,6 +1086,20 @@ func (_m *MockDatabase) RemoveApiKeysFromServiceAccount(ctx context.Context, ser
 	return r0
 }
 
+// RemoveReconcilerStateForTeam provides a mock function with given fields: ctx, reconcilerName, _a2
+func (_m *MockDatabase) RemoveReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, _a2 slug.Slug) error {
+	ret := _m.Called(ctx, reconcilerName, _a2)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName, slug.Slug) error); ok {
+		r0 = rf(ctx, reconcilerName, _a2)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // RemoveSlackAlertsChannel provides a mock function with given fields: ctx, teamSlug, environment
 func (_m *MockDatabase) RemoveSlackAlertsChannel(ctx context.Context, teamSlug slug.Slug, environment string) error {
 	ret := _m.Called(ctx, teamSlug, environment)

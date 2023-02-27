@@ -29,6 +29,21 @@ func (q *Queries) GetReconcilerStateForTeam(ctx context.Context, arg GetReconcil
 	return &i, err
 }
 
+const removeReconcilerStateForTeam = `-- name: RemoveReconcilerStateForTeam :exec
+DELETE FROM reconciler_states
+WHERE reconciler = $1 AND team_slug = $2
+`
+
+type RemoveReconcilerStateForTeamParams struct {
+	Reconciler ReconcilerName
+	TeamSlug   slug.Slug
+}
+
+func (q *Queries) RemoveReconcilerStateForTeam(ctx context.Context, arg RemoveReconcilerStateForTeamParams) error {
+	_, err := q.db.Exec(ctx, removeReconcilerStateForTeam, arg.Reconciler, arg.TeamSlug)
+	return err
+}
+
 const setReconcilerStateForTeam = `-- name: SetReconcilerStateForTeam :exec
 INSERT INTO reconciler_states (reconciler, team_slug, state)
 VALUES($1, $2, $3)
