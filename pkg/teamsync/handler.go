@@ -35,6 +35,7 @@ type Handler interface {
 	RemoveReconciler(reconcilerName sqlc.ReconcilerName)
 	SyncTeams(ctx context.Context)
 	UpdateMetrics(ctx context.Context)
+	DeleteTeam(ctx context.Context, teamSlug slug.Slug, correlationID uuid.UUID) error
 	Close()
 }
 
@@ -87,6 +88,42 @@ func NewHandler(ctx context.Context, database db.Database, cfg *config.Config, a
 		factories:         factories,
 		mainContext:       ctx,
 	}
+}
+
+func (h *handler) DeleteTeam(ctx context.Context, teamSlug slug.Slug, correlationID uuid.UUID) error {
+	log := h.log.WithTeamSlug(string(teamSlug))
+	errors := 0
+
+	h.lock.Lock()
+	orderedReconcilers := getOrderedReconcilers(h.activeReconcilers)
+	h.lock.Unlock()
+
+	for _, reconcilerWithRunOrder := range orderedReconcilers {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		reconcilerImpl := reconcilerWithRunOrder.reconciler
+		name := reconcilerImpl.Name()
+		log := log.WithSystem(string(name))
+
+		err := reconcilerImpl.Delete(ctx, teamSlug, correlationID)
+		if err != nil {
+			log.WithError(err).Error("delete")
+			errors++
+			continue
+		}
+	}
+
+	if errors > 0 {
+		return fmt.Errorf("%d error(s) occurred during delete", errors)
+	}
+
+	err := h.database.DeleteTeam(ctx, teamSlug)
+	if err != nil {
+		log.WithError(err).Error("delete team from database")
+	}
+
+	return nil
 }
 
 func (h *handler) Close() {

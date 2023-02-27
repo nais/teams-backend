@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/console"
@@ -140,6 +141,10 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 		return fmt.Errorf("hack for NAVs legacy GCP projects: %w", err)
 	}
 
+	return nil
+}
+
+func (r *googleGcpReconciler) Delete(ctx context.Context, teamSlug slug.Slug, correlationID uuid.UUID) error {
 	return nil
 }
 

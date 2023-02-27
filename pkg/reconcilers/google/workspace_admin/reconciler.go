@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
@@ -14,6 +15,7 @@ import (
 	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/metrics"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/googleapi"
@@ -97,6 +99,10 @@ func (r *googleWorkspaceAdminReconciler) Reconcile(ctx context.Context, input re
 	}
 
 	return r.addToGKESecurityGroup(ctx, grp, input)
+}
+
+func (r *googleWorkspaceAdminReconciler) Delete(ctx context.Context, teamSlug slug.Slug, correlationID uuid.UUID) error {
+	return nil
 }
 
 func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(ctx context.Context, state *reconcilers.GoogleWorkspaceState, input reconcilers.Input) (*admin_directory_v1.Group, error) {

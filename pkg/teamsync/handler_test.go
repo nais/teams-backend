@@ -294,3 +294,7 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 		handler.SyncTeams(ctx)
 	})
 }
+
+func TestHandler_DeleteTeam(t *testing.T) {
+	// TODO: Add tests
+}

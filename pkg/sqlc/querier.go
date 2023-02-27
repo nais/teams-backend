@@ -17,15 +17,18 @@ type Querier interface {
 	AssignTeamRoleToUser(ctx context.Context, arg AssignTeamRoleToUserParams) error
 	ClearReconcilerErrorsForTeam(ctx context.Context, arg ClearReconcilerErrorsForTeamParams) error
 	ConfigureReconciler(ctx context.Context, arg ConfigureReconcilerParams) error
+	ConfirmTeamDeleteKey(ctx context.Context, key uuid.UUID) error
 	CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) error
 	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) error
 	CreateServiceAccount(ctx context.Context, name string) (*ServiceAccount, error)
 	CreateSession(ctx context.Context, arg CreateSessionParams) (*Session, error)
 	CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, error)
+	CreateTeamDeleteKey(ctx context.Context, teamSlug slug.Slug) (*TeamDeleteKey, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (*User, error)
 	DangerousGetReconcilerConfigValues(ctx context.Context, reconciler ReconcilerName) ([]*DangerousGetReconcilerConfigValuesRow, error)
 	DeleteServiceAccount(ctx context.Context, id uuid.UUID) error
 	DeleteSession(ctx context.Context, id uuid.UUID) error
+	DeleteTeam(ctx context.Context, slug slug.Slug) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
 	DisableReconciler(ctx context.Context, name ReconcilerName) (*Reconciler, error)
 	DisableTeam(ctx context.Context, slug slug.Slug) (*Team, error)
@@ -47,6 +50,7 @@ type Querier interface {
 	GetSessionByID(ctx context.Context, id uuid.UUID) (*Session, error)
 	GetSlackAlertsChannels(ctx context.Context, teamSlug slug.Slug) ([]*SlackAlertsChannel, error)
 	GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)
+	GetTeamDeleteKey(ctx context.Context, key uuid.UUID) (*TeamDeleteKey, error)
 	GetTeamMembers(ctx context.Context, targetTeamSlug *slug.Slug) ([]*User, error)
 	GetTeamMetadata(ctx context.Context, teamSlug slug.Slug) ([]*TeamMetadatum, error)
 	GetTeamReconcilerErrors(ctx context.Context, teamSlug slug.Slug) ([]*ReconcilerError, error)

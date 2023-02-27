@@ -28,3 +28,5 @@ sql:
             go_type: "*github.com/nais/console/pkg/slug.Slug"
           - column: slack_alerts_channels.team_slug
             go_type: github.com/nais/console/pkg/slug.Slug
+          - column: team_delete_keys.team_slug
+            go_type: github.com/nais/console/pkg/slug.Slug

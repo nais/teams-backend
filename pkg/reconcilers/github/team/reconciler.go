@@ -25,9 +25,10 @@ import (
 	"github.com/shurcooL/githubv4"
 )
 
-const Name = sqlc.ReconcilerNameGithubTeam
-
-const metricsSystemName = "github"
+const (
+	Name              = sqlc.ReconcilerNameGithubTeam
+	metricsSystemName = "github"
+)
 
 var errGitHubUserNotFound = errors.New("GitHub user does not exist")
 
@@ -115,6 +116,10 @@ func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.
 	}
 
 	return r.connectUsers(ctx, githubTeam, input)
+}
+
+func (r *githubTeamReconciler) Delete(ctx context.Context, teamSlug slug.Slug, correlationID uuid.UUID) error {
+	return nil
 }
 
 func (r *githubTeamReconciler) syncTeamInfo(ctx context.Context, team db.Team, githubTeam github.Team) error {

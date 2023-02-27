@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4"
@@ -9,6 +10,8 @@ import (
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 )
+
+const teamDeleteKeyLifetime = time.Minute * 5
 
 type (
 	QuerierTransactionFunc  func(ctx context.Context, querier Querier) error
@@ -27,6 +30,10 @@ type AuditLog struct {
 
 type Reconciler struct {
 	*sqlc.Reconciler
+}
+
+type TeamDeleteKey struct {
+	*sqlc.TeamDeleteKey
 }
 
 type ReconcilerConfig struct {
@@ -154,6 +161,10 @@ type Database interface {
 	GetSlackAlertsChannels(ctx context.Context, teamSlug slug.Slug) (map[string]string, error)
 	SetSlackAlertsChannel(ctx context.Context, teamSlug slug.Slug, environment, channelName string) error
 	RemoveSlackAlertsChannel(ctx context.Context, teamSlug slug.Slug, environment string) error
+	CreateTeamDeleteKey(ctx context.Context, teamSlug slug.Slug) (*TeamDeleteKey, error)
+	GetTeamDeleteKey(ctx context.Context, key uuid.UUID) (*TeamDeleteKey, error)
+	ConfirmTeamDeleteKey(ctx context.Context, key uuid.UUID) error
+	DeleteTeam(ctx context.Context, teamSlug slug.Slug) error
 }
 
 func (u User) GetID() uuid.UUID {
@@ -178,4 +189,12 @@ func (s ServiceAccount) Identity() string {
 
 func (s ServiceAccount) IsServiceAccount() bool {
 	return true
+}
+
+func (k TeamDeleteKey) Expires() time.Time {
+	return k.CreatedAt.Add(teamDeleteKeyLifetime)
+}
+
+func (k TeamDeleteKey) HasExpired() bool {
+	return time.Now().After(k.Expires())
 }

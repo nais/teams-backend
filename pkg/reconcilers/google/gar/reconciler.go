@@ -7,6 +7,7 @@ import (
 	artifactregistry "cloud.google.com/go/artifactregistry/apiv1"
 	"cloud.google.com/go/artifactregistry/apiv1/artifactregistrypb"
 	"cloud.google.com/go/iam/apiv1/iampb"
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/console"
@@ -102,6 +103,10 @@ func (r *garReconciler) Reconcile(ctx context.Context, input reconcilers.Input) 
 		return err
 	}
 
+	return nil
+}
+
+func (r *garReconciler) Delete(ctx context.Context, teamSlug slug.Slug, correlationID uuid.UUID) error {
 	return nil
 }
 

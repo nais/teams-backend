@@ -149,6 +149,39 @@ extend type Mutation {
         "The slug of the team to enable."
         slug: Slug!
     ): Team! @auth
+
+    """
+    Request a key that can be used to trigger a team deletion process
+
+    Deleting a team is a two step process. First the client will need to request a deletion key, and then use the
+    key with the confirmTeamDeletion mutation to start the actual deletion process.
+    """
+    requestTeamDeletion(
+        "The slug of the team that the deletion key will be assigned to."
+        slug: Slug!
+    ): TeamDeleteKey! @auth
+
+    """
+    Confirm a team deletion
+
+    This will start the actual team deletion process, which will be done in an asynchronous manner. All external
+    entities controlled by Console will also be deleted.
+
+    WARNING: There is no going back after starting this process.
+    """
+    confirmTeamDeletion(
+        "Deletion key, acquired using the requestTeamDeletion mutation."
+        key: UUID!
+    ): UUID! @auth
+}
+
+"Team deletion key type."
+type TeamDeleteKey {
+    "The unique key used to confirm the deletion of a team."
+    key: UUID!
+
+    "Expiration timestamp of the key."
+    expires: Time!
 }
 
 "Team sync type."

@@ -83,6 +83,20 @@ func (_m *MockDatabase) ConfigureReconciler(ctx context.Context, reconcilerName 
 	return r0, r1
 }
 
+// ConfirmTeamDeleteKey provides a mock function with given fields: ctx, key
+func (_m *MockDatabase) ConfirmTeamDeleteKey(ctx context.Context, key uuid.UUID) error {
+	ret := _m.Called(ctx, key)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
+		r0 = rf(ctx, key)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // CreateAPIKey provides a mock function with given fields: ctx, apiKey, serviceAccountID
 func (_m *MockDatabase) CreateAPIKey(ctx context.Context, apiKey string, serviceAccountID uuid.UUID) error {
 	ret := _m.Called(ctx, apiKey, serviceAccountID)
@@ -180,6 +194,29 @@ func (_m *MockDatabase) CreateTeam(ctx context.Context, _a1 slug.Slug, purpose s
 	return r0, r1
 }
 
+// CreateTeamDeleteKey provides a mock function with given fields: ctx, teamSlug
+func (_m *MockDatabase) CreateTeamDeleteKey(ctx context.Context, teamSlug slug.Slug) (*TeamDeleteKey, error) {
+	ret := _m.Called(ctx, teamSlug)
+
+	var r0 *TeamDeleteKey
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug) *TeamDeleteKey); ok {
+		r0 = rf(ctx, teamSlug)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*TeamDeleteKey)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug) error); ok {
+		r1 = rf(ctx, teamSlug)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CreateUser provides a mock function with given fields: ctx, name, email, externalID
 func (_m *MockDatabase) CreateUser(ctx context.Context, name string, email string, externalID string) (*User, error) {
 	ret := _m.Called(ctx, name, email, externalID)
@@ -247,6 +284,20 @@ func (_m *MockDatabase) DeleteSession(ctx context.Context, sessionID uuid.UUID) 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
 		r0 = rf(ctx, sessionID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DeleteTeam provides a mock function with given fields: ctx, teamSlug
+func (_m *MockDatabase) DeleteTeam(ctx context.Context, teamSlug slug.Slug) error {
+	ret := _m.Called(ctx, teamSlug)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug) error); ok {
+		r0 = rf(ctx, teamSlug)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -689,6 +740,29 @@ func (_m *MockDatabase) GetTeamBySlug(ctx context.Context, _a1 slug.Slug) (*Team
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug) error); ok {
 		r1 = rf(ctx, _a1)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetTeamDeleteKey provides a mock function with given fields: ctx, key
+func (_m *MockDatabase) GetTeamDeleteKey(ctx context.Context, key uuid.UUID) (*TeamDeleteKey, error) {
+	ret := _m.Called(ctx, key)
+
+	var r0 *TeamDeleteKey
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) *TeamDeleteKey); ok {
+		r0 = rf(ctx, key)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*TeamDeleteKey)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = rf(ctx, key)
 	} else {
 		r1 = ret.Error(1)
 	}

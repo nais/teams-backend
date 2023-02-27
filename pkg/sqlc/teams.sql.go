@@ -13,6 +13,17 @@ import (
 	"github.com/nais/console/pkg/slug"
 )
 
+const confirmTeamDeleteKey = `-- name: ConfirmTeamDeleteKey :exec
+UPDATE team_delete_keys
+SET confirmed_at = NOW()
+WHERE key = $1
+`
+
+func (q *Queries) ConfirmTeamDeleteKey(ctx context.Context, key uuid.UUID) error {
+	_, err := q.db.Exec(ctx, confirmTeamDeleteKey, key)
+	return err
+}
+
 const createTeam = `-- name: CreateTeam :one
 INSERT INTO teams (slug, purpose, slack_channel)
 VALUES ($1, $2, $3)
@@ -36,6 +47,34 @@ func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, 
 		&i.SlackChannel,
 	)
 	return &i, err
+}
+
+const createTeamDeleteKey = `-- name: CreateTeamDeleteKey :one
+INSERT INTO team_delete_keys (team_slug)
+VALUES($1)
+RETURNING key, team_slug, created_at, confirmed_at
+`
+
+func (q *Queries) CreateTeamDeleteKey(ctx context.Context, teamSlug slug.Slug) (*TeamDeleteKey, error) {
+	row := q.db.QueryRow(ctx, createTeamDeleteKey, teamSlug)
+	var i TeamDeleteKey
+	err := row.Scan(
+		&i.Key,
+		&i.TeamSlug,
+		&i.CreatedAt,
+		&i.ConfirmedAt,
+	)
+	return &i, err
+}
+
+const deleteTeam = `-- name: DeleteTeam :exec
+DELETE FROM teams
+WHERE slug = $1
+`
+
+func (q *Queries) DeleteTeam(ctx context.Context, slug slug.Slug) error {
+	_, err := q.db.Exec(ctx, deleteTeam, slug)
+	return err
 }
 
 const disableTeam = `-- name: DisableTeam :one
@@ -105,8 +144,9 @@ func (q *Queries) GetSlackAlertsChannels(ctx context.Context, teamSlug slug.Slug
 }
 
 const getTeamBySlug = `-- name: GetTeamBySlug :one
-SELECT slug, purpose, enabled, last_successful_sync, slack_channel FROM teams
-WHERE slug = $1
+SELECT teams.slug, teams.purpose, teams.enabled, teams.last_successful_sync, teams.slack_channel FROM teams
+LEFT JOIN team_delete_keys ON team_delete_keys.team_slug = teams.slug
+WHERE teams.slug = $1 AND team_delete_keys.confirmed_at IS NULL
 `
 
 func (q *Queries) GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error) {
@@ -118,6 +158,23 @@ func (q *Queries) GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, err
 		&i.Enabled,
 		&i.LastSuccessfulSync,
 		&i.SlackChannel,
+	)
+	return &i, err
+}
+
+const getTeamDeleteKey = `-- name: GetTeamDeleteKey :one
+SELECT key, team_slug, created_at, confirmed_at FROM team_delete_keys
+WHERE key = $1
+`
+
+func (q *Queries) GetTeamDeleteKey(ctx context.Context, key uuid.UUID) (*TeamDeleteKey, error) {
+	row := q.db.QueryRow(ctx, getTeamDeleteKey, key)
+	var i TeamDeleteKey
+	err := row.Scan(
+		&i.Key,
+		&i.TeamSlug,
+		&i.CreatedAt,
+		&i.ConfirmedAt,
 	)
 	return &i, err
 }
@@ -182,8 +239,10 @@ func (q *Queries) GetTeamMetadata(ctx context.Context, teamSlug slug.Slug) ([]*T
 }
 
 const getTeams = `-- name: GetTeams :many
-SELECT slug, purpose, enabled, last_successful_sync, slack_channel FROM teams
-ORDER BY slug ASC
+SELECT teams.slug, teams.purpose, teams.enabled, teams.last_successful_sync, teams.slack_channel FROM teams
+LEFT JOIN team_delete_keys ON team_delete_keys.team_slug = teams.slug
+WHERE team_delete_keys.confirmed_at IS NULL
+ORDER BY teams.slug ASC
 `
 
 func (q *Queries) GetTeams(ctx context.Context) ([]*Team, error) {

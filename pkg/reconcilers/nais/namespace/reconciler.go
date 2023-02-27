@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"cloud.google.com/go/pubsub"
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
@@ -25,10 +26,10 @@ import (
 )
 
 const (
+	metricsSystemName    = "naisd"
 	NaisdCreateNamespace = "create-namespace"
+	Name                 = sqlc.ReconcilerNameNaisNamespace
 )
-
-const metricsSystemName = "naisd"
 
 type naisdData struct {
 	Name               string `json:"name"`
@@ -56,8 +57,6 @@ type naisNamespaceReconciler struct {
 	legacyMapping  []envmap.EnvironmentMapping
 	legacyClusters map[string]string
 }
-
-const Name = sqlc.ReconcilerNameNaisNamespace
 
 func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, domain, projectID string, azureEnabled bool, pubsubClient *pubsub.Client, legacyMapping []envmap.EnvironmentMapping, legacyClusters map[string]string, log logger.Logger) *naisNamespaceReconciler {
 	return &naisNamespaceReconciler{
@@ -193,6 +192,10 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 		}
 	}
 
+	return nil
+}
+
+func (r *naisNamespaceReconciler) Delete(ctx context.Context, teamSlug slug.Slug, correlationID uuid.UUID) error {
 	return nil
 }
 

@@ -4,12 +4,15 @@ VALUES ($1, $2, $3)
 RETURNING *;
 
 -- name: GetTeams :many
-SELECT * FROM teams
-ORDER BY slug ASC;
+SELECT teams.* FROM teams
+LEFT JOIN team_delete_keys ON team_delete_keys.team_slug = teams.slug
+WHERE team_delete_keys.confirmed_at IS NULL
+ORDER BY teams.slug ASC;
 
 -- name: GetTeamBySlug :one
-SELECT * FROM teams
-WHERE slug = $1;
+SELECT teams.* FROM teams
+LEFT JOIN team_delete_keys ON team_delete_keys.team_slug = teams.slug
+WHERE teams.slug = $1 AND team_delete_keys.confirmed_at IS NULL;
 
 -- name: GetTeamMembers :many
 SELECT users.* FROM user_roles
@@ -70,3 +73,21 @@ ON CONFLICT (team_slug, environment) DO
 -- name: RemoveSlackAlertsChannel :exec
 DELETE FROM slack_alerts_channels
 WHERE team_slug = $1 AND environment = $2;
+
+-- name: CreateTeamDeleteKey :one
+INSERT INTO team_delete_keys (team_slug)
+VALUES($1)
+RETURNING *;
+
+-- name: GetTeamDeleteKey :one
+SELECT * FROM team_delete_keys
+WHERE key = $1;
+
+-- name: ConfirmTeamDeleteKey :exec
+UPDATE team_delete_keys
+SET confirmed_at = NOW()
+WHERE key = $1;
+
+-- name: DeleteTeam :exec
+DELETE FROM teams
+WHERE slug = $1;

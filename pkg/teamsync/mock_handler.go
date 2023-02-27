@@ -8,6 +8,8 @@ import (
 	db "github.com/nais/console/pkg/db"
 	mock "github.com/stretchr/testify/mock"
 
+	slug "github.com/nais/console/pkg/slug"
+
 	sqlc "github.com/nais/console/pkg/sqlc"
 
 	uuid "github.com/google/uuid"
@@ -21,6 +23,20 @@ type MockHandler struct {
 // Close provides a mock function with given fields:
 func (_m *MockHandler) Close() {
 	_m.Called()
+}
+
+// DeleteTeam provides a mock function with given fields: ctx, teamSlug, correlationID
+func (_m *MockHandler) DeleteTeam(ctx context.Context, teamSlug slug.Slug, correlationID uuid.UUID) error {
+	ret := _m.Called(ctx, teamSlug, correlationID)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug, uuid.UUID) error); ok {
+		r0 = rf(ctx, teamSlug, correlationID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // InitReconcilers provides a mock function with given fields: ctx

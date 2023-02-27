@@ -86,7 +86,7 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, slug *slug.Slug, inpu
 		return nil, err
 	}
 
-	team, err := r.getTeamBySlugOrLog(ctx, *slug)
+	team, err := r.getTeamBySlug(ctx, *slug)
 	if err != nil {
 		return nil, apierror.ErrTeamNotExist
 	}
@@ -150,7 +150,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, slug *slug.S
 		return nil, err
 	}
 
-	team, err := r.getTeamBySlugOrLog(ctx, *slug)
+	team, err := r.getTeamBySlug(ctx, *slug)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +217,7 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, slug *slug.Slug)
 		return nil, err
 	}
 
-	team, err := r.getTeamBySlugOrLog(ctx, *slug)
+	team, err := r.getTeamBySlug(ctx, *slug)
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +290,7 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, slug *slug.Slug, 
 		return nil, err
 	}
 
-	team, err := r.getTeamBySlugOrLog(ctx, *slug)
+	team, err := r.getTeamBySlug(ctx, *slug)
 	if err != nil {
 		return nil, err
 	}
@@ -342,7 +342,7 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, slug *slug.Slug, u
 		return nil, err
 	}
 
-	team, err := r.getTeamBySlugOrLog(ctx, *slug)
+	team, err := r.getTeamBySlug(ctx, *slug)
 	if err != nil {
 		return nil, err
 	}
@@ -394,7 +394,7 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, slug *slug.Slu
 		return nil, err
 	}
 
-	team, err := r.getTeamBySlugOrLog(ctx, *slug)
+	team, err := r.getTeamBySlug(ctx, *slug)
 	if err != nil {
 		return nil, err
 	}
@@ -455,7 +455,7 @@ func (r *mutationResolver) DisableTeam(ctx context.Context, slug *slug.Slug) (*d
 		return nil, err
 	}
 
-	team, err := r.getTeamBySlugOrLog(ctx, *slug)
+	team, err := r.getTeamBySlug(ctx, *slug)
 	if err != nil {
 		return nil, err
 	}
@@ -493,7 +493,7 @@ func (r *mutationResolver) EnableTeam(ctx context.Context, slug *slug.Slug) (*db
 		return nil, err
 	}
 
-	team, err := r.getTeamBySlugOrLog(ctx, *slug)
+	team, err := r.getTeamBySlug(ctx, *slug)
 	if err != nil {
 		return nil, err
 	}
@@ -523,6 +523,88 @@ func (r *mutationResolver) EnableTeam(ctx context.Context, slug *slug.Slug) (*db
 	return team, nil
 }
 
+// RequestTeamDeletion is the resolver for the requestTeamDeletion field.
+func (r *mutationResolver) RequestTeamDeletion(ctx context.Context, slug *slug.Slug) (*db.TeamDeleteKey, error) {
+	actor := authz.ActorFromContext(ctx)
+	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *slug)
+	if err != nil {
+		return nil, err
+	}
+
+	team, err := r.getTeamBySlug(ctx, *slug)
+	if err != nil {
+		return nil, err
+	}
+
+	correlationID, err := uuid.NewUUID()
+	if err != nil {
+		return nil, fmt.Errorf("create log correlation ID: %w", err)
+	}
+
+	deleteKey, err := r.database.CreateTeamDeleteKey(ctx, *slug)
+	if err != nil {
+		return nil, fmt.Errorf("create team delete key: %w", err)
+	}
+
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(team.Slug),
+	}
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGraphqlApiTeamsRequestDelete,
+		Actor:         actor,
+		CorrelationID: correlationID,
+	}
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Request team deletion")
+
+	return deleteKey, nil
+}
+
+// ConfirmTeamDeletion is the resolver for the confirmTeamDeletion field.
+func (r *mutationResolver) ConfirmTeamDeletion(ctx context.Context, key *uuid.UUID) (*uuid.UUID, error) {
+	deleteKey, err := r.database.GetTeamDeleteKey(ctx, *key)
+	if err != nil {
+		return nil, apierror.Errorf("Unknown deletion key: %q", key)
+	}
+
+	actor := authz.ActorFromContext(ctx)
+	err = authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, deleteKey.TeamSlug)
+	if err != nil {
+		return nil, err
+	}
+
+	if deleteKey.ConfirmedAt.Valid {
+		return nil, apierror.Errorf("Key has already been confirmed, team is currently being deleted.")
+	}
+
+	if deleteKey.HasExpired() {
+		return nil, apierror.Errorf("Team delete key has expired, you need to request a new key.")
+	}
+
+	correlationID, err := uuid.NewUUID()
+	if err != nil {
+		return nil, fmt.Errorf("create log correlation ID: %w", err)
+	}
+
+	err = r.database.ConfirmTeamDeleteKey(ctx, *key)
+	if err != nil {
+		return nil, fmt.Errorf("confirm team delete key: %w", err)
+	}
+
+	go r.teamSyncHandler.DeleteTeam(ctx, deleteKey.TeamSlug, correlationID)
+
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(deleteKey.TeamSlug),
+	}
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGraphqlApiTeamsDelete,
+		Actor:         actor,
+		CorrelationID: correlationID,
+	}
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Delete team")
+
+	return &correlationID, nil
+}
+
 // Teams is the resolver for the teams field.
 func (r *queryResolver) Teams(ctx context.Context) ([]*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
@@ -542,7 +624,7 @@ func (r *queryResolver) Team(ctx context.Context, slug *slug.Slug) (*db.Team, er
 		return nil, err
 	}
 
-	team, err := r.getTeamBySlugOrLog(ctx, *slug)
+	team, err := r.getTeamBySlug(ctx, *slug)
 	if err != nil {
 		return nil, err
 	}

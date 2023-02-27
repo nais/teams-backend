@@ -180,3 +180,27 @@ func (d *database) RemoveSlackAlertsChannel(ctx context.Context, teamSlug slug.S
 		Environment: environment,
 	})
 }
+
+func (d *database) CreateTeamDeleteKey(ctx context.Context, teamSlug slug.Slug) (*TeamDeleteKey, error) {
+	deleteKey, err := d.querier.CreateTeamDeleteKey(ctx, teamSlug)
+	if err != nil {
+		return nil, err
+	}
+	return &TeamDeleteKey{TeamDeleteKey: deleteKey}, nil
+}
+
+func (d *database) GetTeamDeleteKey(ctx context.Context, key uuid.UUID) (*TeamDeleteKey, error) {
+	deleteKey, err := d.querier.GetTeamDeleteKey(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	return &TeamDeleteKey{TeamDeleteKey: deleteKey}, nil
+}
+
+func (d *database) ConfirmTeamDeleteKey(ctx context.Context, key uuid.UUID) error {
+	return d.querier.ConfirmTeamDeleteKey(ctx, key)
+}
+
+func (d *database) DeleteTeam(ctx context.Context, teamSlug slug.Slug) error {
+	return d.querier.DeleteTeam(ctx, teamSlug)
+}

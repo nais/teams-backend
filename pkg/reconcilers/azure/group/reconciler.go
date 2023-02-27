@@ -120,6 +120,10 @@ func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.
 	return nil
 }
 
+func (r *azureGroupReconciler) Delete(ctx context.Context, teamSlug slug.Slug, correlationID uuid.UUID) error {
+	return nil
+}
+
 func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclient.Group, input reconcilers.Input) error {
 	members, err := r.client.ListGroupMembers(ctx, grp)
 	if err != nil {
