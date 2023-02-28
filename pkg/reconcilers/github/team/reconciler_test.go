@@ -2,6 +2,7 @@ package github_team_reconciler_test
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -491,6 +492,148 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		err := reconciler.Reconcile(ctx, input)
 
 		assert.ErrorContainsf(t, err, "server error from GitHub: 418: I'm a teapot: this is a body", err.Error())
+	})
+}
+
+func TestGitHubReconciler_Delete(t *testing.T) {
+	const domain = "example.com"
+	const org = "my-organization"
+	teamSlug := slug.Slug("myteam")
+
+	ctx := context.Background()
+	correlationID := uuid.New()
+	auditLogger := auditlogger.NewMockAuditLogger(t)
+	teamsService := github_team_reconciler.NewMockTeamsService(t)
+	graphClient := github_team_reconciler.NewMockGraphClient(t)
+	log := logger.NewMockLogger(t)
+
+	t.Run("unable to load state from database", func(t *testing.T) {
+		database := db.NewMockDatabase(t)
+		database.
+			On("LoadReconcilerStateForTeam", ctx, github_team_reconciler.Name, teamSlug, mock.Anything).
+			Return(fmt.Errorf("some error")).
+			Once()
+
+		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, graphClient, log)
+		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		assert.ErrorContains(t, err, "load reconciler state for team")
+	})
+
+	t.Run("state with missing slug", func(t *testing.T) {
+		database := db.NewMockDatabase(t)
+		database.
+			On("LoadReconcilerStateForTeam", ctx, github_team_reconciler.Name, teamSlug, mock.Anything).
+			Return(nil).
+			Once()
+
+		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, graphClient, log)
+		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		assert.ErrorContains(t, err, "missing slug in reconciler state")
+	})
+
+	t.Run("GitHub API client fails", func(t *testing.T) {
+		database := db.NewMockDatabase(t)
+		database.
+			On("LoadReconcilerStateForTeam", ctx, github_team_reconciler.Name, teamSlug, mock.Anything).
+			Run(func(args mock.Arguments) {
+				state := args.Get(3).(*reconcilers.GitHubState)
+				state.Slug = &teamSlug
+			}).
+			Return(nil).
+			Once()
+
+		teamsService := github_team_reconciler.NewMockTeamsService(t)
+		teamsService.
+			On("DeleteTeamBySlug", ctx, org, string(teamSlug)).
+			Return(nil, fmt.Errorf("some error")).
+			Once()
+
+		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, graphClient, log)
+		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		assert.ErrorContains(t, err, "delete GitHub team")
+	})
+
+	t.Run("unexpected response from GitHub API", func(t *testing.T) {
+		database := db.NewMockDatabase(t)
+		database.
+			On("LoadReconcilerStateForTeam", ctx, github_team_reconciler.Name, teamSlug, mock.Anything).
+			Run(func(args mock.Arguments) {
+				state := args.Get(3).(*reconcilers.GitHubState)
+				state.Slug = &teamSlug
+			}).
+			Return(nil).
+			Once()
+
+		teamsService := github_team_reconciler.NewMockTeamsService(t)
+		teamsService.
+			On("DeleteTeamBySlug", ctx, org, string(teamSlug)).
+			Return(
+				&github.Response{
+					Response: &http.Response{
+						StatusCode: http.StatusOK,
+						Status:     "200: OK",
+						Body:       io.NopCloser(strings.NewReader("body")),
+					}},
+				nil,
+			).
+			Once()
+
+		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, graphClient, log)
+		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		assert.ErrorContains(t, err, "unexpected server response from GitHub")
+	})
+
+	t.Run("successful delete", func(t *testing.T) {
+		database := db.NewMockDatabase(t)
+		database.
+			On("LoadReconcilerStateForTeam", ctx, github_team_reconciler.Name, teamSlug, mock.Anything).
+			Run(func(args mock.Arguments) {
+				state := args.Get(3).(*reconcilers.GitHubState)
+				state.Slug = &teamSlug
+			}).
+			Return(nil).
+			Once()
+		database.
+			On("RemoveReconcilerStateForTeam", ctx, github_team_reconciler.Name, teamSlug).
+			Return(nil).
+			Once()
+
+		teamsService := github_team_reconciler.NewMockTeamsService(t)
+		teamsService.
+			On("DeleteTeamBySlug", ctx, org, string(teamSlug)).
+			Return(
+				&github.Response{
+					Response: &http.Response{
+						StatusCode: http.StatusNoContent,
+						Status:     "204: No Content",
+						Body:       io.NopCloser(strings.NewReader("")),
+					}},
+				nil,
+			).
+			Once()
+
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On(
+				"Logf",
+				ctx,
+				database,
+				mock.MatchedBy(func(targets []auditlogger.Target) bool {
+					return targets[0].Type == sqlc.AuditLogsTargetTypeTeam && targets[0].Identifier == string(teamSlug)
+				}),
+				mock.MatchedBy(func(fields auditlogger.Fields) bool {
+					return fields.CorrelationID == correlationID && fields.Action == sqlc.AuditActionGithubTeamDelete
+				}),
+				mock.MatchedBy(func(msg string) bool {
+					return strings.HasPrefix(msg, "Delete GitHub team")
+				}),
+				teamSlug,
+			).
+			Return(nil).
+			Once()
+
+		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, graphClient, log)
+		assert.Nil(t, reconciler.Delete(ctx, teamSlug, correlationID))
 	})
 }
 

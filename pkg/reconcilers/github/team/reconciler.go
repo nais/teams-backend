@@ -119,7 +119,41 @@ func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.
 }
 
 func (r *githubTeamReconciler) Delete(ctx context.Context, teamSlug slug.Slug, correlationID uuid.UUID) error {
-	return nil
+	state := &reconcilers.GitHubState{}
+	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), teamSlug, state)
+	if err != nil {
+		return fmt.Errorf("load reconciler state for team %q in reconciler %q: %w", teamSlug, r.Name(), err)
+	}
+
+	if state.Slug == nil {
+		return fmt.Errorf("missing slug in reconciler state for team %q in reconciler %q", teamSlug, r.Name())
+	}
+
+	gitHubTeamSlug := *state.Slug
+
+	resp, err := r.teamsService.DeleteTeamBySlug(ctx, r.org, string(gitHubTeamSlug))
+	metrics.IncExternalHTTPCalls(metricsSystemName, unwrapResponse(resp), err)
+	if err != nil {
+		return fmt.Errorf("delete GitHub team %q for team %q: %w", gitHubTeamSlug, teamSlug, err)
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("unexpected server response from GitHub: %q: %q", resp.Status, string(body))
+	}
+
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(teamSlug),
+	}
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGithubTeamDelete,
+		CorrelationID: correlationID,
+	}
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Delete GitHub team with slug %q", gitHubTeamSlug)
+
+	return r.database.RemoveReconcilerStateForTeam(ctx, r.Name(), teamSlug)
 }
 
 func (r *githubTeamReconciler) syncTeamInfo(ctx context.Context, team db.Team, githubTeam github.Team) error {

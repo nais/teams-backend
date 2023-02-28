@@ -23,6 +23,7 @@ type TeamsService interface {
 	RemoveTeamMembershipBySlug(ctx context.Context, org, slug, user string) (*github.Response, error)
 	CreateOrUpdateIDPGroupConnectionsBySlug(ctx context.Context, org, team string, opts github.IDPGroupList) (*github.IDPGroupList, *github.Response, error)
 	ListTeamReposBySlug(ctx context.Context, org, slug string, opts *github.ListOptions) ([]*github.Repository, *github.Response, error)
+	DeleteTeamBySlug(ctx context.Context, org, slug string) (*github.Response, error)
 }
 
 // githubTeamReconciler creates teams on GitHub and connects users to them.
