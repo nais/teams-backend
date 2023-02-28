@@ -102,7 +102,33 @@ func (r *googleWorkspaceAdminReconciler) Reconcile(ctx context.Context, input re
 }
 
 func (r *googleWorkspaceAdminReconciler) Delete(ctx context.Context, teamSlug slug.Slug, correlationID uuid.UUID) error {
-	return nil
+	state := &reconcilers.GoogleWorkspaceState{}
+	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), teamSlug, state)
+	if err != nil {
+		return fmt.Errorf("load reconciler state for team %q in reconciler %q: %w", teamSlug, r.Name(), err)
+	}
+
+	if state.GroupEmail == nil {
+		return fmt.Errorf("missing group email in reconciler state for team %q in reconciler %q", teamSlug, r.Name())
+	}
+
+	grpEmail := *state.GroupEmail
+
+	err = r.adminService.Groups.Delete(grpEmail).Context(ctx).Do()
+	if err != nil {
+		return fmt.Errorf("delete Google directory group with email %q for team %q: %w", grpEmail, teamSlug, err)
+	}
+
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(teamSlug),
+	}
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGoogleWorkspaceAdminDelete,
+		CorrelationID: correlationID,
+	}
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Delete Google directory group with email %q", grpEmail)
+
+	return r.database.RemoveReconcilerStateForTeam(ctx, r.Name(), teamSlug)
 }
 
 func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(ctx context.Context, state *reconcilers.GoogleWorkspaceState, input reconcilers.Input) (*admin_directory_v1.Group, error) {

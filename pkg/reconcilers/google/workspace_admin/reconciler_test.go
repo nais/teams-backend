@@ -231,6 +231,123 @@ func TestReconcile(t *testing.T) {
 	})
 }
 
+func Test_Delete(t *testing.T) {
+	const domain = "example.com"
+	groupEmail := "my-team@example.com"
+	correlationID := uuid.New()
+	ctx := context.Background()
+	teamSlug := slug.Slug("my-team")
+	auditLogger := auditlogger.NewMockAuditLogger(t)
+	log := logger.NewMockLogger(t)
+
+	googleAdminService, close := getAdminDirectoryServiceAndClient(t, ctx, []http.HandlerFunc{})
+	defer close()
+
+	t.Run("unable to load state", func(t *testing.T) {
+		database := db.NewMockDatabase(t)
+		database.
+			On("LoadReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, teamSlug, mock.Anything).
+			Return(fmt.Errorf("some error")).
+			Once()
+
+		reconciler := google_workspace_admin_reconciler.New(database, auditLogger, domain, googleAdminService, log)
+		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		assert.ErrorContains(t, err, "load reconciler state for team")
+	})
+
+	t.Run("no group email in state", func(t *testing.T) {
+		database := db.NewMockDatabase(t)
+		database.
+			On("LoadReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, teamSlug, mock.Anything).
+			Return(nil).
+			Once()
+
+		reconciler := google_workspace_admin_reconciler.New(database, auditLogger, domain, googleAdminService, log)
+		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		assert.ErrorContains(t, err, "missing group email in reconciler state")
+	})
+
+	t.Run("Google API failure", func(t *testing.T) {
+		database := db.NewMockDatabase(t)
+		database.
+			On("LoadReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, teamSlug, mock.Anything).
+			Run(func(args mock.Arguments) {
+				state := args.Get(3).(*reconcilers.GoogleWorkspaceState)
+				state.GroupEmail = &groupEmail
+			}).
+			Return(nil).
+			Once()
+
+		googleAdminService, close := getAdminDirectoryServiceAndClient(t, ctx, []http.HandlerFunc{
+			// delete group failure
+			func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodDelete, r.Method)
+				assert.Contains(t, r.URL.Path, "/groups/my-team@example.com")
+				w.WriteHeader(http.StatusBadRequest)
+			},
+		})
+		defer close()
+
+		reconciler := google_workspace_admin_reconciler.New(database, auditLogger, domain, googleAdminService, log)
+		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		assert.ErrorContains(t, err, "delete Google directory group")
+	})
+
+	t.Run("successful delete", func(t *testing.T) {
+		database := db.NewMockDatabase(t)
+		database.
+			On("LoadReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, teamSlug, mock.Anything).
+			Run(func(args mock.Arguments) {
+				state := args.Get(3).(*reconcilers.GoogleWorkspaceState)
+				state.GroupEmail = &groupEmail
+			}).
+			Return(nil).
+			Once()
+		database.
+			On("RemoveReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, teamSlug).
+			Return(nil).
+			Once()
+
+		googleAdminService, close := getAdminDirectoryServiceAndClient(t, ctx, []http.HandlerFunc{
+			// delete group
+			func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusNoContent)
+			},
+		})
+		defer close()
+
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On(
+				"Logf",
+				ctx,
+				database,
+				mock.MatchedBy(func(targets []auditlogger.Target) bool {
+					return targets[0].Type == sqlc.AuditLogsTargetTypeTeam && targets[0].Identifier == string(teamSlug)
+				}),
+				mock.MatchedBy(func(fields auditlogger.Fields) bool {
+					return fields.CorrelationID == correlationID && fields.Action == sqlc.AuditActionGoogleWorkspaceAdminDelete
+				}),
+				mock.MatchedBy(func(msg string) bool {
+					return strings.HasPrefix(msg, "Delete Google directory group")
+				}),
+				groupEmail,
+			).
+			Return(nil).
+			Once()
+
+		reconciler := google_workspace_admin_reconciler.New(database, auditLogger, domain, googleAdminService, log)
+		assert.Nil(t, reconciler.Delete(ctx, teamSlug, correlationID))
+	})
+}
+
 func consoleUserWithEmail(email string) *db.User {
 	return &db.User{User: &sqlc.User{ID: uuid.New(), Email: email}}
+}
+
+func getAdminDirectoryServiceAndClient(t *testing.T, ctx context.Context, handlers []http.HandlerFunc) (service *admin_directory_v1.Service, closer func()) {
+	ts := test.HttpServerWithHandlers(t, handlers)
+	closer = ts.Close
+	service, _ = admin_directory_v1.NewService(ctx, option.WithoutAuthentication(), option.WithEndpoint(ts.URL))
+	return
 }
