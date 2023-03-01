@@ -590,7 +590,7 @@ func (r *mutationResolver) ConfirmTeamDeletion(ctx context.Context, key *uuid.UU
 		return nil, fmt.Errorf("confirm team delete key: %w", err)
 	}
 
-	go r.teamSyncHandler.DeleteTeam(ctx, deleteKey.TeamSlug, correlationID)
+	go r.teamSyncHandler.DeleteTeam(deleteKey.TeamSlug, correlationID)
 
 	targets := []auditlogger.Target{
 		auditlogger.TeamTarget(deleteKey.TeamSlug),

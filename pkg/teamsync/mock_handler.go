@@ -25,13 +25,13 @@ func (_m *MockHandler) Close() {
 	_m.Called()
 }
 
-// DeleteTeam provides a mock function with given fields: ctx, teamSlug, correlationID
-func (_m *MockHandler) DeleteTeam(ctx context.Context, teamSlug slug.Slug, correlationID uuid.UUID) error {
-	ret := _m.Called(ctx, teamSlug, correlationID)
+// DeleteTeam provides a mock function with given fields: teamSlug, correlationID
+func (_m *MockHandler) DeleteTeam(teamSlug slug.Slug, correlationID uuid.UUID) error {
+	ret := _m.Called(teamSlug, correlationID)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug, uuid.UUID) error); ok {
-		r0 = rf(ctx, teamSlug, correlationID)
+	if rf, ok := ret.Get(0).(func(slug.Slug, uuid.UUID) error); ok {
+		r0 = rf(teamSlug, correlationID)
 	} else {
 		r0 = ret.Error(0)
 	}
