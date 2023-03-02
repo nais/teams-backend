@@ -18,7 +18,7 @@ import (
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
-	iam "google.golang.org/api/iam/v1"
+	"google.golang.org/api/iam/v1"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -83,7 +83,7 @@ func (r *garReconciler) Name() sqlc.ReconcilerName {
 
 func (r *garReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	log := r.log.WithTeamSlug(string(input.Team.Slug))
-	serviceAccount, err := r.getOrCreateServiceAccount(ctx, input, log)
+	serviceAccount, err := r.getOrCreateServiceAccount(ctx, input)
 	if err != nil {
 		return err
 	}
@@ -103,6 +103,13 @@ func (r *garReconciler) Reconcile(ctx context.Context, input reconcilers.Input) 
 		return err
 	}
 
+	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, reconcilers.GoogleGarState{
+		RepositoryName: &garRepository.Name,
+	})
+	if err != nil {
+		r.log.WithError(err).Error("persist reconciler state")
+	}
+
 	return nil
 }
 
@@ -110,7 +117,7 @@ func (r *garReconciler) Delete(ctx context.Context, teamSlug slug.Slug, correlat
 	return nil
 }
 
-func (r *garReconciler) getOrCreateServiceAccount(ctx context.Context, input reconcilers.Input, _ logger.Logger) (*iam.ServiceAccount, error) {
+func (r *garReconciler) getOrCreateServiceAccount(ctx context.Context, input reconcilers.Input) (*iam.ServiceAccount, error) {
 	projectName := fmt.Sprintf("projects/%s", r.managementProjectID)
 	accountId := console.SlugHashPrefixTruncate(input.Team.Slug, "gar", gcp.GoogleServiceAccountMaxLength)
 	emailAddress := fmt.Sprintf("%s@%s.iam.gserviceaccount.com", accountId, r.managementProjectID)

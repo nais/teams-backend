@@ -45,3 +45,7 @@ type GoogleGcpNaisNamespaceState struct {
 type NaisDeployKeyState struct {
 	Provisioned *time.Time `json:"provisioned"`
 }
+
+type GoogleGarState struct {
+	RepositoryName *string `json:"repopsitoryName"`
+}

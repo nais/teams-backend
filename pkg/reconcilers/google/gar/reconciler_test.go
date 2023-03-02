@@ -305,7 +305,7 @@ func TestReconcile(t *testing.T) {
 					assert.Equal(t, "serviceAccount:"+expectedServiceAccount.Email, r.Policy.Bindings[0].Members[0])
 					assert.Equal(t, "roles/artifactregistry.writer", r.Policy.Bindings[0].Role)
 
-					return &iampb.Policy{}, abortTestErr
+					return &iampb.Policy{}, nil
 				},
 			},
 			iam: test.HttpServerWithHandlers(t, []http.HandlerFunc{
@@ -326,11 +326,17 @@ func TestReconcile(t *testing.T) {
 			On("LoadReconcilerStateForTeam", ctx, sqlc.ReconcilerNameGithubTeam, team.Slug, mock.Anything).
 			Return(nil).
 			Once()
+		database.
+			On("SetReconcilerStateForTeam", ctx, google_gar.Name, team.Slug, mock.MatchedBy(func(state reconcilers.GoogleGarState) bool {
+				return *state.RepositoryName == garRepositoryParent+"/repositories/"+string(team.Slug)
+			})).
+			Return(nil).
+			Once()
+
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 
 		reconciler := google_gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, artifactregistryClient, iamService, log)
-		err = reconciler.Reconcile(ctx, input)
-		assert.ErrorContains(t, err, "abort test")
+		assert.NoError(t, reconciler.Reconcile(ctx, input))
 	})
 
 	t.Run("gar repository exists, but has outdated info", func(t *testing.T) {
