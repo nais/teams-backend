@@ -1,4 +1,4 @@
-package gar_test
+package google_gar_test
 
 import (
 	"context"
@@ -182,7 +182,7 @@ func TestReconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 
-		reconciler := gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, nil, iamService, log)
+		reconciler := google_gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, nil, iamService, log)
 		err = reconciler.Reconcile(ctx, input)
 		assert.ErrorContains(t, err, fmt.Sprintf("googleapi: got HTTP response code %d", abortReconcilerCode))
 	})
@@ -241,7 +241,7 @@ func TestReconcile(t *testing.T) {
 			Once()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 
-		reconciler := gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, nil, iamService, log)
+		reconciler := google_gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, nil, iamService, log)
 		err = reconciler.Reconcile(ctx, input)
 		assert.ErrorContains(t, err, fmt.Sprintf("googleapi: got HTTP response code %d", abortReconcilerCode))
 	})
@@ -289,7 +289,7 @@ func TestReconcile(t *testing.T) {
 			Once()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 
-		reconciler := gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, artifactregistryClient, iamService, log)
+		reconciler := google_gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, artifactregistryClient, iamService, log)
 		err = reconciler.Reconcile(ctx, input)
 		assert.ErrorContains(t, err, "abort test")
 	})
@@ -328,7 +328,7 @@ func TestReconcile(t *testing.T) {
 			Once()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 
-		reconciler := gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, artifactregistryClient, iamService, log)
+		reconciler := google_gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, artifactregistryClient, iamService, log)
 		err = reconciler.Reconcile(ctx, input)
 		assert.ErrorContains(t, err, "abort test")
 	})
@@ -374,7 +374,7 @@ func TestReconcile(t *testing.T) {
 			Once()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 
-		reconciler := gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, artifactregistryClient, iamService, log)
+		reconciler := google_gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, artifactregistryClient, iamService, log)
 		err = reconciler.Reconcile(ctx, input)
 		assert.ErrorContains(t, err, "abort test")
 	})

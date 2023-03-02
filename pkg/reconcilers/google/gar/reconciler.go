@@ -1,4 +1,4 @@
-package gar
+package google_gar
 
 import (
 	"context"
