@@ -110,13 +110,13 @@ func (r *garReconciler) Delete(ctx context.Context, teamSlug slug.Slug, correlat
 	return nil
 }
 
-func (r *garReconciler) getOrCreateServiceAccount(ctx context.Context, input reconcilers.Input, log logger.Logger) (*iam.ServiceAccount, error) {
+func (r *garReconciler) getOrCreateServiceAccount(ctx context.Context, input reconcilers.Input, _ logger.Logger) (*iam.ServiceAccount, error) {
 	projectName := fmt.Sprintf("projects/%s", r.managementProjectID)
 	accountId := console.SlugHashPrefixTruncate(input.Team.Slug, "gar", gcp.GoogleServiceAccountMaxLength)
 	emailAddress := fmt.Sprintf("%s@%s.iam.gserviceaccount.com", accountId, r.managementProjectID)
 	serviceAccountName := fmt.Sprintf("%s/serviceAccounts/%s", projectName, emailAddress)
 
-	existing, err := r.iamService.Projects.ServiceAccounts.Get(serviceAccountName).Do()
+	existing, err := r.iamService.Projects.ServiceAccounts.Get(serviceAccountName).Context(ctx).Do()
 	if err == nil {
 		return existing, nil
 	}
@@ -127,7 +127,7 @@ func (r *garReconciler) getOrCreateServiceAccount(ctx context.Context, input rec
 			Description: "Service Account used to push images to Google Artifact Registry for " + string(input.Team.Slug),
 			DisplayName: "Artifact Pusher for " + string(input.Team.Slug),
 		},
-	}).Do()
+	}).Context(ctx).Do()
 }
 
 func (r *garReconciler) setServiceAccountPolicy(ctx context.Context, serviceAccount *iam.ServiceAccount, teamSlug slug.Slug) error {
@@ -147,7 +147,7 @@ func (r *garReconciler) setServiceAccountPolicy(ctx context.Context, serviceAcco
 		},
 	}
 
-	_, err = r.iamService.Projects.ServiceAccounts.SetIamPolicy(serviceAccount.Name, &req).Do()
+	_, err = r.iamService.Projects.ServiceAccounts.SetIamPolicy(serviceAccount.Name, &req).Context(ctx).Do()
 	return err
 }
 
