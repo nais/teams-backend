@@ -151,6 +151,7 @@ type ComplexityRoot struct {
 
 	ReconcilerState struct {
 		AzureADGroupID            func(childComplexity int) int
+		GarRepositoryName         func(childComplexity int) int
 		GcpProjects               func(childComplexity int) int
 		GitHubTeamSlug            func(childComplexity int) int
 		GoogleWorkspaceGroupEmail func(childComplexity int) int
@@ -887,6 +888,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.ReconcilerState.AzureADGroupID(childComplexity), true
+
+	case "ReconcilerState.garRepositoryName":
+		if e.complexity.ReconcilerState.GarRepositoryName == nil {
+			break
+		}
+
+		return e.complexity.ReconcilerState.GarRepositoryName(childComplexity), true
 
 	case "ReconcilerState.gcpProjects":
 		if e.complexity.ReconcilerState.GcpProjects == nil {
@@ -1822,6 +1830,9 @@ type ReconcilerState {
 
     "Timestamp of when the NAIS deploy key was provisioned."
     naisDeployKeyProvisioned: Time
+
+    "Name of the GAR repository for the team."
+    garRepositoryName: String
 }
 
 "GCP project type."
@@ -7131,6 +7142,47 @@ func (ec *executionContext) fieldContext_ReconcilerState_naisDeployKeyProvisione
 	return fc, nil
 }
 
+func (ec *executionContext) _ReconcilerState_garRepositoryName(ctx context.Context, field graphql.CollectedField, obj *model.ReconcilerState) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ReconcilerState_garRepositoryName(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GarRepositoryName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ReconcilerState_garRepositoryName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ReconcilerState",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Role_name(ctx context.Context, field graphql.CollectedField, obj *db.Role) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Role_name(ctx, field)
 	if err != nil {
@@ -8100,6 +8152,8 @@ func (ec *executionContext) fieldContext_Team_reconcilerState(ctx context.Contex
 				return ec.fieldContext_ReconcilerState_naisNamespaces(ctx, field)
 			case "naisDeployKeyProvisioned":
 				return ec.fieldContext_ReconcilerState_naisDeployKeyProvisioned(ctx, field)
+			case "garRepositoryName":
+				return ec.fieldContext_ReconcilerState_garRepositoryName(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ReconcilerState", field.Name)
 		},
@@ -11918,6 +11972,10 @@ func (ec *executionContext) _ReconcilerState(ctx context.Context, sel ast.Select
 		case "naisDeployKeyProvisioned":
 
 			out.Values[i] = ec._ReconcilerState_naisDeployKeyProvisioned(ctx, field, obj)
+
+		case "garRepositoryName":
+
+			out.Values[i] = ec._ReconcilerState_garRepositoryName(ctx, field, obj)
 
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))

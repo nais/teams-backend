@@ -757,6 +757,7 @@ func (r *teamResolver) ReconcilerState(ctx context.Context, obj *db.Team) (*mode
 	}
 	azureADState := &reconcilers.AzureState{}
 	naisDeployKeyState := &reconcilers.NaisDeployKeyState{}
+	googleGarState := &reconcilers.GoogleGarState{}
 
 	queriedFields := GetQueriedFields(ctx)
 
@@ -819,6 +820,13 @@ func (r *teamResolver) ReconcilerState(ctx context.Context, obj *db.Team) (*mode
 		}
 	}
 
+	if _, inQuery := queriedFields["garRepositoryName"]; inQuery {
+		err := r.database.LoadReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGoogleGcpGar, obj.Slug, googleGarState)
+		if err != nil {
+			return nil, apierror.Errorf("Unable to load the existing GAR state.")
+		}
+	}
+
 	return &model.ReconcilerState{
 		GitHubTeamSlug:            gitHubState.Slug,
 		GoogleWorkspaceGroupEmail: googleWorkspaceState.GroupEmail,
@@ -826,6 +834,7 @@ func (r *teamResolver) ReconcilerState(ctx context.Context, obj *db.Team) (*mode
 		NaisNamespaces:            naisNamespaces,
 		AzureADGroupID:            azureADState.GroupID,
 		NaisDeployKeyProvisioned:  naisDeployKeyState.Provisioned,
+		GarRepositoryName:         googleGarState.RepositoryName,
 	}, nil
 }
 

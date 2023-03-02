@@ -275,6 +275,9 @@ type ReconcilerState {
 
     "Timestamp of when the NAIS deploy key was provisioned."
     naisDeployKeyProvisioned: Time
+
+    "Name of the GAR repository for the team."
+    garRepositoryName: String
 }
 
 "GCP project type."
