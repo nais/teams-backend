@@ -107,7 +107,7 @@ func (r *garReconciler) Reconcile(ctx context.Context, input reconcilers.Input) 
 		RepositoryName: &garRepository.Name,
 	})
 	if err != nil {
-		r.log.WithError(err).Error("persist reconciler state")
+		log.WithError(err).Error("persist reconciler state")
 	}
 
 	return nil
