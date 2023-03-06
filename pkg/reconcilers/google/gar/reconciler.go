@@ -3,6 +3,7 @@ package google_gar
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	artifactregistry "cloud.google.com/go/artifactregistry/apiv1"
 	"cloud.google.com/go/artifactregistry/apiv1/artifactregistrypb"
@@ -18,6 +19,7 @@ import (
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iam/v1"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc/codes"
@@ -114,22 +116,67 @@ func (r *garReconciler) Reconcile(ctx context.Context, input reconcilers.Input) 
 }
 
 func (r *garReconciler) Delete(ctx context.Context, teamSlug slug.Slug, correlationID uuid.UUID) error {
-	return nil
+	state := &reconcilers.GoogleGarState{}
+	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), teamSlug, state)
+	if err != nil {
+		return fmt.Errorf("load reconciler state for team %q in reconciler %q: %w", teamSlug, r.Name(), err)
+	}
+
+	if state.RepositoryName == nil {
+		return fmt.Errorf("missing repository name in reconciler state for team %q in reconciler %q", teamSlug, r.Name())
+	}
+
+	serviceAccountName, _ := serviceAccountNameAndAccountID(teamSlug, r.managementProjectID)
+	_, err = r.iamService.Projects.ServiceAccounts.Delete(serviceAccountName).Context(ctx).Do()
+	if err != nil {
+		googleError, ok := err.(*googleapi.Error)
+		if !ok || googleError.Code != http.StatusNotFound {
+			return fmt.Errorf("delete service account %q: %w", serviceAccountName, err)
+		}
+
+		r.log.
+			WithTeamSlug(string(teamSlug)).
+			WithError(err).
+			Infof("GAR service account %q does not exist, nothing to delete", serviceAccountName)
+	}
+
+	garRepositoryName := *state.RepositoryName
+
+	req := &artifactregistrypb.DeleteRepositoryRequest{
+		Name: garRepositoryName,
+	}
+	operation, err := r.artifactRegistry.DeleteRepository(ctx, req)
+	if err != nil {
+		return fmt.Errorf("delete GAR repository for team %q: %w", teamSlug, err)
+	}
+
+	err = operation.Wait(ctx)
+	if err != nil {
+		return fmt.Errorf("wait for GAR repository deletion for team %q: %w", teamSlug, err)
+	}
+
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(teamSlug),
+	}
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGoogleGarDelete,
+		CorrelationID: correlationID,
+	}
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Delete GAR repository %q", garRepositoryName)
+
+	return r.database.RemoveReconcilerStateForTeam(ctx, r.Name(), teamSlug)
 }
 
 func (r *garReconciler) getOrCreateServiceAccount(ctx context.Context, input reconcilers.Input) (*iam.ServiceAccount, error) {
-	projectName := fmt.Sprintf("projects/%s", r.managementProjectID)
-	accountId := console.SlugHashPrefixTruncate(input.Team.Slug, "gar", gcp.GoogleServiceAccountMaxLength)
-	emailAddress := fmt.Sprintf("%s@%s.iam.gserviceaccount.com", accountId, r.managementProjectID)
-	serviceAccountName := fmt.Sprintf("%s/serviceAccounts/%s", projectName, emailAddress)
+	serviceAccountName, accountID := serviceAccountNameAndAccountID(input.Team.Slug, r.managementProjectID)
 
 	existing, err := r.iamService.Projects.ServiceAccounts.Get(serviceAccountName).Context(ctx).Do()
 	if err == nil {
 		return existing, nil
 	}
 
-	return r.iamService.Projects.ServiceAccounts.Create(projectName, &iam.CreateServiceAccountRequest{
-		AccountId: accountId,
+	return r.iamService.Projects.ServiceAccounts.Create("projects/"+r.managementProjectID, &iam.CreateServiceAccountRequest{
+		AccountId: accountID,
 		ServiceAccount: &iam.ServiceAccount{
 			Description: "Service Account used to push images to Google Artifact Registry for " + string(input.Team.Slug),
 			DisplayName: "Artifact Pusher for " + string(input.Team.Slug),
@@ -263,4 +310,11 @@ func (r *garReconciler) setGarRepositoryPolicy(ctx context.Context, repository *
 		},
 	})
 	return err
+}
+
+func serviceAccountNameAndAccountID(teamSlug slug.Slug, projectID string) (serviceAccountName, accountID string) {
+	accountId := console.SlugHashPrefixTruncate(teamSlug, "gar", gcp.GoogleServiceAccountMaxLength)
+	emailAddress := fmt.Sprintf("%s@%s.iam.gserviceaccount.com", accountId, projectID)
+	serviceAccountName = fmt.Sprintf("projects/%s/serviceAccounts/%s", projectID, emailAddress)
+	return
 }
