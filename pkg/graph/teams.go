@@ -663,6 +663,25 @@ func (r *queryResolver) DeployKey(ctx context.Context, slug *slug.Slug) (string,
 	return deployKey, nil
 }
 
+// TeamDeleteKey is the resolver for the teamDeleteKey field.
+func (r *queryResolver) TeamDeleteKey(ctx context.Context, key *uuid.UUID) (*db.TeamDeleteKey, error) {
+	deleteKey, err := r.database.GetTeamDeleteKey(ctx, *key)
+	if err != nil {
+		return nil, apierror.Errorf("Unknown deletion key: %q", key)
+	}
+
+	actor := authz.ActorFromContext(ctx)
+	if actor.User.IsServiceAccount() {
+		return nil, apierror.Errorf("Service accounts are not allowed to get team delete keys.")
+	}
+	err = authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, deleteKey.TeamSlug)
+	if err != nil {
+		return nil, err
+	}
+
+	return deleteKey, nil
+}
+
 // Metadata is the resolver for the metadata field.
 func (r *teamResolver) Metadata(ctx context.Context, obj *db.Team) ([]*db.TeamMetadata, error) {
 	actor := authz.ActorFromContext(ctx)

@@ -13,6 +13,12 @@ extend type Query {
         "Slug of the team."
         slug: Slug!
     ): DeployKey! @auth
+
+    "Get a team delete key."
+    teamDeleteKey(
+        "The key to get."
+        key: UUID!
+    ): TeamDeleteKey! @auth
 }
 
 extend type Mutation {
