@@ -6,7 +6,7 @@ ADR: https://github.com/nais/core/blob/main/adr/010-console-nais-io.md
 
 ## Local development
 
-Console needs Go 1.19, and depends on a running PostgreSQL database. For convenience, a [Docker Compose](https://docs.docker.com/compose/) configuration is provided.
+Console needs a go version as per the go.mod file, and depends on a running PostgreSQL database. For convenience, a [Docker Compose](https://docs.docker.com/compose/) configuration is provided.
 
 ```sh
 docker compose up -d
