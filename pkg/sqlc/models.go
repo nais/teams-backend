@@ -816,7 +816,6 @@ type SlackAlertsChannel struct {
 type Team struct {
 	Slug               slug.Slug
 	Purpose            string
-	Enabled            bool
 	LastSuccessfulSync sql.NullTime
 	SlackChannel       string
 }

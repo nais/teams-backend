@@ -37,36 +37,6 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	log := logger.NewMockLogger(t)
 
-	t.Run("team is not enabled", func(t *testing.T) {
-		log := logger.NewMockLogger(t)
-		log.
-			On("WithTeamSlug", string(teamSlug)).
-			Return(log)
-		log.
-			On("Infof", mock.MatchedBy(func(msg string) bool {
-				return strings.HasPrefix(msg, "team is not enabled")
-			})).
-			Return(nil).
-			Once()
-
-		input := teamsync.Input{
-			CorrelationID: uuid.New(),
-			TeamSlug:      teamSlug,
-		}
-		team := &db.Team{
-			&sqlc.Team{
-				Slug:    teamSlug,
-				Enabled: false,
-			},
-		}
-		database.On("GetTeamBySlug", mock.Anything, teamSlug).Return(team, nil).Once()
-
-		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
-		handler.Schedule(input)
-		handler.Close()
-		handler.SyncTeams(ctx)
-	})
-
 	t.Run("no reconcilers", func(t *testing.T) {
 		log := logger.NewMockLogger(t)
 		log.
@@ -85,11 +55,12 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 			CorrelationID: uuid.New(),
 			TeamSlug:      teamSlug,
 		}
-		team := &db.Team{Team: &sqlc.Team{
-			Slug:    teamSlug,
-			Purpose: "some purpose",
-			Enabled: true,
-		}}
+		team := &db.Team{
+			Team: &sqlc.Team{
+				Slug:    teamSlug,
+				Purpose: "some purpose",
+			},
+		}
 		database.On("GetTeamBySlug", mock.Anything, teamSlug).Return(team, nil).Once()
 		database.On("GetTeamMembers", mock.Anything, teamSlug).Return(nil, nil).Once()
 
@@ -182,11 +153,12 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 			Return(nil).
 			Once()
 
-		team := &db.Team{&sqlc.Team{
-			Slug:    teamSlug,
-			Purpose: "some purpose",
-			Enabled: true,
-		}}
+		team := &db.Team{
+			Team: &sqlc.Team{
+				Slug:    teamSlug,
+				Purpose: "some purpose",
+			},
+		}
 		input := teamsync.Input{
 			CorrelationID: uuid.New(),
 			TeamSlug:      teamSlug,
@@ -269,11 +241,12 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 			CorrelationID: uuid.New(),
 			TeamSlug:      teamSlug,
 		}
-		team := &db.Team{Team: &sqlc.Team{
-			Slug:    teamSlug,
-			Purpose: "some purpose",
-			Enabled: true,
-		}}
+		team := &db.Team{
+			Team: &sqlc.Team{
+				Slug:    teamSlug,
+				Purpose: "some purpose",
+			},
+		}
 		database.
 			On("GetTeamBySlug", mock.Anything, teamSlug).
 			Return(team, nil).

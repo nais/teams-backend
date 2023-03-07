@@ -31,9 +31,7 @@ type Querier interface {
 	DeleteTeam(ctx context.Context, slug slug.Slug) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
 	DisableReconciler(ctx context.Context, name ReconcilerName) (*Reconciler, error)
-	DisableTeam(ctx context.Context, slug slug.Slug) (*Team, error)
 	EnableReconciler(ctx context.Context, name ReconcilerName) (*Reconciler, error)
-	EnableTeam(ctx context.Context, slug slug.Slug) (*Team, error)
 	FirstRunComplete(ctx context.Context) error
 	GetAuditLogsForReconciler(ctx context.Context, targetIdentifier string) ([]*AuditLog, error)
 	GetAuditLogsForTeam(ctx context.Context, targetIdentifier string) ([]*AuditLog, error)

@@ -227,10 +227,6 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, slug *slug.Slug)
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	if !team.Enabled {
-		return nil, apierror.Errorf("Synchronization of this team has been disabled. Unfortunately, there's nothing you can do to resolve the situation. Please contact the NAIS team for support.")
-	}
-
 	targets := []auditlogger.Target{
 		auditlogger.TeamTarget(team.Slug),
 	}
@@ -441,82 +437,6 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, slug *slug.Slu
 	}
 
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Assign %q to %s", desiredRole, member.Email)
-
-	r.reconcileTeam(ctx, correlationID, team.Slug)
-
-	return team, nil
-}
-
-// DisableTeam is the resolver for the disableTeam field.
-func (r *mutationResolver) DisableTeam(ctx context.Context, slug *slug.Slug) (*db.Team, error) {
-	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *slug)
-	if err != nil {
-		return nil, err
-	}
-
-	team, err := r.getTeamBySlug(ctx, *slug)
-	if err != nil {
-		return nil, err
-	}
-
-	correlationID, err := uuid.NewUUID()
-	if err != nil {
-		return nil, fmt.Errorf("create log correlation ID: %w", err)
-	}
-
-	team, err = r.database.DisableTeam(ctx, team.Slug)
-	if err != nil {
-		return nil, fmt.Errorf("disable team: %w", err)
-	}
-
-	targets := []auditlogger.Target{
-		auditlogger.TeamTarget(team.Slug),
-	}
-	fields := auditlogger.Fields{
-		Action:        sqlc.AuditActionGraphqlApiTeamDisable,
-		Actor:         actor,
-		CorrelationID: correlationID,
-	}
-	r.auditLogger.Logf(ctx, r.database, targets, fields, "Disable team")
-
-	r.reconcileTeam(ctx, correlationID, team.Slug)
-
-	return team, nil
-}
-
-// EnableTeam is the resolver for the enableTeam field.
-func (r *mutationResolver) EnableTeam(ctx context.Context, slug *slug.Slug) (*db.Team, error) {
-	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *slug)
-	if err != nil {
-		return nil, err
-	}
-
-	team, err := r.getTeamBySlug(ctx, *slug)
-	if err != nil {
-		return nil, err
-	}
-
-	correlationID, err := uuid.NewUUID()
-	if err != nil {
-		return nil, fmt.Errorf("create log correlation ID: %w", err)
-	}
-
-	team, err = r.database.EnableTeam(ctx, team.Slug)
-	if err != nil {
-		return nil, fmt.Errorf("enable team: %w", err)
-	}
-
-	targets := []auditlogger.Target{
-		auditlogger.TeamTarget(team.Slug),
-	}
-	fields := auditlogger.Fields{
-		Action:        sqlc.AuditActionGraphqlApiTeamEnable,
-		Actor:         actor,
-		CorrelationID: correlationID,
-	}
-	r.auditLogger.Logf(ctx, r.database, targets, fields, "Enable team")
 
 	r.reconcileTeam(ctx, correlationID, team.Slug)
 

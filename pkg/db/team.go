@@ -130,24 +130,6 @@ func (d *database) GetTeamMembers(ctx context.Context, teamSlug slug.Slug) ([]*U
 	return members, nil
 }
 
-func (d *database) DisableTeam(ctx context.Context, teamSlug slug.Slug) (*Team, error) {
-	team, err := d.querier.DisableTeam(ctx, teamSlug)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Team{Team: team}, nil
-}
-
-func (d *database) EnableTeam(ctx context.Context, teamSlug slug.Slug) (*Team, error) {
-	team, err := d.querier.EnableTeam(ctx, teamSlug)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Team{Team: team}, nil
-}
-
 func (d *database) SetLastSuccessfulSyncForTeam(ctx context.Context, teamSlug slug.Slug) error {
 	return d.querier.SetLastSuccessfulSyncForTeam(ctx, teamSlug)
 }

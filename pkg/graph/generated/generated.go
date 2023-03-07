@@ -95,9 +95,7 @@ type ComplexityRoot struct {
 		ConfirmTeamDeletion          func(childComplexity int, key *uuid.UUID) int
 		CreateTeam                   func(childComplexity int, input model.CreateTeamInput) int
 		DisableReconciler            func(childComplexity int, name sqlc.ReconcilerName) int
-		DisableTeam                  func(childComplexity int, slug *slug.Slug) int
 		EnableReconciler             func(childComplexity int, name sqlc.ReconcilerName) int
-		EnableTeam                   func(childComplexity int, slug *slug.Slug) int
 		RemoveUsersFromTeam          func(childComplexity int, slug *slug.Slug, userIds []*uuid.UUID) int
 		RequestTeamDeletion          func(childComplexity int, slug *slug.Slug) int
 		ResetReconciler              func(childComplexity int, name sqlc.ReconcilerName) int
@@ -187,7 +185,6 @@ type ComplexityRoot struct {
 
 	Team struct {
 		AuditLogs           func(childComplexity int) int
-		Enabled             func(childComplexity int) int
 		GitHubRepositories  func(childComplexity int) int
 		LastSuccessfulSync  func(childComplexity int) int
 		Members             func(childComplexity int) int
@@ -262,8 +259,6 @@ type MutationResolver interface {
 	AddTeamMembers(ctx context.Context, slug *slug.Slug, userIds []*uuid.UUID) (*db.Team, error)
 	AddTeamOwners(ctx context.Context, slug *slug.Slug, userIds []*uuid.UUID) (*db.Team, error)
 	SetTeamMemberRole(ctx context.Context, slug *slug.Slug, userID *uuid.UUID, role model.TeamRole) (*db.Team, error)
-	DisableTeam(ctx context.Context, slug *slug.Slug) (*db.Team, error)
-	EnableTeam(ctx context.Context, slug *slug.Slug) (*db.Team, error)
 	RequestTeamDeletion(ctx context.Context, slug *slug.Slug) (*db.TeamDeleteKey, error)
 	ConfirmTeamDeletion(ctx context.Context, key *uuid.UUID) (*uuid.UUID, error)
 	SynchronizeUsers(ctx context.Context) (*model.UserSync, error)
@@ -300,7 +295,6 @@ type TeamResolver interface {
 	AuditLogs(ctx context.Context, obj *db.Team) ([]*db.AuditLog, error)
 	Members(ctx context.Context, obj *db.Team) ([]*model.TeamMember, error)
 	SyncErrors(ctx context.Context, obj *db.Team) ([]*model.SyncError, error)
-
 	LastSuccessfulSync(ctx context.Context, obj *db.Team) (*time.Time, error)
 	ReconcilerState(ctx context.Context, obj *db.Team) (*model.ReconcilerState, error)
 
@@ -515,18 +509,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.DisableReconciler(childComplexity, args["name"].(sqlc.ReconcilerName)), true
 
-	case "Mutation.disableTeam":
-		if e.complexity.Mutation.DisableTeam == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_disableTeam_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.DisableTeam(childComplexity, args["slug"].(*slug.Slug)), true
-
 	case "Mutation.enableReconciler":
 		if e.complexity.Mutation.EnableReconciler == nil {
 			break
@@ -538,18 +520,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.EnableReconciler(childComplexity, args["name"].(sqlc.ReconcilerName)), true
-
-	case "Mutation.enableTeam":
-		if e.complexity.Mutation.EnableTeam == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_enableTeam_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.EnableTeam(childComplexity, args["slug"].(*slug.Slug)), true
 
 	case "Mutation.removeUsersFromTeam":
 		if e.complexity.Mutation.RemoveUsersFromTeam == nil {
@@ -1043,13 +1013,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Team.AuditLogs(childComplexity), true
-
-	case "Team.enabled":
-		if e.complexity.Team.Enabled == nil {
-			break
-		}
-
-		return e.complexity.Team.Enabled(childComplexity), true
 
 	case "Team.gitHubRepositories":
 		if e.complexity.Team.GitHubRepositories == nil {
@@ -1678,7 +1641,7 @@ extend type Mutation {
     Manually synchronize all teams
 
     This action will trigger a full synchronization of all teams against the configured third party systems. The action
-    is asynchronous. The operation can take a while, depending on the amount of teams currently enabled in Console.
+    is asynchronous. The operation can take a while, depending on the amount of teams currently in Console.
     """
     synchronizeAllTeams: TeamSync! @auth
 
@@ -1730,28 +1693,6 @@ extend type Mutation {
 
         "The team role to set."
         role: TeamRole!
-    ): Team! @auth
-
-    """
-    Disable a team
-
-    When a team is disabled it will no longer be included during team reconciliation.
-
-    The team will be returned on success.
-    """
-    disableTeam(
-        "The slug of the team to disable."
-        slug: Slug!
-    ): Team! @auth
-
-    """
-    Enable a previously disabled team
-
-    The team will be returned on success.
-    """
-    enableTeam(
-        "The slug of the team to enable."
-        slug: Slug!
     ): Team! @auth
 
     """
@@ -1826,9 +1767,6 @@ type Team {
 
     "Possible issues related to synchronization of the team to configured external systems. If there are no entries the team can be considered fully synchronized."
     syncErrors: [SyncError!]!
-
-    "Whether or not the team is enabled."
-    enabled: Boolean!
 
     "Timestamp of the last successful synchronization of the team."
     lastSuccessfulSync: Time
@@ -2177,21 +2115,6 @@ func (ec *executionContext) field_Mutation_disableReconciler_args(ctx context.Co
 	return args, nil
 }
 
-func (ec *executionContext) field_Mutation_disableTeam_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 *slug.Slug
-	if tmp, ok := rawArgs["slug"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["slug"] = arg0
-	return args, nil
-}
-
 func (ec *executionContext) field_Mutation_enableReconciler_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -2204,21 +2127,6 @@ func (ec *executionContext) field_Mutation_enableReconciler_args(ctx context.Con
 		}
 	}
 	args["name"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_enableTeam_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 *slug.Slug
-	if tmp, ok := rawArgs["slug"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["slug"] = arg0
 	return args, nil
 }
 
@@ -3392,8 +3300,6 @@ func (ec *executionContext) fieldContext_Mutation_setGitHubTeamSlug(ctx context.
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "enabled":
-				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
@@ -3493,8 +3399,6 @@ func (ec *executionContext) fieldContext_Mutation_setGoogleWorkspaceGroupEmail(c
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "enabled":
-				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
@@ -3594,8 +3498,6 @@ func (ec *executionContext) fieldContext_Mutation_setAzureADGroupId(ctx context.
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "enabled":
-				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
@@ -3695,8 +3597,6 @@ func (ec *executionContext) fieldContext_Mutation_setGcpProjectId(ctx context.Co
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "enabled":
-				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
@@ -3796,8 +3696,6 @@ func (ec *executionContext) fieldContext_Mutation_setNaisNamespace(ctx context.C
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "enabled":
-				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
@@ -4269,8 +4167,6 @@ func (ec *executionContext) fieldContext_Mutation_createTeam(ctx context.Context
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "enabled":
-				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
@@ -4370,8 +4266,6 @@ func (ec *executionContext) fieldContext_Mutation_updateTeam(ctx context.Context
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "enabled":
-				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
@@ -4471,8 +4365,6 @@ func (ec *executionContext) fieldContext_Mutation_removeUsersFromTeam(ctx contex
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "enabled":
-				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
@@ -4719,8 +4611,6 @@ func (ec *executionContext) fieldContext_Mutation_addTeamMembers(ctx context.Con
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "enabled":
-				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
@@ -4820,8 +4710,6 @@ func (ec *executionContext) fieldContext_Mutation_addTeamOwners(ctx context.Cont
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "enabled":
-				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
@@ -4921,8 +4809,6 @@ func (ec *executionContext) fieldContext_Mutation_setTeamMemberRole(ctx context.
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "enabled":
-				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
@@ -4945,208 +4831,6 @@ func (ec *executionContext) fieldContext_Mutation_setTeamMemberRole(ctx context.
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_setTeamMemberRole_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_disableTeam(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_disableTeam(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		directive0 := func(rctx context.Context) (interface{}, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().DisableTeam(rctx, fc.Args["slug"].(*slug.Slug))
-		}
-		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Auth == nil {
-				return nil, errors.New("directive auth is not implemented")
-			}
-			return ec.directives.Auth(ctx, nil, directive0)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*db.Team); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/db.Team`, tmp)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*db.Team)
-	fc.Result = res
-	return ec.marshalNTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐTeam(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_disableTeam(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "slug":
-				return ec.fieldContext_Team_slug(ctx, field)
-			case "purpose":
-				return ec.fieldContext_Team_purpose(ctx, field)
-			case "metadata":
-				return ec.fieldContext_Team_metadata(ctx, field)
-			case "auditLogs":
-				return ec.fieldContext_Team_auditLogs(ctx, field)
-			case "members":
-				return ec.fieldContext_Team_members(ctx, field)
-			case "syncErrors":
-				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "enabled":
-				return ec.fieldContext_Team_enabled(ctx, field)
-			case "lastSuccessfulSync":
-				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
-			case "reconcilerState":
-				return ec.fieldContext_Team_reconcilerState(ctx, field)
-			case "slackChannel":
-				return ec.fieldContext_Team_slackChannel(ctx, field)
-			case "slackAlertsChannels":
-				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
-			case "gitHubRepositories":
-				return ec.fieldContext_Team_gitHubRepositories(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_disableTeam_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_enableTeam(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_enableTeam(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		directive0 := func(rctx context.Context) (interface{}, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().EnableTeam(rctx, fc.Args["slug"].(*slug.Slug))
-		}
-		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Auth == nil {
-				return nil, errors.New("directive auth is not implemented")
-			}
-			return ec.directives.Auth(ctx, nil, directive0)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*db.Team); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/console/pkg/db.Team`, tmp)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*db.Team)
-	fc.Result = res
-	return ec.marshalNTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐTeam(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_enableTeam(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "slug":
-				return ec.fieldContext_Team_slug(ctx, field)
-			case "purpose":
-				return ec.fieldContext_Team_purpose(ctx, field)
-			case "metadata":
-				return ec.fieldContext_Team_metadata(ctx, field)
-			case "auditLogs":
-				return ec.fieldContext_Team_auditLogs(ctx, field)
-			case "members":
-				return ec.fieldContext_Team_members(ctx, field)
-			case "syncErrors":
-				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "enabled":
-				return ec.fieldContext_Team_enabled(ctx, field)
-			case "lastSuccessfulSync":
-				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
-			case "reconcilerState":
-				return ec.fieldContext_Team_reconcilerState(ctx, field)
-			case "slackChannel":
-				return ec.fieldContext_Team_slackChannel(ctx, field)
-			case "slackAlertsChannels":
-				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
-			case "gitHubRepositories":
-				return ec.fieldContext_Team_gitHubRepositories(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_enableTeam_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -5732,8 +5416,6 @@ func (ec *executionContext) fieldContext_Query_teams(ctx context.Context, field 
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "enabled":
-				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
@@ -5822,8 +5504,6 @@ func (ec *executionContext) fieldContext_Query_team(ctx context.Context, field g
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "enabled":
-				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
@@ -8186,50 +7866,6 @@ func (ec *executionContext) fieldContext_Team_syncErrors(ctx context.Context, fi
 	return fc, nil
 }
 
-func (ec *executionContext) _Team_enabled(ctx context.Context, field graphql.CollectedField, obj *db.Team) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Team_enabled(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Enabled, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(bool)
-	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Team_enabled(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Team",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Team_lastSuccessfulSync(ctx context.Context, field graphql.CollectedField, obj *db.Team) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 	if err != nil {
@@ -8716,8 +8352,6 @@ func (ec *executionContext) fieldContext_TeamDeleteKey_team(ctx context.Context,
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "enabled":
-				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
@@ -8888,8 +8522,6 @@ func (ec *executionContext) fieldContext_TeamMembership_team(ctx context.Context
 				return ec.fieldContext_Team_members(ctx, field)
 			case "syncErrors":
 				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "enabled":
-				return ec.fieldContext_Team_enabled(ctx, field)
 			case "lastSuccessfulSync":
 				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
 			case "reconcilerState":
@@ -11746,24 +11378,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "disableTeam":
-
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_disableTeam(ctx, field)
-			})
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "enableTeam":
-
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_enableTeam(ctx, field)
-			})
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
 		case "requestTeamDeletion":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
@@ -12642,13 +12256,6 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 				return innerFunc(ctx)
 
 			})
-		case "enabled":
-
-			out.Values[i] = ec._Team_enabled(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
-			}
 		case "lastSuccessfulSync":
 			field := field
 

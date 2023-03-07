@@ -15,4 +15,6 @@ CREATE TABLE team_delete_keys (
    confirmed_at TIMESTAMP WITH TIME ZONE
 );
 
+ALTER TABLE teams DROP COLUMN enabled;
+
 COMMIT;

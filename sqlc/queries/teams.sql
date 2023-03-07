@@ -39,18 +39,6 @@ SET purpose = COALESCE(sqlc.narg(purpose), purpose),
 WHERE slug = sqlc.arg(slug)
 RETURNING *;
 
--- name: DisableTeam :one
-UPDATE teams
-SET enabled = false
-WHERE slug = $1
-RETURNING *;
-
--- name: EnableTeam :one
-UPDATE teams
-SET enabled = true
-WHERE slug = $1
-RETURNING *;
-
 -- name: RemoveUserFromTeam :exec
 DELETE FROM user_roles
 WHERE user_id = $1 AND target_team_slug = $2;

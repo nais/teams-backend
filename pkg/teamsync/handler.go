@@ -243,11 +243,6 @@ func (h *handler) reconcileTeam(ctx context.Context, input Input) error {
 		return err
 	}
 
-	if !team.Enabled {
-		log.Infof("team is not enabled, skipping reconciliation")
-		return nil
-	}
-
 	members, err := h.database.GetTeamMembers(ctx, input.TeamSlug)
 	if err != nil {
 		return err
