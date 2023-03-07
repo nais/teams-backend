@@ -18,7 +18,6 @@ import (
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/gcp"
 	"github.com/nais/console/pkg/google_token_source"
-	"github.com/nais/console/pkg/legacy/envmap"
 	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/metrics"
 	"github.com/nais/console/pkg/reconcilers"
@@ -39,7 +38,7 @@ const (
 	metricsSystemName                 = "gcp"
 )
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, gcpServices *GcpServices, tenantName, domain, cnrmRoleName, billingAccount string, legacyClusters map[string]string, legacyMapping []envmap.EnvironmentMapping, log logger.Logger) *googleGcpReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, gcpServices *GcpServices, tenantName, domain, cnrmRoleName, billingAccount string, log logger.Logger) *googleGcpReconciler {
 	return &googleGcpReconciler{
 		database:       database,
 		auditLogger:    auditLogger,
@@ -49,8 +48,6 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp
 		cnrmRoleName:   cnrmRoleName,
 		billingAccount: billingAccount,
 		tenantName:     tenantName,
-		legacyClusters: legacyClusters,
-		legacyMapping:  legacyMapping,
 		log:            log,
 	}
 }
@@ -63,7 +60,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		return nil, err
 	}
 
-	return New(database, auditLogger, cfg.GCP.Clusters, gcpServices, cfg.TenantName, cfg.TenantDomain, cfg.GCP.CnrmRole, cfg.GCP.BillingAccount, cfg.LegacyClusters, cfg.LegacyNaisNamespaces, log), nil
+	return New(database, auditLogger, cfg.GCP.Clusters, gcpServices, cfg.TenantName, cfg.TenantDomain, cfg.GCP.CnrmRole, cfg.GCP.BillingAccount, log), nil
 }
 
 func (r *googleGcpReconciler) Name() sqlc.ReconcilerName {
@@ -89,16 +86,14 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 		return fmt.Errorf("no Google Workspace group exists for team %q yet, is the %q reconciler enabled? ", input.Team.Slug, google_workspace_admin_reconciler.Name)
 	}
 
-	teamProjects := make(map[string]*cloudresourcemanager.Project, len(r.clusters))
 	for environment, cluster := range r.clusters {
 		projectID := GenerateProjectID(r.domain, environment, input.Team.Slug)
-		project, err := r.getOrCreateProject(ctx, projectID, state, environment, cluster.TeamsFolderID, input)
+		teamProject, err := r.getOrCreateProject(ctx, projectID, state, environment, cluster.TeamsFolderID, input)
 		if err != nil {
 			return fmt.Errorf("get or create a GCP project %q for team %q in environment %q: %w", projectID, input.Team.Slug, environment, err)
 		}
-		teamProjects[environment] = project
 		state.Projects[environment] = reconcilers.GoogleGcpEnvironmentProject{
-			ProjectID: project.ProjectId,
+			ProjectID: teamProject.ProjectId,
 		}
 
 		err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, state)
@@ -106,7 +101,7 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 			r.log.WithError(err).Error("persist system state")
 		}
 
-		err = r.ensureProjectHasLabels(ctx, project, map[string]string{
+		err = r.ensureProjectHasLabels(ctx, teamProject, map[string]string{
 			"team":        string(input.Team.Slug),
 			"environment": environment,
 			"tenant":      r.tenantName,
@@ -115,30 +110,25 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 			return fmt.Errorf("set project labels: %w", err)
 		}
 
-		err = r.setTeamProjectBillingInfo(ctx, project, input)
+		err = r.setTeamProjectBillingInfo(ctx, teamProject, input)
 		if err != nil {
-			return fmt.Errorf("set project billing info for project %q for team %q in environment %q: %w", project.ProjectId, input.Team.Slug, environment, err)
+			return fmt.Errorf("set project billing info for project %q for team %q in environment %q: %w", teamProject.ProjectId, input.Team.Slug, environment, err)
 		}
 
-		cnrmServiceAccount, err := r.getOrCreateProjectCnrmServiceAccount(ctx, input, environment, cluster.ProjectID)
+		cnrmServiceAccount, err := r.getOrCreateProjectCnrmServiceAccount(ctx, input, environment, teamProject.ProjectId)
 		if err != nil {
-			return fmt.Errorf("create CNRM service account for project %q for team %q in environment %q: %w", project.ProjectId, input.Team.Slug, environment, err)
+			return fmt.Errorf("create CNRM service account for project %q for team %q in environment %q: %w", teamProject.ProjectId, input.Team.Slug, environment, err)
 		}
 
-		err = r.setProjectPermissions(ctx, project, input, *googleWorkspaceState.GroupEmail, cluster.ProjectID, cnrmServiceAccount)
+		err = r.setProjectPermissions(ctx, teamProject, input, *googleWorkspaceState.GroupEmail, cnrmServiceAccount)
 		if err != nil {
-			return fmt.Errorf("set group permissions to project %q for team %q in environment %q: %w", project.ProjectId, input.Team.Slug, environment, err)
+			return fmt.Errorf("set group permissions to project %q for team %q in environment %q: %w", teamProject.ProjectId, input.Team.Slug, environment, err)
 		}
 
-		err = r.ensureProjectHasAccessToGoogleApis(ctx, project, input)
+		err = r.ensureProjectHasAccessToGoogleApis(ctx, teamProject, input)
 		if err != nil {
-			return fmt.Errorf("enable Google APIs access in project %q for team %q in environment %q: %w", project.ProjectId, input.Team.Slug, environment, err)
+			return fmt.Errorf("enable Google APIs access in project %q for team %q in environment %q: %w", teamProject.ProjectId, input.Team.Slug, environment, err)
 		}
-	}
-
-	err = r.createLegacyClusterCNRMServiceAccount(ctx, input, teamProjects, *googleWorkspaceState.GroupEmail)
-	if err != nil {
-		return fmt.Errorf("hack for NAVs legacy GCP projects: %w", err)
 	}
 
 	return nil
@@ -227,53 +217,6 @@ func (r *googleGcpReconciler) ensureProjectHasAccessToGoogleApis(ctx context.Con
 	return nil
 }
 
-func (r *googleGcpReconciler) createLegacyClusterCNRMServiceAccount(ctx context.Context, input reconcilers.Input, teamProjects map[string]*cloudresourcemanager.Project, groupEmail string) error {
-OUTER:
-	for legacyEnvironment, legacyClusterProject := range r.legacyClusters {
-		var teamProject *cloudresourcemanager.Project
-		for _, m := range r.legacyMapping {
-			if m.Legacy == legacyEnvironment {
-				teamProject = teamProjects[m.Platinum]
-				break
-			}
-		}
-		if teamProject == nil {
-			r.log.Warnf("found no team project for cluster: %q. legacyClusters: %+v, legacyMapping: %+v, teamProjects: %+v", legacyEnvironment, r.legacyClusters, r.legacyMapping, teamProjects)
-			continue OUTER
-		}
-
-		cnrmServiceAccount, err := r.getOrCreateProjectCnrmServiceAccount(ctx, input, legacyEnvironment, legacyClusterProject)
-		if err != nil {
-			return fmt.Errorf("create legacy CNRM service account for team %q in environment %q: %w", input.Team.Slug, legacyEnvironment, err)
-		}
-
-		// Set workload identity role to the CNRM service account
-		member := fmt.Sprintf("serviceAccount:%s.svc.id.goog[cnrm-system/cnrm-controller-manager-%s]", legacyClusterProject, input.Team.Slug)
-		response, err := r.gcpServices.IamProjectsServiceAccountsService.SetIamPolicy(cnrmServiceAccount.Name, &iam.SetIamPolicyRequest{
-			Policy: &iam.Policy{
-				Bindings: []*iam.Binding{
-					{
-						Members: []string{member},
-						Role:    "roles/iam.workloadIdentityUser",
-					},
-				},
-			},
-		}).Do()
-		if err != nil {
-			metrics.IncExternalCallsByError(metricsSystemName, err)
-			return fmt.Errorf("assign roles for legacy CNRM service account: %w", err)
-		}
-		metrics.IncExternalCalls(metricsSystemName, response.HTTPStatusCode)
-
-		err = r.setProjectPermissions(ctx, teamProject, input, groupEmail, legacyClusterProject, cnrmServiceAccount)
-		if err != nil {
-			return fmt.Errorf("set group permissions to project %q for team %q in environment %q: %w", teamProject, input.Team.Slug, legacyEnvironment, err)
-		}
-	}
-
-	return nil
-}
-
 func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, projectID string, state *reconcilers.GoogleGcpProjectState, environment string, parentFolderID int64, input reconcilers.Input) (*cloudresourcemanager.Project, error) {
 	if projectFromState, exists := state.Projects[environment]; exists {
 		response, err := r.gcpServices.CloudResourceManagerProjectsService.Search().Query("id:" + projectFromState.ProjectID).Do()
@@ -353,9 +296,9 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, projectID 
 
 // setProjectPermissions Make sure that the project has the necessary permissions, and don't remove permissions we don't
 // control
-func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project *cloudresourcemanager.Project, input reconcilers.Input, groupEmail, clusterProjectID string, cnrmServiceAccount *iam.ServiceAccount) error {
+func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, teamProject *cloudresourcemanager.Project, input reconcilers.Input, groupEmail string, cnrmServiceAccount *iam.ServiceAccount) error {
 	// Set workload identity role to the CNRM service account
-	member := fmt.Sprintf("serviceAccount:%s.svc.id.goog[cnrm-system/cnrm-controller-manager-%s]", clusterProjectID, input.Team.Slug)
+	member := fmt.Sprintf("serviceAccount:%s.svc.id.goog[cnrm-system/cnrm-controller-manager-%s]", teamProject.ProjectId, input.Team.Slug)
 	operation, err := r.gcpServices.IamProjectsServiceAccountsService.SetIamPolicy(cnrmServiceAccount.Name, &iam.SetIamPolicyRequest{
 		Policy: &iam.Policy{
 			Bindings: []*iam.Binding{
@@ -372,7 +315,7 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 	}
 	metrics.IncExternalCalls(metricsSystemName, operation.HTTPStatusCode)
 
-	policy, err := r.gcpServices.CloudResourceManagerProjectsService.GetIamPolicy(project.Name, &cloudresourcemanager.GetIamPolicyRequest{}).Do()
+	policy, err := r.gcpServices.CloudResourceManagerProjectsService.GetIamPolicy(teamProject.Name, &cloudresourcemanager.GetIamPolicyRequest{}).Do()
 	if err != nil {
 		metrics.IncExternalCallsByError(metricsSystemName, err)
 		return fmt.Errorf("retrieve existing GCP project IAM policy: %w", err)
@@ -389,7 +332,7 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 	}
 
 	policy.Bindings = newBindings
-	policy, err = r.gcpServices.CloudResourceManagerProjectsService.SetIamPolicy(project.Name, &cloudresourcemanager.SetIamPolicyRequest{
+	policy, err = r.gcpServices.CloudResourceManagerProjectsService.SetIamPolicy(teamProject.Name, &cloudresourcemanager.SetIamPolicyRequest{
 		Policy: policy,
 	}).Do()
 	if err != nil {
@@ -405,15 +348,15 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 		Action:        sqlc.AuditActionGoogleGcpProjectAssignPermissions,
 		CorrelationID: input.CorrelationID,
 	}
-	r.auditLogger.Logf(ctx, r.database, targets, fields, "Assigned GCP project IAM permissions for %q", project.ProjectId)
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Assigned GCP project IAM permissions for %q", teamProject.ProjectId)
 
 	return nil
 }
 
 // getOrCreateProjectCnrmServiceAccount Get the CNRM service account for the project in this env. If the service account
 // does not exist, attempt to create it, and then return it.
-func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.Context, input reconcilers.Input, environment string, clusterProjectID string) (*iam.ServiceAccount, error) {
-	name, accountID := CnrmServiceAccountNameAndAccountID(input.Team.Slug, clusterProjectID)
+func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.Context, input reconcilers.Input, environment, teamProjectID string) (*iam.ServiceAccount, error) {
+	name, accountID := CnrmServiceAccountNameAndAccountID(input.Team.Slug, teamProjectID)
 	serviceAccount, err := r.gcpServices.IamProjectsServiceAccountsService.Get(name).Do()
 	if err == nil {
 		metrics.IncExternalCalls(metricsSystemName, serviceAccount.HTTPStatusCode)
@@ -428,7 +371,7 @@ func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.C
 			Description: fmt.Sprintf("CNRM service account for team %q in environment %q", input.Team.Slug, environment),
 		},
 	}
-	serviceAccount, err = r.gcpServices.IamProjectsServiceAccountsService.Create("projects/"+clusterProjectID, createServiceAccountRequest).Do()
+	serviceAccount, err = r.gcpServices.IamProjectsServiceAccountsService.Create("projects/"+teamProjectID, createServiceAccountRequest).Do()
 	if err != nil {
 		metrics.IncExternalCallsByError(metricsSystemName, err)
 		return nil, err
@@ -499,10 +442,10 @@ func (r *googleGcpReconciler) getOperationResponse(operation *cloudresourcemanag
 	return operation.Response, nil
 }
 
-func (r *googleGcpReconciler) ensureProjectHasLabels(_ context.Context, project *cloudresourcemanager.Project, labels map[string]string) error {
+func (r *googleGcpReconciler) ensureProjectHasLabels(ctx context.Context, project *cloudresourcemanager.Project, labels map[string]string) error {
 	operation, err := r.gcpServices.CloudResourceManagerProjectsService.Patch(project.Name, &cloudresourcemanager.Project{
 		Labels: labels,
-	}).Do()
+	}).Context(ctx).Do()
 	if err != nil {
 		metrics.IncExternalCallsByError(metricsSystemName, err)
 		return err

@@ -46,30 +46,28 @@ type NaisdRequest struct {
 }
 
 type naisNamespaceReconciler struct {
-	database       db.Database
-	domain         string
-	auditLogger    auditlogger.AuditLogger
-	clusters       gcp.Clusters
-	projectID      string
-	azureEnabled   bool
-	pubsubClient   *pubsub.Client
-	log            logger.Logger
-	legacyMapping  []envmap.EnvironmentMapping
-	legacyClusters map[string]string
+	database      db.Database
+	domain        string
+	auditLogger   auditlogger.AuditLogger
+	clusters      gcp.Clusters
+	projectID     string
+	azureEnabled  bool
+	pubsubClient  *pubsub.Client
+	log           logger.Logger
+	legacyMapping []envmap.EnvironmentMapping
 }
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, domain, projectID string, azureEnabled bool, pubsubClient *pubsub.Client, legacyMapping []envmap.EnvironmentMapping, legacyClusters map[string]string, log logger.Logger) *naisNamespaceReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, domain, projectID string, azureEnabled bool, pubsubClient *pubsub.Client, legacyMapping []envmap.EnvironmentMapping, log logger.Logger) *naisNamespaceReconciler {
 	return &naisNamespaceReconciler{
-		database:       database,
-		auditLogger:    auditLogger,
-		clusters:       clusters,
-		domain:         domain,
-		projectID:      projectID,
-		azureEnabled:   azureEnabled,
-		pubsubClient:   pubsubClient,
-		legacyMapping:  legacyMapping,
-		legacyClusters: legacyClusters,
-		log:            log,
+		database:      database,
+		auditLogger:   auditLogger,
+		clusters:      clusters,
+		domain:        domain,
+		projectID:     projectID,
+		azureEnabled:  azureEnabled,
+		pubsubClient:  pubsubClient,
+		legacyMapping: legacyMapping,
+		log:           log,
 	}
 }
 
@@ -91,19 +89,19 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		return nil, fmt.Errorf("retrieve pubsub client: %w", err)
 	}
 
-	return New(database, auditLogger, cfg.GCP.Clusters, cfg.TenantDomain, cfg.GoogleManagementProjectID, cfg.NaisNamespace.AzureEnabled, pubsubClient, cfg.LegacyNaisNamespaces, cfg.LegacyClusters, log), nil
+	return New(database, auditLogger, cfg.GCP.Clusters, cfg.TenantDomain, cfg.GoogleManagementProjectID, cfg.NaisNamespace.AzureEnabled, pubsubClient, cfg.LegacyNaisNamespaces, log), nil
 }
 
 func (r *naisNamespaceReconciler) Name() sqlc.ReconcilerName {
 	return Name
 }
 
-func GCPProjectsWithLegacyEnvironments(projects map[string]reconcilers.GoogleGcpEnvironmentProject, mappings []envmap.EnvironmentMapping) map[string]reconcilers.GoogleGcpEnvironmentProject {
+func GCPProjectsWithLegacyEnvironments(teamProjects map[string]reconcilers.GoogleGcpEnvironmentProject, mappings []envmap.EnvironmentMapping) map[string]reconcilers.GoogleGcpEnvironmentProject {
 	output := make(map[string]reconcilers.GoogleGcpEnvironmentProject)
 	for _, mapping := range mappings {
-		output[mapping.Legacy] = projects[mapping.Platinum]
+		output[mapping.Legacy] = teamProjects[mapping.Platinum]
 	}
-	for k, v := range projects {
+	for k, v := range teamProjects {
 		output[k] = v
 	}
 	return output
@@ -199,20 +197,10 @@ func (r *naisNamespaceReconciler) Delete(ctx context.Context, teamSlug slug.Slug
 	return nil
 }
 
-func (r *naisNamespaceReconciler) getClusterProjectForEnv(environment string) string {
-	if cluster, ok := r.clusters[environment]; ok {
-		return cluster.ProjectID
-	}
-
-	// fallback to legacy clusters
-	return r.legacyClusters[environment]
-}
-
 func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, team db.Team, environment, slackAlertsChannel, gcpProjectID, groupEmail, azureGroupID string) error {
 	const topicPrefix = "naisd-console-"
 
-	clusterProjectID := r.getClusterProjectForEnv(environment)
-	cnrmAccountName, _ := google_gcp_reconciler.CnrmServiceAccountNameAndAccountID(team.Slug, clusterProjectID)
+	cnrmAccountName, _ := google_gcp_reconciler.CnrmServiceAccountNameAndAccountID(team.Slug, gcpProjectID)
 	parts := strings.Split(cnrmAccountName, "/")
 	cnrmEmail := parts[len(parts)-1]
 
