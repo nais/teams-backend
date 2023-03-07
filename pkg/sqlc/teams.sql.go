@@ -110,8 +110,7 @@ func (q *Queries) GetSlackAlertsChannels(ctx context.Context, teamSlug slug.Slug
 
 const getTeamBySlug = `-- name: GetTeamBySlug :one
 SELECT teams.slug, teams.purpose, teams.last_successful_sync, teams.slack_channel FROM teams
-LEFT JOIN team_delete_keys ON team_delete_keys.team_slug = teams.slug
-WHERE teams.slug = $1 AND team_delete_keys.confirmed_at IS NULL
+WHERE teams.slug = $1
 `
 
 func (q *Queries) GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error) {
@@ -205,8 +204,6 @@ func (q *Queries) GetTeamMetadata(ctx context.Context, teamSlug slug.Slug) ([]*T
 
 const getTeams = `-- name: GetTeams :many
 SELECT teams.slug, teams.purpose, teams.last_successful_sync, teams.slack_channel FROM teams
-LEFT JOIN team_delete_keys ON team_delete_keys.team_slug = teams.slug
-WHERE team_delete_keys.confirmed_at IS NULL
 ORDER BY teams.slug ASC
 `
 

@@ -5,14 +5,11 @@ RETURNING *;
 
 -- name: GetTeams :many
 SELECT teams.* FROM teams
-LEFT JOIN team_delete_keys ON team_delete_keys.team_slug = teams.slug
-WHERE team_delete_keys.confirmed_at IS NULL
 ORDER BY teams.slug ASC;
 
 -- name: GetTeamBySlug :one
 SELECT teams.* FROM teams
-LEFT JOIN team_delete_keys ON team_delete_keys.team_slug = teams.slug
-WHERE teams.slug = $1 AND team_delete_keys.confirmed_at IS NULL;
+WHERE teams.slug = $1;
 
 -- name: GetTeamMembers :many
 SELECT users.* FROM user_roles
