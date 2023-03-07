@@ -342,29 +342,6 @@ func (_m *MockDatabase) DisableReconciler(ctx context.Context, reconcilerName sq
 	return r0, r1
 }
 
-// DisableTeam provides a mock function with given fields: ctx, teamSlug
-func (_m *MockDatabase) DisableTeam(ctx context.Context, teamSlug slug.Slug) (*Team, error) {
-	ret := _m.Called(ctx, teamSlug)
-
-	var r0 *Team
-	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug) *Team); ok {
-		r0 = rf(ctx, teamSlug)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*Team)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug) error); ok {
-		r1 = rf(ctx, teamSlug)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // EnableReconciler provides a mock function with given fields: ctx, reconcilerName
 func (_m *MockDatabase) EnableReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*Reconciler, error) {
 	ret := _m.Called(ctx, reconcilerName)
@@ -381,29 +358,6 @@ func (_m *MockDatabase) EnableReconciler(ctx context.Context, reconcilerName sql
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, sqlc.ReconcilerName) error); ok {
 		r1 = rf(ctx, reconcilerName)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// EnableTeam provides a mock function with given fields: ctx, teamSlug
-func (_m *MockDatabase) EnableTeam(ctx context.Context, teamSlug slug.Slug) (*Team, error) {
-	ret := _m.Called(ctx, teamSlug)
-
-	var r0 *Team
-	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug) *Team); ok {
-		r0 = rf(ctx, teamSlug)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*Team)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug) error); ok {
-		r1 = rf(ctx, teamSlug)
 	} else {
 		r1 = ret.Error(1)
 	}
