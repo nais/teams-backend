@@ -75,8 +75,8 @@ DELETE FROM slack_alerts_channels
 WHERE team_slug = $1 AND environment = $2;
 
 -- name: CreateTeamDeleteKey :one
-INSERT INTO team_delete_keys (team_slug)
-VALUES($1)
+INSERT INTO team_delete_keys (team_slug, created_by)
+VALUES($1, $2)
 RETURNING *;
 
 -- name: GetTeamDeleteKey :one

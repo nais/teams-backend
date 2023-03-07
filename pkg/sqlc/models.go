@@ -825,6 +825,7 @@ type TeamDeleteKey struct {
 	Key         uuid.UUID
 	TeamSlug    slug.Slug
 	CreatedAt   time.Time
+	CreatedBy   uuid.UUID
 	ConfirmedAt sql.NullTime
 }
 

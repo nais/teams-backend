@@ -153,8 +153,10 @@ extend type Mutation {
     """
     Request a key that can be used to trigger a team deletion process
 
-    Deleting a team is a two step process. First the client will need to request a deletion key, and then use the
-    key with the confirmTeamDeletion mutation to start the actual deletion process.
+    Deleting a team is a two step process. First an owner of the team (or an admin) must request a team deletion key, and
+    then a second owner of the team (or an admin) must confirm the deletion using the confirmTeamDeletion mutation.
+
+    Note: Service accounts are not allowed to request team delete keys.
     """
     requestTeamDeletion(
         "The slug of the team that the deletion key will be assigned to."
@@ -168,6 +170,8 @@ extend type Mutation {
     entities controlled by Console will also be deleted.
 
     WARNING: There is no going back after starting this process.
+
+    Note: Service accounts are not allowed to confirm a team deletion.
     """
     confirmTeamDeletion(
         "Deletion key, acquired using the requestTeamDeletion mutation."
@@ -180,8 +184,17 @@ type TeamDeleteKey {
     "The unique key used to confirm the deletion of a team."
     key: UUID!
 
+    "The creation timestamp of the key."
+    createdAt: Time!
+
     "Expiration timestamp of the key."
     expires: Time!
+
+    "The user who created the key."
+    createdBy: User!
+
+    "The team the delete key is for."
+    team: Team!
 }
 
 "Team sync type."

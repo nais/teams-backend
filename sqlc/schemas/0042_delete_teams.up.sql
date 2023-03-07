@@ -11,6 +11,7 @@ CREATE TABLE team_delete_keys (
    key UUID PRIMARY KEY DEFAULT gen_random_uuid(),
    team_slug TEXT REFERENCES teams(slug) ON DELETE CASCADE,
    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+   created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
    confirmed_at TIMESTAMP WITH TIME ZONE
 );
 

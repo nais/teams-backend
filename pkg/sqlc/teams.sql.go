@@ -50,18 +50,24 @@ func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, 
 }
 
 const createTeamDeleteKey = `-- name: CreateTeamDeleteKey :one
-INSERT INTO team_delete_keys (team_slug)
-VALUES($1)
-RETURNING key, team_slug, created_at, confirmed_at
+INSERT INTO team_delete_keys (team_slug, created_by)
+VALUES($1, $2)
+RETURNING key, team_slug, created_at, created_by, confirmed_at
 `
 
-func (q *Queries) CreateTeamDeleteKey(ctx context.Context, teamSlug slug.Slug) (*TeamDeleteKey, error) {
-	row := q.db.QueryRow(ctx, createTeamDeleteKey, teamSlug)
+type CreateTeamDeleteKeyParams struct {
+	TeamSlug  slug.Slug
+	CreatedBy uuid.UUID
+}
+
+func (q *Queries) CreateTeamDeleteKey(ctx context.Context, arg CreateTeamDeleteKeyParams) (*TeamDeleteKey, error) {
+	row := q.db.QueryRow(ctx, createTeamDeleteKey, arg.TeamSlug, arg.CreatedBy)
 	var i TeamDeleteKey
 	err := row.Scan(
 		&i.Key,
 		&i.TeamSlug,
 		&i.CreatedAt,
+		&i.CreatedBy,
 		&i.ConfirmedAt,
 	)
 	return &i, err
@@ -163,7 +169,7 @@ func (q *Queries) GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, err
 }
 
 const getTeamDeleteKey = `-- name: GetTeamDeleteKey :one
-SELECT key, team_slug, created_at, confirmed_at FROM team_delete_keys
+SELECT key, team_slug, created_at, created_by, confirmed_at FROM team_delete_keys
 WHERE key = $1
 `
 
@@ -174,6 +180,7 @@ func (q *Queries) GetTeamDeleteKey(ctx context.Context, key uuid.UUID) (*TeamDel
 		&i.Key,
 		&i.TeamSlug,
 		&i.CreatedAt,
+		&i.CreatedBy,
 		&i.ConfirmedAt,
 	)
 	return &i, err

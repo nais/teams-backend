@@ -526,6 +526,10 @@ func (r *mutationResolver) EnableTeam(ctx context.Context, slug *slug.Slug) (*db
 // RequestTeamDeletion is the resolver for the requestTeamDeletion field.
 func (r *mutationResolver) RequestTeamDeletion(ctx context.Context, slug *slug.Slug) (*db.TeamDeleteKey, error) {
 	actor := authz.ActorFromContext(ctx)
+	if actor.User.IsServiceAccount() {
+		return nil, apierror.Errorf("Service accounts are not allowed to request a team deletion.")
+	}
+
 	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, *slug)
 	if err != nil {
 		return nil, err
@@ -541,7 +545,7 @@ func (r *mutationResolver) RequestTeamDeletion(ctx context.Context, slug *slug.S
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	deleteKey, err := r.database.CreateTeamDeleteKey(ctx, *slug)
+	deleteKey, err := r.database.CreateTeamDeleteKey(ctx, *slug, actor.User.GetID())
 	if err != nil {
 		return nil, fmt.Errorf("create team delete key: %w", err)
 	}
@@ -567,9 +571,16 @@ func (r *mutationResolver) ConfirmTeamDeletion(ctx context.Context, key *uuid.UU
 	}
 
 	actor := authz.ActorFromContext(ctx)
+	if actor.User.IsServiceAccount() {
+		return nil, apierror.Errorf("Service accounts are not allowed to confirm a team deletion.")
+	}
 	err = authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsUpdate, deleteKey.TeamSlug)
 	if err != nil {
 		return nil, err
+	}
+
+	if actor.User.GetID() == deleteKey.CreatedBy {
+		return nil, apierror.Errorf("You cannot confirm your own delete key.")
 	}
 
 	if deleteKey.ConfirmedAt.Valid {
@@ -869,7 +880,23 @@ func (r *teamResolver) GitHubRepositories(ctx context.Context, obj *db.Team) ([]
 	return state.Repositories, nil
 }
 
+// CreatedBy is the resolver for the createdBy field.
+func (r *teamDeleteKeyResolver) CreatedBy(ctx context.Context, obj *db.TeamDeleteKey) (*db.User, error) {
+	return r.database.GetUserByID(ctx, obj.CreatedBy)
+}
+
+// Team is the resolver for the team field.
+func (r *teamDeleteKeyResolver) Team(ctx context.Context, obj *db.TeamDeleteKey) (*db.Team, error) {
+	return r.database.GetTeamBySlug(ctx, obj.TeamSlug)
+}
+
 // Team returns generated.TeamResolver implementation.
 func (r *Resolver) Team() generated.TeamResolver { return &teamResolver{r} }
 
-type teamResolver struct{ *Resolver }
+// TeamDeleteKey returns generated.TeamDeleteKeyResolver implementation.
+func (r *Resolver) TeamDeleteKey() generated.TeamDeleteKeyResolver { return &teamDeleteKeyResolver{r} }
+
+type (
+	teamResolver          struct{ *Resolver }
+	teamDeleteKeyResolver struct{ *Resolver }
+)

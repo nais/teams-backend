@@ -181,8 +181,11 @@ func (d *database) RemoveSlackAlertsChannel(ctx context.Context, teamSlug slug.S
 	})
 }
 
-func (d *database) CreateTeamDeleteKey(ctx context.Context, teamSlug slug.Slug) (*TeamDeleteKey, error) {
-	deleteKey, err := d.querier.CreateTeamDeleteKey(ctx, teamSlug)
+func (d *database) CreateTeamDeleteKey(ctx context.Context, teamSlug slug.Slug, userID uuid.UUID) (*TeamDeleteKey, error) {
+	deleteKey, err := d.querier.CreateTeamDeleteKey(ctx, sqlc.CreateTeamDeleteKeyParams{
+		TeamSlug:  teamSlug,
+		CreatedBy: userID,
+	})
 	if err != nil {
 		return nil, err
 	}

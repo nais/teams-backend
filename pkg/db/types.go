@@ -162,7 +162,7 @@ type Database interface {
 	GetSlackAlertsChannels(ctx context.Context, teamSlug slug.Slug) (map[string]string, error)
 	SetSlackAlertsChannel(ctx context.Context, teamSlug slug.Slug, environment, channelName string) error
 	RemoveSlackAlertsChannel(ctx context.Context, teamSlug slug.Slug, environment string) error
-	CreateTeamDeleteKey(ctx context.Context, teamSlug slug.Slug) (*TeamDeleteKey, error)
+	CreateTeamDeleteKey(ctx context.Context, teamSlug slug.Slug, userID uuid.UUID) (*TeamDeleteKey, error)
 	GetTeamDeleteKey(ctx context.Context, key uuid.UUID) (*TeamDeleteKey, error)
 	ConfirmTeamDeleteKey(ctx context.Context, key uuid.UUID) error
 	DeleteTeam(ctx context.Context, teamSlug slug.Slug) error
