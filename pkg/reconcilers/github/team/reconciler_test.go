@@ -573,7 +573,8 @@ func TestGitHubReconciler_Delete(t *testing.T) {
 						StatusCode: http.StatusOK,
 						Status:     "200: OK",
 						Body:       io.NopCloser(strings.NewReader("body")),
-					}},
+					},
+				},
 				nil,
 			).
 			Once()
@@ -607,7 +608,8 @@ func TestGitHubReconciler_Delete(t *testing.T) {
 						StatusCode: http.StatusNoContent,
 						Status:     "204: No Content",
 						Body:       io.NopCloser(strings.NewReader("")),
-					}},
+					},
+				},
 				nil,
 			).
 			Once()

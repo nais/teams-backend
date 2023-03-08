@@ -357,7 +357,6 @@ func TestAzureReconciler_Delete(t *testing.T) {
 		database.
 			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, teamSlug, mock.Anything).
 			Run(func(args mock.Arguments) {
-
 				state := args.Get(3).(*reconcilers.AzureState)
 				state.GroupID = &grpID
 			}).
