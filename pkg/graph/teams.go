@@ -702,7 +702,7 @@ func (r *teamResolver) ReconcilerState(ctx context.Context, obj *db.Team) (*mode
 	gcpProjectState := &reconcilers.GoogleGcpProjectState{
 		Projects: make(map[string]reconcilers.GoogleGcpEnvironmentProject),
 	}
-	naisNamespaceState := &reconcilers.GoogleGcpNaisNamespaceState{
+	naisNamespaceState := &reconcilers.NaisNamespaceState{
 		Namespaces: make(map[string]slug.Slug),
 	}
 	azureADState := &reconcilers.AzureState{}

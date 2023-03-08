@@ -225,7 +225,7 @@ func TestReconcile(t *testing.T) {
 			Return(nil).
 			Once()
 		database.
-			On("SetReconcilerStateForTeam", ctx, nais_namespace_reconciler.Name, team.Slug, mock.MatchedBy(func(state *reconcilers.GoogleGcpNaisNamespaceState) bool {
+			On("SetReconcilerStateForTeam", ctx, nais_namespace_reconciler.Name, team.Slug, mock.MatchedBy(func(state *reconcilers.NaisNamespaceState) bool {
 				return state.Namespaces[environment] == team.Slug
 			})).
 			Return(nil).
@@ -281,7 +281,7 @@ func TestReconcile(t *testing.T) {
 		database.
 			On("LoadReconcilerStateForTeam", ctx, nais_namespace_reconciler.Name, team.Slug, mock.Anything).
 			Run(func(args mock.Arguments) {
-				state := args.Get(3).(*reconcilers.GoogleGcpNaisNamespaceState)
+				state := args.Get(3).(*reconcilers.NaisNamespaceState)
 				state.Namespaces[environment] = team.Slug
 			}).
 			Return(nil).
@@ -372,7 +372,7 @@ func TestReconcile(t *testing.T) {
 			Return(nil).
 			Once()
 		database.
-			On("SetReconcilerStateForTeam", ctx, nais_namespace_reconciler.Name, team.Slug, mock.MatchedBy(func(state *reconcilers.GoogleGcpNaisNamespaceState) bool {
+			On("SetReconcilerStateForTeam", ctx, nais_namespace_reconciler.Name, team.Slug, mock.MatchedBy(func(state *reconcilers.NaisNamespaceState) bool {
 				return state.Namespaces[environment] == team.Slug
 			})).
 			Return(nil).
@@ -465,7 +465,7 @@ func TestReconcile(t *testing.T) {
 			Return(nil).
 			Once()
 		database.
-			On("SetReconcilerStateForTeam", ctx, nais_namespace_reconciler.Name, team.Slug, mock.MatchedBy(func(state *reconcilers.GoogleGcpNaisNamespaceState) bool {
+			On("SetReconcilerStateForTeam", ctx, nais_namespace_reconciler.Name, team.Slug, mock.MatchedBy(func(state *reconcilers.NaisNamespaceState) bool {
 				return state.Namespaces[environment] == team.Slug && state.Namespaces[virtualName] == team.Slug
 			})).
 			Return(nil).
@@ -577,7 +577,7 @@ func TestReconcile(t *testing.T) {
 			Return(nil).
 			Once()
 		database.
-			On("SetReconcilerStateForTeam", ctx, nais_namespace_reconciler.Name, team.Slug, mock.MatchedBy(func(state *reconcilers.GoogleGcpNaisNamespaceState) bool {
+			On("SetReconcilerStateForTeam", ctx, nais_namespace_reconciler.Name, team.Slug, mock.MatchedBy(func(state *reconcilers.NaisNamespaceState) bool {
 				return len(state.Namespaces) == 0
 			})).
 			Return(nil).

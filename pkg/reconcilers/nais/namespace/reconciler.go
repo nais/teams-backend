@@ -115,7 +115,7 @@ func GCPProjectsWithLegacyEnvironments(projects map[string]reconcilers.GoogleGcp
 }
 
 func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
-	namespaceState := &reconcilers.GoogleGcpNaisNamespaceState{
+	namespaceState := &reconcilers.NaisNamespaceState{
 		Namespaces: make(map[string]slug.Slug),
 	}
 	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, namespaceState)
@@ -202,7 +202,7 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 
 func (r *naisNamespaceReconciler) Delete(ctx context.Context, teamSlug slug.Slug, correlationID uuid.UUID) error {
 	log := r.log.WithTeamSlug(teamSlug.String())
-	namespaceState := &reconcilers.GoogleGcpNaisNamespaceState{
+	namespaceState := &reconcilers.NaisNamespaceState{
 		Namespaces: make(map[string]slug.Slug),
 	}
 	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), teamSlug, namespaceState)
