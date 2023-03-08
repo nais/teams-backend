@@ -7,6 +7,7 @@ ALTER TYPE audit_action ADD VALUE IF NOT EXISTS 'github:team:delete';
 ALTER TYPE audit_action ADD VALUE IF NOT EXISTS 'google:workspace-admin:delete';
 ALTER TYPE audit_action ADD VALUE IF NOT EXISTS 'google:gar:delete';
 ALTER TYPE audit_action ADD VALUE IF NOT EXISTS 'google:gcp:delete-project';
+ALTER TYPE audit_action ADD VALUE IF NOT EXISTS 'nais:namespace:delete-namespace';
 
 CREATE TABLE team_delete_keys (
    key UUID PRIMARY KEY DEFAULT gen_random_uuid(),

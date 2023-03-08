@@ -81,6 +81,7 @@ const (
 	AuditActionGoogleWorkspaceAdminDelete                AuditAction = "google:workspace-admin:delete"
 	AuditActionGoogleGarDelete                           AuditAction = "google:gar:delete"
 	AuditActionGoogleGcpDeleteProject                    AuditAction = "google:gcp:delete-project"
+	AuditActionNaisNamespaceDeleteNamespace              AuditAction = "nais:namespace:delete-namespace"
 )
 
 func (e *AuditAction) Scan(src interface{}) error {
@@ -182,7 +183,8 @@ func (e AuditAction) Valid() bool {
 		AuditActionGithubTeamDelete,
 		AuditActionGoogleWorkspaceAdminDelete,
 		AuditActionGoogleGarDelete,
-		AuditActionGoogleGcpDeleteProject:
+		AuditActionGoogleGcpDeleteProject,
+		AuditActionNaisNamespaceDeleteNamespace:
 		return true
 	}
 	return false
@@ -253,6 +255,7 @@ func AllAuditActionValues() []AuditAction {
 		AuditActionGoogleWorkspaceAdminDelete,
 		AuditActionGoogleGarDelete,
 		AuditActionGoogleGcpDeleteProject,
+		AuditActionNaisNamespaceDeleteNamespace,
 	}
 }
 

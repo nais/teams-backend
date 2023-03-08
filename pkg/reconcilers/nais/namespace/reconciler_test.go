@@ -256,12 +256,64 @@ func TestReconcile(t *testing.T) {
 		publishRequest := &nais_namespace_reconciler.NaisdRequest{}
 		json.Unmarshal(msgs[0].Data, publishRequest)
 
-		assert.Equal(t, teamSlug, publishRequest.Data.Name)
-		assert.Equal(t, teamProjectID, publishRequest.Data.GcpProject)
-		assert.Equal(t, googleWorkspaceEmail, publishRequest.Data.GroupEmail)
-		assert.Equal(t, cnrmEmail, publishRequest.Data.CNRMEmail)
-		assert.Equal(t, "#env-channel", publishRequest.Data.SlackAlertsChannel)
-		assert.Equal(t, azureGroupID.String(), publishRequest.Data.AzureGroupID)
+		createNamespaceRequest := &nais_namespace_reconciler.NaisdCreateNamespace{}
+		json.Unmarshal(publishRequest.Data, createNamespaceRequest)
+
+		assert.Equal(t, teamSlug, createNamespaceRequest.Name)
+		assert.Equal(t, teamProjectID, createNamespaceRequest.GcpProject)
+		assert.Equal(t, googleWorkspaceEmail, createNamespaceRequest.GroupEmail)
+		assert.Equal(t, cnrmEmail, createNamespaceRequest.CNRMEmail)
+		assert.Equal(t, "#env-channel", createNamespaceRequest.SlackAlertsChannel)
+		assert.Equal(t, azureGroupID.String(), createNamespaceRequest.AzureGroupID)
+	})
+
+	t.Run("delete namespaces", func(t *testing.T) {
+		srv, pubsubClient, close := getPubsubServerAndClient(ctx, managementProjectID, "naisd-console-"+environment)
+		defer close()
+
+		log := logger.NewMockLogger(t)
+		log.
+			On("WithTeamSlug", teamSlug).
+			Return(log).
+			Once()
+
+		database := db.NewMockDatabase(t)
+		database.
+			On("LoadReconcilerStateForTeam", ctx, nais_namespace_reconciler.Name, team.Slug, mock.Anything).
+			Run(func(args mock.Arguments) {
+				state := args.Get(3).(*reconcilers.GoogleGcpNaisNamespaceState)
+				state.Namespaces[environment] = team.Slug
+			}).
+			Return(nil).
+			Once()
+		database.
+			On("RemoveReconcilerStateForTeam", ctx, nais_namespace_reconciler.Name, team.Slug).
+			Return(nil).
+			Once()
+
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+				return targets[0].Type == "team" && targets[0].Identifier == string(team.Slug)
+			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
+				return fields.CorrelationID == input.CorrelationID && fields.Action == sqlc.AuditActionNaisNamespaceDeleteNamespace
+			}), mock.Anything, team.Slug, environment).
+			Return(nil).
+			Once()
+
+		r := nais_namespace_reconciler.New(database, auditLogger, clusters, domain, managementProjectID, azureEnabled, pubsubClient, emptyMapping, emptyMap, log)
+		assert.NoError(t, r.Delete(ctx, team.Slug, input.CorrelationID))
+
+		msgs := srv.Messages()
+		assert.Len(t, msgs, 1)
+
+		publishRequest := &nais_namespace_reconciler.NaisdRequest{}
+		json.Unmarshal(msgs[0].Data, publishRequest)
+
+		deleteNamespaceRequest := &nais_namespace_reconciler.NaisdDeleteNamespace{}
+		json.Unmarshal(publishRequest.Data, deleteNamespaceRequest)
+
+		assert.Equal(t, teamSlug, deleteNamespaceRequest.Name)
 	})
 
 	t.Run("create legacy namespaces", func(t *testing.T) {
@@ -349,12 +401,15 @@ func TestReconcile(t *testing.T) {
 		publishRequest := &nais_namespace_reconciler.NaisdRequest{}
 		json.Unmarshal(msgs[0].Data, publishRequest)
 
-		assert.Equal(t, teamSlug, publishRequest.Data.Name)
-		assert.Equal(t, teamProjectID, publishRequest.Data.GcpProject)
-		assert.Equal(t, googleWorkspaceEmail, publishRequest.Data.GroupEmail)
-		assert.Equal(t, cnrmEmail, publishRequest.Data.CNRMEmail)
-		assert.Equal(t, azureGroupID.String(), publishRequest.Data.AzureGroupID)
-		assert.Equal(t, slackChannel, publishRequest.Data.SlackAlertsChannel)
+		createNamespaceRequest := &nais_namespace_reconciler.NaisdCreateNamespace{}
+		json.Unmarshal(publishRequest.Data, createNamespaceRequest)
+
+		assert.Equal(t, teamSlug, createNamespaceRequest.Name)
+		assert.Equal(t, teamProjectID, createNamespaceRequest.GcpProject)
+		assert.Equal(t, googleWorkspaceEmail, createNamespaceRequest.GroupEmail)
+		assert.Equal(t, cnrmEmail, createNamespaceRequest.CNRMEmail)
+		assert.Equal(t, azureGroupID.String(), createNamespaceRequest.AzureGroupID)
+		assert.Equal(t, slackChannel, createNamespaceRequest.SlackAlertsChannel)
 	})
 
 	t.Run("create namespaces with additional legacy mappings", func(t *testing.T) {
@@ -455,17 +510,20 @@ func TestReconcile(t *testing.T) {
 		for _, msg := range msgs {
 			json.Unmarshal(msg.Data, publishRequest)
 
-			assert.Equal(t, teamSlug, publishRequest.Data.Name)
-			assert.Equal(t, teamProjectID, publishRequest.Data.GcpProject)
-			assert.Equal(t, googleWorkspaceEmail, publishRequest.Data.GroupEmail)
-			assert.Equal(t, azureGroupID.String(), publishRequest.Data.AzureGroupID)
+			createNamespaceRequest := &nais_namespace_reconciler.NaisdCreateNamespace{}
+			json.Unmarshal(publishRequest.Data, createNamespaceRequest)
+
+			assert.Equal(t, teamSlug, createNamespaceRequest.Name)
+			assert.Equal(t, teamProjectID, createNamespaceRequest.GcpProject)
+			assert.Equal(t, googleWorkspaceEmail, createNamespaceRequest.GroupEmail)
+			assert.Equal(t, azureGroupID.String(), createNamespaceRequest.AzureGroupID)
 			for email := range expectedCNRMEmails {
-				if email == publishRequest.Data.CNRMEmail {
+				if email == createNamespaceRequest.CNRMEmail {
 					delete(expectedCNRMEmails, email)
 					break
 				}
 			}
-			assert.Equal(t, slackChannel, publishRequest.Data.SlackAlertsChannel)
+			assert.Equal(t, slackChannel, createNamespaceRequest.SlackAlertsChannel)
 		}
 		assert.Empty(t, expectedCNRMEmails)
 	})
