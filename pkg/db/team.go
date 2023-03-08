@@ -130,24 +130,6 @@ func (d *database) GetTeamMembers(ctx context.Context, teamSlug slug.Slug) ([]*U
 	return members, nil
 }
 
-func (d *database) DisableTeam(ctx context.Context, teamSlug slug.Slug) (*Team, error) {
-	team, err := d.querier.DisableTeam(ctx, teamSlug)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Team{Team: team}, nil
-}
-
-func (d *database) EnableTeam(ctx context.Context, teamSlug slug.Slug) (*Team, error) {
-	team, err := d.querier.EnableTeam(ctx, teamSlug)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Team{Team: team}, nil
-}
-
 func (d *database) SetLastSuccessfulSyncForTeam(ctx context.Context, teamSlug slug.Slug) error {
 	return d.querier.SetLastSuccessfulSyncForTeam(ctx, teamSlug)
 }
@@ -179,4 +161,31 @@ func (d *database) RemoveSlackAlertsChannel(ctx context.Context, teamSlug slug.S
 		TeamSlug:    teamSlug,
 		Environment: environment,
 	})
+}
+
+func (d *database) CreateTeamDeleteKey(ctx context.Context, teamSlug slug.Slug, userID uuid.UUID) (*TeamDeleteKey, error) {
+	deleteKey, err := d.querier.CreateTeamDeleteKey(ctx, sqlc.CreateTeamDeleteKeyParams{
+		TeamSlug:  teamSlug,
+		CreatedBy: userID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &TeamDeleteKey{TeamDeleteKey: deleteKey}, nil
+}
+
+func (d *database) GetTeamDeleteKey(ctx context.Context, key uuid.UUID) (*TeamDeleteKey, error) {
+	deleteKey, err := d.querier.GetTeamDeleteKey(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	return &TeamDeleteKey{TeamDeleteKey: deleteKey}, nil
+}
+
+func (d *database) ConfirmTeamDeleteKey(ctx context.Context, key uuid.UUID) error {
+	return d.querier.ConfirmTeamDeleteKey(ctx, key)
+}
+
+func (d *database) DeleteTeam(ctx context.Context, teamSlug slug.Slug) error {
+	return d.querier.DeleteTeam(ctx, teamSlug)
 }

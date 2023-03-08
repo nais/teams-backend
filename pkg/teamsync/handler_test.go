@@ -3,29 +3,26 @@ package teamsync_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
-	"github.com/nais/console/pkg/slug"
-
-	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
-	nais_deploy_reconciler "github.com/nais/console/pkg/reconcilers/nais/deploy"
-
-	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
-
-	"github.com/stretchr/testify/mock"
-
-	"github.com/stretchr/testify/assert"
-
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/reconcilers"
-	"github.com/nais/console/pkg/sqlc"
-
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/logger"
+	"github.com/nais/console/pkg/reconcilers"
+	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
+	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
+	nais_deploy_reconciler "github.com/nais/console/pkg/reconcilers/nais/deploy"
+	"github.com/nais/console/pkg/slug"
+	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/pkg/teamsync"
+	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestHandler_ReconcileTeam(t *testing.T) {
@@ -36,36 +33,6 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 	cfg := config.Defaults()
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	log := logger.NewMockLogger(t)
-
-	t.Run("team is not enabled", func(t *testing.T) {
-		log := logger.NewMockLogger(t)
-		log.
-			On("WithTeamSlug", string(teamSlug)).
-			Return(log)
-		log.
-			On("Infof", mock.MatchedBy(func(msg string) bool {
-				return strings.HasPrefix(msg, "team is not enabled")
-			})).
-			Return(nil).
-			Once()
-
-		input := teamsync.Input{
-			CorrelationID: uuid.New(),
-			TeamSlug:      teamSlug,
-		}
-		team := &db.Team{
-			&sqlc.Team{
-				Slug:    teamSlug,
-				Enabled: false,
-			},
-		}
-		database.On("GetTeamBySlug", mock.Anything, teamSlug).Return(team, nil).Once()
-
-		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
-		handler.Schedule(input)
-		handler.Close()
-		handler.SyncTeams(ctx)
-	})
 
 	t.Run("no reconcilers", func(t *testing.T) {
 		log := logger.NewMockLogger(t)
@@ -85,11 +52,12 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 			CorrelationID: uuid.New(),
 			TeamSlug:      teamSlug,
 		}
-		team := &db.Team{Team: &sqlc.Team{
-			Slug:    teamSlug,
-			Purpose: "some purpose",
-			Enabled: true,
-		}}
+		team := &db.Team{
+			Team: &sqlc.Team{
+				Slug:    teamSlug,
+				Purpose: "some purpose",
+			},
+		}
 		database.On("GetTeamBySlug", mock.Anything, teamSlug).Return(team, nil).Once()
 		database.On("GetTeamMembers", mock.Anything, teamSlug).Return(nil, nil).Once()
 
@@ -182,11 +150,12 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 			Return(nil).
 			Once()
 
-		team := &db.Team{&sqlc.Team{
-			Slug:    teamSlug,
-			Purpose: "some purpose",
-			Enabled: true,
-		}}
+		team := &db.Team{
+			Team: &sqlc.Team{
+				Slug:    teamSlug,
+				Purpose: "some purpose",
+			},
+		}
 		input := teamsync.Input{
 			CorrelationID: uuid.New(),
 			TeamSlug:      teamSlug,
@@ -269,11 +238,12 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 			CorrelationID: uuid.New(),
 			TeamSlug:      teamSlug,
 		}
-		team := &db.Team{Team: &sqlc.Team{
-			Slug:    teamSlug,
-			Purpose: "some purpose",
-			Enabled: true,
-		}}
+		team := &db.Team{
+			Team: &sqlc.Team{
+				Slug:    teamSlug,
+				Purpose: "some purpose",
+			},
+		}
 		database.
 			On("GetTeamBySlug", mock.Anything, teamSlug).
 			Return(team, nil).
@@ -292,5 +262,95 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 		handler.Schedule(input)
 		handler.Close()
 		handler.SyncTeams(ctx)
+	})
+}
+
+func TestHandler_DeleteTeam(t *testing.T) {
+	const teamSlug = slug.Slug("my team")
+
+	ctx := context.Background()
+	cfg := config.Defaults()
+	auditLogger := auditlogger.NewMockAuditLogger(t)
+	correlationID := uuid.New()
+
+	t.Run("reconcile errors", func(t *testing.T) {
+		testLogger, logs := test.NewNullLogger()
+		database := db.NewMockDatabase(t)
+
+		deleteErr := fmt.Errorf("some error")
+
+		log := logger.NewMockLogger(t)
+		log.
+			On("WithTeamSlug", string(teamSlug)).
+			Return(log).
+			Once()
+		log.
+			On("WithSystem", string(azure_group_reconciler.Name)).
+			Return(log).
+			Once()
+		log.
+			On("WithSystem", string(github_team_reconciler.Name)).
+			Return(log).
+			Once()
+		log.
+			On("WithError", deleteErr).
+			Return(&logrus.Entry{Logger: testLogger}).
+			Once()
+
+		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
+
+		reconciler1 := func(context.Context, db.Database, *config.Config, auditlogger.AuditLogger, logger.Logger) (reconcilers.Reconciler, error) {
+			reconciler := reconcilers.NewMockReconciler(t)
+			reconciler.
+				On("Name").
+				Return(azure_group_reconciler.Name).
+				Once()
+			reconciler.
+				On("Delete", ctx, teamSlug, correlationID).
+				Return(nil).
+				Once()
+			return reconciler, nil
+		}
+
+		reconciler2 := func(context.Context, db.Database, *config.Config, auditlogger.AuditLogger, logger.Logger) (reconcilers.Reconciler, error) {
+			reconciler := reconcilers.NewMockReconciler(t)
+			reconciler.
+				On("Name").
+				Return(github_team_reconciler.Name).
+				Once()
+			reconciler.
+				On("Delete", ctx, teamSlug, correlationID).
+				Return(deleteErr).
+				Once()
+			return reconciler, nil
+		}
+
+		handler.SetReconcilerFactories(teamsync.ReconcilerFactories{
+			azure_group_reconciler.Name: reconciler1,
+			github_team_reconciler.Name: reconciler2,
+		})
+
+		assert.Nil(t, handler.UseReconciler(db.Reconciler{Reconciler: &sqlc.Reconciler{Name: azure_group_reconciler.Name, RunOrder: 1}}))
+		assert.Nil(t, handler.UseReconciler(db.Reconciler{Reconciler: &sqlc.Reconciler{Name: github_team_reconciler.Name, RunOrder: 2}}))
+
+		err := handler.DeleteTeam(teamSlug, correlationID)
+		assert.EqualError(t, err, "1 error(s) occurred during delete")
+		assert.Len(t, logs.Entries, 1)
+	})
+
+	t.Run("no errors", func(t *testing.T) {
+		database := db.NewMockDatabase(t)
+		database.
+			On("DeleteTeam", ctx, teamSlug).
+			Return(nil).
+			Once()
+
+		log := logger.NewMockLogger(t)
+		log.
+			On("WithTeamSlug", string(teamSlug)).
+			Return(log)
+
+		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
+		assert.NoError(t, handler.DeleteTeam(teamSlug, correlationID))
 	})
 }

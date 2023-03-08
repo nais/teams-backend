@@ -51,6 +51,20 @@ func (_m *MockClient) CreateGroup(ctx context.Context, grp *Group) (*Group, erro
 	return r0, r1
 }
 
+// DeleteGroup provides a mock function with given fields: ctx, grpID
+func (_m *MockClient) DeleteGroup(ctx context.Context, grpID uuid.UUID) error {
+	ret := _m.Called(ctx, grpID)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
+		r0 = rf(ctx, grpID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // GetGroupById provides a mock function with given fields: ctx, id
 func (_m *MockClient) GetGroupById(ctx context.Context, id uuid.UUID) (*Group, error) {
 	ret := _m.Called(ctx, id)

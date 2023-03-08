@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"cloud.google.com/go/pubsub"
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
@@ -25,12 +26,13 @@ import (
 )
 
 const (
-	NaisdCreateNamespace = "create-namespace"
+	metricsSystemName        = "naisd"
+	NaisdTypeCreateNamespace = "create-namespace"
+	NaisdTypeDeleteNamespace = "delete-namespace"
+	Name                     = sqlc.ReconcilerNameNaisNamespace
 )
 
-const metricsSystemName = "naisd"
-
-type naisdData struct {
+type NaisdCreateNamespace struct {
 	Name               string `json:"name"`
 	GcpProject         string `json:"gcpProject"` // the user specified "project id"; not the "projects/ID" format
 	GroupEmail         string `json:"groupEmail"`
@@ -39,9 +41,13 @@ type naisdData struct {
 	SlackAlertsChannel string `json:"slackAlertsChannel"`
 }
 
+type NaisdDeleteNamespace struct {
+	Name string `json:"name"`
+}
+
 type NaisdRequest struct {
-	Type string    `json:"type"`
-	Data naisdData `json:"data"`
+	Type string          `json:"type"`
+	Data json.RawMessage `json:"data"`
 }
 
 type naisNamespaceReconciler struct {
@@ -56,8 +62,6 @@ type naisNamespaceReconciler struct {
 	legacyMapping  []envmap.EnvironmentMapping
 	legacyClusters map[string]string
 }
-
-const Name = sqlc.ReconcilerNameNaisNamespace
 
 func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, domain, projectID string, azureEnabled bool, pubsubClient *pubsub.Client, legacyMapping []envmap.EnvironmentMapping, legacyClusters map[string]string, log logger.Logger) *naisNamespaceReconciler {
 	return &naisNamespaceReconciler{
@@ -111,7 +115,7 @@ func GCPProjectsWithLegacyEnvironments(projects map[string]reconcilers.GoogleGcp
 }
 
 func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
-	namespaceState := &reconcilers.GoogleGcpNaisNamespaceState{
+	namespaceState := &reconcilers.NaisNamespaceState{
 		Namespaces: make(map[string]slug.Slug),
 	}
 	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, namespaceState)
@@ -196,6 +200,70 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	return nil
 }
 
+func (r *naisNamespaceReconciler) Delete(ctx context.Context, teamSlug slug.Slug, correlationID uuid.UUID) error {
+	log := r.log.WithTeamSlug(teamSlug.String())
+	namespaceState := &reconcilers.NaisNamespaceState{
+		Namespaces: make(map[string]slug.Slug),
+	}
+	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), teamSlug, namespaceState)
+	if err != nil {
+		return fmt.Errorf("unable to load NAIS namespace state for team %q: %w", teamSlug, err)
+	}
+
+	var errors []error
+	for environment := range namespaceState.Namespaces {
+		if err := r.deleteNamespace(ctx, teamSlug, environment, correlationID); err != nil {
+			log.WithError(err).Error("delete namespace")
+			errors = append(errors, err)
+		} else {
+			targets := []auditlogger.Target{auditlogger.TeamTarget(teamSlug)}
+			fields := auditlogger.Fields{
+				Action:        sqlc.AuditActionNaisNamespaceDeleteNamespace,
+				CorrelationID: correlationID,
+			}
+
+			r.auditLogger.Logf(ctx, r.database, targets, fields, "Request namespace deletion for team %q in environment %q", teamSlug, environment)
+		}
+	}
+
+	if len(errors) > 0 {
+		return fmt.Errorf("%d errors occured during namespace deletion", len(errors))
+	}
+
+	return r.database.RemoveReconcilerStateForTeam(ctx, r.Name(), teamSlug)
+}
+
+func (r *naisNamespaceReconciler) deleteNamespace(ctx context.Context, teamSlug slug.Slug, environment string, correlationID uuid.UUID) error {
+	const topicPrefix = "naisd-console-"
+
+	deleteReq, err := json.Marshal(NaisdDeleteNamespace{
+		Name: string(teamSlug),
+	})
+	if err != nil {
+		return fmt.Errorf("marshal delete namespace request: %w", err)
+	}
+
+	payload, err := json.Marshal(NaisdRequest{
+		Type: NaisdTypeDeleteNamespace,
+		Data: deleteReq,
+	})
+	if err != nil {
+		return fmt.Errorf("marshal naisd request envelope: %w", err)
+	}
+
+	topicName := topicPrefix + environment
+	msg := &pubsub.Message{Data: payload}
+	topic := r.pubsubClient.Topic(topicName)
+	future := topic.Publish(ctx, msg)
+	<-future.Ready()
+	_, err = future.Get(ctx)
+	topic.Stop()
+
+	metrics.IncExternalCallsByError(metricsSystemName, err)
+
+	return err
+}
+
 func (r *naisNamespaceReconciler) getClusterProjectForEnv(environment string) string {
 	if cluster, ok := r.clusters[environment]; ok {
 		return cluster.ProjectID
@@ -213,9 +281,8 @@ func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, team db.T
 	parts := strings.Split(cnrmAccountName, "/")
 	cnrmEmail := parts[len(parts)-1]
 
-	req := &NaisdRequest{
-		Type: NaisdCreateNamespace,
-		Data: naisdData{
+	createReq, err := json.Marshal(
+		NaisdCreateNamespace{
 			Name:               string(team.Slug),
 			GcpProject:         gcpProjectID,
 			GroupEmail:         groupEmail,
@@ -223,11 +290,17 @@ func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, team db.T
 			CNRMEmail:          cnrmEmail,
 			SlackAlertsChannel: slackAlertsChannel,
 		},
+	)
+	if err != nil {
+		return fmt.Errorf("marshal create namespace request: %w", err)
 	}
 
-	payload, err := json.Marshal(req)
+	payload, err := json.Marshal(NaisdRequest{
+		Type: NaisdTypeCreateNamespace,
+		Data: createReq,
+	})
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal naisd request envelope: %w", err)
 	}
 
 	topicName := topicPrefix + environment

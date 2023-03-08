@@ -194,7 +194,7 @@ func (r *mutationResolver) SetNaisNamespace(ctx context.Context, teamSlug *slug.
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	state := &reconcilers.GoogleGcpNaisNamespaceState{
+	state := &reconcilers.NaisNamespaceState{
 		Namespaces: make(map[string]slug.Slug),
 	}
 	err = r.database.LoadReconcilerStateForTeam(ctx, sqlc.ReconcilerNameNaisNamespace, *teamSlug, state)

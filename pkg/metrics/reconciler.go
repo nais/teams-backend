@@ -58,6 +58,13 @@ var (
 		Help:      "Number of times a team has exhausted all its sync attempts",
 	})
 
+	deleteErrorCounter = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: namespace,
+		Subsystem: subsystem,
+		Name:      "delete_team_errors",
+		Help:      "Number of errors occurred during team deletion",
+	})
+
 	reconcilerDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Namespace: namespace,
 		Subsystem: subsystem,
@@ -81,6 +88,10 @@ func IncReconcilerCounter(name sqlc.ReconcilerName, state ReconcilerState) {
 		labelState:      string(state),
 	}
 	reconcilerCounter.With(labels).Inc()
+}
+
+func IncDeleteErrorCounter(numErrors int) {
+	deleteErrorCounter.Add(float64(numErrors))
 }
 
 func IncReconcilerMaxAttemptsExhaustion() {

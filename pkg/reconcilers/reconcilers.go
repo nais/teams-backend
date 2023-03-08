@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/logger"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 )
 
@@ -17,6 +19,7 @@ const TeamNamePrefix = "nais-team-"
 // Reconciler Interface for all reconcilers
 type Reconciler interface {
 	Reconcile(ctx context.Context, input Input) error
+	Delete(ctx context.Context, teamSlug slug.Slug, correlationID uuid.UUID) error
 	Name() sqlc.ReconcilerName
 }
 

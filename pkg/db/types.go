@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4"
@@ -9,6 +10,8 @@ import (
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 )
+
+const teamDeleteKeyLifetime = time.Minute * 5
 
 type (
 	QuerierTransactionFunc  func(ctx context.Context, querier Querier) error
@@ -27,6 +30,10 @@ type AuditLog struct {
 
 type Reconciler struct {
 	*sqlc.Reconciler
+}
+
+type TeamDeleteKey struct {
+	*sqlc.TeamDeleteKey
 }
 
 type ReconcilerConfig struct {
@@ -123,6 +130,7 @@ type Database interface {
 	Transaction(ctx context.Context, fn DatabaseTransactionFunc) error
 	LoadReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, slug slug.Slug, state interface{}) error
 	SetReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, slug slug.Slug, state interface{}) error
+	RemoveReconcilerStateForTeam(ctx context.Context, reconcilerName sqlc.ReconcilerName, slug slug.Slug) error
 	UpdateUser(ctx context.Context, userID uuid.UUID, name, email, externalID string) (*User, error)
 	SetReconcilerErrorForTeam(ctx context.Context, correlationID uuid.UUID, slug slug.Slug, reconcilerName sqlc.ReconcilerName, err error) error
 	GetTeamReconcilerErrors(ctx context.Context, slug slug.Slug) ([]*ReconcilerError, error)
@@ -144,8 +152,6 @@ type Database interface {
 	DisableReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*Reconciler, error)
 	DangerousGetReconcilerConfigValues(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*ReconcilerConfigValues, error)
 	GetAuditLogsForReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) ([]*AuditLog, error)
-	DisableTeam(ctx context.Context, teamSlug slug.Slug) (*Team, error)
-	EnableTeam(ctx context.Context, teamSlug slug.Slug) (*Team, error)
 	SetLastSuccessfulSyncForTeam(ctx context.Context, teamSlug slug.Slug) error
 	RevokeGlobalUserRole(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error
 	GetUsersWithGloballyAssignedRole(ctx context.Context, roleName sqlc.RoleName) ([]*User, error)
@@ -154,6 +160,10 @@ type Database interface {
 	GetSlackAlertsChannels(ctx context.Context, teamSlug slug.Slug) (map[string]string, error)
 	SetSlackAlertsChannel(ctx context.Context, teamSlug slug.Slug, environment, channelName string) error
 	RemoveSlackAlertsChannel(ctx context.Context, teamSlug slug.Slug, environment string) error
+	CreateTeamDeleteKey(ctx context.Context, teamSlug slug.Slug, userID uuid.UUID) (*TeamDeleteKey, error)
+	GetTeamDeleteKey(ctx context.Context, key uuid.UUID) (*TeamDeleteKey, error)
+	ConfirmTeamDeleteKey(ctx context.Context, key uuid.UUID) error
+	DeleteTeam(ctx context.Context, teamSlug slug.Slug) error
 }
 
 func (u User) GetID() uuid.UUID {
@@ -178,4 +188,12 @@ func (s ServiceAccount) Identity() string {
 
 func (s ServiceAccount) IsServiceAccount() bool {
 	return true
+}
+
+func (k TeamDeleteKey) Expires() time.Time {
+	return k.CreatedAt.Add(teamDeleteKeyLifetime)
+}
+
+func (k TeamDeleteKey) HasExpired() bool {
+	return time.Now().After(k.Expires())
 }

@@ -4,12 +4,12 @@ VALUES ($1, $2, $3)
 RETURNING *;
 
 -- name: GetTeams :many
-SELECT * FROM teams
-ORDER BY slug ASC;
+SELECT teams.* FROM teams
+ORDER BY teams.slug ASC;
 
 -- name: GetTeamBySlug :one
-SELECT * FROM teams
-WHERE slug = $1;
+SELECT teams.* FROM teams
+WHERE teams.slug = $1;
 
 -- name: GetTeamMembers :many
 SELECT users.* FROM user_roles
@@ -36,18 +36,6 @@ SET purpose = COALESCE(sqlc.narg(purpose), purpose),
 WHERE slug = sqlc.arg(slug)
 RETURNING *;
 
--- name: DisableTeam :one
-UPDATE teams
-SET enabled = false
-WHERE slug = $1
-RETURNING *;
-
--- name: EnableTeam :one
-UPDATE teams
-SET enabled = true
-WHERE slug = $1
-RETURNING *;
-
 -- name: RemoveUserFromTeam :exec
 DELETE FROM user_roles
 WHERE user_id = $1 AND target_team_slug = $2;
@@ -70,3 +58,21 @@ ON CONFLICT (team_slug, environment) DO
 -- name: RemoveSlackAlertsChannel :exec
 DELETE FROM slack_alerts_channels
 WHERE team_slug = $1 AND environment = $2;
+
+-- name: CreateTeamDeleteKey :one
+INSERT INTO team_delete_keys (team_slug, created_by)
+VALUES($1, $2)
+RETURNING *;
+
+-- name: GetTeamDeleteKey :one
+SELECT * FROM team_delete_keys
+WHERE key = $1;
+
+-- name: ConfirmTeamDeleteKey :exec
+UPDATE team_delete_keys
+SET confirmed_at = NOW()
+WHERE key = $1;
+
+-- name: DeleteTeam :exec
+DELETE FROM teams
+WHERE slug = $1;

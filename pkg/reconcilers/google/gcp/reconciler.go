@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/console"
@@ -141,6 +142,72 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 	}
 
 	return nil
+}
+
+func (r *googleGcpReconciler) Delete(ctx context.Context, teamSlug slug.Slug, correlationID uuid.UUID) error {
+	log := r.log.WithTeamSlug(string(teamSlug))
+	state := &reconcilers.GoogleGcpProjectState{
+		Projects: make(map[string]reconcilers.GoogleGcpEnvironmentProject),
+	}
+	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), teamSlug, state)
+	if err != nil {
+		return fmt.Errorf("load reconciler state for team %q in reconciler %q: %w", teamSlug, r.Name(), err)
+	}
+
+	if len(state.Projects) == 0 {
+		log.Info("no GCP projects in reconciler state, nothing to delete")
+		return r.database.RemoveReconcilerStateForTeam(ctx, r.Name(), teamSlug)
+	}
+
+	var errors []error
+
+	for environment, teamProject := range state.Projects {
+		cluster, exists := r.clusters[environment]
+		if !exists {
+			log.Error("environment %q is no longer active, removing from state")
+			delete(state.Projects, environment)
+			continue
+		}
+
+		cnrmServiceAccountName, _ := CnrmServiceAccountNameAndAccountID(teamSlug, cluster.ProjectID)
+		_, err := r.gcpServices.IamProjectsServiceAccountsService.Delete(cnrmServiceAccountName).Context(ctx).Do()
+		if err != nil {
+			errors = append(errors, err)
+			continue
+		}
+
+		_, err = r.gcpServices.CloudResourceManagerProjectsService.Delete("projects/" + teamProject.ProjectID).Context(ctx).Do()
+		if err != nil {
+			errors = append(errors, err)
+			continue
+		}
+
+		targets := []auditlogger.Target{
+			auditlogger.TeamTarget(teamSlug),
+		}
+		fields := auditlogger.Fields{
+			Action:        sqlc.AuditActionGoogleGcpDeleteProject,
+			CorrelationID: correlationID,
+		}
+		r.auditLogger.Logf(ctx, r.database, targets, fields, "Delete GCP project: %q", teamProject.ProjectID)
+		delete(state.Projects, environment)
+	}
+
+	if len(errors) == 0 {
+		return r.database.RemoveReconcilerStateForTeam(ctx, r.Name(), teamSlug)
+	}
+
+	metrics.IncDeleteErrorCounter(len(errors))
+	for _, err := range errors {
+		log.WithError(err).Error("error during team deletion")
+	}
+
+	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), teamSlug, state)
+	if err != nil {
+		log.WithError(err).Error("persist reconciler state during delete")
+	}
+
+	return fmt.Errorf("%d error(s) occurred during GCP project deletion", len(errors))
 }
 
 func (r *googleGcpReconciler) ensureProjectHasAccessToGoogleApis(ctx context.Context, project *cloudresourcemanager.Project, input reconcilers.Input) error {

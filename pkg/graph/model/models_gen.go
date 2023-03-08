@@ -64,6 +64,8 @@ type ReconcilerState struct {
 	NaisNamespaces []*NaisNamespace `json:"naisNamespaces"`
 	// Timestamp of when the NAIS deploy key was provisioned.
 	NaisDeployKeyProvisioned *time.Time `json:"naisDeployKeyProvisioned"`
+	// Name of the GAR repository for the team.
+	GarRepositoryName *string `json:"garRepositoryName"`
 }
 
 // Slack alerts channel type.

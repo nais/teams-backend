@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
@@ -17,7 +16,7 @@ import (
 	"github.com/nais/console/pkg/reconcilers"
 	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
 	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
-	"github.com/nais/console/pkg/reconcilers/google/gar"
+	google_gar "github.com/nais/console/pkg/reconcilers/google/gar"
 	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
 	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
 	nais_deploy_reconciler "github.com/nais/console/pkg/reconcilers/nais/deploy"
@@ -35,6 +34,7 @@ type Handler interface {
 	RemoveReconciler(reconcilerName sqlc.ReconcilerName)
 	SyncTeams(ctx context.Context)
 	UpdateMetrics(ctx context.Context)
+	DeleteTeam(teamSlug slug.Slug, correlationID uuid.UUID) error
 	Close()
 }
 
@@ -68,7 +68,7 @@ var factories = ReconcilerFactories{
 	google_gcp_reconciler.Name:             google_gcp_reconciler.NewFromConfig,
 	nais_namespace_reconciler.Name:         nais_namespace_reconciler.NewFromConfig,
 	nais_deploy_reconciler.Name:            nais_deploy_reconciler.NewFromConfig,
-	gar.Name:                               gar.NewFromConfig,
+	google_gar.Name:                        google_gar.NewFromConfig,
 }
 
 const reconcilerTimeout = time.Minute * 15
@@ -87,6 +87,42 @@ func NewHandler(ctx context.Context, database db.Database, cfg *config.Config, a
 		factories:         factories,
 		mainContext:       ctx,
 	}
+}
+
+func (h *handler) DeleteTeam(teamSlug slug.Slug, correlationID uuid.UUID) error {
+	log := h.log.WithTeamSlug(string(teamSlug))
+	errors := 0
+
+	h.lock.Lock()
+	orderedReconcilers := getOrderedReconcilers(h.activeReconcilers)
+	h.lock.Unlock()
+
+	for _, reconcilerWithRunOrder := range orderedReconcilers {
+		if h.mainContext.Err() != nil {
+			return h.mainContext.Err()
+		}
+		reconcilerImpl := reconcilerWithRunOrder.reconciler
+		name := reconcilerImpl.Name()
+		log := log.WithSystem(string(name))
+
+		err := reconcilerImpl.Delete(h.mainContext, teamSlug, correlationID)
+		if err != nil {
+			log.WithError(err).Error("delete team")
+			errors++
+			continue
+		}
+	}
+
+	if errors > 0 {
+		return fmt.Errorf("%d error(s) occurred during delete", errors)
+	}
+
+	err := h.database.DeleteTeam(h.mainContext, teamSlug)
+	if err != nil {
+		log.WithError(err).Error("delete team from database")
+	}
+
+	return nil
 }
 
 func (h *handler) Close() {
@@ -205,11 +241,6 @@ func (h *handler) reconcileTeam(ctx context.Context, input Input) error {
 	team, err := h.database.GetTeamBySlug(ctx, input.TeamSlug)
 	if err != nil {
 		return err
-	}
-
-	if !team.Enabled {
-		log.Infof("team is not enabled, skipping reconciliation")
-		return nil
 	}
 
 	members, err := h.database.GetTeamMembers(ctx, input.TeamSlug)

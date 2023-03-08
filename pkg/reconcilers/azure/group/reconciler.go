@@ -120,6 +120,36 @@ func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.
 	return nil
 }
 
+func (r *azureGroupReconciler) Delete(ctx context.Context, teamSlug slug.Slug, correlationID uuid.UUID) error {
+	state := &reconcilers.AzureState{}
+	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), teamSlug, state)
+	if err != nil {
+		return fmt.Errorf("load reconciler state for team %q in reconciler %q: %w", teamSlug, r.Name(), err)
+	}
+
+	if state.GroupID == nil {
+		return fmt.Errorf("missing group ID in reconciler state for team %q in reconciler %q", teamSlug, r.Name())
+	}
+
+	grpID := *state.GroupID
+
+	err = r.client.DeleteGroup(ctx, grpID)
+	if err != nil {
+		return fmt.Errorf("delete Azure AD group with ID %q for team %q: %w", grpID, teamSlug, err)
+	}
+
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(teamSlug),
+	}
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionAzureGroupDelete,
+		CorrelationID: correlationID,
+	}
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Delete Azure AD group with ID %q", grpID)
+
+	return r.database.RemoveReconcilerStateForTeam(ctx, Name, teamSlug)
+}
+
 func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclient.Group, input reconcilers.Input) error {
 	members, err := r.client.ListGroupMembers(ctx, grp)
 	if err != nil {

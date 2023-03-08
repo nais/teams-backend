@@ -38,10 +38,14 @@ type GoogleGcpEnvironmentProject struct {
 	ProjectID string `json:"projectId"` // Unique of the project, for instance `my-project-123`
 }
 
-type GoogleGcpNaisNamespaceState struct {
+type NaisNamespaceState struct {
 	Namespaces map[string]slug.Slug `json:"namespaces"` // Key is the environment for the team namespace
 }
 
 type NaisDeployKeyState struct {
 	Provisioned *time.Time `json:"provisioned"`
+}
+
+type GoogleGarState struct {
+	RepositoryName *string `json:"repopsitoryName"`
 }

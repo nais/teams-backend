@@ -13,6 +13,12 @@ extend type Query {
         "Slug of the team."
         slug: Slug!
     ): DeployKey! @auth
+
+    "Get a team delete key."
+    teamDeleteKey(
+        "The key to get."
+        key: UUID!
+    ): TeamDeleteKey! @auth
 }
 
 extend type Mutation {
@@ -74,7 +80,7 @@ extend type Mutation {
     Manually synchronize all teams
 
     This action will trigger a full synchronization of all teams against the configured third party systems. The action
-    is asynchronous. The operation can take a while, depending on the amount of teams currently enabled in Console.
+    is asynchronous. The operation can take a while, depending on the amount of teams currently in Console.
     """
     synchronizeAllTeams: TeamSync! @auth
 
@@ -129,26 +135,50 @@ extend type Mutation {
     ): Team! @auth
 
     """
-    Disable a team
+    Request a key that can be used to trigger a team deletion process
 
-    When a team is disabled it will no longer be included during team reconciliation.
+    Deleting a team is a two step process. First an owner of the team (or an admin) must request a team deletion key, and
+    then a second owner of the team (or an admin) must confirm the deletion using the confirmTeamDeletion mutation.
 
-    The team will be returned on success.
+    Note: Service accounts are not allowed to request team delete keys.
     """
-    disableTeam(
-        "The slug of the team to disable."
+    requestTeamDeletion(
+        "The slug of the team that the deletion key will be assigned to."
         slug: Slug!
-    ): Team! @auth
+    ): TeamDeleteKey! @auth
 
     """
-    Enable a previously disabled team
+    Confirm a team deletion
 
-    The team will be returned on success.
+    This will start the actual team deletion process, which will be done in an asynchronous manner. All external
+    entities controlled by Console will also be deleted.
+
+    WARNING: There is no going back after starting this process.
+
+    Note: Service accounts are not allowed to confirm a team deletion.
     """
-    enableTeam(
-        "The slug of the team to enable."
-        slug: Slug!
-    ): Team! @auth
+    confirmTeamDeletion(
+        "Deletion key, acquired using the requestTeamDeletion mutation."
+        key: UUID!
+    ): UUID! @auth
+}
+
+"Team deletion key type."
+type TeamDeleteKey {
+    "The unique key used to confirm the deletion of a team."
+    key: UUID!
+
+    "The creation timestamp of the key."
+    createdAt: Time!
+
+    "Expiration timestamp of the key."
+    expires: Time!
+
+    "The user who created the key."
+    createdBy: User!
+
+    "The team the delete key is for."
+    team: Team!
 }
 
 "Team sync type."
@@ -176,9 +206,6 @@ type Team {
 
     "Possible issues related to synchronization of the team to configured external systems. If there are no entries the team can be considered fully synchronized."
     syncErrors: [SyncError!]!
-
-    "Whether or not the team is enabled."
-    enabled: Boolean!
 
     "Timestamp of the last successful synchronization of the team."
     lastSuccessfulSync: Time
@@ -242,6 +269,9 @@ type ReconcilerState {
 
     "Timestamp of when the NAIS deploy key was provisioned."
     naisDeployKeyProvisioned: Time
+
+    "Name of the GAR repository for the team."
+    garRepositoryName: String
 }
 
 "GCP project type."

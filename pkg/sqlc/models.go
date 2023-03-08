@@ -74,6 +74,14 @@ const (
 	AuditActionGoogleGcpProjectDeleteCnrmServiceAccount  AuditAction = "google:gcp:project:delete-cnrm-service-account"
 	AuditActionGoogleGcpProjectEnableGoogleApis          AuditAction = "google:gcp:project:enable-google-apis"
 	AuditActionGraphqlApiUsersSync                       AuditAction = "graphql-api:users:sync"
+	AuditActionGraphqlApiTeamsRequestDelete              AuditAction = "graphql-api:teams:request-delete"
+	AuditActionGraphqlApiTeamsDelete                     AuditAction = "graphql-api:teams:delete"
+	AuditActionAzureGroupDelete                          AuditAction = "azure:group:delete"
+	AuditActionGithubTeamDelete                          AuditAction = "github:team:delete"
+	AuditActionGoogleWorkspaceAdminDelete                AuditAction = "google:workspace-admin:delete"
+	AuditActionGoogleGarDelete                           AuditAction = "google:gar:delete"
+	AuditActionGoogleGcpDeleteProject                    AuditAction = "google:gcp:delete-project"
+	AuditActionNaisNamespaceDeleteNamespace              AuditAction = "nais:namespace:delete-namespace"
 )
 
 func (e *AuditAction) Scan(src interface{}) error {
@@ -168,7 +176,15 @@ func (e AuditAction) Valid() bool {
 		AuditActionNaisDeployProvisionDeployKey,
 		AuditActionGoogleGcpProjectDeleteCnrmServiceAccount,
 		AuditActionGoogleGcpProjectEnableGoogleApis,
-		AuditActionGraphqlApiUsersSync:
+		AuditActionGraphqlApiUsersSync,
+		AuditActionGraphqlApiTeamsRequestDelete,
+		AuditActionGraphqlApiTeamsDelete,
+		AuditActionAzureGroupDelete,
+		AuditActionGithubTeamDelete,
+		AuditActionGoogleWorkspaceAdminDelete,
+		AuditActionGoogleGarDelete,
+		AuditActionGoogleGcpDeleteProject,
+		AuditActionNaisNamespaceDeleteNamespace:
 		return true
 	}
 	return false
@@ -232,6 +248,14 @@ func AllAuditActionValues() []AuditAction {
 		AuditActionGoogleGcpProjectDeleteCnrmServiceAccount,
 		AuditActionGoogleGcpProjectEnableGoogleApis,
 		AuditActionGraphqlApiUsersSync,
+		AuditActionGraphqlApiTeamsRequestDelete,
+		AuditActionGraphqlApiTeamsDelete,
+		AuditActionAzureGroupDelete,
+		AuditActionGithubTeamDelete,
+		AuditActionGoogleWorkspaceAdminDelete,
+		AuditActionGoogleGarDelete,
+		AuditActionGoogleGcpDeleteProject,
+		AuditActionNaisNamespaceDeleteNamespace,
 	}
 }
 
@@ -798,9 +822,16 @@ type SlackAlertsChannel struct {
 type Team struct {
 	Slug               slug.Slug
 	Purpose            string
-	Enabled            bool
 	LastSuccessfulSync sql.NullTime
 	SlackChannel       string
+}
+
+type TeamDeleteKey struct {
+	Key         uuid.UUID
+	TeamSlug    slug.Slug
+	CreatedAt   time.Time
+	CreatedBy   uuid.UUID
+	ConfirmedAt sql.NullTime
 }
 
 type TeamMetadatum struct {

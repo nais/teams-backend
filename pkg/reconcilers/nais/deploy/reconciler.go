@@ -8,12 +8,14 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/metrics"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 )
 
@@ -27,10 +29,9 @@ type naisDeployReconciler struct {
 }
 
 const (
-	Name = sqlc.ReconcilerNameNaisDeploy
+	Name              = sqlc.ReconcilerNameNaisDeploy
+	metricsSystemName = "nais-deploy"
 )
-
-const metricsSystemName = "nais-deploy"
 
 func New(database db.Database, auditLogger auditlogger.AuditLogger, client *http.Client, endpoint string, provisionKey []byte, log logger.Logger) *naisDeployReconciler {
 	return &naisDeployReconciler{
@@ -104,4 +105,8 @@ func (r *naisDeployReconciler) Reconcile(ctx context.Context, input reconcilers.
 	default:
 		return fmt.Errorf("provision NAIS deploy API key for team %q: %s", input.Team.Slug, response.Status)
 	}
+}
+
+func (r *naisDeployReconciler) Delete(ctx context.Context, teamSlug slug.Slug, correlationID uuid.UUID) error {
+	return nil
 }

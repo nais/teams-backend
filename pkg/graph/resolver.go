@@ -76,11 +76,9 @@ func (r *Resolver) reconcileTeam(_ context.Context, correlationID uuid.UUID, slu
 	return r.addTeamToReconcilerQueue(input)
 }
 
-// getTeam helper to get team by slug, or log if err
-func (r *Resolver) getTeamBySlugOrLog(ctx context.Context, slug slug.Slug) (*db.Team, error) {
+func (r *Resolver) getTeamBySlug(ctx context.Context, slug slug.Slug) (*db.Team, error) {
 	team, err := r.database.GetTeamBySlug(ctx, slug)
 	if err != nil {
-		r.log.WithTeamSlug(string(slug)).WithError(err).Errorf("get team")
 		return nil, apierror.ErrTeamNotExist
 	}
 

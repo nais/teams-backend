@@ -13,10 +13,21 @@ import (
 	"github.com/nais/console/pkg/slug"
 )
 
+const confirmTeamDeleteKey = `-- name: ConfirmTeamDeleteKey :exec
+UPDATE team_delete_keys
+SET confirmed_at = NOW()
+WHERE key = $1
+`
+
+func (q *Queries) ConfirmTeamDeleteKey(ctx context.Context, key uuid.UUID) error {
+	_, err := q.db.Exec(ctx, confirmTeamDeleteKey, key)
+	return err
+}
+
 const createTeam = `-- name: CreateTeam :one
 INSERT INTO teams (slug, purpose, slack_channel)
 VALUES ($1, $2, $3)
-RETURNING slug, purpose, enabled, last_successful_sync, slack_channel
+RETURNING slug, purpose, last_successful_sync, slack_channel
 `
 
 type CreateTeamParams struct {
@@ -31,51 +42,44 @@ func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, 
 	err := row.Scan(
 		&i.Slug,
 		&i.Purpose,
-		&i.Enabled,
 		&i.LastSuccessfulSync,
 		&i.SlackChannel,
 	)
 	return &i, err
 }
 
-const disableTeam = `-- name: DisableTeam :one
-UPDATE teams
-SET enabled = false
-WHERE slug = $1
-RETURNING slug, purpose, enabled, last_successful_sync, slack_channel
+const createTeamDeleteKey = `-- name: CreateTeamDeleteKey :one
+INSERT INTO team_delete_keys (team_slug, created_by)
+VALUES($1, $2)
+RETURNING key, team_slug, created_at, created_by, confirmed_at
 `
 
-func (q *Queries) DisableTeam(ctx context.Context, slug slug.Slug) (*Team, error) {
-	row := q.db.QueryRow(ctx, disableTeam, slug)
-	var i Team
+type CreateTeamDeleteKeyParams struct {
+	TeamSlug  slug.Slug
+	CreatedBy uuid.UUID
+}
+
+func (q *Queries) CreateTeamDeleteKey(ctx context.Context, arg CreateTeamDeleteKeyParams) (*TeamDeleteKey, error) {
+	row := q.db.QueryRow(ctx, createTeamDeleteKey, arg.TeamSlug, arg.CreatedBy)
+	var i TeamDeleteKey
 	err := row.Scan(
-		&i.Slug,
-		&i.Purpose,
-		&i.Enabled,
-		&i.LastSuccessfulSync,
-		&i.SlackChannel,
+		&i.Key,
+		&i.TeamSlug,
+		&i.CreatedAt,
+		&i.CreatedBy,
+		&i.ConfirmedAt,
 	)
 	return &i, err
 }
 
-const enableTeam = `-- name: EnableTeam :one
-UPDATE teams
-SET enabled = true
+const deleteTeam = `-- name: DeleteTeam :exec
+DELETE FROM teams
 WHERE slug = $1
-RETURNING slug, purpose, enabled, last_successful_sync, slack_channel
 `
 
-func (q *Queries) EnableTeam(ctx context.Context, slug slug.Slug) (*Team, error) {
-	row := q.db.QueryRow(ctx, enableTeam, slug)
-	var i Team
-	err := row.Scan(
-		&i.Slug,
-		&i.Purpose,
-		&i.Enabled,
-		&i.LastSuccessfulSync,
-		&i.SlackChannel,
-	)
-	return &i, err
+func (q *Queries) DeleteTeam(ctx context.Context, slug slug.Slug) error {
+	_, err := q.db.Exec(ctx, deleteTeam, slug)
+	return err
 }
 
 const getSlackAlertsChannels = `-- name: GetSlackAlertsChannels :many
@@ -105,8 +109,8 @@ func (q *Queries) GetSlackAlertsChannels(ctx context.Context, teamSlug slug.Slug
 }
 
 const getTeamBySlug = `-- name: GetTeamBySlug :one
-SELECT slug, purpose, enabled, last_successful_sync, slack_channel FROM teams
-WHERE slug = $1
+SELECT teams.slug, teams.purpose, teams.last_successful_sync, teams.slack_channel FROM teams
+WHERE teams.slug = $1
 `
 
 func (q *Queries) GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error) {
@@ -115,9 +119,26 @@ func (q *Queries) GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, err
 	err := row.Scan(
 		&i.Slug,
 		&i.Purpose,
-		&i.Enabled,
 		&i.LastSuccessfulSync,
 		&i.SlackChannel,
+	)
+	return &i, err
+}
+
+const getTeamDeleteKey = `-- name: GetTeamDeleteKey :one
+SELECT key, team_slug, created_at, created_by, confirmed_at FROM team_delete_keys
+WHERE key = $1
+`
+
+func (q *Queries) GetTeamDeleteKey(ctx context.Context, key uuid.UUID) (*TeamDeleteKey, error) {
+	row := q.db.QueryRow(ctx, getTeamDeleteKey, key)
+	var i TeamDeleteKey
+	err := row.Scan(
+		&i.Key,
+		&i.TeamSlug,
+		&i.CreatedAt,
+		&i.CreatedBy,
+		&i.ConfirmedAt,
 	)
 	return &i, err
 }
@@ -182,8 +203,8 @@ func (q *Queries) GetTeamMetadata(ctx context.Context, teamSlug slug.Slug) ([]*T
 }
 
 const getTeams = `-- name: GetTeams :many
-SELECT slug, purpose, enabled, last_successful_sync, slack_channel FROM teams
-ORDER BY slug ASC
+SELECT teams.slug, teams.purpose, teams.last_successful_sync, teams.slack_channel FROM teams
+ORDER BY teams.slug ASC
 `
 
 func (q *Queries) GetTeams(ctx context.Context) ([]*Team, error) {
@@ -198,7 +219,6 @@ func (q *Queries) GetTeams(ctx context.Context) ([]*Team, error) {
 		if err := rows.Scan(
 			&i.Slug,
 			&i.Purpose,
-			&i.Enabled,
 			&i.LastSuccessfulSync,
 			&i.SlackChannel,
 		); err != nil {
@@ -293,7 +313,7 @@ UPDATE teams
 SET purpose = COALESCE($1, purpose),
     slack_channel = COALESCE($2, slack_channel)
 WHERE slug = $3
-RETURNING slug, purpose, enabled, last_successful_sync, slack_channel
+RETURNING slug, purpose, last_successful_sync, slack_channel
 `
 
 type UpdateTeamParams struct {
@@ -308,7 +328,6 @@ func (q *Queries) UpdateTeam(ctx context.Context, arg UpdateTeamParams) (*Team, 
 	err := row.Scan(
 		&i.Slug,
 		&i.Purpose,
-		&i.Enabled,
 		&i.LastSuccessfulSync,
 		&i.SlackChannel,
 	)

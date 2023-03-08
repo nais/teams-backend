@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
@@ -14,6 +15,7 @@ import (
 	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/metrics"
 	"github.com/nais/console/pkg/reconcilers"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	admin_directory_v1 "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/googleapi"
@@ -97,6 +99,36 @@ func (r *googleWorkspaceAdminReconciler) Reconcile(ctx context.Context, input re
 	}
 
 	return r.addToGKESecurityGroup(ctx, grp, input)
+}
+
+func (r *googleWorkspaceAdminReconciler) Delete(ctx context.Context, teamSlug slug.Slug, correlationID uuid.UUID) error {
+	state := &reconcilers.GoogleWorkspaceState{}
+	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), teamSlug, state)
+	if err != nil {
+		return fmt.Errorf("load reconciler state for team %q in reconciler %q: %w", teamSlug, r.Name(), err)
+	}
+
+	if state.GroupEmail == nil {
+		return fmt.Errorf("missing group email in reconciler state for team %q in reconciler %q", teamSlug, r.Name())
+	}
+
+	grpEmail := *state.GroupEmail
+
+	err = r.adminService.Groups.Delete(grpEmail).Context(ctx).Do()
+	if err != nil {
+		return fmt.Errorf("delete Google directory group with email %q for team %q: %w", grpEmail, teamSlug, err)
+	}
+
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(teamSlug),
+	}
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionGoogleWorkspaceAdminDelete,
+		CorrelationID: correlationID,
+	}
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Delete Google directory group with email %q", grpEmail)
+
+	return r.database.RemoveReconcilerStateForTeam(ctx, r.Name(), teamSlug)
 }
 
 func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(ctx context.Context, state *reconcilers.GoogleWorkspaceState, input reconcilers.Input) (*admin_directory_v1.Group, error) {
