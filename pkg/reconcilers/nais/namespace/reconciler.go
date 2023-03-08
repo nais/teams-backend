@@ -212,6 +212,12 @@ func (r *naisNamespaceReconciler) Delete(ctx context.Context, teamSlug slug.Slug
 
 	var errors []error
 	for environment := range namespaceState.Namespaces {
+		if !r.activeEnvironment(environment) {
+			log.Infof("environment %q from namespace state is no longer active, will update state for the team", environment)
+			delete(namespaceState.Namespaces, environment)
+			continue
+		}
+
 		if err := r.deleteNamespace(ctx, teamSlug, environment, correlationID); err != nil {
 			log.WithError(err).Error("delete namespace")
 			errors = append(errors, err)
@@ -223,14 +229,20 @@ func (r *naisNamespaceReconciler) Delete(ctx context.Context, teamSlug slug.Slug
 			}
 
 			r.auditLogger.Logf(ctx, r.database, targets, fields, "Request namespace deletion for team %q in environment %q", teamSlug, environment)
+			delete(namespaceState.Namespaces, environment)
 		}
 	}
 
-	if len(errors) > 0 {
-		return fmt.Errorf("%d errors occured during namespace deletion", len(errors))
+	if len(errors) == 0 {
+		return r.database.RemoveReconcilerStateForTeam(ctx, r.Name(), teamSlug)
 	}
 
-	return r.database.RemoveReconcilerStateForTeam(ctx, r.Name(), teamSlug)
+	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), teamSlug, namespaceState)
+	if err != nil {
+		log.WithError(err).Error("set reconciler state")
+	}
+
+	return fmt.Errorf("%d errors occured during namespace deletion", len(errors))
 }
 
 func (r *naisNamespaceReconciler) deleteNamespace(ctx context.Context, teamSlug slug.Slug, environment string, correlationID uuid.UUID) error {

@@ -277,15 +277,21 @@ func TestReconcile(t *testing.T) {
 			Return(log).
 			Once()
 
+		// var theState *reconcilers.NaisNamespaceState
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, nais_namespace_reconciler.Name, team.Slug, mock.Anything).
 			Run(func(args mock.Arguments) {
 				state := args.Get(3).(*reconcilers.NaisNamespaceState)
 				state.Namespaces[environment] = team.Slug
+				// theState = state
 			}).
 			Return(nil).
 			Once()
+		// database.
+		// 	On("SetReconcilerStateForTeam", ctx, nais_namespace_reconciler.Name, team.Slug, theState).
+		// 	Return(nil).
+		// 	Once()
 		database.
 			On("RemoveReconcilerStateForTeam", ctx, nais_namespace_reconciler.Name, team.Slug).
 			Return(nil).
