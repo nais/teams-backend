@@ -107,7 +107,7 @@ func (h *handler) DeleteTeam(teamSlug slug.Slug, correlationID uuid.UUID) error 
 
 		err := reconcilerImpl.Delete(h.mainContext, teamSlug, correlationID)
 		if err != nil {
-			log.WithError(err).Error("delete")
+			log.WithError(err).Error("delete team")
 			errors++
 			continue
 		}
