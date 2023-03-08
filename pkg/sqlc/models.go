@@ -80,6 +80,7 @@ const (
 	AuditActionGithubTeamDelete                          AuditAction = "github:team:delete"
 	AuditActionGoogleWorkspaceAdminDelete                AuditAction = "google:workspace-admin:delete"
 	AuditActionGoogleGarDelete                           AuditAction = "google:gar:delete"
+	AuditActionGoogleGcpDeleteProject                    AuditAction = "google:gcp:delete-project"
 )
 
 func (e *AuditAction) Scan(src interface{}) error {
@@ -180,7 +181,8 @@ func (e AuditAction) Valid() bool {
 		AuditActionAzureGroupDelete,
 		AuditActionGithubTeamDelete,
 		AuditActionGoogleWorkspaceAdminDelete,
-		AuditActionGoogleGarDelete:
+		AuditActionGoogleGarDelete,
+		AuditActionGoogleGcpDeleteProject:
 		return true
 	}
 	return false
@@ -250,6 +252,7 @@ func AllAuditActionValues() []AuditAction {
 		AuditActionGithubTeamDelete,
 		AuditActionGoogleWorkspaceAdminDelete,
 		AuditActionGoogleGarDelete,
+		AuditActionGoogleGcpDeleteProject,
 	}
 }
 
