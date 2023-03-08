@@ -97,7 +97,7 @@ func (r *naisDeployReconciler) Reconcile(ctx context.Context, input reconcilers.
 			Provisioned: &now,
 		})
 		if err != nil {
-			r.log.WithError(err).Error("persiste reconsiler state")
+			r.log.WithError(err).Error("persist reconciler state")
 		}
 		return nil
 	case http.StatusNoContent:
