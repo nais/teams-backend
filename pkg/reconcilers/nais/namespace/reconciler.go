@@ -222,7 +222,7 @@ func (r *naisNamespaceReconciler) Delete(ctx context.Context, teamSlug slug.Slug
 				CorrelationID: correlationID,
 			}
 
-			r.auditLogger.Logf(ctx, r.database, targets, fields, "Request namespace creation for team %q in environment %q", teamSlug, environment)
+			r.auditLogger.Logf(ctx, r.database, targets, fields, "Request namespace deletion for team %q in environment %q", teamSlug, environment)
 		}
 	}
 
