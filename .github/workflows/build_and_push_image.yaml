@@ -3,6 +3,7 @@ on:
   push:
     paths-ignore:
       - "charts/**"
+      - "*.md"
 jobs:
   build_and_push:
     permissions:
