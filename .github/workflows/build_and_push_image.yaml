@@ -3,7 +3,6 @@ on:
   push:
     paths-ignore:
       - "charts/**"
-
 jobs:
   build_and_push:
     permissions:
@@ -14,8 +13,8 @@ jobs:
       "version": ${{ steps.version.outputs.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
-      - uses: nais/build-push-sign@main
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # ratchet:actions/checkout@v3
+      - uses: nais/build-push-sign@7ec7617aae88394f31653b30c0b20b5706678396 # ratchet:nais/build-push-sign@main
         id: build_push_sign
         with:
           name: console
@@ -30,7 +29,7 @@ jobs:
     runs-on: fasit-deploy
     if: github.ref == 'refs/heads/main'
     steps:
-      - uses: nais/fasit-deploy@main
+      - uses: nais/fasit-deploy@b2c0b6d049b53bef41b321eec406fe66938576fd # ratchet:nais/fasit-deploy@main
         with:
           json: '{"backend": {"image": {"tag": "${{ needs.build_and_push.outputs.version }}"}}}'
           feature_name: console
