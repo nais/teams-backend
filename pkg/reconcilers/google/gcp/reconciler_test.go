@@ -39,6 +39,7 @@ func TestReconcile(t *testing.T) {
 		tenantDomain     = "example.com"
 		cnrmRoleName     = "organizations/123/roles/name"
 		billingAccount   = "billingAccounts/123"
+		numberOfAPIs     = 12
 	)
 
 	clusters := gcp.Clusters{
@@ -215,7 +216,7 @@ func TestReconcile(t *testing.T) {
 				return strings.HasPrefix(msg, "Enable Google API")
 			}), mock.AnythingOfType("string"), expectedTeamProjectID).
 			Return(nil).
-			Times(11)
+			Times(numberOfAPIs)
 
 		srv := test.HttpServerWithHandlers(t, []http.HandlerFunc{
 			// create project request
@@ -352,7 +353,7 @@ func TestReconcile(t *testing.T) {
 				assert.Equal(t, http.MethodPost, r.Method)
 				payload := serviceusage.BatchEnableServicesRequest{}
 				json.NewDecoder(r.Body).Decode(&payload)
-				assert.Len(t, payload.ServiceIds, 11)
+				assert.Len(t, payload.ServiceIds, numberOfAPIs)
 
 				op := serviceusage.Operation{Done: true}
 				resp, _ := op.MarshalJSON()

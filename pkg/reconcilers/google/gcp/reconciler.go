@@ -223,6 +223,7 @@ func (r *googleGcpReconciler) ensureProjectHasAccessToGoogleApis(ctx context.Con
 		"pubsub.googleapis.com":               {},
 		"logging.googleapis.com":              {},
 		"bigquery.googleapis.com":             {},
+		"cloudtrace.googleapis.com":           {},
 	}
 
 	response, err := r.gcpServices.ServiceUsageService.List(project.Name).Filter("state:ENABLED").Do()
