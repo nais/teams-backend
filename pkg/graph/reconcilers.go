@@ -66,8 +66,8 @@ func (r *mutationResolver) EnableReconciler(ctx context.Context, name sqlc.Recon
 			return nil, apierror.Errorf("Reconciler was enabled, but initialization failed, and we were unable to disable the reconciler.")
 		}
 
-		r.log.WithError(err).Errorf("reconciler will not be enabled because of an initialization failure. Please verify that you have entered correct configuratiom values.")
-		return nil, apierror.Errorf("Reconciler will not be enabled because of an initialization failure. Please verify that you have entered correct configuratiom values.")
+		r.log.WithError(err).Errorf("reconciler will not be enabled because of an initialization failure. Please verify that you have entered correct configuration values.")
+		return nil, apierror.Errorf("Reconciler will not be enabled because of an initialization failure. Please verify that you have entered correct configuration values.")
 	}
 
 	actor := authz.ActorFromContext(ctx)
