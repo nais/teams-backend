@@ -71,7 +71,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 				"CreateTeam",
 				ctx,
 				org,
-				github.NewTeam{Name: teamSlug, Description: &teamPurpose},
+				github.NewTeam{Name: teamSlug, Description: &teamPurpose, Privacy: helpers.Strp("closed")},
 			).
 			Return(
 				&github.Team{Slug: helpers.Strp(teamSlug)},
@@ -178,7 +178,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 				"CreateTeam",
 				ctx,
 				org,
-				github.NewTeam{Name: teamSlug, Description: &teamPurpose},
+				github.NewTeam{Name: teamSlug, Description: &teamPurpose, Privacy: helpers.Strp("closed")},
 			).
 			Return(
 				nil,
@@ -305,7 +305,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 				"CreateTeam",
 				ctx,
 				org,
-				github.NewTeam{Name: existingSlug, Description: &teamPurpose},
+				github.NewTeam{Name: existingSlug, Description: &teamPurpose, Privacy: helpers.Strp("closed")},
 			).
 			Return(
 				&github.Team{Slug: helpers.Strp(existingSlug)},
@@ -730,7 +730,16 @@ func configureListTeamMembersBySlug(teamsService *github_team_reconciler.MockTea
 
 func configureCreateTeam(teamsService *github_team_reconciler.MockTeamsService, org, teamName, description string) *mock.Call {
 	return teamsService.
-		On("CreateTeam", mock.Anything, org, github.NewTeam{Name: teamName, Description: helpers.Strp(description)}).
+		On(
+			"CreateTeam",
+			mock.Anything,
+			org,
+			github.NewTeam{
+				Name:        teamName,
+				Description: helpers.Strp(description),
+				Privacy:     helpers.Strp("closed"),
+			},
+		).
 		Return(
 			&github.Team{
 				Slug: helpers.Strp(teamName),
@@ -770,6 +779,7 @@ func configureSyncTeamInfo(teamsService *github_team_reconciler.MockTeamsService
 			github.NewTeam{
 				Name:        slug,
 				Description: &purpose,
+				Privacy:     helpers.Strp("closed"),
 			},
 			false,
 		).

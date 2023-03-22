@@ -159,7 +159,7 @@ func (r *githubTeamReconciler) Delete(ctx context.Context, teamSlug slug.Slug, c
 func (r *githubTeamReconciler) syncTeamInfo(ctx context.Context, team db.Team, githubTeam github.Team) error {
 	var slug string
 
-	if team.Purpose == helpers.StringWithFallback(githubTeam.Description, "") {
+	if gitHubTeamIsUpToDate(team, githubTeam) {
 		return nil
 	}
 
@@ -167,6 +167,7 @@ func (r *githubTeamReconciler) syncTeamInfo(ctx context.Context, team db.Team, g
 	newTeam := github.NewTeam{
 		Name:        slug,
 		Description: &team.Purpose,
+		Privacy:     helpers.Strp("closed"),
 	}
 
 	_, resp, err := r.teamsService.EditTeamBySlug(ctx, r.org, slug, newTeam, false)
@@ -236,6 +237,7 @@ func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconc
 	githubTeam, resp, err := r.teamsService.CreateTeam(ctx, r.org, github.NewTeam{
 		Name:        slug,
 		Description: &team.Purpose,
+		Privacy:     helpers.Strp("closed"),
 	})
 	metrics.IncExternalHTTPCalls(metricsSystemName, unwrapResponse(resp), err)
 	err = httpError(http.StatusCreated, resp, err)
@@ -542,4 +544,17 @@ func unwrapResponse(resp *github.Response) *http.Response {
 		return nil
 	}
 	return resp.Response
+}
+
+// gitHubTeamIsUpToDate check if a GitHub team is up to date compared to the Console team
+func gitHubTeamIsUpToDate(consoleTeam db.Team, gitHubTeam github.Team) bool {
+	if consoleTeam.Purpose != helpers.StringWithFallback(gitHubTeam.Description, "") {
+		return false
+	}
+
+	if gitHubTeam.GetPrivacy() != "closed" {
+		return false
+	}
+
+	return true
 }
