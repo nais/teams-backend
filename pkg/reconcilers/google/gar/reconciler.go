@@ -231,7 +231,8 @@ func (r *garReconciler) getOrCreateOrUpdateGarRepository(ctx context.Context, in
 			Name:        name,
 			Description: description,
 			Labels: map[string]string{
-				"team": string(input.Team.Slug),
+				"team":                         string(input.Team.Slug),
+				reconcilers.ManagedByLabelName: reconcilers.ManagedByLabelValue,
 			},
 		}
 
@@ -282,6 +283,11 @@ func (r *garReconciler) updateGarRepository(ctx context.Context, repository *art
 	if repository.Labels["team"] != string(slug) {
 		repository.Labels["team"] = string(slug)
 		changes = append(changes, "labels.team")
+	}
+
+	if repository.Labels[reconcilers.ManagedByLabelName] != reconcilers.ManagedByLabelValue {
+		repository.Labels[reconcilers.ManagedByLabelName] = reconcilers.ManagedByLabelValue
+		changes = append(changes, "labels.managed-by")
 	}
 
 	if repository.Description != description {

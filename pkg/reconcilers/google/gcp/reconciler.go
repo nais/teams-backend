@@ -107,10 +107,10 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 		}
 
 		err = r.ensureProjectHasLabels(ctx, project, map[string]string{
-			"team":        string(input.Team.Slug),
-			"environment": environment,
-			"tenant":      r.tenantName,
-			"managed-by":  "console",
+			"team":                         string(input.Team.Slug),
+			"environment":                  environment,
+			"tenant":                       r.tenantName,
+			reconcilers.ManagedByLabelName: reconcilers.ManagedByLabelValue,
 		})
 		if err != nil {
 			return fmt.Errorf("set project labels: %w", err)

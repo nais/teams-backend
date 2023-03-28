@@ -13,8 +13,13 @@ import (
 	"github.com/nais/console/pkg/sqlc"
 )
 
-// TeamNamePrefix Prefix that can be used for team-like objects in external systems
-const TeamNamePrefix = "nais-team-"
+const (
+	ManagedByLabelName  = "managed-by"
+	ManagedByLabelValue = "console"
+
+	// TeamNamePrefix Prefix that can be used for team-like objects in external systems
+	TeamNamePrefix = "nais-team-"
+)
 
 // Reconciler Interface for all reconcilers
 type Reconciler interface {

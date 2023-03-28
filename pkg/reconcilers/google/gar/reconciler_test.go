@@ -178,7 +178,8 @@ func TestReconcile(t *testing.T) {
 		Format:      artifactregistrypb.Repository_DOCKER,
 		Description: fmt.Sprintf("Docker repository for team %q. Managed by NAIS Console.", team.Slug),
 		Labels: map[string]string{
-			"team": string(team.Slug),
+			"team":                         string(team.Slug),
+			reconcilers.ManagedByLabelName: reconcilers.ManagedByLabelValue,
 		},
 	}
 
