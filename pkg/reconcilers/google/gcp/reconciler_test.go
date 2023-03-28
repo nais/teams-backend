@@ -49,8 +49,6 @@ func TestReconcile(t *testing.T) {
 		},
 	}
 
-	emptyMap := make(map[string]string, 0)
-
 	teamSlug := slug.Slug("slug")
 	correlationID := uuid.New()
 	team := db.Team{Team: &sqlc.Team{Slug: teamSlug}}
@@ -68,7 +66,7 @@ func TestReconcile(t *testing.T) {
 			Return(fmt.Errorf("some error")).
 			Once()
 		gcpServices := &google_gcp_reconciler.GcpServices{}
-		reconciler := google_gcp_reconciler.New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, emptyMap, nil, log)
+		reconciler := google_gcp_reconciler.New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log)
 
 		err := reconciler.Reconcile(ctx, input)
 		assert.ErrorContains(t, err, "load system state")
@@ -87,7 +85,7 @@ func TestReconcile(t *testing.T) {
 			Return(fmt.Errorf("some error")).
 			Once()
 		gcpServices := &google_gcp_reconciler.GcpServices{}
-		reconciler := google_gcp_reconciler.New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, emptyMap, nil, log)
+		reconciler := google_gcp_reconciler.New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log)
 
 		err := reconciler.Reconcile(ctx, input)
 		assert.ErrorContains(t, err, "load system state")
@@ -106,7 +104,7 @@ func TestReconcile(t *testing.T) {
 			Return(nil).
 			Once()
 		gcpServices := &google_gcp_reconciler.GcpServices{}
-		reconciler := google_gcp_reconciler.New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, emptyMap, nil, log)
+		reconciler := google_gcp_reconciler.New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log)
 
 		err := reconciler.Reconcile(ctx, input)
 		assert.ErrorContains(t, err, "no Google Workspace group exists")
@@ -130,7 +128,7 @@ func TestReconcile(t *testing.T) {
 			Return(nil).
 			Once()
 		gcpServices := &google_gcp_reconciler.GcpServices{}
-		reconciler := google_gcp_reconciler.New(database, auditLogger, gcp.Clusters{}, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, emptyMap, nil, log)
+		reconciler := google_gcp_reconciler.New(database, auditLogger, gcp.Clusters{}, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log)
 
 		err := reconciler.Reconcile(ctx, input)
 		assert.NoError(t, err)
@@ -194,7 +192,7 @@ func TestReconcile(t *testing.T) {
 				return fields.CorrelationID == correlationID && fields.Action == sqlc.AuditActionGoogleGcpProjectCreateCnrmServiceAccount
 			}), mock.MatchedBy(func(msg string) bool {
 				return strings.HasPrefix(msg, "Created CNRM service account")
-			}), teamSlug, env).
+			}), teamSlug, expectedTeamProjectID).
 			Return(nil).
 			Once()
 		auditLogger.
@@ -292,12 +290,12 @@ func TestReconcile(t *testing.T) {
 				assert.Equal(t, http.MethodPost, r.Method)
 				payload := iam.CreateServiceAccountRequest{}
 				json.NewDecoder(r.Body).Decode(&payload)
-				assert.Equal(t, "cnrm-slug-cd03", payload.AccountId)
-				assert.Equal(t, "slug CNRM service account (prod)", payload.ServiceAccount.DisplayName)
+				assert.Equal(t, "cnrm", payload.AccountId)
+				assert.Equal(t, "CNRM service account", payload.ServiceAccount.DisplayName)
 
 				sa := iam.ServiceAccount{
-					Name:  "projects/some-project-123/serviceAccounts/cnrm-slug-cd03@some-project-123.iam.gserviceaccount.com",
-					Email: "cnrm-slug-cd03@some-project-123.iam.gserviceaccount.com",
+					Name:  "projects/some-project-123/serviceAccounts/cnrm@some-project-123.iam.gserviceaccount.com",
+					Email: "cnrm@some-project-123.iam.gserviceaccount.com",
 				}
 				resp, _ := sa.MarshalJSON()
 				w.Write(resp)
@@ -334,7 +332,7 @@ func TestReconcile(t *testing.T) {
 					payload.Policy.Bindings[1].Role: payload.Policy.Bindings[1].Members[0],
 				}
 				assert.Equal(t, "group:mail@example.com", expectedBindings["roles/owner"])
-				assert.Equal(t, "serviceAccount:cnrm-slug-cd03@some-project-123.iam.gserviceaccount.com", expectedBindings[cnrmRoleName])
+				assert.Equal(t, "serviceAccount:cnrm@some-project-123.iam.gserviceaccount.com", expectedBindings[cnrmRoleName])
 
 				policy := iam.Policy{}
 				resp, _ := policy.MarshalJSON()
@@ -376,7 +374,7 @@ func TestReconcile(t *testing.T) {
 			ServiceUsageService:                   serviceUsageService.Services,
 			ServiceUsageOperationsService:         serviceUsageService.Operations,
 		}
-		reconciler := google_gcp_reconciler.New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, emptyMap, nil, log)
+		reconciler := google_gcp_reconciler.New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log)
 
 		err = reconciler.Reconcile(ctx, input)
 		assert.NoError(t, err)
@@ -416,44 +414,5 @@ func TestGetProjectDisplayName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		assert.Equal(t, tt.displayName, google_gcp_reconciler.GetProjectDisplayName(slug.Slug(tt.slug), tt.environment))
-	}
-}
-
-func TestCnrmServiceAccountNameAndAccountID(t *testing.T) {
-	tests := []struct {
-		slug               slug.Slug
-		projectID          string
-		generatedName      string
-		generatedAccountID string
-	}{
-		{
-			"some-slug",
-			"foo-bar-123",
-			"projects/foo-bar-123/serviceAccounts/cnrm-some-slug-ba7f@foo-bar-123.iam.gserviceaccount.com",
-			"cnrm-some-slug-ba7f",
-		},
-		{
-			"slug",
-			"foobar-barfoo-123a",
-			"projects/foobar-barfoo-123a/serviceAccounts/cnrm-slug-cd03@foobar-barfoo-123a.iam.gserviceaccount.com",
-			"cnrm-slug-cd03",
-		},
-		{
-			"some-team-slug-that-is-waaaaaaaaaaay-to-long",
-			"foo-bar-123",
-			"projects/foo-bar-123/serviceAccounts/cnrm-some-team-slug-that-9233@foo-bar-123.iam.gserviceaccount.com",
-			"cnrm-some-team-slug-that-9233",
-		},
-		{
-			"someteam-slug-that-is-waaaaaaaaaaay-to-long",
-			"foo-bar-123",
-			"projects/foo-bar-123/serviceAccounts/cnrm-someteam-slug-that-i-d830@foo-bar-123.iam.gserviceaccount.com",
-			"cnrm-someteam-slug-that-i-d830",
-		},
-	}
-	for _, tt := range tests {
-		name, accountID := google_gcp_reconciler.CnrmServiceAccountNameAndAccountID(tt.slug, tt.projectID)
-		assert.Equal(t, tt.generatedName, name)
-		assert.Equal(t, tt.generatedAccountID, accountID)
 	}
 }

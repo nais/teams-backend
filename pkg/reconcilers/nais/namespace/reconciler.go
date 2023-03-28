@@ -1,12 +1,10 @@
 package nais_namespace_reconciler
 
 import (
+	"cloud.google.com/go/pubsub"
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
-
-	"cloud.google.com/go/pubsub"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
@@ -51,30 +49,28 @@ type NaisdRequest struct {
 }
 
 type naisNamespaceReconciler struct {
-	database       db.Database
-	domain         string
-	auditLogger    auditlogger.AuditLogger
-	clusters       gcp.Clusters
-	projectID      string
-	azureEnabled   bool
-	pubsubClient   *pubsub.Client
-	log            logger.Logger
-	legacyMapping  []envmap.EnvironmentMapping
-	legacyClusters map[string]string
+	database      db.Database
+	domain        string
+	auditLogger   auditlogger.AuditLogger
+	clusters      gcp.Clusters
+	projectID     string
+	azureEnabled  bool
+	pubsubClient  *pubsub.Client
+	log           logger.Logger
+	legacyMapping []envmap.EnvironmentMapping
 }
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, domain, projectID string, azureEnabled bool, pubsubClient *pubsub.Client, legacyMapping []envmap.EnvironmentMapping, legacyClusters map[string]string, log logger.Logger) *naisNamespaceReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, domain, projectID string, azureEnabled bool, pubsubClient *pubsub.Client, legacyMapping []envmap.EnvironmentMapping, log logger.Logger) *naisNamespaceReconciler {
 	return &naisNamespaceReconciler{
-		database:       database,
-		auditLogger:    auditLogger,
-		clusters:       clusters,
-		domain:         domain,
-		projectID:      projectID,
-		azureEnabled:   azureEnabled,
-		pubsubClient:   pubsubClient,
-		legacyMapping:  legacyMapping,
-		legacyClusters: legacyClusters,
-		log:            log,
+		database:      database,
+		auditLogger:   auditLogger,
+		clusters:      clusters,
+		domain:        domain,
+		projectID:     projectID,
+		azureEnabled:  azureEnabled,
+		pubsubClient:  pubsubClient,
+		legacyMapping: legacyMapping,
+		log:           log,
 	}
 }
 
@@ -96,7 +92,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		return nil, fmt.Errorf("retrieve pubsub client: %w", err)
 	}
 
-	return New(database, auditLogger, cfg.GCP.Clusters, cfg.TenantDomain, cfg.GoogleManagementProjectID, cfg.NaisNamespace.AzureEnabled, pubsubClient, cfg.LegacyNaisNamespaces, cfg.LegacyClusters, log), nil
+	return New(database, auditLogger, cfg.GCP.Clusters, cfg.TenantDomain, cfg.GoogleManagementProjectID, cfg.NaisNamespace.AzureEnabled, pubsubClient, cfg.LegacyNaisNamespaces, log), nil
 }
 
 func (r *naisNamespaceReconciler) Name() sqlc.ReconcilerName {
@@ -276,22 +272,8 @@ func (r *naisNamespaceReconciler) deleteNamespace(ctx context.Context, teamSlug 
 	return err
 }
 
-func (r *naisNamespaceReconciler) getClusterProjectForEnv(environment string) string {
-	if cluster, ok := r.clusters[environment]; ok {
-		return cluster.ProjectID
-	}
-
-	// fallback to legacy clusters
-	return r.legacyClusters[environment]
-}
-
 func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, team db.Team, environment, slackAlertsChannel, gcpProjectID, groupEmail, azureGroupID string) error {
 	const topicPrefix = "naisd-console-"
-
-	clusterProjectID := r.getClusterProjectForEnv(environment)
-	cnrmAccountName, _ := google_gcp_reconciler.CnrmServiceAccountNameAndAccountID(team.Slug, clusterProjectID)
-	parts := strings.Split(cnrmAccountName, "/")
-	cnrmEmail := parts[len(parts)-1]
 
 	createReq, err := json.Marshal(
 		NaisdCreateNamespace{
@@ -299,7 +281,7 @@ func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, team db.T
 			GcpProject:         gcpProjectID,
 			GroupEmail:         groupEmail,
 			AzureGroupID:       azureGroupID,
-			CNRMEmail:          cnrmEmail,
+			CNRMEmail:          fmt.Sprintf("cnrm@%s.iam.gserviceaccount.com", gcpProjectID),
 			SlackAlertsChannel: slackAlertsChannel,
 		},
 	)
