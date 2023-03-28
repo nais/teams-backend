@@ -290,7 +290,7 @@ func TestReconcile(t *testing.T) {
 				assert.Equal(t, http.MethodPost, r.Method)
 				payload := iam.CreateServiceAccountRequest{}
 				json.NewDecoder(r.Body).Decode(&payload)
-				assert.Equal(t, "cnrm", payload.AccountId)
+				assert.Equal(t, reconcilers.CnrmServiceAccountAccountID, payload.AccountId)
 				assert.Equal(t, "CNRM service account", payload.ServiceAccount.DisplayName)
 
 				sa := iam.ServiceAccount{

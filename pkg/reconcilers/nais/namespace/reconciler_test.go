@@ -36,7 +36,7 @@ func TestReconcile(t *testing.T) {
 		teamSlug            = "slug"
 		environment         = "dev"
 		clusterProjectID    = "cluster-dev-123"
-		cnrmEmail           = "cnrm@team-project-123.iam.gserviceaccount.com"
+		cnrmEmail           = "nais-sa-cnrm@team-project-123.iam.gserviceaccount.com"
 		slackChannel        = "#team-channel"
 	)
 

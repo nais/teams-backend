@@ -424,7 +424,7 @@ func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.C
 	metrics.IncExternalCalls(metricsSystemName, 0)
 
 	createServiceAccountRequest := &iam.CreateServiceAccountRequest{
-		AccountId: "cnrm",
+		AccountId: reconcilers.CnrmServiceAccountAccountID,
 		ServiceAccount: &iam.ServiceAccount{
 			DisplayName: "CNRM service account",
 			Description: "Managed by Console",

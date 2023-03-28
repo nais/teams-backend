@@ -18,7 +18,8 @@ const (
 	ManagedByLabelValue = "console"
 
 	// TeamNamePrefix Prefix that can be used for team-like objects in external systems
-	TeamNamePrefix = "nais-team-"
+	TeamNamePrefix              = "nais-team-"
+	CnrmServiceAccountAccountID = "nais-sa-cnrm"
 )
 
 // Reconciler Interface for all reconcilers

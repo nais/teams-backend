@@ -281,7 +281,7 @@ func (r *naisNamespaceReconciler) createNamespace(ctx context.Context, team db.T
 			GcpProject:         gcpProjectID,
 			GroupEmail:         groupEmail,
 			AzureGroupID:       azureGroupID,
-			CNRMEmail:          fmt.Sprintf("cnrm@%s.iam.gserviceaccount.com", gcpProjectID),
+			CNRMEmail:          fmt.Sprintf("%s@%s.iam.gserviceaccount.com", reconcilers.CnrmServiceAccountAccountID, gcpProjectID),
 			SlackAlertsChannel: slackAlertsChannel,
 		},
 	)
