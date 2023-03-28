@@ -20,6 +20,7 @@ import (
 	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/reconcilers/google/gar"
+	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/pkg/test"
@@ -154,6 +155,7 @@ func TestReconcile(t *testing.T) {
 	)
 
 	abortTestErr := fmt.Errorf("abort test")
+	groupEmail := "team@example.com"
 
 	correlationID := uuid.New()
 	team := db.Team{Team: &sqlc.Team{Slug: slug.Slug("team")}}
@@ -321,8 +323,15 @@ func TestReconcile(t *testing.T) {
 				},
 				setIamPolicy: func(ctx context.Context, r *iampb.SetIamPolicyRequest) (*iampb.Policy, error) {
 					assert.Equal(t, expectedRepository.Name, r.Resource)
+					assert.Len(t, r.Policy.Bindings, 2)
+					assert.Len(t, r.Policy.Bindings[0].Members, 1)
+					assert.Len(t, r.Policy.Bindings[1].Members, 1)
+
 					assert.Equal(t, "serviceAccount:"+expectedServiceAccount.Email, r.Policy.Bindings[0].Members[0])
 					assert.Equal(t, "roles/artifactregistry.writer", r.Policy.Bindings[0].Role)
+
+					assert.Equal(t, "group:"+groupEmail, r.Policy.Bindings[1].Members[0])
+					assert.Equal(t, "roles/artifactregistry.repoAdmin", r.Policy.Bindings[1].Role)
 
 					return &iampb.Policy{}, nil
 				},
@@ -341,6 +350,14 @@ func TestReconcile(t *testing.T) {
 
 		artifactregistryClient, iamService := mocks.start(t, ctx)
 		database := db.NewMockDatabase(t)
+		database.
+			On("LoadReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, team.Slug, mock.Anything).
+			Run(func(args mock.Arguments) {
+				state := args.Get(3).(*reconcilers.GoogleWorkspaceState)
+				state.GroupEmail = &groupEmail
+			}).
+			Return(nil).
+			Once()
 		database.
 			On("LoadReconcilerStateForTeam", ctx, sqlc.ReconcilerNameGithubTeam, team.Slug, mock.Anything).
 			Return(nil).

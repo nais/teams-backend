@@ -17,6 +17,7 @@ import (
 	"github.com/nais/console/pkg/google_token_source"
 	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
+	google_workspace_admin_reconciler "github.com/nais/console/pkg/reconcilers/google/workspace_admin"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"google.golang.org/api/googleapi"
@@ -100,7 +101,13 @@ func (r *garReconciler) Reconcile(ctx context.Context, input reconcilers.Input) 
 		return err
 	}
 
-	err = r.setGarRepositoryPolicy(ctx, garRepository, serviceAccount)
+	googleWorkspaceState := &reconcilers.GoogleWorkspaceState{}
+	err = r.database.LoadReconcilerStateForTeam(ctx, google_workspace_admin_reconciler.Name, input.Team.Slug, googleWorkspaceState)
+	if err != nil {
+		log.WithError(err).Warnf("load Google workspace state")
+	}
+
+	err = r.setGarRepositoryPolicy(ctx, garRepository, serviceAccount, googleWorkspaceState.GroupEmail)
 	if err != nil {
 		return err
 	}
@@ -297,16 +304,25 @@ func (r *garReconciler) updateGarRepository(ctx context.Context, repository *art
 	return repository, nil
 }
 
-func (r *garReconciler) setGarRepositoryPolicy(ctx context.Context, repository *artifactregistrypb.Repository, serviceAccount *iam.ServiceAccount) error {
+func (r *garReconciler) setGarRepositoryPolicy(ctx context.Context, repository *artifactregistrypb.Repository, serviceAccount *iam.ServiceAccount, groupEmail *string) error {
+	bindings := []*iampb.Binding{
+		{
+			Role:    "roles/artifactregistry.writer",
+			Members: []string{"serviceAccount:" + serviceAccount.Email},
+		},
+	}
+
+	if groupEmail != nil {
+		bindings = append(bindings, &iampb.Binding{
+			Role:    "roles/artifactregistry.repoAdmin",
+			Members: []string{"group:" + *groupEmail},
+		})
+	}
+
 	_, err := r.artifactRegistry.SetIamPolicy(ctx, &iampb.SetIamPolicyRequest{
 		Resource: repository.Name,
 		Policy: &iampb.Policy{
-			Bindings: []*iampb.Binding{
-				{
-					Role:    "roles/artifactregistry.writer",
-					Members: []string{"serviceAccount:" + serviceAccount.Email},
-				},
-			},
+			Bindings: bindings,
 		},
 	})
 	return err
