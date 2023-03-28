@@ -250,6 +250,7 @@ func TestReconcile(t *testing.T) {
 				assert.Equal(t, env, payload.Labels["environment"])
 				assert.Equal(t, string(teamSlug), payload.Labels["team"])
 				assert.Equal(t, tenantName, payload.Labels["tenant"])
+				assert.Equal(t, "console", payload.Labels["managed-by"])
 
 				project, _ := payload.MarshalJSON()
 				op := cloudresourcemanager.Operation{

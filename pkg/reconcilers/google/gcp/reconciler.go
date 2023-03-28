@@ -110,6 +110,7 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 			"team":        string(input.Team.Slug),
 			"environment": environment,
 			"tenant":      r.tenantName,
+			"managed-by":  "console",
 		})
 		if err != nil {
 			return fmt.Errorf("set project labels: %w", err)
