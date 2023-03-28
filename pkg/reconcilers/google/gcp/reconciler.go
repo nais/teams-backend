@@ -415,7 +415,8 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 // getOrCreateProjectCnrmServiceAccount Get the CNRM service account for the project in this env. If the service account
 // does not exist, attempt to create it, and then return it.
 func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.Context, input reconcilers.Input, teamProjectID string) (*iam.ServiceAccount, error) {
-	name := fmt.Sprintf("projects/%s/serviceAccounts/%s", teamProjectID, reconcilers.CnrmServiceAccountAccountID)
+	email := fmt.Sprintf("%s@%s.iam.gserviceaccount.com", reconcilers.CnrmServiceAccountAccountID, teamProjectID)
+	name := fmt.Sprintf("projects/-/serviceAccounts/%s", email)
 	serviceAccount, err := r.gcpServices.IamProjectsServiceAccountsService.Get(name).Do()
 	if err == nil {
 		metrics.IncExternalCalls(metricsSystemName, serviceAccount.HTTPStatusCode)
