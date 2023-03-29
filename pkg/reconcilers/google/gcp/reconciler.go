@@ -18,6 +18,7 @@ import (
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/gcp"
 	"github.com/nais/console/pkg/google_token_source"
+	"github.com/nais/console/pkg/legacy/envmap"
 	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/metrics"
 	"github.com/nais/console/pkg/reconcilers"
@@ -38,7 +39,7 @@ const (
 	metricsSystemName                 = "gcp"
 )
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, gcpServices *GcpServices, tenantName, domain, cnrmRoleName, billingAccount string, log logger.Logger) *googleGcpReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, gcpServices *GcpServices, tenantName, domain, cnrmRoleName, billingAccount string, log logger.Logger, legacyMapping []envmap.EnvironmentMapping) *googleGcpReconciler {
 	return &googleGcpReconciler{
 		database:       database,
 		auditLogger:    auditLogger,
@@ -49,6 +50,7 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp
 		billingAccount: billingAccount,
 		tenantName:     tenantName,
 		log:            log,
+		legacyMapping:  legacyMapping,
 	}
 }
 
@@ -60,7 +62,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		return nil, err
 	}
 
-	return New(database, auditLogger, cfg.GCP.Clusters, gcpServices, cfg.TenantName, cfg.TenantDomain, cfg.GCP.CnrmRole, cfg.GCP.BillingAccount, log), nil
+	return New(database, auditLogger, cfg.GCP.Clusters, gcpServices, cfg.TenantName, cfg.TenantDomain, cfg.GCP.CnrmRole, cfg.GCP.BillingAccount, log, cfg.LegacyNaisNamespaces), nil
 }
 
 func (r *googleGcpReconciler) Name() sqlc.ReconcilerName {
@@ -123,7 +125,7 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 			return fmt.Errorf("create CNRM service account for project %q for team %q in environment %q: %w", teamProject.ProjectId, input.Team.Slug, environment, err)
 		}
 
-		err = r.setProjectPermissions(ctx, teamProject, input, *googleWorkspaceState.GroupEmail, cluster.ProjectID, cnrmServiceAccount)
+		err = r.setProjectPermissions(ctx, teamProject, input, *googleWorkspaceState.GroupEmail, cluster.ProjectID, cnrmServiceAccount, environment)
 		if err != nil {
 			return fmt.Errorf("set group permissions to project %q for team %q in environment %q: %w", teamProject.ProjectId, input.Team.Slug, environment, err)
 		}
@@ -353,16 +355,40 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, projectID 
 	return createdProject, nil
 }
 
+func (r *googleGcpReconciler) getLegacyMember(teamSlug slug.Slug, env string) string {
+	if r.tenantName != "nav" {
+		return ""
+	}
+	legacyClusters := map[string]string{
+		"dev-gcp":  "nais-dev-2e7b",
+		"prod-gcp": "nais-prod-020f",
+		"ci-gcp":   "nais-ci-e17f",
+	}
+	for _, m := range r.legacyMapping {
+		if m.Platinum == env {
+			return fmt.Sprintf("serviceAccount:%s.svc.id.goog[cnrm-system/cnrm-controller-manager-%s]", legacyClusters[m.Legacy], teamSlug)
+		}
+	}
+	return ""
+}
+
 // setProjectPermissions Make sure that the project has the necessary permissions, and don't remove permissions we don't
 // control
-func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project *cloudresourcemanager.Project, input reconcilers.Input, groupEmail, clusterProjectID string, cnrmServiceAccount *iam.ServiceAccount) error {
+func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project *cloudresourcemanager.Project, input reconcilers.Input, groupEmail, clusterProjectID string, cnrmServiceAccount *iam.ServiceAccount, environment string) error {
 	// Set workload identity role to the CNRM service account
 	member := fmt.Sprintf("serviceAccount:%s.svc.id.goog[cnrm-system/cnrm-controller-manager-%s]", clusterProjectID, input.Team.Slug)
+	members := []string{member}
+
+	member = r.getLegacyMember(input.Team.Slug, environment)
+	if member != "" {
+		members = append(members, member)
+	}
+
 	operation, err := r.gcpServices.IamProjectsServiceAccountsService.SetIamPolicy(cnrmServiceAccount.Name, &iam.SetIamPolicyRequest{
 		Policy: &iam.Policy{
 			Bindings: []*iam.Binding{
 				{
-					Members: []string{member},
+					Members: members,
 					Role:    "roles/iam.workloadIdentityUser",
 				},
 			},

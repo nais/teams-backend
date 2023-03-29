@@ -121,7 +121,7 @@ type Config struct {
 	GoogleManagementProjectID string `envconfig:"CONSOLE_GOOGLE_MANAGEMENT_PROJECT_ID"`
 
 	// Maps an external Kubernetes cluster namespace onto permissions in a specific GCP project
-	// Example: "dev-fss:dev prod-fss:rod dev-gcp:dev prod-gcp:prod"
+	// Example: "dev-fss:dev prod-fss:prod dev-gcp:dev prod-gcp:prod"
 	LegacyNaisNamespaces []envmap.EnvironmentMapping `envconfig:"CONSOLE_LEGACY_NAIS_NAMESPACES"`
 
 	// StaticServiceAccounts A JSON-encoded value describing a set of service accounts to be created when the
