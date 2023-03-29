@@ -365,7 +365,7 @@ func (r *googleGcpReconciler) getLegacyMember(teamSlug slug.Slug, env string) st
 		"ci-gcp":   "nais-ci-e17f",
 	}
 	for _, m := range r.legacyMapping {
-		if m.Platinum == env {
+		if m.Platinum == env && legacyClusters[m.Legacy] != "" {
 			return fmt.Sprintf("serviceAccount:%s.svc.id.goog[cnrm-system/cnrm-controller-manager-%s]", legacyClusters[m.Legacy], teamSlug)
 		}
 	}
