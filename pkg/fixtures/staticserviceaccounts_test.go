@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/fixtures"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -41,7 +42,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 	t.Run("missing API key", func(t *testing.T) {
 		err := serviceAccounts.Decode(`[{
 			"name": "nais-service-account",
-			"roles": ["Admin"]
+			"roles": [{"name":"Admin"}]
 		}]`)
 		assert.EqualError(t, err, `service account is missing an API key: "nais-service-account"`)
 		assert.Len(t, serviceAccounts, 0)
@@ -51,7 +52,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 		err := serviceAccounts.Decode(`[{
 			"name": "service-account",
 			"apiKey": "some key",
-			"roles": ["Team viewer"]
+			"roles": [{"name":"Team viewer"}]
 		}]`)
 		assert.EqualError(t, err, `service account is missing required "nais-" prefix: "service-account"`)
 		assert.Len(t, serviceAccounts, 0)
@@ -61,7 +62,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 		err := serviceAccounts.Decode(`[{
 			"name": "nais-service-account",
 			"apiKey": "some key",
-			"roles": ["role"]
+			"roles": [{"name":"role"}]
 		}]`)
 		assert.EqualError(t, err, `invalid role name: "role" for service account "nais-service-account"`)
 		assert.Len(t, serviceAccounts, 0)
@@ -112,6 +113,14 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 			Return(nil).
 			Once()
 		dbtx.
+			On("AssignTeamRoleToServiceAccount", txCtx, sa1.ID, sqlc.RoleNameDeploykeyviewer, slug.Slug("specific-team")).
+			Return(nil).
+			Once()
+		dbtx.
+			On("AssignTeamRoleToServiceAccount", txCtx, sa1.ID, sqlc.RoleNameDeploykeyviewer, slug.Slug("other-team")).
+			Return(nil).
+			Once()
+		dbtx.
 			On("CreateAPIKey", txCtx, "key-1", sa1.ID).
 			Return(nil).
 			Once()
@@ -151,11 +160,11 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 		err := serviceAccounts.Decode(`[{
 			"name": "nais-service-account-1",
 			"apiKey": "key-1",
-			"roles": ["Team creator", "Team viewer"]
+			"roles": [{"name":"Team creator"}, {"name":"Team viewer"}, {"name":"Deploy key viewer", "teams": ["specific-team", "other-team"]}]
 		}, {
 			"name": "nais-service-account-2",
 			"apiKey": "key-2",
-			"roles": ["Admin"]
+			"roles": [{"name":"Admin"}]
 		}]`)
 		assert.NoError(t, err)
 		assert.Len(t, serviceAccounts, 2)

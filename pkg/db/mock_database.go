@@ -46,6 +46,20 @@ func (_m *MockDatabase) AssignGlobalRoleToUser(ctx context.Context, userID uuid.
 	return r0
 }
 
+// AssignTeamRoleToServiceAccount provides a mock function with given fields: ctx, serviceAccountID, roleName, teamSlug
+func (_m *MockDatabase) AssignTeamRoleToServiceAccount(ctx context.Context, serviceAccountID uuid.UUID, roleName sqlc.RoleName, teamSlug slug.Slug) error {
+	ret := _m.Called(ctx, serviceAccountID, roleName, teamSlug)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, sqlc.RoleName, slug.Slug) error); ok {
+		r0 = rf(ctx, serviceAccountID, roleName, teamSlug)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // ClearReconcilerErrorsForTeam provides a mock function with given fields: ctx, _a1, reconcilerName
 func (_m *MockDatabase) ClearReconcilerErrorsForTeam(ctx context.Context, _a1 slug.Slug, reconcilerName sqlc.ReconcilerName) error {
 	ret := _m.Called(ctx, _a1, reconcilerName)

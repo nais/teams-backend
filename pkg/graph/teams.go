@@ -566,7 +566,7 @@ func (r *queryResolver) Team(ctx context.Context, slug *slug.Slug) (*db.Team, er
 // DeployKey is the resolver for the deployKey field.
 func (r *queryResolver) DeployKey(ctx context.Context, slug *slug.Slug) (string, error) {
 	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsRead, *slug)
+	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameDeployKeyView, *slug)
 	if err != nil {
 		return "", err
 	}

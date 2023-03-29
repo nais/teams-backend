@@ -7,13 +7,19 @@ import (
 	"strings"
 
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 )
 
 type ServiceAccount struct {
-	Name   string   `json:"name"`
-	Roles  []string `json:"roles"`
-	APIKey string   `json:"apiKey"`
+	Name   string               `json:"name"`
+	Roles  []ServiceAccountRole `json:"roles"`
+	APIKey string               `json:"apiKey"`
+}
+
+type ServiceAccountRole struct {
+	Name  sqlc.RoleName `json:"name"`
+	Teams []slug.Slug   `json:"teams"`
 }
 
 const NaisServiceAccountPrefix = "nais-"
@@ -45,8 +51,8 @@ func (s *ServiceAccounts) Decode(value string) error {
 		}
 
 		for _, role := range serviceAccount.Roles {
-			if !sqlc.RoleName(role).Valid() {
-				return fmt.Errorf("invalid role name: %q for service account %q", role, serviceAccount.Name)
+			if !role.Name.Valid() {
+				return fmt.Errorf("invalid role name: %q for service account %q", role.Name, serviceAccount.Name)
 			}
 		}
 	}
@@ -79,10 +85,19 @@ func SetupStaticServiceAccounts(ctx context.Context, database db.Database, servi
 				return err
 			}
 
-			for _, roleName := range serviceAccountFromInput.Roles {
-				err = dbtx.AssignGlobalRoleToServiceAccount(ctx, serviceAccount.ID, sqlc.RoleName(roleName))
-				if err != nil {
-					return err
+			for _, role := range serviceAccountFromInput.Roles {
+				if len(role.Teams) == 0 {
+					err = dbtx.AssignGlobalRoleToServiceAccount(ctx, serviceAccount.ID, role.Name)
+					if err != nil {
+						return err
+					}
+				} else {
+					for _, team := range role.Teams {
+						err = dbtx.AssignTeamRoleToServiceAccount(ctx, serviceAccount.ID, role.Name, team)
+						if err != nil {
+							return err
+						}
+					}
 				}
 			}
 

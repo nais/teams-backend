@@ -42,6 +42,22 @@ func (q *Queries) AssignGlobalRoleToUser(ctx context.Context, arg AssignGlobalRo
 	return err
 }
 
+const assignTeamRoleToServiceAccount = `-- name: AssignTeamRoleToServiceAccount :exec
+INSERT INTO service_account_roles (service_account_id, role_name, target_team_slug)
+VALUES ($1, $2, $3) ON CONFLICT DO NOTHING
+`
+
+type AssignTeamRoleToServiceAccountParams struct {
+	ServiceAccountID uuid.UUID
+	RoleName         RoleName
+	TargetTeamSlug   *slug.Slug
+}
+
+func (q *Queries) AssignTeamRoleToServiceAccount(ctx context.Context, arg AssignTeamRoleToServiceAccountParams) error {
+	_, err := q.db.Exec(ctx, assignTeamRoleToServiceAccount, arg.ServiceAccountID, arg.RoleName, arg.TargetTeamSlug)
+	return err
+}
+
 const assignTeamRoleToUser = `-- name: AssignTeamRoleToUser :exec
 INSERT INTO user_roles (user_id, role_name, target_team_slug)
 VALUES ($1, $2, $3) ON CONFLICT DO NOTHING

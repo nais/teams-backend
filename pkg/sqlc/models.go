@@ -347,6 +347,7 @@ const (
 	AuthzNameUsersUpdate           AuthzName = "users:update"
 	AuthzNameTeamsSynchronize      AuthzName = "teams:synchronize"
 	AuthzNameUsersyncSynchronize   AuthzName = "usersync:synchronize"
+	AuthzNameDeployKeyView         AuthzName = "deploy_key:view"
 )
 
 func (e *AuthzName) Scan(src interface{}) error {
@@ -403,7 +404,8 @@ func (e AuthzName) Valid() bool {
 		AuthzNameUsersList,
 		AuthzNameUsersUpdate,
 		AuthzNameTeamsSynchronize,
-		AuthzNameUsersyncSynchronize:
+		AuthzNameUsersyncSynchronize,
+		AuthzNameDeployKeyView:
 		return true
 	}
 	return false
@@ -429,6 +431,7 @@ func AllAuthzNameValues() []AuthzName {
 		AuthzNameUsersUpdate,
 		AuthzNameTeamsSynchronize,
 		AuthzNameUsersyncSynchronize,
+		AuthzNameDeployKeyView,
 	}
 }
 
@@ -585,6 +588,7 @@ const (
 	RoleNameUseradmin             RoleName = "User admin"
 	RoleNameUserviewer            RoleName = "User viewer"
 	RoleNameSynchronizer          RoleName = "Synchronizer"
+	RoleNameDeploykeyviewer       RoleName = "Deploy key viewer"
 )
 
 func (e *RoleName) Scan(src interface{}) error {
@@ -633,7 +637,8 @@ func (e RoleName) Valid() bool {
 		RoleNameTeamviewer,
 		RoleNameUseradmin,
 		RoleNameUserviewer,
-		RoleNameSynchronizer:
+		RoleNameSynchronizer,
+		RoleNameDeploykeyviewer:
 		return true
 	}
 	return false
@@ -651,6 +656,7 @@ func AllRoleNameValues() []RoleName {
 		RoleNameUseradmin,
 		RoleNameUserviewer,
 		RoleNameSynchronizer,
+		RoleNameDeploykeyviewer,
 	}
 }
 

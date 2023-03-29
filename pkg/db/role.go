@@ -23,6 +23,14 @@ func (d *database) AssignGlobalRoleToServiceAccount(ctx context.Context, service
 	})
 }
 
+func (d *database) AssignTeamRoleToServiceAccount(ctx context.Context, serviceAccountID uuid.UUID, roleName sqlc.RoleName, teamSlug slug.Slug) error {
+	return d.querier.AssignTeamRoleToServiceAccount(ctx, sqlc.AssignTeamRoleToServiceAccountParams{
+		ServiceAccountID: serviceAccountID,
+		RoleName:         roleName,
+		TargetTeamSlug:   &teamSlug,
+	})
+}
+
 // IsGlobal Check if the role is globally assigned or not
 func (r Role) IsGlobal() bool {
 	return r.TargetServiceAccountID == nil && r.TargetTeamSlug == nil
