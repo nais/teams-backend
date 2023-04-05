@@ -19,7 +19,6 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authn"
 	"github.com/nais/console/pkg/config"
@@ -39,11 +38,10 @@ import (
 )
 
 const (
-	databaseConnectRetries = 5
-	reconcilerWorkers      = 10
-	fullTeamSyncInterval   = time.Minute * 30
-	userSyncInterval       = time.Minute * 15
-	userSyncTimeout        = time.Second * 30
+	reconcilerWorkers    = 10
+	fullTeamSyncInterval = time.Minute * 30
+	userSyncInterval     = time.Minute * 15
+	userSyncTimeout      = time.Second * 30
 )
 
 func main() {
@@ -73,7 +71,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 	bt, _ := version.BuildTime()
 	log.Infof("console.nais.io version %s built on %s", version.Version(), bt)
 
-	database, err := setupDatabase(ctx, cfg.DatabaseURL, log)
+	database, err := db.New(ctx, cfg.DatabaseURL, log)
 	if err != nil {
 		return err
 	}
@@ -238,36 +236,6 @@ func setupAuthHandler(cfg *config.Config, database db.Database, log logger.Logge
 	}
 	handler := authn.New(cf, database, *frontendURL, log)
 	return handler, nil
-}
-
-func setupDatabase(ctx context.Context, dbUrl string, log logger.Logger) (db.Database, error) {
-	config, err := pgxpool.ParseConfig(dbUrl)
-	if err != nil {
-		return nil, err
-	}
-
-	var dbc *pgxpool.Pool
-	for i := 0; i < databaseConnectRetries; i++ {
-		dbc, err = pgxpool.ConnectConfig(ctx, config)
-		if err == nil {
-			break
-		}
-
-		log.Warnf("unable to connect to the database: %s", err)
-		time.Sleep(time.Second * time.Duration(i+1))
-	}
-
-	if dbc == nil {
-		return nil, fmt.Errorf("giving up connecting to the database after %d attempts: %w", databaseConnectRetries, err)
-	}
-
-	err = db.Migrate(dbc.Config().ConnString())
-	if err != nil {
-		return nil, err
-	}
-
-	queries := db.Wrap(sqlc.New(dbc), dbc)
-	return db.NewDatabase(queries), nil
 }
 
 func setupGraphAPI(teamSync teamsync.Handler, database db.Database, deployProxy deployproxy.Proxy, domain string, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *graphql_handler.Server {

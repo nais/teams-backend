@@ -4,16 +4,7 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/nais/console/pkg/sqlc"
 )
-
-func Wrap(q *sqlc.Queries, connPool *pgxpool.Pool) Querier {
-	return &Queries{
-		Queries:  q,
-		connPool: connPool,
-	}
-}
 
 func (q *Queries) Transaction(ctx context.Context, callback QuerierTransactionFunc) error {
 	querier, err := q.begin(ctx)

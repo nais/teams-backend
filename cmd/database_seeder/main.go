@@ -8,11 +8,9 @@ import (
 	"math/rand"
 	"os"
 	"strings"
-	"time"
 	"unicode"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/logger"
@@ -21,10 +19,6 @@ import (
 	"golang.org/x/text/runes"
 	"golang.org/x/text/transform"
 	"golang.org/x/text/unicode/norm"
-)
-
-const (
-	databaseConnectRetries = 5
 )
 
 type seedConfig struct {
@@ -90,7 +84,7 @@ func run(cfg *seedConfig, log logger.Logger) error {
 	}
 	numLastNames := len(lastNames)
 
-	database, err := setupDatabase(ctx, cfg.DatabaseURL, log)
+	database, err := db.New(ctx, cfg.DatabaseURL, log)
 	if err != nil {
 		return err
 	}
@@ -193,34 +187,4 @@ func fileToSlice(path string) ([]string, error) {
 	}
 
 	return lines, nil
-}
-
-func setupDatabase(ctx context.Context, dbUrl string, log logger.Logger) (db.Database, error) {
-	config, err := pgxpool.ParseConfig(dbUrl)
-	if err != nil {
-		return nil, err
-	}
-
-	var dbc *pgxpool.Pool
-	for i := 0; i < databaseConnectRetries; i++ {
-		dbc, err = pgxpool.ConnectConfig(ctx, config)
-		if err == nil {
-			break
-		}
-
-		log.Warnf("unable to connect to the database: %s", err)
-		time.Sleep(time.Second * time.Duration(i+1))
-	}
-
-	if dbc == nil {
-		return nil, fmt.Errorf("giving up connecting to the database after %d attempts: %w", databaseConnectRetries, err)
-	}
-
-	err = db.Migrate(dbc.Config().ConnString())
-	if err != nil {
-		return nil, err
-	}
-
-	queries := db.Wrap(sqlc.New(dbc), dbc)
-	return db.NewDatabase(queries), nil
 }
