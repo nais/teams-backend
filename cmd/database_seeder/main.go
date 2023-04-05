@@ -89,6 +89,9 @@ func run(cfg *seedConfig, log logger.Logger) error {
 		return err
 	}
 
+	emails := map[string]struct{}{}
+	slugs := map[string]struct{}{}
+
 	if !*cfg.ForceSeed {
 		if existingUsers, err := database.GetUsers(ctx); len(existingUsers) != 0 || err != nil {
 			return fmt.Errorf("database already has users, abort")
@@ -97,10 +100,25 @@ func run(cfg *seedConfig, log logger.Logger) error {
 		if existingTeams, err := database.GetTeams(ctx); len(existingTeams) != 0 || err != nil {
 			return fmt.Errorf("database already has teams, abort")
 		}
+	} else {
+		users, err := database.GetUsers(ctx)
+		if err != nil {
+			return err
+		}
+		for _, user := range users {
+			emails[user.Email] = struct{}{}
+		}
+
+		teams, err := database.GetTeams(ctx)
+		if err != nil {
+			return err
+		}
+		for _, team := range teams {
+			slugs[string(team.Slug)] = struct{}{}
+		}
 	}
 
 	err = database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
-		emails := map[string]struct{}{}
 		users := make([]*db.User, 0)
 		for i := 1; i <= *cfg.NumUsers; i++ {
 			firstName := firstNames[rand.Intn(numFirstNames)]
@@ -122,7 +140,6 @@ func run(cfg *seedConfig, log logger.Logger) error {
 		}
 		usersCreated := len(users)
 
-		slugs := map[string]struct{}{}
 		for i := 1; i <= *cfg.NumTeams; i++ {
 			name := teamName()
 			if _, exists := slugs[name]; exists {
