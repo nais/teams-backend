@@ -53,3 +53,6 @@ docker:
 
 rollback:
 	echo "TODO: command that git checkouts code that works, leave migrations at HEAD, specify migration version i pkg/db/database.Migrate()"
+
+seed:
+	go run cmd/database_seeder/main.go -users 1000 -teams 100 -owners 2 -members 10
