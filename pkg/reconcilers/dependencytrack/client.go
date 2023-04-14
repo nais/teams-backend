@@ -177,6 +177,53 @@ func (c *Client) AddToTeam(ctx context.Context, username string, uuid string) er
 	return nil
 }
 
+func (c *Client) GetUsers(ctx context.Context) ([]User, error) {
+	token, err := c.token(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("getting Token: %w", err)
+	}
+	b, err := c.sendRequest(ctx, http.MethodGet, c.baseUrl+"/user/oidc", map[string][]string{
+		"Accept":        {"application/json"},
+		"Authorization": {fmt.Sprintf("Bearer %s", token)},
+	}, nil)
+	if err != nil {
+		return nil, fmt.Errorf("getting users: %w", err)
+	}
+	var users []User
+	if err := json.Unmarshal(b, &users); err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+func (c *Client) DeleteUser(ctx context.Context, email string) error {
+	body, err := json.Marshal(map[string]string{
+		"username": email,
+		"email":    email,
+	})
+	token, err := c.token(ctx)
+	if err != nil {
+		return fmt.Errorf("getting Token: %w", err)
+	}
+	_, err = c.sendRequest(ctx, http.MethodDelete, c.baseUrl+"/user/oidc", map[string][]string{
+		"Content-Type":  {"application/json"},
+		"Accept":        {"application/json"},
+		"Authorization": {fmt.Sprintf("Bearer %s", token)},
+	}, body)
+	if err != nil {
+		e, ok := err.(*RequestError)
+		if !ok {
+			return fmt.Errorf("deleting user: %w", err)
+		}
+		if e.StatusCode == http.StatusNotFound {
+			log.Infof("user %s does not exist", email)
+			return nil
+		}
+		return fmt.Errorf("deleting user: %w", err)
+	}
+	return nil
+}
+
 func (r *RequestError) Error() string {
 	return fmt.Sprintf("status %d: err %v", r.StatusCode, r.Err)
 }
