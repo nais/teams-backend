@@ -12,8 +12,21 @@ jobs:
     runs-on: ubuntu-latest-16-cores
     outputs:
       "version": ${{ steps.build_push_sign.outputs.version }}
+    env:
+      BUILDER_IMG: "cgr.dev/chainguard/go:1.20"
+      RUNNER_IMG: "cgr.dev/chainguard/static"
+      BASEIMG_IDENTITY: "https://github.com/chainguard-images/images/.github/workflows/release.yaml@refs/heads/main"
+      BASEIMG_ISSUER: "https://token.actions.githubusercontent.com"
     steps:
       - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # ratchet:actions/checkout@v3
+      - name: Install cosign
+        uses: sigstore/cosign-installer@9e9de2292db7abb3f51b7f4808d98f0d347a8919 # ratchet:sigstore/cosign-installer@main
+        with:
+          cosign-release: 'v2.0.0'
+      - name: Verify builder image
+        run: cosign verify --certificate-identity ${{ env.BASEIMG_IDENTITY }} --certificate-oidc-issuer ${{ env.BASEIMG_ISSUER }} ${{ env.BUILDER_IMG }}
+      - name: Verify runner image
+        run: cosign verify --certificate-identity ${{ env.BASEIMG_IDENTITY }} --certificate-oidc-issuer ${{ env.BASEIMG_ISSUER }} ${{ env.RUNNER_IMG }}
       - uses: nais/platform-build-push-sign@d5680102b2e7006e7b4184acc9604aa321176107 # ratchet:nais/platform-build-push-sign@main
         id: build_push_sign
         with:

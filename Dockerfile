@@ -1,21 +1,14 @@
-FROM golang:1.20.3-alpine as builder
-RUN apk add --no-cache git make curl build-base
+FROM cgr.dev/chainguard/go:1.20 as builder
+
 ENV GOOS=linux
-
 WORKDIR /src
+COPY . .
 
-COPY go.mod ./
-COPY go.sum ./
 RUN go mod download
-
-COPY . ./
 RUN make test
 RUN make check
-RUN make alpine
+RUN make static
 
-FROM alpine:3.17
-RUN apk add --no-cache ca-certificates tzdata
-RUN export PATH=$PATH:/app
-WORKDIR /app
+FROM cgr.dev/chainguard/static
 COPY --from=builder /src/bin/console /app/console
 CMD ["/app/console"]

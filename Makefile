@@ -3,7 +3,7 @@ DATE = $(shell date "+%Y-%m-%d")
 LAST_COMMIT = $(shell git rev-parse --short HEAD)
 LDFLAGS := -X github.com/nais/console/pkg/version.Revision=$(LAST_COMMIT) -X github.com/nais/console/pkg/version.Date=$(DATE) -X github.com/nais/console/pkg/version.BuildUnixTime=$(BUILDTIME)
 
-.PHONY: alpine console test generate
+.PHONY: static console test generate
 
 all: generate console
 
@@ -45,8 +45,8 @@ generate-mocks:
 	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/reconcilers --name Reconciler
 	go run mvdan.cc/gofumpt -w ./pkg/graph/
 
-alpine:
-	go build -a -installsuffix cgo -o bin/console -ldflags "-s $(LDFLAGS)" cmd/console/main.go
+static:
+	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/console -ldflags "-s $(LDFLAGS)" cmd/console/main.go
 
 docker:
 	docker build -t ghcr.io/nais/console:latest .
