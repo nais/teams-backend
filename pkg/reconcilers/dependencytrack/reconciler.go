@@ -41,12 +41,23 @@ func (r *dependencytrackReconciler) Name() sqlc.ReconcilerName {
 func (r *dependencytrackReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 
 	// TODO: implement update and delete
+	teams, err := r.client.GetTeams(ctx)
+	if err != nil {
+
+	}
+	if ok := TeamExist(teams, input.Team.Slug.String()); ok {
+		//update,sync
+	}
 	return r.createTeamAndUsers(ctx, input)
 }
 
 func (r *dependencytrackReconciler) Delete(ctx context.Context, teamSlug slug.Slug, correlationID uuid.UUID) error {
-	//TODO implement me
-	panic("implement me")
+	team := teamSlug.String()
+	err := r.client.DeleteTeam(ctx, team)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *dependencytrackReconciler) createTeamAndUsers(ctx context.Context, input reconcilers.Input) error {
@@ -82,4 +93,12 @@ func (r *dependencytrackReconciler) createTeamAndUsers(ctx context.Context, inpu
 		// TODO: audit log
 	}
 	return nil
+}
+
+func TeamExist(teams []Team, team string) bool {
+
+	if GetTeamUuid(teams, team) == "" {
+		return false
+	}
+	return true
 }
