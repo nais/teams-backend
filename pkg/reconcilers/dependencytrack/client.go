@@ -224,6 +224,35 @@ func (c *Client) DeleteUser(ctx context.Context, email string) error {
 	return nil
 }
 
+func (c *Client) DeleteTeam(ctx context.Context, team string) error {
+	teams, err := c.GetTeams(ctx)
+	teamUuid := GetTeamUuid(teams, team)
+	body, err := json.Marshal(map[string]string{
+		"uuid": teamUuid,
+	})
+	token, err := c.token(ctx)
+	if err != nil {
+		return fmt.Errorf("getting Token: %w", err)
+	}
+	_, err = c.sendRequest(ctx, http.MethodDelete, c.baseUrl+"/team", map[string][]string{
+		"Content-Type":  {"application/json"},
+		"Accept":        {"application/json"},
+		"Authorization": {fmt.Sprintf("Bearer %s", token)},
+	}, body)
+	if err != nil {
+		e, ok := err.(*RequestError)
+		if !ok {
+			return fmt.Errorf("deleting team: %w", err)
+		}
+		if e.StatusCode == http.StatusNotFound {
+			log.Infof("team %s does not exist", team)
+			return nil
+		}
+		return fmt.Errorf("deleting team: %w", err)
+	}
+	return nil
+}
+
 func (r *RequestError) Error() string {
 	return fmt.Sprintf("status %d: err %v", r.StatusCode, r.Err)
 }

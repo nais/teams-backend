@@ -51,3 +51,9 @@ func TestClient_GetUsers(t *testing.T) {
 	assert.NoError(t, err)
 	fmt.Printf("%+v\n", users)
 }
+
+func TestClient_DeleteTeam(t *testing.T) {
+	c := NewClient("http://localhost:9001/api/v1", "admin", "yolo")
+	err := c.DeleteTeam(context.TODO(), "teamname")
+	assert.NoError(t, err)
+}
