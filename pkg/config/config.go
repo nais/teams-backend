@@ -9,6 +9,11 @@ import (
 	"github.com/nais/console/pkg/legacy/envmap"
 )
 
+type DependencyTrack struct {
+	Endpoint string
+	Username string
+	Password string
+}
 type GitHub struct {
 	// ApplicationID The ID of the GitHub Application that is used when communicating with the GitHub APIs.
 	ApplicationID int64 `envconfig:"CONSOLE_GITHUB_APPLICATION_ID"`
@@ -80,12 +85,13 @@ type NaisDeploy struct {
 }
 
 type Config struct {
-	GitHub        GitHub
-	GCP           GCP
-	UserSync      UserSync
-	NaisDeploy    NaisDeploy
-	NaisNamespace NaisNamespace
-	OAuth         OAuth
+	DependencyTrack DependencyTrack
+	GitHub          GitHub
+	GCP             GCP
+	UserSync        UserSync
+	NaisDeploy      NaisDeploy
+	NaisNamespace   NaisNamespace
+	OAuth           OAuth
 
 	// Environments A list of environment names used for instance in GCP
 	Environments []string

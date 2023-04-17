@@ -17,15 +17,14 @@ type dependencytrackReconciler struct {
 	database    db.Database
 	auditLogger auditlogger.AuditLogger
 	log         logger.Logger
-	client      *Client
+	client      Client
 }
 
 const Name = sqlc.ReconcilerName("nais:dependencytrack")
 
 func NewFromConfig(ctx context.Context, cfg *config.Config) (reconcilers.Reconciler, error) {
 	//log = log.WithSystem(string(Name))
-	// TODO: get from config
-	c := NewClient("http://localhost:9001/api/v1", "admin", "yolo")
+	c := NewClient(cfg.DependencyTrack.Endpoint, cfg.DependencyTrack.Username, cfg.DependencyTrack.Password)
 	return &dependencytrackReconciler{
 		client: c,
 	}, nil

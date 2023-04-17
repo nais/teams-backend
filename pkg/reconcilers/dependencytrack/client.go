@@ -14,7 +14,16 @@ import (
 
 const metricsSystemName = "dependencytrack"
 
-type Client struct {
+type Client interface {
+	CreateTeam(ctx context.Context, teamName string, permissions []Permission) (*Team, error)
+	GetTeams(ctx context.Context) ([]Team, error)
+	CreateUser(ctx context.Context, email string) error
+	AddToTeam(ctx context.Context, username string, uuid string) error
+	DeleteTeam(ctx context.Context, uuid string) error
+	DeleteUserMembership(ctx context.Context, uuid string, username string) error
+}
+
+type client struct {
 	baseUrl     string
 	username    string
 	password    string
@@ -32,8 +41,8 @@ type Team struct {
 	OidcUsers []User `json:"oidcUsers,omitempty"`
 }
 
-func NewClient(baseUrl string, username string, password string) *Client {
-	return &Client{
+func NewClient(baseUrl string, username string, password string) Client {
+	return &client{
 		baseUrl:    baseUrl,
 		username:   username,
 		password:   password,
@@ -52,7 +61,7 @@ type RequestError struct {
 }
 
 // TODO: check if team exists - name is not unique
-func (c *Client) CreateTeam(ctx context.Context, teamName string, permissions []Permission) (*Team, error) {
+func (c *client) CreateTeam(ctx context.Context, teamName string, permissions []Permission) (*Team, error) {
 	body, _ := json.Marshal(&Team{
 		Name: teamName,
 	})
@@ -88,7 +97,7 @@ func (c *Client) CreateTeam(ctx context.Context, teamName string, permissions []
 	return t, nil
 }
 
-func (c *Client) GetTeams(ctx context.Context) ([]Team, error) {
+func (c *client) GetTeams(ctx context.Context) ([]Team, error) {
 	token, err := c.token(ctx)
 	if err != nil {
 		return nil, err
@@ -120,7 +129,7 @@ func GetTeam(teams []Team, name string) *Team {
 	return nil
 }
 
-func (c *Client) CreateUser(ctx context.Context, email string) error {
+func (c *client) CreateUser(ctx context.Context, email string) error {
 	body, err := json.Marshal(map[string]string{
 		"username": email,
 		"email":    email,
@@ -151,7 +160,7 @@ func (c *Client) CreateUser(ctx context.Context, email string) error {
 	return nil
 }
 
-func (c *Client) AddToTeam(ctx context.Context, username string, uuid string) error {
+func (c *client) AddToTeam(ctx context.Context, username string, uuid string) error {
 	token, err := c.token(ctx)
 	if err != nil {
 		return fmt.Errorf("getting Token: %w", err)
@@ -177,54 +186,7 @@ func (c *Client) AddToTeam(ctx context.Context, username string, uuid string) er
 	return nil
 }
 
-func (c *Client) GetUsers(ctx context.Context) ([]User, error) {
-	token, err := c.token(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("getting Token: %w", err)
-	}
-	b, err := c.sendRequest(ctx, http.MethodGet, c.baseUrl+"/user/oidc", map[string][]string{
-		"Accept":        {"application/json"},
-		"Authorization": {fmt.Sprintf("Bearer %s", token)},
-	}, nil)
-	if err != nil {
-		return nil, fmt.Errorf("getting users: %w", err)
-	}
-	var users []User
-	if err := json.Unmarshal(b, &users); err != nil {
-		return nil, err
-	}
-	return users, nil
-}
-
-func (c *Client) DeleteUser(ctx context.Context, email string) error {
-	body, err := json.Marshal(map[string]string{
-		"username": email,
-		"email":    email,
-	})
-	token, err := c.token(ctx)
-	if err != nil {
-		return fmt.Errorf("getting Token: %w", err)
-	}
-	_, err = c.sendRequest(ctx, http.MethodDelete, c.baseUrl+"/user/oidc", map[string][]string{
-		"Content-Type":  {"application/json"},
-		"Accept":        {"application/json"},
-		"Authorization": {fmt.Sprintf("Bearer %s", token)},
-	}, body)
-	if err != nil {
-		e, ok := err.(*RequestError)
-		if !ok {
-			return fmt.Errorf("deleting user: %w", err)
-		}
-		if e.StatusCode == http.StatusNotFound {
-			log.Infof("user %s does not exist", email)
-			return nil
-		}
-		return fmt.Errorf("deleting user: %w", err)
-	}
-	return nil
-}
-
-func (c *Client) DeleteTeam(ctx context.Context, uuid string) error {
+func (c *client) DeleteTeam(ctx context.Context, uuid string) error {
 
 	body, err := json.Marshal(map[string]string{
 		"uuid": uuid,
@@ -260,7 +222,7 @@ func (r *RequestError) AlreadyExists() bool {
 	return r.StatusCode == http.StatusConflict
 }
 
-func (c *Client) sendRequest(ctx context.Context, httpMethod string, url string, headers map[string][]string, body []byte) ([]byte, error) {
+func (c *client) sendRequest(ctx context.Context, httpMethod string, url string, headers map[string][]string, body []byte) ([]byte, error) {
 	fmt.Printf("Sending request to %s\n", url)
 	req, err := http.NewRequestWithContext(ctx, httpMethod, url, bytes.NewReader(body))
 	if err != nil {
@@ -287,7 +249,7 @@ func (c *Client) sendRequest(ctx context.Context, httpMethod string, url string,
 	return resBody, err
 }
 
-func (c *Client) DeleteUserMembership(ctx context.Context, uuid string, username string) error {
+func (c *client) DeleteUserMembership(ctx context.Context, uuid string, username string) error {
 	token, err := c.token(ctx)
 	if err != nil {
 		log.Errorf("getting Token: %v", err)

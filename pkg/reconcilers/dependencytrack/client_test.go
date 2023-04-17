@@ -40,19 +40,6 @@ func TestClient_GetTeams(t *testing.T) {
 	fmt.Printf("%+v\n", teams)
 }
 
-func TestClient_DeleteUser(t *testing.T) {
-	c := NewClient("http://localhost:9001/api/v1", "admin", "yolo")
-	err := c.DeleteUser(context.TODO(), "kimt@dev-nais.io")
-	assert.NoError(t, err)
-}
-
-func TestClient_GetUsers(t *testing.T) {
-	c := NewClient("http://localhost:9001/api/v1", "admin", "yolo")
-	users, err := c.GetUsers(context.TODO())
-	assert.NoError(t, err)
-	fmt.Printf("%+v\n", users)
-}
-
 func TestClient_DeleteTeam(t *testing.T) {
 	c := NewClient("http://localhost:9001/api/v1", "admin", "yolo")
 	err := c.DeleteTeam(context.TODO(), "teamname")

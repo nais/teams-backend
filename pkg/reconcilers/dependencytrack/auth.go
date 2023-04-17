@@ -8,7 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (c *Client) token(ctx context.Context) (string, error) {
+func (c *client) token(ctx context.Context) (string, error) {
 	if c.accessToken == "" || c.isExpired() {
 		log.Debugf("accessToken expired, getting new one")
 		t, err := c.login(ctx)
@@ -20,7 +20,7 @@ func (c *Client) token(ctx context.Context) (string, error) {
 	return c.accessToken, nil
 }
 
-func (c *Client) login(ctx context.Context) (string, error) {
+func (c *client) login(ctx context.Context) (string, error) {
 	token, err := c.sendRequest(ctx, "POST", c.baseUrl+"/user/login", map[string][]string{
 		"Content-Type": {"application/x-www-form-urlencoded"},
 		"Accept":       {"text/plain"},
@@ -32,7 +32,7 @@ func (c *Client) login(ctx context.Context) (string, error) {
 	return string(token), nil
 }
 
-func (c *Client) isExpired() bool {
+func (c *client) isExpired() bool {
 	if c.accessToken == "" {
 		return true
 	}
