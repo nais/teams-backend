@@ -17,7 +17,7 @@ VALUES ($1, $2) ON CONFLICT DO NOTHING;
 
 -- name: AssignTeamRoleToUser :exec
 INSERT INTO user_roles (user_id, role_name, target_team_slug)
-VALUES ($1, $2, $3) ON CONFLICT (user_id, target_team_slug) DO UPDATE SET role_name = $2;
+VALUES ($1, $2, $3) ON CONFLICT DO NOTHING;
 
 -- name: AssignTeamRoleToServiceAccount :exec
 INSERT INTO service_account_roles (service_account_id, role_name, target_team_slug)

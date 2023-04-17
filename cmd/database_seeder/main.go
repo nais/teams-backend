@@ -152,11 +152,17 @@ func run(cfg *seedConfig, log logger.Logger) error {
 			}
 
 			for o := 0; o < *cfg.NumOwnersPerTeam; o++ {
-				_ = dbtx.SetTeamMemberRole(ctx, users[rand.Intn(usersCreated)].ID, team.Slug, sqlc.RoleNameTeamowner)
+				err = dbtx.SetTeamMemberRole(ctx, users[rand.Intn(usersCreated)].ID, team.Slug, sqlc.RoleNameTeamowner)
+				if err != nil {
+					return err
+				}
 			}
 
 			for o := 0; o < *cfg.NumMembersPerTeam; o++ {
-				_ = dbtx.SetTeamMemberRole(ctx, users[rand.Intn(usersCreated)].ID, team.Slug, sqlc.RoleNameTeammember)
+				err = dbtx.SetTeamMemberRole(ctx, users[rand.Intn(usersCreated)].ID, team.Slug, sqlc.RoleNameTeammember)
+				if err != nil {
+					return err
+				}
 			}
 
 			log.Infof("%d/%d teams created", i, *cfg.NumTeams)
