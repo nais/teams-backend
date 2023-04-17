@@ -188,7 +188,6 @@ type ComplexityRoot struct {
 		GitHubRepositories  func(childComplexity int) int
 		LastSuccessfulSync  func(childComplexity int) int
 		Members             func(childComplexity int) int
-		Metadata            func(childComplexity int) int
 		Purpose             func(childComplexity int) int
 		ReconcilerState     func(childComplexity int) int
 		SlackAlertsChannels func(childComplexity int) int
@@ -213,11 +212,6 @@ type ComplexityRoot struct {
 	TeamMembership struct {
 		Role func(childComplexity int) int
 		Team func(childComplexity int) int
-	}
-
-	TeamMetadata struct {
-		Key   func(childComplexity int) int
-		Value func(childComplexity int) int
 	}
 
 	TeamSync struct {
@@ -291,7 +285,6 @@ type ServiceAccountResolver interface {
 	Roles(ctx context.Context, obj *db.ServiceAccount) ([]*db.Role, error)
 }
 type TeamResolver interface {
-	Metadata(ctx context.Context, obj *db.Team) ([]*db.TeamMetadata, error)
 	AuditLogs(ctx context.Context, obj *db.Team) ([]*db.AuditLog, error)
 	Members(ctx context.Context, obj *db.Team) ([]*model.TeamMember, error)
 	SyncErrors(ctx context.Context, obj *db.Team) ([]*model.SyncError, error)
@@ -1035,13 +1028,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Team.Members(childComplexity), true
 
-	case "Team.metadata":
-		if e.complexity.Team.Metadata == nil {
-			break
-		}
-
-		return e.complexity.Team.Metadata(childComplexity), true
-
 	case "Team.purpose":
 		if e.complexity.Team.Purpose == nil {
 			break
@@ -1146,20 +1132,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.TeamMembership.Team(childComplexity), true
-
-	case "TeamMetadata.key":
-		if e.complexity.TeamMetadata.Key == nil {
-			break
-		}
-
-		return e.complexity.TeamMetadata.Key(childComplexity), true
-
-	case "TeamMetadata.value":
-		if e.complexity.TeamMetadata.Value == nil {
-			break
-		}
-
-		return e.complexity.TeamMetadata.Value(childComplexity), true
 
 	case "TeamSync.correlationID":
 		if e.complexity.TeamSync.CorrelationID == nil {
@@ -1756,9 +1728,6 @@ type Team {
     "Purpose of the team."
     purpose: String!
 
-    "Metadata attached to the team."
-    metadata: [TeamMetadata!]!
-
     "Audit logs for this team."
     auditLogs: [AuditLog!]!
 
@@ -1854,15 +1823,6 @@ type NaisNamespace {
 
     "The namespace."
     namespace: Slug!
-}
-
-"Team metadata type."
-type TeamMetadata {
-    "Metadata key."
-    key: String!
-
-    "Metadata value."
-    value: String
 }
 
 "Sync error type."
@@ -3292,8 +3252,6 @@ func (ec *executionContext) fieldContext_Mutation_setGitHubTeamSlug(ctx context.
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "metadata":
-				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
@@ -3391,8 +3349,6 @@ func (ec *executionContext) fieldContext_Mutation_setGoogleWorkspaceGroupEmail(c
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "metadata":
-				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
@@ -3490,8 +3446,6 @@ func (ec *executionContext) fieldContext_Mutation_setAzureADGroupId(ctx context.
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "metadata":
-				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
@@ -3589,8 +3543,6 @@ func (ec *executionContext) fieldContext_Mutation_setGcpProjectId(ctx context.Co
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "metadata":
-				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
@@ -3688,8 +3640,6 @@ func (ec *executionContext) fieldContext_Mutation_setNaisNamespace(ctx context.C
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "metadata":
-				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
@@ -4159,8 +4109,6 @@ func (ec *executionContext) fieldContext_Mutation_createTeam(ctx context.Context
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "metadata":
-				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
@@ -4258,8 +4206,6 @@ func (ec *executionContext) fieldContext_Mutation_updateTeam(ctx context.Context
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "metadata":
-				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
@@ -4357,8 +4303,6 @@ func (ec *executionContext) fieldContext_Mutation_removeUsersFromTeam(ctx contex
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "metadata":
-				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
@@ -4603,8 +4547,6 @@ func (ec *executionContext) fieldContext_Mutation_addTeamMembers(ctx context.Con
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "metadata":
-				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
@@ -4702,8 +4644,6 @@ func (ec *executionContext) fieldContext_Mutation_addTeamOwners(ctx context.Cont
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "metadata":
-				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
@@ -4801,8 +4741,6 @@ func (ec *executionContext) fieldContext_Mutation_setTeamMemberRole(ctx context.
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "metadata":
-				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
@@ -5408,8 +5346,6 @@ func (ec *executionContext) fieldContext_Query_teams(ctx context.Context, field 
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "metadata":
-				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
@@ -5496,8 +5432,6 @@ func (ec *executionContext) fieldContext_Query_team(ctx context.Context, field g
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "metadata":
-				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
@@ -7650,56 +7584,6 @@ func (ec *executionContext) fieldContext_Team_purpose(ctx context.Context, field
 	return fc, nil
 }
 
-func (ec *executionContext) _Team_metadata(ctx context.Context, field graphql.CollectedField, obj *db.Team) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Team_metadata(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Team().Metadata(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*db.TeamMetadata)
-	fc.Result = res
-	return ec.marshalNTeamMetadata2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐTeamMetadataᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Team_metadata(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Team",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "key":
-				return ec.fieldContext_TeamMetadata_key(ctx, field)
-			case "value":
-				return ec.fieldContext_TeamMetadata_value(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type TeamMetadata", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Team_auditLogs(ctx context.Context, field graphql.CollectedField, obj *db.Team) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Team_auditLogs(ctx, field)
 	if err != nil {
@@ -8344,8 +8228,6 @@ func (ec *executionContext) fieldContext_TeamDeleteKey_team(ctx context.Context,
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "metadata":
-				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
@@ -8514,8 +8396,6 @@ func (ec *executionContext) fieldContext_TeamMembership_team(ctx context.Context
 				return ec.fieldContext_Team_slug(ctx, field)
 			case "purpose":
 				return ec.fieldContext_Team_purpose(ctx, field)
-			case "metadata":
-				return ec.fieldContext_Team_metadata(ctx, field)
 			case "auditLogs":
 				return ec.fieldContext_Team_auditLogs(ctx, field)
 			case "members":
@@ -8578,91 +8458,6 @@ func (ec *executionContext) fieldContext_TeamMembership_role(ctx context.Context
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type TeamRole does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _TeamMetadata_key(ctx context.Context, field graphql.CollectedField, obj *db.TeamMetadata) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_TeamMetadata_key(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Key, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_TeamMetadata_key(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TeamMetadata",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _TeamMetadata_value(ctx context.Context, field graphql.CollectedField, obj *db.TeamMetadata) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_TeamMetadata_value(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Value, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*string)
-	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_TeamMetadata_value(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TeamMetadata",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -12176,26 +11971,6 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
-		case "metadata":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Team_metadata(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
 		case "auditLogs":
 			field := field
 
@@ -12492,38 +12267,6 @@ func (ec *executionContext) _TeamMembership(ctx context.Context, sel ast.Selecti
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var teamMetadataImplementors = []string{"TeamMetadata"}
-
-func (ec *executionContext) _TeamMetadata(ctx context.Context, sel ast.SelectionSet, obj *db.TeamMetadata) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, teamMetadataImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("TeamMetadata")
-		case "key":
-
-			out.Values[i] = ec._TeamMetadata_key(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "value":
-
-			out.Values[i] = ec._TeamMetadata_value(ctx, field, obj)
-
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -14000,60 +13743,6 @@ func (ec *executionContext) marshalNTeamMembership2ᚖgithubᚗcomᚋnaisᚋcons
 		return graphql.Null
 	}
 	return ec._TeamMembership(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalNTeamMetadata2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐTeamMetadataᚄ(ctx context.Context, sel ast.SelectionSet, v []*db.TeamMetadata) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNTeamMetadata2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐTeamMetadata(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) marshalNTeamMetadata2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐTeamMetadata(ctx context.Context, sel ast.SelectionSet, v *db.TeamMetadata) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._TeamMetadata(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNTeamRole2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamRole(ctx context.Context, v interface{}) (model.TeamRole, error) {

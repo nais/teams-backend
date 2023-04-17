@@ -602,22 +602,6 @@ func (r *queryResolver) TeamDeleteKey(ctx context.Context, key *uuid.UUID) (*db.
 	return deleteKey, nil
 }
 
-// Metadata is the resolver for the metadata field.
-func (r *teamResolver) Metadata(ctx context.Context, obj *db.Team) ([]*db.TeamMetadata, error) {
-	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireTeamAuthorization(actor, sqlc.AuthzNameTeamsRead, obj.Slug)
-	if err != nil {
-		return nil, err
-	}
-
-	metadata, err := r.database.GetTeamMetadata(ctx, obj.Slug)
-	if err != nil {
-		return nil, err
-	}
-
-	return metadata, nil
-}
-
 // AuditLogs is the resolver for the auditLogs field.
 func (r *teamResolver) AuditLogs(ctx context.Context, obj *db.Team) ([]*db.AuditLog, error) {
 	actor := authz.ActorFromContext(ctx)

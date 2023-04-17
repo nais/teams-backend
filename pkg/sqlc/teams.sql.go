@@ -176,32 +176,6 @@ func (q *Queries) GetTeamMembers(ctx context.Context, targetTeamSlug *slug.Slug)
 	return items, nil
 }
 
-const getTeamMetadata = `-- name: GetTeamMetadata :many
-SELECT key, value, team_slug FROM team_metadata
-WHERE team_slug = $1
-ORDER BY key ASC
-`
-
-func (q *Queries) GetTeamMetadata(ctx context.Context, teamSlug slug.Slug) ([]*TeamMetadatum, error) {
-	rows, err := q.db.Query(ctx, getTeamMetadata, teamSlug)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []*TeamMetadatum
-	for rows.Next() {
-		var i TeamMetadatum
-		if err := rows.Scan(&i.Key, &i.Value, &i.TeamSlug); err != nil {
-			return nil, err
-		}
-		items = append(items, &i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getTeams = `-- name: GetTeams :many
 SELECT teams.slug, teams.purpose, teams.last_successful_sync, teams.slack_channel FROM teams
 ORDER BY teams.slug ASC
@@ -287,24 +261,6 @@ type SetSlackAlertsChannelParams struct {
 
 func (q *Queries) SetSlackAlertsChannel(ctx context.Context, arg SetSlackAlertsChannelParams) error {
 	_, err := q.db.Exec(ctx, setSlackAlertsChannel, arg.TeamSlug, arg.Environment, arg.ChannelName)
-	return err
-}
-
-const setTeamMetadata = `-- name: SetTeamMetadata :exec
-INSERT INTO team_metadata (team_slug, key, value)
-VALUES ($1, $2, $3)
-ON CONFLICT (team_slug, key) DO
-    UPDATE SET value = $3
-`
-
-type SetTeamMetadataParams struct {
-	TeamSlug slug.Slug
-	Key      string
-	Value    sql.NullString
-}
-
-func (q *Queries) SetTeamMetadata(ctx context.Context, arg SetTeamMetadataParams) error {
-	_, err := q.db.Exec(ctx, setTeamMetadata, arg.TeamSlug, arg.Key, arg.Value)
 	return err
 }
 

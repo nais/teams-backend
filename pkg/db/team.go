@@ -8,44 +8,6 @@ import (
 	"github.com/nais/console/pkg/sqlc"
 )
 
-func (d *database) GetTeamMetadata(ctx context.Context, slug slug.Slug) ([]*TeamMetadata, error) {
-	rows, err := d.querier.GetTeamMetadata(ctx, slug)
-	if err != nil {
-		return nil, err
-	}
-
-	metadata := make([]*TeamMetadata, 0, len(rows))
-	for _, row := range rows {
-		var value *string
-		if row.Value.Valid {
-			value = &row.Value.String
-		}
-		metadata = append(metadata, &TeamMetadata{
-			Key:   row.Key,
-			Value: value,
-		})
-	}
-
-	return metadata, nil
-}
-
-func (d *database) SetTeamMetadata(ctx context.Context, slug slug.Slug, metadata []TeamMetadata) error {
-	return d.querier.Transaction(ctx, func(ctx context.Context, querier Querier) error {
-		for _, entry := range metadata {
-			err := querier.SetTeamMetadata(ctx, sqlc.SetTeamMetadataParams{
-				TeamSlug: slug,
-				Key:      entry.Key,
-				Value:    nullString(entry.Value),
-			})
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
-}
-
 func (d *database) RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug) error {
 	return d.querier.RemoveUserFromTeam(ctx, sqlc.RemoveUserFromTeamParams{
 		UserID:         userID,

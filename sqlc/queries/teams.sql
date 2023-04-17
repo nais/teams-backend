@@ -18,17 +18,6 @@ JOIN users ON users.id = user_roles.user_id
 WHERE user_roles.target_team_slug = $1
 ORDER BY users.name ASC;
 
--- name: GetTeamMetadata :many
-SELECT * FROM team_metadata
-WHERE team_slug = $1
-ORDER BY key ASC;
-
--- name: SetTeamMetadata :exec
-INSERT INTO team_metadata (team_slug, key, value)
-VALUES ($1, $2, $3)
-ON CONFLICT (team_slug, key) DO
-    UPDATE SET value = $3;
-
 -- name: UpdateTeam :one
 UPDATE teams
 SET purpose = COALESCE(sqlc.narg(purpose), purpose),

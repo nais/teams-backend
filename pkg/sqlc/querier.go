@@ -51,7 +51,6 @@ type Querier interface {
 	GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)
 	GetTeamDeleteKey(ctx context.Context, key uuid.UUID) (*TeamDeleteKey, error)
 	GetTeamMembers(ctx context.Context, targetTeamSlug *slug.Slug) ([]*User, error)
-	GetTeamMetadata(ctx context.Context, teamSlug slug.Slug) ([]*TeamMetadatum, error)
 	GetTeamReconcilerErrors(ctx context.Context, teamSlug slug.Slug) ([]*ReconcilerError, error)
 	GetTeams(ctx context.Context) ([]*Team, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
@@ -74,7 +73,6 @@ type Querier interface {
 	SetReconcilerStateForTeam(ctx context.Context, arg SetReconcilerStateForTeamParams) error
 	SetSessionExpires(ctx context.Context, arg SetSessionExpiresParams) (*Session, error)
 	SetSlackAlertsChannel(ctx context.Context, arg SetSlackAlertsChannelParams) error
-	SetTeamMetadata(ctx context.Context, arg SetTeamMetadataParams) error
 	UpdateTeam(ctx context.Context, arg UpdateTeamParams) (*Team, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (*User, error)
 }

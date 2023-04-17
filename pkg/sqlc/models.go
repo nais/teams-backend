@@ -840,12 +840,6 @@ type TeamDeleteKey struct {
 	ConfirmedAt sql.NullTime
 }
 
-type TeamMetadatum struct {
-	Key      string
-	Value    sql.NullString
-	TeamSlug slug.Slug
-}
-
 type User struct {
 	ID         uuid.UUID
 	Email      string

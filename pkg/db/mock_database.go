@@ -761,29 +761,6 @@ func (_m *MockDatabase) GetTeamMembers(ctx context.Context, teamSlug slug.Slug) 
 	return r0, r1
 }
 
-// GetTeamMetadata provides a mock function with given fields: ctx, _a1
-func (_m *MockDatabase) GetTeamMetadata(ctx context.Context, _a1 slug.Slug) ([]*TeamMetadata, error) {
-	ret := _m.Called(ctx, _a1)
-
-	var r0 []*TeamMetadata
-	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug) []*TeamMetadata); ok {
-		r0 = rf(ctx, _a1)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*TeamMetadata)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug) error); ok {
-		r1 = rf(ctx, _a1)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // GetTeamReconcilerErrors provides a mock function with given fields: ctx, _a1
 func (_m *MockDatabase) GetTeamReconcilerErrors(ctx context.Context, _a1 slug.Slug) ([]*ReconcilerError, error) {
 	ret := _m.Called(ctx, _a1)
@@ -1196,20 +1173,6 @@ func (_m *MockDatabase) SetTeamMemberRole(ctx context.Context, userID uuid.UUID,
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, slug.Slug, sqlc.RoleName) error); ok {
 		r0 = rf(ctx, userID, teamSlug, role)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// SetTeamMetadata provides a mock function with given fields: ctx, _a1, metadata
-func (_m *MockDatabase) SetTeamMetadata(ctx context.Context, _a1 slug.Slug, metadata []TeamMetadata) error {
-	ret := _m.Called(ctx, _a1, metadata)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug, []TeamMetadata) error); ok {
-		r0 = rf(ctx, _a1, metadata)
 	} else {
 		r0 = ret.Error(0)
 	}

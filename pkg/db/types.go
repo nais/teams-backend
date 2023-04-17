@@ -70,11 +70,6 @@ type Session struct {
 	*sqlc.Session
 }
 
-type TeamMetadata struct {
-	Key   string
-	Value *string
-}
-
 type Team struct {
 	*sqlc.Team
 }
@@ -110,8 +105,6 @@ type Database interface {
 	GetUsers(ctx context.Context) ([]*User, error)
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error)
 	CreateTeam(ctx context.Context, slug slug.Slug, purpose, slackChannel string) (*Team, error)
-	SetTeamMetadata(ctx context.Context, slug slug.Slug, metadata []TeamMetadata) error
-	GetTeamMetadata(ctx context.Context, slug slug.Slug) ([]*TeamMetadata, error)
 	UpdateTeam(ctx context.Context, teamSlug slug.Slug, purpose, slackChannel *string) (*Team, error)
 	GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)
 	GetTeams(ctx context.Context) ([]*Team, error)
