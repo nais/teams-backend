@@ -22,15 +22,12 @@ type dependencytrackReconciler struct {
 
 const Name = sqlc.ReconcilerName("nais:dependencytrack")
 
-func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
-	log = log.WithSystem(string(Name))
+func NewFromConfig(ctx context.Context, cfg *config.Config) (reconcilers.Reconciler, error) {
+	//log = log.WithSystem(string(Name))
 	// TODO: get from config
 	c := NewClient("http://localhost:9001/api/v1", "admin", "yolo")
 	return &dependencytrackReconciler{
-		database:    database,
-		auditLogger: auditLogger,
-		log:         log,
-		client:      c,
+		client: c,
 	}, nil
 }
 
@@ -40,20 +37,18 @@ func (r *dependencytrackReconciler) Name() sqlc.ReconcilerName {
 
 func (r *dependencytrackReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 
-	// TODO: implement update and delete
-	teams, err := r.client.GetTeams(ctx)
-	if err != nil {
-
-	}
-	if ok := TeamExist(teams, input.Team.Slug.String()); ok {
-		//update,sync
-	}
 	return r.createTeamAndUsers(ctx, input)
 }
 
 func (r *dependencytrackReconciler) Delete(ctx context.Context, teamSlug slug.Slug, correlationID uuid.UUID) error {
-	team := teamSlug.String()
-	err := r.client.DeleteTeam(ctx, team)
+	teams, err := r.client.GetTeams(ctx)
+	if err != nil {
+		return err
+	}
+	teamName := teamSlug.String()
+
+	team := GetTeam(teams, teamName)
+	err = r.client.DeleteTeam(ctx, team.Uuid)
 	if err != nil {
 		return err
 	}
@@ -66,17 +61,24 @@ func (r *dependencytrackReconciler) createTeamAndUsers(ctx context.Context, inpu
 	if err != nil {
 		return err
 	}
-	team := input.Team.Slug.String()
+	teamName := input.Team.Slug.String()
 
-	uuid := GetTeamUuid(teams, team)
+	team := GetTeam(teams, teamName)
+	uuid := team.Uuid
+
 	if uuid == "" {
-		team, err := r.client.CreateTeam(ctx, team, []Permission{
+		team, err := r.client.CreateTeam(ctx, teamName, []Permission{
 			ViewPortfolioPermission,
 		})
 		if err != nil {
 			return err
 		}
 		uuid = team.Uuid
+	}
+
+	err = r.deleteUsersNotInConsole(ctx, team, input.TeamMembers)
+	if err != nil {
+		return err
 	}
 
 	for _, user := range input.TeamMembers {
@@ -95,10 +97,26 @@ func (r *dependencytrackReconciler) createTeamAndUsers(ctx context.Context, inpu
 	return nil
 }
 
-func TeamExist(teams []Team, team string) bool {
+func (r *dependencytrackReconciler) deleteUsersNotInConsole(ctx context.Context, team *Team, consoleUsers []*db.User) error {
 
-	if GetTeamUuid(teams, team) == "" {
-		return false
+	usersToRemove := make([]User, 0)
+	for _, u := range team.OidcUsers {
+		found := false
+		for _, cu := range consoleUsers {
+			if u.Username == cu.Email {
+				found = true
+			}
+		}
+		if !found {
+			usersToRemove = append(usersToRemove, u)
+		}
 	}
-	return true
+
+	for _, u := range usersToRemove {
+		err := r.client.DeleteUserMembership(ctx, team.Uuid, u.Username)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -111,13 +111,13 @@ func (c *Client) GetTeams(ctx context.Context) ([]Team, error) {
 	return teams, nil
 }
 
-func GetTeamUuid(teams []Team, name string) string {
+func GetTeam(teams []Team, name string) *Team {
 	for _, t := range teams {
 		if t.Name == name {
-			return t.Uuid
+			return &t
 		}
 	}
-	return ""
+	return nil
 }
 
 func (c *Client) CreateUser(ctx context.Context, email string) error {
@@ -224,11 +224,10 @@ func (c *Client) DeleteUser(ctx context.Context, email string) error {
 	return nil
 }
 
-func (c *Client) DeleteTeam(ctx context.Context, team string) error {
-	teams, err := c.GetTeams(ctx)
-	teamUuid := GetTeamUuid(teams, team)
+func (c *Client) DeleteTeam(ctx context.Context, uuid string) error {
+
 	body, err := json.Marshal(map[string]string{
-		"uuid": teamUuid,
+		"uuid": uuid,
 	})
 	token, err := c.token(ctx)
 	if err != nil {
@@ -245,7 +244,7 @@ func (c *Client) DeleteTeam(ctx context.Context, team string) error {
 			return fmt.Errorf("deleting team: %w", err)
 		}
 		if e.StatusCode == http.StatusNotFound {
-			log.Infof("team %s does not exist", team)
+			log.Infof("team %s does not exist", uuid)
 			return nil
 		}
 		return fmt.Errorf("deleting team: %w", err)
@@ -286,6 +285,41 @@ func (c *Client) sendRequest(ctx context.Context, httpMethod string, url string,
 	}
 	resBody, err := io.ReadAll(resp.Body)
 	return resBody, err
+}
+
+func (c *Client) DeleteUserMembership(ctx context.Context, uuid string, username string) error {
+	token, err := c.token(ctx)
+	if err != nil {
+		log.Errorf("getting Token: %v", err)
+		return err
+	}
+
+	body, err := json.Marshal(map[string]string{
+		"uuid": uuid,
+	})
+	if err != nil {
+		log.Errorf("marshalling body: %v", err)
+		return err
+	}
+
+	_, err = c.sendRequest(ctx, http.MethodDelete, c.baseUrl+"/user/"+username+"/membership", map[string][]string{
+		"Content-Type":  {"application/json"},
+		"Accept":        {"application/json"},
+		"Authorization": {"Bearer " + token},
+	}, body)
+	if err != nil {
+		e, ok := err.(*RequestError)
+		if !ok {
+			return fmt.Errorf("deleting user membership: %w", err)
+		}
+		if e.StatusCode == http.StatusNotFound {
+			log.Infof("user %s does not exist", username)
+			return nil
+		}
+		return fmt.Errorf("deleting user membership: %w", err)
+
+	}
+	return nil
 }
 
 func fail(status int, err error) *RequestError {

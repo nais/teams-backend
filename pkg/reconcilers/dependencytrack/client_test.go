@@ -11,13 +11,14 @@ import (
 func TestClient_All(t *testing.T) {
 	c := NewClient("http://localhost:9001/api/v1", "admin", "yolo")
 
-	team := "yolo"
+	teamName := "yolo"
 	teams, err := c.GetTeams(context.TODO())
 	assert.NoError(t, err)
 
-	uuid := GetTeamUuid(teams, team)
+	team := GetTeam(teams, teamName)
+	uuid := team.Uuid
 	if uuid == "" {
-		team, err := c.CreateTeam(context.TODO(), team, []Permission{
+		team, err := c.CreateTeam(context.TODO(), teamName, []Permission{
 			ViewPortfolioPermission,
 		})
 		assert.NoError(t, err)
@@ -29,7 +30,7 @@ func TestClient_All(t *testing.T) {
 
 	err = c.AddToTeam(context.TODO(), "user@dev-nais.io", uuid)
 	assert.NoError(t, err)
-	fmt.Printf("team uuid: %s\n", uuid)
+	fmt.Printf("teamName uuid: %s\n", uuid)
 }
 
 func TestClient_GetTeams(t *testing.T) {
