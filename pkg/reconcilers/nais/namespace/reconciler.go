@@ -1,10 +1,12 @@
 package nais_namespace_reconciler
 
 import (
-	"cloud.google.com/go/pubsub"
 	"context"
 	"encoding/json"
 	"fmt"
+
+	"cloud.google.com/go/pubsub"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"

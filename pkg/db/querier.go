@@ -48,5 +48,5 @@ func (q *Queries) commit(ctx context.Context) error {
 }
 
 func (q *Queries) rollback(ctx context.Context) error {
-	return q.tx.Commit(ctx)
+	return q.tx.Rollback(ctx)
 }

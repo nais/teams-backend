@@ -128,6 +128,14 @@ func (r *mutationResolver) DisableReconciler(ctx context.Context, name sqlc.Reco
 	return reconciler, nil
 }
 
+func getKeys(values map[sqlc.ReconcilerConfigKey]struct{}) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, string(key))
+	}
+	return keys
+}
+
 // ConfigureReconciler is the resolver for the configureReconciler field.
 func (r *mutationResolver) ConfigureReconciler(ctx context.Context, name sqlc.ReconcilerName, config []*model.ReconcilerConfigInput) (*db.Reconciler, error) {
 	if !name.Valid() {
@@ -139,7 +147,35 @@ func (r *mutationResolver) ConfigureReconciler(ctx context.Context, name sqlc.Re
 		reconcilerConfig[entry.Key] = entry.Value
 	}
 
-	reconciler, err := r.database.ConfigureReconciler(ctx, name, reconcilerConfig)
+	err := r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
+		rows, err := dbtx.GetReconcilerConfig(ctx, name)
+		if err != nil {
+			return err
+		}
+
+		validOptions := make(map[sqlc.ReconcilerConfigKey]struct{})
+		for _, row := range rows {
+			validOptions[row.Key] = struct{}{}
+		}
+
+		for key, value := range reconcilerConfig {
+			if _, exists := validOptions[key]; !exists {
+				return fmt.Errorf("unknown configuration option %q for reconciler %q. Valid options: %s", key, name, strings.Join(getKeys(validOptions), ", "))
+			}
+
+			err = dbtx.ConfigureReconciler(ctx, name, key, value)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	reconciler, err := r.database.GetReconciler(ctx, name)
 	if err != nil {
 		return nil, err
 	}

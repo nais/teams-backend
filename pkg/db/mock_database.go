@@ -74,27 +74,18 @@ func (_m *MockDatabase) ClearReconcilerErrorsForTeam(ctx context.Context, _a1 sl
 	return r0
 }
 
-// ConfigureReconciler provides a mock function with given fields: ctx, reconcilerName, config
-func (_m *MockDatabase) ConfigureReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName, config map[sqlc.ReconcilerConfigKey]string) (*Reconciler, error) {
-	ret := _m.Called(ctx, reconcilerName, config)
+// ConfigureReconciler provides a mock function with given fields: ctx, reconcilerName, key, value
+func (_m *MockDatabase) ConfigureReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName, key sqlc.ReconcilerConfigKey, value string) error {
+	ret := _m.Called(ctx, reconcilerName, key, value)
 
-	var r0 *Reconciler
-	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName, map[sqlc.ReconcilerConfigKey]string) *Reconciler); ok {
-		r0 = rf(ctx, reconcilerName, config)
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName, sqlc.ReconcilerConfigKey, string) error); ok {
+		r0 = rf(ctx, reconcilerName, key, value)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*Reconciler)
-		}
+		r0 = ret.Error(0)
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, sqlc.ReconcilerName, map[sqlc.ReconcilerConfigKey]string) error); ok {
-		r1 = rf(ctx, reconcilerName, config)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+	return r0
 }
 
 // ConfirmTeamDeleteKey provides a mock function with given fields: ctx, key

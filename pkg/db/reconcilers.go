@@ -2,8 +2,6 @@ package db
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
 	"github.com/nais/console/pkg/sqlc"
 )
@@ -35,45 +33,12 @@ func (d *database) GetEnabledReconcilers(ctx context.Context) ([]*Reconciler, er
 	return wrapReconcilers(rows), nil
 }
 
-func (d *database) ConfigureReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName, config map[sqlc.ReconcilerConfigKey]string) (*Reconciler, error) {
-	reconciler, err := d.querier.GetReconciler(ctx, reconcilerName)
-	if err != nil {
-		return nil, err
-	}
-
-	err = d.querier.Transaction(ctx, func(ctx context.Context, querier Querier) error {
-		rows, err := querier.GetReconcilerConfig(ctx, reconcilerName)
-		if err != nil {
-			return err
-		}
-
-		validOptions := make(map[sqlc.ReconcilerConfigKey]struct{})
-		for _, row := range rows {
-			validOptions[row.Key] = struct{}{}
-		}
-
-		for key, value := range config {
-			if _, exists := validOptions[key]; !exists {
-				return fmt.Errorf("unknown configuration option %q for reconciler %q. Valid options: %s", key, reconcilerName, strings.Join(getKeys(validOptions), ", "))
-			}
-
-			err := querier.ConfigureReconciler(ctx, sqlc.ConfigureReconcilerParams{
-				Reconciler: reconcilerName,
-				Key:        key,
-				Value:      value,
-			})
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
+func (d *database) ConfigureReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName, key sqlc.ReconcilerConfigKey, value string) error {
+	return d.querier.ConfigureReconciler(ctx, sqlc.ConfigureReconcilerParams{
+		Reconciler: reconcilerName,
+		Key:        key,
+		Value:      value,
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &Reconciler{Reconciler: reconciler}, nil
 }
 
 func (d *database) GetReconcilerConfig(ctx context.Context, reconcilerName sqlc.ReconcilerName) ([]*ReconcilerConfig, error) {

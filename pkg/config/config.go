@@ -171,7 +171,6 @@ func New() (*Config, error) {
 		for _, mapping := range cfg.LegacyNaisNamespaces {
 			environments = append(environments, mapping.Legacy)
 		}
-
 	} else {
 		for environment := range cfg.GCP.Clusters {
 			environments = append(environments, environment)
