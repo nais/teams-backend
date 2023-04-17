@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
@@ -86,7 +85,6 @@ type Querier interface {
 type Queries struct {
 	*sqlc.Queries
 	connPool *pgxpool.Pool
-	tx       pgx.Tx
 }
 
 type database struct {
