@@ -62,25 +62,10 @@ func (d *database) UserIsTeamOwner(ctx context.Context, userID uuid.UUID, teamSl
 }
 
 func (d *database) SetTeamMemberRole(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug, role sqlc.RoleName) error {
-	return d.querier.Transaction(ctx, func(ctx context.Context, querier Querier) error {
-		err := querier.RemoveUserFromTeam(ctx, sqlc.RemoveUserFromTeamParams{
-			UserID:         userID,
-			TargetTeamSlug: &teamSlug,
-		})
-		if err != nil {
-			return err
-		}
-
-		err = querier.AssignTeamRoleToUser(ctx, sqlc.AssignTeamRoleToUserParams{
-			UserID:         userID,
-			TargetTeamSlug: &teamSlug,
-			RoleName:       role,
-		})
-		if err != nil {
-			return err
-		}
-
-		return nil
+	return d.querier.AssignTeamRoleToUser(ctx, sqlc.AssignTeamRoleToUserParams{
+		UserID:         userID,
+		TargetTeamSlug: &teamSlug,
+		RoleName:       role,
 	})
 }
 

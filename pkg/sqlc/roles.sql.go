@@ -60,7 +60,7 @@ func (q *Queries) AssignTeamRoleToServiceAccount(ctx context.Context, arg Assign
 
 const assignTeamRoleToUser = `-- name: AssignTeamRoleToUser :exec
 INSERT INTO user_roles (user_id, role_name, target_team_slug)
-VALUES ($1, $2, $3) ON CONFLICT DO NOTHING
+VALUES ($1, $2, $3) ON CONFLICT (user_id, target_team_slug) DO UPDATE SET role_name = $2
 `
 
 type AssignTeamRoleToUserParams struct {
