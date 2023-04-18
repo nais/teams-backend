@@ -22,12 +22,15 @@ type dependencytrackReconciler struct {
 
 const Name = sqlc.ReconcilerName("nais:dependencytrack")
 
+func New(ctx context.Context, client Client) (reconcilers.Reconciler, error) {
+	return &dependencytrackReconciler{
+		client: client,
+	}, nil
+}
 func NewFromConfig(ctx context.Context, cfg *config.Config) (reconcilers.Reconciler, error) {
 	//log = log.WithSystem(string(Name))
 	c := NewClient(cfg.DependencyTrack.Endpoint, cfg.DependencyTrack.Username, cfg.DependencyTrack.Password)
-	return &dependencytrackReconciler{
-		client: c,
-	}, nil
+	return New(ctx, c)
 }
 
 func (r *dependencytrackReconciler) Name() sqlc.ReconcilerName {
@@ -63,16 +66,13 @@ func (r *dependencytrackReconciler) createTeamAndUsers(ctx context.Context, inpu
 	teamName := input.Team.Slug.String()
 
 	team := GetTeam(teams, teamName)
-	uuid := team.Uuid
-
-	if uuid == "" {
-		team, err := r.client.CreateTeam(ctx, teamName, []Permission{
+	if team == nil {
+		team, err = r.client.CreateTeam(ctx, teamName, []Permission{
 			ViewPortfolioPermission,
 		})
 		if err != nil {
 			return err
 		}
-		uuid = team.Uuid
 	}
 
 	err = r.deleteUsersNotInConsole(ctx, team, input.TeamMembers)
@@ -86,7 +86,7 @@ func (r *dependencytrackReconciler) createTeamAndUsers(ctx context.Context, inpu
 			return err
 		}
 
-		err = r.client.AddToTeam(ctx, user.Email, uuid)
+		err = r.client.AddToTeam(ctx, user.Email, team.Uuid)
 		if err != nil {
 			return err
 		}

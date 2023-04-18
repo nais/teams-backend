@@ -1,28 +1,16 @@
 package dependencytrack
 
-import (
-	"context"
-	"github.com/google/uuid"
-)
-
+/*
 type mock struct {
-	teams       []*Team
-	Members     map[string][]string
-	Permissions map[string][]*Permission
+	teams       map[string]*Team
+	permissions map[string][]*Permission
 	users       []*User
-}
-
-type mockTeam struct {
-	*Team
-	Members     []*User
-	Permissions []*Permission
 }
 
 func newMock() *mock {
 	return &mock{
-		teams:       make([]*Team, 0),
-		Members:     make(map[string][]string),
-		Permissions: map[string][]*Permission{},
+		teams:       make(map[string]*Team),
+		permissions: make(map[string][]*Permission),
 		users:       make([]*User, 0),
 	}
 }
@@ -36,8 +24,8 @@ func (m *mock) CreateTeam(ctx context.Context, teamName string, permissions []Pe
 		Name: teamName,
 		Uuid: uuid.New().String(),
 	}
-	m.teams = append(m.teams, team)
-	m.Permissions[teamName] = per
+	m.teams[team.Uuid] = team
+	m.permissions[teamName] = per
 	return team, nil
 }
 
@@ -60,25 +48,74 @@ func (m *mock) CreateUser(ctx context.Context, email string) error {
 }
 
 func (m *mock) AddToTeam(ctx context.Context, username string, uuid string) error {
-	m.Members[uuid] = append(m.Members[uuid], username)
+	var user *User
+	for _, u := range m.users {
+		if u.Username == username {
+			user = u
+		}
+	}
+	m.teams[uuid].OidcUsers = append(m.teams[uuid].OidcUsers, *user)
 	return nil
 }
 
-func (m *mock) DeleteTeam(ctx context.Context, uuid string) error {
+func (m *mock) DeleteTeam(_ context.Context, uuid string) error {
+	m.teams[uuid] = nil
+	return nil
+}
+
+func (m *mock) DeleteUserMembership(_ context.Context, uuid string, username string) error {
+	users := m.teams[uuid].OidcUsers
+	for i, u := range users {
+		if u.Username == username {
+			users = append(users[:i], users[i+1:]...)
+		}
+	}
+	return nil
+}
+
+func (m *mock) reset() {
+	m.teams = make(map[string]*Team, 0)
+	m.permissions = map[string][]*Permission{}
+	m.users = make([]*User, 0)
+}
+
+func (m *mock) membersInTeam(teamName string) []string {
+	users := make([]string, 0)
+	for _, t := range m.teams {
+		if t.Name == teamName {
+			for _, u := range t.OidcUsers {
+				users = append(users, u.Username)
+			}
+		}
+	}
+	return users
+}
+
+func (m *mock) usernames() []string {
+	users := make([]string, 0)
+	for _, u := range m.users {
+		users = append(users, u.Username)
+	}
+	return users
+}
+
+func (m *mock) teamExist(uuid string) bool {
 	for _, t := range m.teams {
 		if t.Uuid == uuid {
-			m.teams = append(m.teams[:0], m.teams[1:]...)
+			return true
 		}
 	}
-	return nil
+	return false
 }
 
-func (m *mock) DeleteUserMembership(ctx context.Context, uuid string, username string) error {
-	// TODO: check that it really works
-	for _, t := range m.Members[uuid] {
-		if t == username {
-			m.Members[uuid] = append(m.Members[uuid][:0], m.Members[uuid][1:]...)
+func (m *mock) hasPermissions(team string, permissions ...Permission) bool {
+	for _, p := range m.permissions[team] {
+		for _, p2 := range permissions {
+			if *p != p2 {
+				return false
+			}
 		}
 	}
-	return nil
+	return true
 }
+*/
