@@ -2,6 +2,9 @@
 SELECT * FROM user_roles
 WHERE user_id = $1;
 
+-- name: GetAllUserRoles :many
+SELECT * FROM user_roles;
+
 -- name: AssignGlobalRoleToUser :exec
 INSERT INTO user_roles (user_id, role_name)
 VALUES ($1, $2) ON CONFLICT DO NOTHING;

@@ -34,6 +34,7 @@ type Querier interface {
 	DisableReconciler(ctx context.Context, name ReconcilerName) (*Reconciler, error)
 	EnableReconciler(ctx context.Context, name ReconcilerName) (*Reconciler, error)
 	FirstRunComplete(ctx context.Context) error
+	GetAllUserRoles(ctx context.Context) ([]*UserRole, error)
 	GetAuditLogsForReconciler(ctx context.Context, targetIdentifier string) ([]*AuditLog, error)
 	GetAuditLogsForTeam(ctx context.Context, targetIdentifier string) ([]*AuditLog, error)
 	GetEnabledReconcilers(ctx context.Context) ([]*Reconciler, error)

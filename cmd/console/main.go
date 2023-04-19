@@ -28,6 +28,7 @@ import (
 	"github.com/nais/console/pkg/fixtures"
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/graph/apierror"
+	"github.com/nais/console/pkg/graph/dataloader"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/middleware"
@@ -279,10 +280,12 @@ func setupHTTPServer(cfg *config.Config, database db.Database, graphApi *graphql
 
 	r.Get("/", playground.Handler("GraphQL playground", "/query"))
 
+	dataLoaders := dataloader.NewLoaders(database)
 	middlewares := []func(http.Handler) http.Handler{
 		cors.New(corsConfig(cfg.FrontendURL)).Handler,
 		middleware.ApiKeyAuthentication(database),
 		middleware.Oauth2Authentication(database, authHandler),
+		dataloader.Middleware(dataLoaders),
 	}
 
 	r.Route("/query", func(r chi.Router) {

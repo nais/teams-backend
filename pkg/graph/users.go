@@ -13,6 +13,7 @@ import (
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/graph/dataloader"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/sqlc"
@@ -66,7 +67,7 @@ func (r *queryResolver) User(ctx context.Context, id *uuid.UUID) (*db.User, erro
 		return nil, err
 	}
 
-	return r.database.GetUserByID(ctx, *id)
+	return dataloader.GetUser(ctx, id)
 }
 
 // UserByEmail is the resolver for the userByEmail field.
@@ -88,30 +89,39 @@ func (r *userResolver) Teams(ctx context.Context, obj *db.User) ([]*model.TeamMe
 		return nil, err
 	}
 
-	teams, err := r.database.GetUserTeams(ctx, obj.ID)
+	userRoles, err := dataloader.GetUserRoles(ctx, obj.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	userTeams := make([]*model.TeamMembership, 0, len(teams))
-	for _, team := range teams {
-		isOwner, err := r.database.UserIsTeamOwner(ctx, obj.ID, team.Slug)
+	teams := make([]*model.TeamMembership, 0)
+	for _, role := range userRoles {
+		if role.TargetTeamSlug == nil {
+			continue
+		}
+
+		var teamRole model.TeamRole
+		switch role.RoleName {
+		case sqlc.RoleNameTeammember:
+			teamRole = model.TeamRoleMember
+		case sqlc.RoleNameTeamowner:
+			teamRole = model.TeamRoleOwner
+		default:
+			continue
+		}
+
+		team, err := dataloader.GetTeam(ctx, role.TargetTeamSlug)
 		if err != nil {
 			return nil, err
 		}
-
-		role := model.TeamRoleMember
-		if isOwner {
-			role = model.TeamRoleOwner
-		}
-
-		userTeams = append(userTeams, &model.TeamMembership{
+		teams = append(teams, &model.TeamMembership{
 			Team: team,
-			Role: role,
+			Role: teamRole,
 		})
+
 	}
 
-	return userTeams, nil
+	return teams, nil
 }
 
 // Roles is the resolver for the roles field.
@@ -122,7 +132,32 @@ func (r *userResolver) Roles(ctx context.Context, obj *db.User) ([]*db.Role, err
 		return nil, err
 	}
 
-	return r.database.GetUserRoles(ctx, obj.ID)
+	userRoles, err := dataloader.GetUserRoles(ctx, obj.ID)
+	if err != nil {
+		return nil, err
+	}
+	ret := make([]*db.Role, 0)
+	for _, ur := range userRoles {
+		authz, err := roles.Authorizations(ur.RoleName)
+		if err != nil {
+			return nil, err
+		}
+
+		var tsa *uuid.UUID
+		ntsa := ur.TargetServiceAccountID
+		if ntsa.Valid {
+			tsa = &ntsa.UUID
+		}
+
+		ret = append(ret, &db.Role{
+			Authorizations:         authz,
+			RoleName:               ur.RoleName,
+			TargetServiceAccountID: tsa,
+			TargetTeamSlug:         ur.TargetTeamSlug,
+		})
+	}
+
+	return ret, nil
 }
 
 // User returns generated.UserResolver implementation.

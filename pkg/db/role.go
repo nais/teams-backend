@@ -87,6 +87,20 @@ func (d *database) GetUsersWithGloballyAssignedRole(ctx context.Context, roleNam
 	return wrapUsers(users), nil
 }
 
+func (d *database) GetAllUserRoles(ctx context.Context) ([]*UserRole, error) {
+	userRoles, err := d.querier.GetAllUserRoles(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	roles := make([]*UserRole, 0, len(userRoles))
+	for _, userRole := range userRoles {
+		roles = append(roles, &UserRole{userRole})
+	}
+
+	return roles, nil
+}
+
 func (d *database) roleFromRoleBinding(_ context.Context, roleName sqlc.RoleName, targetServiceAccountID uuid.NullUUID, targetTeamSlug *slug.Slug) (*Role, error) {
 	authorizations, err := roles.Authorizations(roleName)
 	if err != nil {

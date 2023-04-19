@@ -74,6 +74,36 @@ func (q *Queries) AssignTeamRoleToUser(ctx context.Context, arg AssignTeamRoleTo
 	return err
 }
 
+const getAllUserRoles = `-- name: GetAllUserRoles :many
+SELECT id, role_name, user_id, target_team_slug, target_service_account_id FROM user_roles
+`
+
+func (q *Queries) GetAllUserRoles(ctx context.Context) ([]*UserRole, error) {
+	rows, err := q.db.Query(ctx, getAllUserRoles)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*UserRole
+	for rows.Next() {
+		var i UserRole
+		if err := rows.Scan(
+			&i.ID,
+			&i.RoleName,
+			&i.UserID,
+			&i.TargetTeamSlug,
+			&i.TargetServiceAccountID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUserRoles = `-- name: GetUserRoles :many
 SELECT id, role_name, user_id, target_team_slug, target_service_account_id FROM user_roles
 WHERE user_id = $1
