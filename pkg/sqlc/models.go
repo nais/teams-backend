@@ -17,8 +17,41 @@ import (
 type AuditAction string
 
 const (
+	AuditActionAzureGroupAddMember                       AuditAction = "azure:group:add-member"
+	AuditActionAzureGroupAddMembers                      AuditAction = "azure:group:add-members"
+	AuditActionAzureGroupCreate                          AuditAction = "azure:group:create"
+	AuditActionAzureGroupDelete                          AuditAction = "azure:group:delete"
+	AuditActionAzureGroupDeleteMember                    AuditAction = "azure:group:delete-member"
+	AuditActionDependencytrackGroupCreate                AuditAction = "dependencytrack:group:create"
+	AuditActionGithubTeamAddMember                       AuditAction = "github:team:add-member"
+	AuditActionGithubTeamAddMembers                      AuditAction = "github:team:add-members"
+	AuditActionGithubTeamCreate                          AuditAction = "github:team:create"
+	AuditActionGithubTeamDelete                          AuditAction = "github:team:delete"
+	AuditActionGithubTeamDeleteMember                    AuditAction = "github:team:delete-member"
+	AuditActionGithubTeamMapSsoUser                      AuditAction = "github:team:map-sso-user"
+	AuditActionGoogleGarDelete                           AuditAction = "google:gar:delete"
+	AuditActionGoogleGcpDeleteProject                    AuditAction = "google:gcp:delete-project"
+	AuditActionGoogleGcpProjectAssignPermissions         AuditAction = "google:gcp:project:assign-permissions"
+	AuditActionGoogleGcpProjectCreateCnrmServiceAccount  AuditAction = "google:gcp:project:create-cnrm-service-account"
+	AuditActionGoogleGcpProjectCreateProject             AuditAction = "google:gcp:project:create-project"
+	AuditActionGoogleGcpProjectDeleteCnrmServiceAccount  AuditAction = "google:gcp:project:delete-cnrm-service-account"
+	AuditActionGoogleGcpProjectEnableGoogleApis          AuditAction = "google:gcp:project:enable-google-apis"
+	AuditActionGoogleGcpProjectSetBillingInfo            AuditAction = "google:gcp:project:set-billing-info"
+	AuditActionGoogleWorkspaceAdminAddMember             AuditAction = "google:workspace-admin:add-member"
+	AuditActionGoogleWorkspaceAdminAddMembers            AuditAction = "google:workspace-admin:add-members"
+	AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup AuditAction = "google:workspace-admin:add-to-gke-security-group"
+	AuditActionGoogleWorkspaceAdminCreate                AuditAction = "google:workspace-admin:create"
+	AuditActionGoogleWorkspaceAdminDelete                AuditAction = "google:workspace-admin:delete"
+	AuditActionGoogleWorkspaceAdminDeleteMember          AuditAction = "google:workspace-admin:delete-member"
 	AuditActionGraphqlApiApiKeyCreate                    AuditAction = "graphql-api:api-key:create"
 	AuditActionGraphqlApiApiKeyDelete                    AuditAction = "graphql-api:api-key:delete"
+	AuditActionGraphqlApiReconcilersConfigure            AuditAction = "graphql-api:reconcilers:configure"
+	AuditActionGraphqlApiReconcilersDisable              AuditAction = "graphql-api:reconcilers:disable"
+	AuditActionGraphqlApiReconcilersEnable               AuditAction = "graphql-api:reconcilers:enable"
+	AuditActionGraphqlApiReconcilersReset                AuditAction = "graphql-api:reconcilers:reset"
+	AuditActionGraphqlApiReconcilersUpdateTeamState      AuditAction = "graphql-api:reconcilers:update-team-state"
+	AuditActionGraphqlApiRolesAssignGlobalRole           AuditAction = "graphql-api:roles:assign-global-role"
+	AuditActionGraphqlApiRolesRevokeGlobalRole           AuditAction = "graphql-api:roles:revoke-global-role"
 	AuditActionGraphqlApiServiceAccountCreate            AuditAction = "graphql-api:service-account:create"
 	AuditActionGraphqlApiServiceAccountDelete            AuditAction = "graphql-api:service-account:delete"
 	AuditActionGraphqlApiServiceAccountUpdate            AuditAction = "graphql-api:service-account:update"
@@ -31,57 +64,24 @@ const (
 	AuditActionGraphqlApiTeamSetMemberRole               AuditAction = "graphql-api:team:set-member-role"
 	AuditActionGraphqlApiTeamSync                        AuditAction = "graphql-api:team:sync"
 	AuditActionGraphqlApiTeamUpdate                      AuditAction = "graphql-api:team:update"
-	AuditActionGraphqlApiRolesAssignGlobalRole           AuditAction = "graphql-api:roles:assign-global-role"
-	AuditActionGraphqlApiRolesRevokeGlobalRole           AuditAction = "graphql-api:roles:revoke-global-role"
-	AuditActionGraphqlApiReconcilersConfigure            AuditAction = "graphql-api:reconcilers:configure"
-	AuditActionGraphqlApiReconcilersDisable              AuditAction = "graphql-api:reconcilers:disable"
-	AuditActionGraphqlApiReconcilersEnable               AuditAction = "graphql-api:reconcilers:enable"
-	AuditActionGraphqlApiReconcilersReset                AuditAction = "graphql-api:reconcilers:reset"
-	AuditActionUsersyncPrepare                           AuditAction = "usersync:prepare"
-	AuditActionUsersyncListRemote                        AuditAction = "usersync:list:remote"
-	AuditActionUsersyncListLocal                         AuditAction = "usersync:list:local"
-	AuditActionUsersyncCreate                            AuditAction = "usersync:create"
-	AuditActionUsersyncUpdate                            AuditAction = "usersync:update"
-	AuditActionUsersyncDelete                            AuditAction = "usersync:delete"
-	AuditActionAzureGroupCreate                          AuditAction = "azure:group:create"
-	AuditActionAzureGroupAddMember                       AuditAction = "azure:group:add-member"
-	AuditActionAzureGroupAddMembers                      AuditAction = "azure:group:add-members"
-	AuditActionAzureGroupDeleteMember                    AuditAction = "azure:group:delete-member"
-	AuditActionGithubTeamCreate                          AuditAction = "github:team:create"
-	AuditActionGithubTeamAddMembers                      AuditAction = "github:team:add-members"
-	AuditActionGithubTeamAddMember                       AuditAction = "github:team:add-member"
-	AuditActionGithubTeamDeleteMember                    AuditAction = "github:team:delete-member"
-	AuditActionGithubTeamMapSsoUser                      AuditAction = "github:team:map-sso-user"
-	AuditActionGoogleWorkspaceAdminCreate                AuditAction = "google:workspace-admin:create"
-	AuditActionGoogleWorkspaceAdminAddMember             AuditAction = "google:workspace-admin:add-member"
-	AuditActionGoogleWorkspaceAdminAddMembers            AuditAction = "google:workspace-admin:add-members"
-	AuditActionGoogleWorkspaceAdminDeleteMember          AuditAction = "google:workspace-admin:delete-member"
-	AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup AuditAction = "google:workspace-admin:add-to-gke-security-group"
-	AuditActionGoogleGcpProjectCreateProject             AuditAction = "google:gcp:project:create-project"
-	AuditActionGoogleGcpProjectAssignPermissions         AuditAction = "google:gcp:project:assign-permissions"
-	AuditActionGoogleGcpProjectSetBillingInfo            AuditAction = "google:gcp:project:set-billing-info"
-	AuditActionGoogleGcpProjectCreateCnrmServiceAccount  AuditAction = "google:gcp:project:create-cnrm-service-account"
-	AuditActionNaisNamespaceCreateNamespace              AuditAction = "nais:namespace:create-namespace"
-	AuditActionLegacyImporterTeamCreate                  AuditAction = "legacy-importer:team:create"
+	AuditActionGraphqlApiTeamsDelete                     AuditAction = "graphql-api:teams:delete"
+	AuditActionGraphqlApiTeamsRequestDelete              AuditAction = "graphql-api:teams:request-delete"
+	AuditActionGraphqlApiUsersSync                       AuditAction = "graphql-api:users:sync"
 	AuditActionLegacyImporterTeamAddMember               AuditAction = "legacy-importer:team:add-member"
 	AuditActionLegacyImporterTeamAddOwner                AuditAction = "legacy-importer:team:add-owner"
+	AuditActionLegacyImporterTeamCreate                  AuditAction = "legacy-importer:team:create"
 	AuditActionLegacyImporterUserCreate                  AuditAction = "legacy-importer:user:create"
-	AuditActionUsersyncAssignAdminRole                   AuditAction = "usersync:assign-admin-role"
-	AuditActionUsersyncRevokeAdminRole                   AuditAction = "usersync:revoke-admin-role"
-	AuditActionGraphqlApiReconcilersUpdateTeamState      AuditAction = "graphql-api:reconcilers:update-team-state"
 	AuditActionNaisDeployProvisionDeployKey              AuditAction = "nais:deploy:provision-deploy-key"
-	AuditActionGoogleGcpProjectDeleteCnrmServiceAccount  AuditAction = "google:gcp:project:delete-cnrm-service-account"
-	AuditActionGoogleGcpProjectEnableGoogleApis          AuditAction = "google:gcp:project:enable-google-apis"
-	AuditActionGraphqlApiUsersSync                       AuditAction = "graphql-api:users:sync"
-	AuditActionGraphqlApiTeamsRequestDelete              AuditAction = "graphql-api:teams:request-delete"
-	AuditActionGraphqlApiTeamsDelete                     AuditAction = "graphql-api:teams:delete"
-	AuditActionAzureGroupDelete                          AuditAction = "azure:group:delete"
-	AuditActionGithubTeamDelete                          AuditAction = "github:team:delete"
-	AuditActionGoogleWorkspaceAdminDelete                AuditAction = "google:workspace-admin:delete"
-	AuditActionGoogleGarDelete                           AuditAction = "google:gar:delete"
-	AuditActionGoogleGcpDeleteProject                    AuditAction = "google:gcp:delete-project"
+	AuditActionNaisNamespaceCreateNamespace              AuditAction = "nais:namespace:create-namespace"
 	AuditActionNaisNamespaceDeleteNamespace              AuditAction = "nais:namespace:delete-namespace"
-	AuditActionDependencytrackGroupCreate                AuditAction = "dependencytrack:group:create"
+	AuditActionUsersyncAssignAdminRole                   AuditAction = "usersync:assign-admin-role"
+	AuditActionUsersyncCreate                            AuditAction = "usersync:create"
+	AuditActionUsersyncDelete                            AuditAction = "usersync:delete"
+	AuditActionUsersyncListLocal                         AuditAction = "usersync:list:local"
+	AuditActionUsersyncListRemote                        AuditAction = "usersync:list:remote"
+	AuditActionUsersyncPrepare                           AuditAction = "usersync:prepare"
+	AuditActionUsersyncRevokeAdminRole                   AuditAction = "usersync:revoke-admin-role"
+	AuditActionUsersyncUpdate                            AuditAction = "usersync:update"
 )
 
 func (e *AuditAction) Scan(src interface{}) error {
@@ -121,8 +121,41 @@ func (ns NullAuditAction) Value() (driver.Value, error) {
 
 func (e AuditAction) Valid() bool {
 	switch e {
-	case AuditActionGraphqlApiApiKeyCreate,
+	case AuditActionAzureGroupAddMember,
+		AuditActionAzureGroupAddMembers,
+		AuditActionAzureGroupCreate,
+		AuditActionAzureGroupDelete,
+		AuditActionAzureGroupDeleteMember,
+		AuditActionDependencytrackGroupCreate,
+		AuditActionGithubTeamAddMember,
+		AuditActionGithubTeamAddMembers,
+		AuditActionGithubTeamCreate,
+		AuditActionGithubTeamDelete,
+		AuditActionGithubTeamDeleteMember,
+		AuditActionGithubTeamMapSsoUser,
+		AuditActionGoogleGarDelete,
+		AuditActionGoogleGcpDeleteProject,
+		AuditActionGoogleGcpProjectAssignPermissions,
+		AuditActionGoogleGcpProjectCreateCnrmServiceAccount,
+		AuditActionGoogleGcpProjectCreateProject,
+		AuditActionGoogleGcpProjectDeleteCnrmServiceAccount,
+		AuditActionGoogleGcpProjectEnableGoogleApis,
+		AuditActionGoogleGcpProjectSetBillingInfo,
+		AuditActionGoogleWorkspaceAdminAddMember,
+		AuditActionGoogleWorkspaceAdminAddMembers,
+		AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup,
+		AuditActionGoogleWorkspaceAdminCreate,
+		AuditActionGoogleWorkspaceAdminDelete,
+		AuditActionGoogleWorkspaceAdminDeleteMember,
+		AuditActionGraphqlApiApiKeyCreate,
 		AuditActionGraphqlApiApiKeyDelete,
+		AuditActionGraphqlApiReconcilersConfigure,
+		AuditActionGraphqlApiReconcilersDisable,
+		AuditActionGraphqlApiReconcilersEnable,
+		AuditActionGraphqlApiReconcilersReset,
+		AuditActionGraphqlApiReconcilersUpdateTeamState,
+		AuditActionGraphqlApiRolesAssignGlobalRole,
+		AuditActionGraphqlApiRolesRevokeGlobalRole,
 		AuditActionGraphqlApiServiceAccountCreate,
 		AuditActionGraphqlApiServiceAccountDelete,
 		AuditActionGraphqlApiServiceAccountUpdate,
@@ -135,57 +168,24 @@ func (e AuditAction) Valid() bool {
 		AuditActionGraphqlApiTeamSetMemberRole,
 		AuditActionGraphqlApiTeamSync,
 		AuditActionGraphqlApiTeamUpdate,
-		AuditActionGraphqlApiRolesAssignGlobalRole,
-		AuditActionGraphqlApiRolesRevokeGlobalRole,
-		AuditActionGraphqlApiReconcilersConfigure,
-		AuditActionGraphqlApiReconcilersDisable,
-		AuditActionGraphqlApiReconcilersEnable,
-		AuditActionGraphqlApiReconcilersReset,
-		AuditActionUsersyncPrepare,
-		AuditActionUsersyncListRemote,
-		AuditActionUsersyncListLocal,
-		AuditActionUsersyncCreate,
-		AuditActionUsersyncUpdate,
-		AuditActionUsersyncDelete,
-		AuditActionAzureGroupCreate,
-		AuditActionAzureGroupAddMember,
-		AuditActionAzureGroupAddMembers,
-		AuditActionAzureGroupDeleteMember,
-		AuditActionGithubTeamCreate,
-		AuditActionGithubTeamAddMembers,
-		AuditActionGithubTeamAddMember,
-		AuditActionGithubTeamDeleteMember,
-		AuditActionGithubTeamMapSsoUser,
-		AuditActionGoogleWorkspaceAdminCreate,
-		AuditActionGoogleWorkspaceAdminAddMember,
-		AuditActionGoogleWorkspaceAdminAddMembers,
-		AuditActionGoogleWorkspaceAdminDeleteMember,
-		AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup,
-		AuditActionGoogleGcpProjectCreateProject,
-		AuditActionGoogleGcpProjectAssignPermissions,
-		AuditActionGoogleGcpProjectSetBillingInfo,
-		AuditActionGoogleGcpProjectCreateCnrmServiceAccount,
-		AuditActionNaisNamespaceCreateNamespace,
-		AuditActionLegacyImporterTeamCreate,
+		AuditActionGraphqlApiTeamsDelete,
+		AuditActionGraphqlApiTeamsRequestDelete,
+		AuditActionGraphqlApiUsersSync,
 		AuditActionLegacyImporterTeamAddMember,
 		AuditActionLegacyImporterTeamAddOwner,
+		AuditActionLegacyImporterTeamCreate,
 		AuditActionLegacyImporterUserCreate,
-		AuditActionUsersyncAssignAdminRole,
-		AuditActionUsersyncRevokeAdminRole,
-		AuditActionGraphqlApiReconcilersUpdateTeamState,
 		AuditActionNaisDeployProvisionDeployKey,
-		AuditActionGoogleGcpProjectDeleteCnrmServiceAccount,
-		AuditActionGoogleGcpProjectEnableGoogleApis,
-		AuditActionGraphqlApiUsersSync,
-		AuditActionGraphqlApiTeamsRequestDelete,
-		AuditActionGraphqlApiTeamsDelete,
-		AuditActionAzureGroupDelete,
-		AuditActionGithubTeamDelete,
-		AuditActionGoogleWorkspaceAdminDelete,
-		AuditActionGoogleGarDelete,
-		AuditActionGoogleGcpDeleteProject,
+		AuditActionNaisNamespaceCreateNamespace,
 		AuditActionNaisNamespaceDeleteNamespace,
-		AuditActionDependencytrackGroupCreate:
+		AuditActionUsersyncAssignAdminRole,
+		AuditActionUsersyncCreate,
+		AuditActionUsersyncDelete,
+		AuditActionUsersyncListLocal,
+		AuditActionUsersyncListRemote,
+		AuditActionUsersyncPrepare,
+		AuditActionUsersyncRevokeAdminRole,
+		AuditActionUsersyncUpdate:
 		return true
 	}
 	return false
@@ -193,8 +193,41 @@ func (e AuditAction) Valid() bool {
 
 func AllAuditActionValues() []AuditAction {
 	return []AuditAction{
+		AuditActionAzureGroupAddMember,
+		AuditActionAzureGroupAddMembers,
+		AuditActionAzureGroupCreate,
+		AuditActionAzureGroupDelete,
+		AuditActionAzureGroupDeleteMember,
+		AuditActionDependencytrackGroupCreate,
+		AuditActionGithubTeamAddMember,
+		AuditActionGithubTeamAddMembers,
+		AuditActionGithubTeamCreate,
+		AuditActionGithubTeamDelete,
+		AuditActionGithubTeamDeleteMember,
+		AuditActionGithubTeamMapSsoUser,
+		AuditActionGoogleGarDelete,
+		AuditActionGoogleGcpDeleteProject,
+		AuditActionGoogleGcpProjectAssignPermissions,
+		AuditActionGoogleGcpProjectCreateCnrmServiceAccount,
+		AuditActionGoogleGcpProjectCreateProject,
+		AuditActionGoogleGcpProjectDeleteCnrmServiceAccount,
+		AuditActionGoogleGcpProjectEnableGoogleApis,
+		AuditActionGoogleGcpProjectSetBillingInfo,
+		AuditActionGoogleWorkspaceAdminAddMember,
+		AuditActionGoogleWorkspaceAdminAddMembers,
+		AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup,
+		AuditActionGoogleWorkspaceAdminCreate,
+		AuditActionGoogleWorkspaceAdminDelete,
+		AuditActionGoogleWorkspaceAdminDeleteMember,
 		AuditActionGraphqlApiApiKeyCreate,
 		AuditActionGraphqlApiApiKeyDelete,
+		AuditActionGraphqlApiReconcilersConfigure,
+		AuditActionGraphqlApiReconcilersDisable,
+		AuditActionGraphqlApiReconcilersEnable,
+		AuditActionGraphqlApiReconcilersReset,
+		AuditActionGraphqlApiReconcilersUpdateTeamState,
+		AuditActionGraphqlApiRolesAssignGlobalRole,
+		AuditActionGraphqlApiRolesRevokeGlobalRole,
 		AuditActionGraphqlApiServiceAccountCreate,
 		AuditActionGraphqlApiServiceAccountDelete,
 		AuditActionGraphqlApiServiceAccountUpdate,
@@ -207,68 +240,35 @@ func AllAuditActionValues() []AuditAction {
 		AuditActionGraphqlApiTeamSetMemberRole,
 		AuditActionGraphqlApiTeamSync,
 		AuditActionGraphqlApiTeamUpdate,
-		AuditActionGraphqlApiRolesAssignGlobalRole,
-		AuditActionGraphqlApiRolesRevokeGlobalRole,
-		AuditActionGraphqlApiReconcilersConfigure,
-		AuditActionGraphqlApiReconcilersDisable,
-		AuditActionGraphqlApiReconcilersEnable,
-		AuditActionGraphqlApiReconcilersReset,
-		AuditActionUsersyncPrepare,
-		AuditActionUsersyncListRemote,
-		AuditActionUsersyncListLocal,
-		AuditActionUsersyncCreate,
-		AuditActionUsersyncUpdate,
-		AuditActionUsersyncDelete,
-		AuditActionAzureGroupCreate,
-		AuditActionAzureGroupAddMember,
-		AuditActionAzureGroupAddMembers,
-		AuditActionAzureGroupDeleteMember,
-		AuditActionGithubTeamCreate,
-		AuditActionGithubTeamAddMembers,
-		AuditActionGithubTeamAddMember,
-		AuditActionGithubTeamDeleteMember,
-		AuditActionGithubTeamMapSsoUser,
-		AuditActionGoogleWorkspaceAdminCreate,
-		AuditActionGoogleWorkspaceAdminAddMember,
-		AuditActionGoogleWorkspaceAdminAddMembers,
-		AuditActionGoogleWorkspaceAdminDeleteMember,
-		AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup,
-		AuditActionGoogleGcpProjectCreateProject,
-		AuditActionGoogleGcpProjectAssignPermissions,
-		AuditActionGoogleGcpProjectSetBillingInfo,
-		AuditActionGoogleGcpProjectCreateCnrmServiceAccount,
-		AuditActionNaisNamespaceCreateNamespace,
-		AuditActionLegacyImporterTeamCreate,
+		AuditActionGraphqlApiTeamsDelete,
+		AuditActionGraphqlApiTeamsRequestDelete,
+		AuditActionGraphqlApiUsersSync,
 		AuditActionLegacyImporterTeamAddMember,
 		AuditActionLegacyImporterTeamAddOwner,
+		AuditActionLegacyImporterTeamCreate,
 		AuditActionLegacyImporterUserCreate,
-		AuditActionUsersyncAssignAdminRole,
-		AuditActionUsersyncRevokeAdminRole,
-		AuditActionGraphqlApiReconcilersUpdateTeamState,
 		AuditActionNaisDeployProvisionDeployKey,
-		AuditActionGoogleGcpProjectDeleteCnrmServiceAccount,
-		AuditActionGoogleGcpProjectEnableGoogleApis,
-		AuditActionGraphqlApiUsersSync,
-		AuditActionGraphqlApiTeamsRequestDelete,
-		AuditActionGraphqlApiTeamsDelete,
-		AuditActionAzureGroupDelete,
-		AuditActionGithubTeamDelete,
-		AuditActionGoogleWorkspaceAdminDelete,
-		AuditActionGoogleGarDelete,
-		AuditActionGoogleGcpDeleteProject,
+		AuditActionNaisNamespaceCreateNamespace,
 		AuditActionNaisNamespaceDeleteNamespace,
-		AuditActionDependencytrackGroupCreate,
+		AuditActionUsersyncAssignAdminRole,
+		AuditActionUsersyncCreate,
+		AuditActionUsersyncDelete,
+		AuditActionUsersyncListLocal,
+		AuditActionUsersyncListRemote,
+		AuditActionUsersyncPrepare,
+		AuditActionUsersyncRevokeAdminRole,
+		AuditActionUsersyncUpdate,
 	}
 }
 
 type AuditLogsTargetType string
 
 const (
-	AuditLogsTargetTypeUser           AuditLogsTargetType = "user"
-	AuditLogsTargetTypeTeam           AuditLogsTargetType = "team"
-	AuditLogsTargetTypeServiceAccount AuditLogsTargetType = "service_account"
 	AuditLogsTargetTypeReconciler     AuditLogsTargetType = "reconciler"
+	AuditLogsTargetTypeServiceAccount AuditLogsTargetType = "service_account"
 	AuditLogsTargetTypeSystem         AuditLogsTargetType = "system"
+	AuditLogsTargetTypeTeam           AuditLogsTargetType = "team"
+	AuditLogsTargetTypeUser           AuditLogsTargetType = "user"
 )
 
 func (e *AuditLogsTargetType) Scan(src interface{}) error {
@@ -308,11 +308,11 @@ func (ns NullAuditLogsTargetType) Value() (driver.Value, error) {
 
 func (e AuditLogsTargetType) Valid() bool {
 	switch e {
-	case AuditLogsTargetTypeUser,
-		AuditLogsTargetTypeTeam,
+	case AuditLogsTargetTypeReconciler,
 		AuditLogsTargetTypeServiceAccount,
-		AuditLogsTargetTypeReconciler,
-		AuditLogsTargetTypeSystem:
+		AuditLogsTargetTypeSystem,
+		AuditLogsTargetTypeTeam,
+		AuditLogsTargetTypeUser:
 		return true
 	}
 	return false
@@ -320,11 +320,11 @@ func (e AuditLogsTargetType) Valid() bool {
 
 func AllAuditLogsTargetTypeValues() []AuditLogsTargetType {
 	return []AuditLogsTargetType{
-		AuditLogsTargetTypeUser,
-		AuditLogsTargetTypeTeam,
-		AuditLogsTargetTypeServiceAccount,
 		AuditLogsTargetTypeReconciler,
+		AuditLogsTargetTypeServiceAccount,
 		AuditLogsTargetTypeSystem,
+		AuditLogsTargetTypeTeam,
+		AuditLogsTargetTypeUser,
 	}
 }
 
@@ -394,12 +394,12 @@ type ReconcilerName string
 const (
 	ReconcilerNameAzureGroup           ReconcilerName = "azure:group"
 	ReconcilerNameGithubTeam           ReconcilerName = "github:team"
+	ReconcilerNameGoogleGcpGar         ReconcilerName = "google:gcp:gar"
 	ReconcilerNameGoogleGcpProject     ReconcilerName = "google:gcp:project"
 	ReconcilerNameGoogleWorkspaceAdmin ReconcilerName = "google:workspace-admin"
-	ReconcilerNameNaisNamespace        ReconcilerName = "nais:namespace"
-	ReconcilerNameNaisDeploy           ReconcilerName = "nais:deploy"
-	ReconcilerNameGoogleGcpGar         ReconcilerName = "google:gcp:gar"
 	ReconcilerNameNaisDependencytrack  ReconcilerName = "nais:dependencytrack"
+	ReconcilerNameNaisDeploy           ReconcilerName = "nais:deploy"
+	ReconcilerNameNaisNamespace        ReconcilerName = "nais:namespace"
 )
 
 func (e *ReconcilerName) Scan(src interface{}) error {
@@ -441,12 +441,12 @@ func (e ReconcilerName) Valid() bool {
 	switch e {
 	case ReconcilerNameAzureGroup,
 		ReconcilerNameGithubTeam,
+		ReconcilerNameGoogleGcpGar,
 		ReconcilerNameGoogleGcpProject,
 		ReconcilerNameGoogleWorkspaceAdmin,
-		ReconcilerNameNaisNamespace,
+		ReconcilerNameNaisDependencytrack,
 		ReconcilerNameNaisDeploy,
-		ReconcilerNameGoogleGcpGar,
-		ReconcilerNameNaisDependencytrack:
+		ReconcilerNameNaisNamespace:
 		return true
 	}
 	return false
@@ -456,12 +456,12 @@ func AllReconcilerNameValues() []ReconcilerName {
 	return []ReconcilerName{
 		ReconcilerNameAzureGroup,
 		ReconcilerNameGithubTeam,
+		ReconcilerNameGoogleGcpGar,
 		ReconcilerNameGoogleGcpProject,
 		ReconcilerNameGoogleWorkspaceAdmin,
-		ReconcilerNameNaisNamespace,
-		ReconcilerNameNaisDeploy,
-		ReconcilerNameGoogleGcpGar,
 		ReconcilerNameNaisDependencytrack,
+		ReconcilerNameNaisDeploy,
+		ReconcilerNameNaisNamespace,
 	}
 }
 
@@ -469,16 +469,16 @@ type RoleName string
 
 const (
 	RoleNameAdmin                 RoleName = "Admin"
+	RoleNameDeploykeyviewer       RoleName = "Deploy key viewer"
 	RoleNameServiceaccountcreator RoleName = "Service account creator"
 	RoleNameServiceaccountowner   RoleName = "Service account owner"
+	RoleNameSynchronizer          RoleName = "Synchronizer"
 	RoleNameTeamcreator           RoleName = "Team creator"
 	RoleNameTeammember            RoleName = "Team member"
 	RoleNameTeamowner             RoleName = "Team owner"
 	RoleNameTeamviewer            RoleName = "Team viewer"
 	RoleNameUseradmin             RoleName = "User admin"
 	RoleNameUserviewer            RoleName = "User viewer"
-	RoleNameSynchronizer          RoleName = "Synchronizer"
-	RoleNameDeploykeyviewer       RoleName = "Deploy key viewer"
 )
 
 func (e *RoleName) Scan(src interface{}) error {
@@ -519,16 +519,16 @@ func (ns NullRoleName) Value() (driver.Value, error) {
 func (e RoleName) Valid() bool {
 	switch e {
 	case RoleNameAdmin,
+		RoleNameDeploykeyviewer,
 		RoleNameServiceaccountcreator,
 		RoleNameServiceaccountowner,
+		RoleNameSynchronizer,
 		RoleNameTeamcreator,
 		RoleNameTeammember,
 		RoleNameTeamowner,
 		RoleNameTeamviewer,
 		RoleNameUseradmin,
-		RoleNameUserviewer,
-		RoleNameSynchronizer,
-		RoleNameDeploykeyviewer:
+		RoleNameUserviewer:
 		return true
 	}
 	return false
@@ -537,35 +537,35 @@ func (e RoleName) Valid() bool {
 func AllRoleNameValues() []RoleName {
 	return []RoleName{
 		RoleNameAdmin,
+		RoleNameDeploykeyviewer,
 		RoleNameServiceaccountcreator,
 		RoleNameServiceaccountowner,
+		RoleNameSynchronizer,
 		RoleNameTeamcreator,
 		RoleNameTeammember,
 		RoleNameTeamowner,
 		RoleNameTeamviewer,
 		RoleNameUseradmin,
 		RoleNameUserviewer,
-		RoleNameSynchronizer,
-		RoleNameDeploykeyviewer,
 	}
 }
 
 type SystemName string
 
 const (
-	SystemNameConsole              SystemName = "console"
+	SystemNameAuthn                SystemName = "authn"
 	SystemNameAzureGroup           SystemName = "azure:group"
+	SystemNameConsole              SystemName = "console"
 	SystemNameGithubTeam           SystemName = "github:team"
+	SystemNameGoogleGcpGar         SystemName = "google:gcp:gar"
 	SystemNameGoogleGcpProject     SystemName = "google:gcp:project"
 	SystemNameGoogleWorkspaceAdmin SystemName = "google:workspace-admin"
-	SystemNameNaisNamespace        SystemName = "nais:namespace"
 	SystemNameGraphqlApi           SystemName = "graphql-api"
-	SystemNameUsersync             SystemName = "usersync"
 	SystemNameLegacyImporter       SystemName = "legacy-importer"
-	SystemNameAuthn                SystemName = "authn"
-	SystemNameNaisDependencytrack  SystemName = "nais:dependencytrack"
 	SystemNameNaisDeploy           SystemName = "nais:deploy"
-	SystemNameGoogleGcpGar         SystemName = "google:gcp:gar"
+	SystemNameNaisDependencytrack  SystemName = "nais:dependencytrack"
+	SystemNameNaisNamespace        SystemName = "nais:namespace"
+	SystemNameUsersync             SystemName = "usersync"
 )
 
 func (e *SystemName) Scan(src interface{}) error {
@@ -605,19 +605,19 @@ func (ns NullSystemName) Value() (driver.Value, error) {
 
 func (e SystemName) Valid() bool {
 	switch e {
-	case SystemNameConsole,
+	case SystemNameAuthn,
 		SystemNameAzureGroup,
+		SystemNameConsole,
 		SystemNameGithubTeam,
+		SystemNameGoogleGcpGar,
 		SystemNameGoogleGcpProject,
 		SystemNameGoogleWorkspaceAdmin,
-		SystemNameNaisNamespace,
 		SystemNameGraphqlApi,
-		SystemNameUsersync,
 		SystemNameLegacyImporter,
-		SystemNameAuthn,
-		SystemNameNaisDependencytrack,
 		SystemNameNaisDeploy,
-		SystemNameGoogleGcpGar:
+		SystemNameNaisDependencytrack,
+		SystemNameNaisNamespace,
+		SystemNameUsersync:
 		return true
 	}
 	return false
@@ -625,19 +625,19 @@ func (e SystemName) Valid() bool {
 
 func AllSystemNameValues() []SystemName {
 	return []SystemName{
-		SystemNameConsole,
+		SystemNameAuthn,
 		SystemNameAzureGroup,
+		SystemNameConsole,
 		SystemNameGithubTeam,
+		SystemNameGoogleGcpGar,
 		SystemNameGoogleGcpProject,
 		SystemNameGoogleWorkspaceAdmin,
-		SystemNameNaisNamespace,
 		SystemNameGraphqlApi,
-		SystemNameUsersync,
 		SystemNameLegacyImporter,
-		SystemNameAuthn,
-		SystemNameNaisDependencytrack,
 		SystemNameNaisDeploy,
-		SystemNameGoogleGcpGar,
+		SystemNameNaisDependencytrack,
+		SystemNameNaisNamespace,
+		SystemNameUsersync,
 	}
 }
 

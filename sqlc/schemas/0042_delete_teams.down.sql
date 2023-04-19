@@ -1,6 +1,0 @@
-BEGIN;
-
-DROP TABLE team_delete_keys;
-ALTER TABLE teams ADD COLUMN enabled BOOL NOT NULL DEFAULT true;
-
-COMMIT;
