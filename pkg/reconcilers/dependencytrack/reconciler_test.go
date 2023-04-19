@@ -118,6 +118,44 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 	}
 }
 
+func TestDependencytrackReconciler_Delete(t *testing.T) {
+
+	input := setupInput("someTeam", "user1@nais.io")
+
+	for _, tt := range []struct {
+		name   string
+		preRun func(t *testing.T, mock *MockClient)
+	}{
+		{
+			name: "team does not exist, remove from dtrack",
+			preRun: func(t *testing.T, client *MockClient) {
+				teamName := "someTeam"
+				teamNotInConsoleUuid := uuid.New().String()
+
+				client.On("GetTeams", mock.Anything).Return([]Team{
+					{
+						Name: teamName,
+						Uuid: teamNotInConsoleUuid,
+					},
+				}, nil).Once()
+
+				client.On("DeleteTeam", mock.Anything, teamNotInConsoleUuid).Return(nil).Once()
+			},
+		},
+	} {
+		mockClient := NewMockClient(t)
+		reconciler, err := New(context.Background(), mockClient)
+		assert.NoError(t, err)
+
+		if tt.preRun != nil {
+			tt.preRun(t, mockClient)
+		}
+
+		err = reconciler.Delete(context.Background(), input.Team.Slug, uuid.New())
+		assert.NoError(t, err)
+	}
+}
+
 func setupInput(teamSlug string, members ...string) reconcilers.Input {
 	inputTeam := db.Team{
 		Team: &sqlc.Team{
