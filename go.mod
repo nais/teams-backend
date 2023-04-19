@@ -28,7 +28,7 @@ require (
 	github.com/vektra/mockery/v2 v2.14.0
 	golang.org/x/oauth2 v0.0.0-20221014153046-6fdb5e3db783
 	golang.org/x/text v0.9.0
-	golang.org/x/vuln v0.0.0-20230411201117-aaaefcd264f6
+	golang.org/x/vuln v0.0.0-20230419012003-9268f8338db8
 	google.golang.org/api v0.103.0
 	google.golang.org/genproto v0.0.0-20221207170731-23e4bf6bdc37
 	google.golang.org/grpc v1.51.0
