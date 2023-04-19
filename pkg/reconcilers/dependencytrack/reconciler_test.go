@@ -68,6 +68,42 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 				client.On("AddToTeam", mock.Anything, username, teamUuid).Return(nil).Once()
 			},
 		},
+		{
+			name: "usermembership removed from existing team",
+			preRun: func(t *testing.T, client *MockClient) {
+				teamName := "someTeam"
+				teamUuid := uuid.New().String()
+				usernameInConsole := "user1@nais.io"
+				usernameNotInConsole := "userNotInConsole@nais.io"
+				username := "user1@nais.io"
+
+				client.On("GetTeams", mock.Anything).Return([]Team{
+					{
+						Name: teamName,
+						Uuid: teamUuid,
+						OidcUsers: []User{
+							{
+								Username: usernameInConsole,
+								Email:    usernameInConsole,
+							},
+							{
+								Username: usernameNotInConsole,
+								Email:    usernameNotInConsole,
+							},
+						},
+					},
+				}, nil).Once()
+
+				client.On("DeleteUserMembership", mock.Anything, teamUuid, usernameNotInConsole).Return(nil).Once()
+
+				client.On("CreateUser", mock.Anything, username).Return(&User{
+					Username: username,
+					Email:    username,
+				}).Return(nil).Once()
+
+				client.On("AddToTeam", mock.Anything, username, teamUuid).Return(nil).Once()
+			},
+		},
 	} {
 		mockClient := NewMockClient(t)
 		reconciler, err := New(context.Background(), mockClient)
