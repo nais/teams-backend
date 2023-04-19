@@ -3,6 +3,7 @@ package dataloader
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/graph-gophers/dataloader"
@@ -29,9 +30,9 @@ func NewLoaders(database db.Database) *Loaders {
 	userRoleReader := &UserRoleReader{db: database}
 
 	loaders := &Loaders{
-		UserLoader:      dataloader.NewBatchedLoader(userReader.GetUsers),
-		TeamLoader:      dataloader.NewBatchedLoader(teamReader.GetTeams),
-		UserRolesLoader: dataloader.NewBatchedLoader(userRoleReader.GetUserRoles),
+		UserLoader:      dataloader.NewBatchedLoader(userReader.GetUsers, dataloader.WithWait(100*time.Millisecond)),
+		TeamLoader:      dataloader.NewBatchedLoader(teamReader.GetTeams, dataloader.WithWait(100*time.Millisecond)),
+		UserRolesLoader: dataloader.NewBatchedLoader(userRoleReader.GetUserRoles, dataloader.WithWait(100*time.Millisecond)),
 	}
 
 	return loaders
