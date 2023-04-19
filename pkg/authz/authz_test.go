@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/nais/console/pkg/slug"
-
 	"github.com/nais/console/pkg/authz"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/roles"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/stretchr/testify/assert"
 )
@@ -44,34 +44,34 @@ func TestRequireGlobalAuthorization(t *testing.T) {
 	}
 
 	t.Run("Nil user", func(t *testing.T) {
-		assert.ErrorIs(t, authz.RequireGlobalAuthorization(nil, sqlc.AuthzNameTeamsCreate), authz.ErrNotAuthenticated)
+		assert.ErrorIs(t, authz.RequireGlobalAuthorization(nil, roles.AuthorizationTeamsCreate), authz.ErrNotAuthenticated)
 	})
 
 	t.Run("User with no roles", func(t *testing.T) {
 		contextUser := authz.ActorFromContext(authz.ContextWithActor(context.Background(), user, []*db.Role{}))
-		assert.EqualError(t, authz.RequireGlobalAuthorization(contextUser, sqlc.AuthzNameTeamsCreate), authTeamCreateError)
+		assert.EqualError(t, authz.RequireGlobalAuthorization(contextUser, roles.AuthorizationTeamsCreate), authTeamCreateError)
 	})
 
 	t.Run("User with insufficient roles", func(t *testing.T) {
-		roles := []*db.Role{
+		userRoles := []*db.Role{
 			{
 				RoleName:       sqlc.RoleNameTeamviewer,
-				Authorizations: []sqlc.AuthzName{},
+				Authorizations: []roles.Authorization{},
 			},
 		}
-		contextUser := authz.ActorFromContext(authz.ContextWithActor(context.Background(), user, roles))
-		assert.EqualError(t, authz.RequireGlobalAuthorization(contextUser, sqlc.AuthzNameTeamsCreate), authTeamCreateError)
+		contextUser := authz.ActorFromContext(authz.ContextWithActor(context.Background(), user, userRoles))
+		assert.EqualError(t, authz.RequireGlobalAuthorization(contextUser, roles.AuthorizationTeamsCreate), authTeamCreateError)
 	})
 
 	t.Run("User with sufficient role", func(t *testing.T) {
-		roles := []*db.Role{
+		userRoles := []*db.Role{
 			{
 				RoleName:       sqlc.RoleNameTeamcreator,
-				Authorizations: []sqlc.AuthzName{sqlc.AuthzNameTeamsCreate},
+				Authorizations: []roles.Authorization{roles.AuthorizationTeamsCreate},
 			},
 		}
-		contextUser := authz.ActorFromContext(authz.ContextWithActor(context.Background(), user, roles))
-		assert.NoError(t, authz.RequireGlobalAuthorization(contextUser, sqlc.AuthzNameTeamsCreate))
+		contextUser := authz.ActorFromContext(authz.ContextWithActor(context.Background(), user, userRoles))
+		assert.NoError(t, authz.RequireGlobalAuthorization(contextUser, roles.AuthorizationTeamsCreate))
 	})
 }
 
@@ -85,54 +85,54 @@ func TestRequireAuthorizationForTeamTarget(t *testing.T) {
 	targetTeamSlug := slug.Slug("slug")
 
 	t.Run("Nil user", func(t *testing.T) {
-		assert.ErrorIs(t, authz.RequireTeamAuthorization(nil, sqlc.AuthzNameTeamsCreate, targetTeamSlug), authz.ErrNotAuthenticated)
+		assert.ErrorIs(t, authz.RequireTeamAuthorization(nil, roles.AuthorizationTeamsCreate, targetTeamSlug), authz.ErrNotAuthenticated)
 	})
 
 	t.Run("User with no roles", func(t *testing.T) {
 		contextUser := authz.ActorFromContext(authz.ContextWithActor(context.Background(), user, []*db.Role{}))
-		assert.EqualError(t, authz.RequireTeamAuthorization(contextUser, sqlc.AuthzNameTeamsCreate, targetTeamSlug), authTeamCreateError)
+		assert.EqualError(t, authz.RequireTeamAuthorization(contextUser, roles.AuthorizationTeamsCreate, targetTeamSlug), authTeamCreateError)
 	})
 
 	t.Run("User with insufficient roles", func(t *testing.T) {
-		roles := []*db.Role{
+		userRoles := []*db.Role{
 			{
-				Authorizations: []sqlc.AuthzName{},
+				Authorizations: []roles.Authorization{},
 			},
 		}
-		contextUser := authz.ActorFromContext(authz.ContextWithActor(context.Background(), user, roles))
-		assert.EqualError(t, authz.RequireTeamAuthorization(contextUser, sqlc.AuthzNameTeamsUpdate, targetTeamSlug), authTeamUpdateError)
+		contextUser := authz.ActorFromContext(authz.ContextWithActor(context.Background(), user, userRoles))
+		assert.EqualError(t, authz.RequireTeamAuthorization(contextUser, roles.AuthorizationTeamsUpdate, targetTeamSlug), authTeamUpdateError)
 	})
 
 	t.Run("User with targeted role", func(t *testing.T) {
-		roles := []*db.Role{
+		userRoles := []*db.Role{
 			{
 				TargetTeamSlug: &targetTeamSlug,
-				Authorizations: []sqlc.AuthzName{sqlc.AuthzNameTeamsUpdate},
+				Authorizations: []roles.Authorization{roles.AuthorizationTeamsUpdate},
 			},
 		}
-		contextUser := authz.ActorFromContext(authz.ContextWithActor(context.Background(), user, roles))
-		assert.NoError(t, authz.RequireTeamAuthorization(contextUser, sqlc.AuthzNameTeamsUpdate, targetTeamSlug))
+		contextUser := authz.ActorFromContext(authz.ContextWithActor(context.Background(), user, userRoles))
+		assert.NoError(t, authz.RequireTeamAuthorization(contextUser, roles.AuthorizationTeamsUpdate, targetTeamSlug))
 	})
 
 	t.Run("User with targeted role for wrong target", func(t *testing.T) {
 		wrongSlug := slug.Slug("other-team")
-		roles := []*db.Role{
+		userRoles := []*db.Role{
 			{
 				TargetTeamSlug: &wrongSlug,
-				Authorizations: []sqlc.AuthzName{sqlc.AuthzNameTeamsUpdate},
+				Authorizations: []roles.Authorization{roles.AuthorizationTeamsUpdate},
 			},
 		}
-		contextUser := authz.ActorFromContext(authz.ContextWithActor(context.Background(), user, roles))
-		assert.EqualError(t, authz.RequireTeamAuthorization(contextUser, sqlc.AuthzNameTeamsUpdate, targetTeamSlug), authTeamUpdateError)
+		contextUser := authz.ActorFromContext(authz.ContextWithActor(context.Background(), user, userRoles))
+		assert.EqualError(t, authz.RequireTeamAuthorization(contextUser, roles.AuthorizationTeamsUpdate, targetTeamSlug), authTeamUpdateError)
 	})
 
 	t.Run("User with global role", func(t *testing.T) {
-		roles := []*db.Role{
+		userRoles := []*db.Role{
 			{
-				Authorizations: []sqlc.AuthzName{sqlc.AuthzNameTeamsUpdate},
+				Authorizations: []roles.Authorization{roles.AuthorizationTeamsUpdate},
 			},
 		}
-		contextUser := authz.ActorFromContext(authz.ContextWithActor(context.Background(), user, roles))
-		assert.NoError(t, authz.RequireTeamAuthorization(contextUser, sqlc.AuthzNameTeamsUpdate, targetTeamSlug))
+		contextUser := authz.ActorFromContext(authz.ContextWithActor(context.Background(), user, userRoles))
+		assert.NoError(t, authz.RequireTeamAuthorization(contextUser, roles.AuthorizationTeamsUpdate, targetTeamSlug))
 	})
 }

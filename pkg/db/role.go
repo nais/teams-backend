@@ -3,6 +3,8 @@ package db
 import (
 	"context"
 
+	"github.com/nais/console/pkg/roles"
+
 	"github.com/nais/console/pkg/slug"
 
 	"github.com/google/uuid"
@@ -85,8 +87,8 @@ func (d *database) GetUsersWithGloballyAssignedRole(ctx context.Context, roleNam
 	return wrapUsers(users), nil
 }
 
-func (d *database) roleFromRoleBinding(ctx context.Context, roleName sqlc.RoleName, targetServiceAccountID uuid.NullUUID, targetTeamSlug *slug.Slug) (*Role, error) {
-	authorizations, err := d.querier.GetRoleAuthorizations(ctx, roleName)
+func (d *database) roleFromRoleBinding(_ context.Context, roleName sqlc.RoleName, targetServiceAccountID uuid.NullUUID, targetTeamSlug *slug.Slug) (*Role, error) {
+	authorizations, err := roles.Authorizations(roleName)
 	if err != nil {
 		return nil, err
 	}

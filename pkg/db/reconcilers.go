@@ -108,11 +108,3 @@ func wrapReconcilers(rows []*sqlc.Reconciler) []*Reconciler {
 	}
 	return reconcilers
 }
-
-func getKeys(values map[sqlc.ReconcilerConfigKey]struct{}) []string {
-	keys := make([]string, 0, len(values))
-	for key := range values {
-		keys = append(keys, string(key))
-	}
-	return keys
-}

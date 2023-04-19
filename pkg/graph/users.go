@@ -7,6 +7,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/nais/console/pkg/roles"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
@@ -19,7 +21,7 @@ import (
 // SynchronizeUsers is the resolver for the synchronizeUsers field.
 func (r *mutationResolver) SynchronizeUsers(ctx context.Context) (*model.UserSync, error) {
 	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameUsersyncSynchronize)
+	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationUsersyncSynchronize)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +50,7 @@ func (r *mutationResolver) SynchronizeUsers(ctx context.Context) (*model.UserSyn
 // Users is the resolver for the users field.
 func (r *queryResolver) Users(ctx context.Context) ([]*db.User, error) {
 	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameUsersList)
+	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +61,7 @@ func (r *queryResolver) Users(ctx context.Context) ([]*db.User, error) {
 // User is the resolver for the user field.
 func (r *queryResolver) User(ctx context.Context, id *uuid.UUID) (*db.User, error) {
 	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameUsersList)
+	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +72,7 @@ func (r *queryResolver) User(ctx context.Context, id *uuid.UUID) (*db.User, erro
 // UserByEmail is the resolver for the userByEmail field.
 func (r *queryResolver) UserByEmail(ctx context.Context, email string) (*db.User, error) {
 	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameUsersList)
+	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +83,7 @@ func (r *queryResolver) UserByEmail(ctx context.Context, email string) (*db.User
 // Teams is the resolver for the teams field.
 func (r *userResolver) Teams(ctx context.Context, obj *db.User) ([]*model.TeamMembership, error) {
 	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireGlobalAuthorization(actor, sqlc.AuthzNameTeamsList)
+	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationTeamsList)
 	if err != nil {
 		return nil, err
 	}

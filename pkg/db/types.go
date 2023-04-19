@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/nais/console/pkg/roles"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/nais/console/pkg/slug"
@@ -55,7 +57,7 @@ type ReconcilerError struct {
 }
 
 type Role struct {
-	Authorizations         []sqlc.AuthzName
+	Authorizations         []roles.Authorization
 	RoleName               sqlc.RoleName
 	TargetServiceAccountID *uuid.UUID
 	TargetTeamSlug         *slug.Slug

@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/nais/console/pkg/roles"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
@@ -41,7 +43,7 @@ func TestQueryResolver_Users(t *testing.T) {
 		}
 		ctx := authz.ContextWithActor(ctx, user, []*db.Role{
 			{
-				Authorizations: []sqlc.AuthzName{sqlc.AuthzNameUsersList},
+				Authorizations: []roles.Authorization{roles.AuthorizationUsersList},
 			},
 		})
 

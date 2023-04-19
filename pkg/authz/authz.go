@@ -4,11 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/nais/console/pkg/slug"
-
-	"github.com/nais/console/pkg/sqlc"
-
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/roles"
+	"github.com/nais/console/pkg/slug"
+	"github.com/nais/console/pkg/sqlc"
 )
 
 type ContextKey string
@@ -57,12 +56,12 @@ func ActorFromContext(ctx context.Context) *Actor {
 }
 
 // RequireGlobalAuthorization Require an actor to have a specific authorization through a globally assigned role.
-func RequireGlobalAuthorization(actor *Actor, requiredAuthzName sqlc.AuthzName) error {
+func RequireGlobalAuthorization(actor *Actor, requiredAuthzName roles.Authorization) error {
 	if !actor.Authenticated() {
 		return ErrNotAuthenticated
 	}
 
-	authorizations := make(map[sqlc.AuthzName]struct{})
+	authorizations := make(map[roles.Authorization]struct{})
 
 	for _, role := range actor.Roles {
 		if role.IsGlobal() {
@@ -77,12 +76,12 @@ func RequireGlobalAuthorization(actor *Actor, requiredAuthzName sqlc.AuthzName) 
 
 // RequireTeamAuthorization Require an actor to have a specific authorization through a globally assigned or a correctly
 // targeted role.
-func RequireTeamAuthorization(actor *Actor, requiredAuthzName sqlc.AuthzName, targetTeamSlug slug.Slug) error {
+func RequireTeamAuthorization(actor *Actor, requiredAuthzName roles.Authorization, targetTeamSlug slug.Slug) error {
 	if !actor.Authenticated() {
 		return ErrNotAuthenticated
 	}
 
-	authorizations := make(map[sqlc.AuthzName]struct{})
+	authorizations := make(map[roles.Authorization]struct{})
 
 	for _, role := range actor.Roles {
 		if role.IsGlobal() || role.TargetsTeam(targetTeamSlug) {
@@ -96,7 +95,7 @@ func RequireTeamAuthorization(actor *Actor, requiredAuthzName sqlc.AuthzName, ta
 }
 
 // authorized Check if one of the authorizations in the map matches the required authorization.
-func authorized(authorizations map[sqlc.AuthzName]struct{}, requiredAuthzName sqlc.AuthzName) error {
+func authorized(authorizations map[roles.Authorization]struct{}, requiredAuthzName roles.Authorization) error {
 	for authorization := range authorizations {
 		if authorization == requiredAuthzName {
 			return nil

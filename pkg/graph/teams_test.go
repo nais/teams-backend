@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nais/console/pkg/roles"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
@@ -35,8 +37,8 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 	ctx := authz.ContextWithActor(context.Background(), user, []*db.Role{
 		{
 			RoleName: sqlc.RoleNameAdmin,
-			Authorizations: []sqlc.AuthzName{
-				sqlc.AuthzNameTeamsCreate,
+			Authorizations: []roles.Authorization{
+				roles.AuthorizationTeamsCreate,
 			},
 		},
 	})
@@ -51,8 +53,8 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 	saCtx := authz.ContextWithActor(context.Background(), serviceAccount, []*db.Role{
 		{
 			RoleName: sqlc.RoleNameAdmin,
-			Authorizations: []sqlc.AuthzName{
-				sqlc.AuthzNameTeamsCreate,
+			Authorizations: []roles.Authorization{
+				roles.AuthorizationTeamsCreate,
 			},
 		},
 	})
@@ -236,8 +238,8 @@ func TestMutationResolver_RequestTeamDeletion(t *testing.T) {
 		ctx := authz.ContextWithActor(ctx, user, []*db.Role{
 			{
 				RoleName: sqlc.RoleNameTeamowner,
-				Authorizations: []sqlc.AuthzName{
-					sqlc.AuthzNameTeamsUpdate,
+				Authorizations: []roles.Authorization{
+					roles.AuthorizationTeamsUpdate,
 				},
 			},
 		})
@@ -273,8 +275,8 @@ func TestMutationResolver_RequestTeamDeletion(t *testing.T) {
 		ctx := authz.ContextWithActor(ctx, user, []*db.Role{
 			{
 				RoleName: sqlc.RoleNameTeamowner,
-				Authorizations: []sqlc.AuthzName{
-					sqlc.AuthzNameTeamsUpdate,
+				Authorizations: []roles.Authorization{
+					roles.AuthorizationTeamsUpdate,
 				},
 			},
 		})

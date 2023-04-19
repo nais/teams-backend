@@ -326,115 +326,6 @@ func AllAuditLogsTargetTypeValues() []AuditLogsTargetType {
 	}
 }
 
-type AuthzName string
-
-const (
-	AuthzNameAuditLogsRead         AuthzName = "audit_logs:read"
-	AuthzNameServiceAccountsCreate AuthzName = "service_accounts:create"
-	AuthzNameServiceAccountsDelete AuthzName = "service_accounts:delete"
-	AuthzNameServiceAccountsList   AuthzName = "service_accounts:list"
-	AuthzNameServiceAccountsRead   AuthzName = "service_accounts:read"
-	AuthzNameServiceAccountsUpdate AuthzName = "service_accounts:update"
-	AuthzNameSystemStatesDelete    AuthzName = "system_states:delete"
-	AuthzNameSystemStatesRead      AuthzName = "system_states:read"
-	AuthzNameSystemStatesUpdate    AuthzName = "system_states:update"
-	AuthzNameTeamsCreate           AuthzName = "teams:create"
-	AuthzNameTeamsDelete           AuthzName = "teams:delete"
-	AuthzNameTeamsList             AuthzName = "teams:list"
-	AuthzNameTeamsRead             AuthzName = "teams:read"
-	AuthzNameTeamsUpdate           AuthzName = "teams:update"
-	AuthzNameUsersList             AuthzName = "users:list"
-	AuthzNameUsersUpdate           AuthzName = "users:update"
-	AuthzNameTeamsSynchronize      AuthzName = "teams:synchronize"
-	AuthzNameUsersyncSynchronize   AuthzName = "usersync:synchronize"
-	AuthzNameDeployKeyView         AuthzName = "deploy_key:view"
-)
-
-func (e *AuthzName) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = AuthzName(s)
-	case string:
-		*e = AuthzName(s)
-	default:
-		return fmt.Errorf("unsupported scan type for AuthzName: %T", src)
-	}
-	return nil
-}
-
-type NullAuthzName struct {
-	AuthzName AuthzName
-	Valid     bool // Valid is true if AuthzName is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullAuthzName) Scan(value interface{}) error {
-	if value == nil {
-		ns.AuthzName, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.AuthzName.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullAuthzName) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.AuthzName), nil
-}
-
-func (e AuthzName) Valid() bool {
-	switch e {
-	case AuthzNameAuditLogsRead,
-		AuthzNameServiceAccountsCreate,
-		AuthzNameServiceAccountsDelete,
-		AuthzNameServiceAccountsList,
-		AuthzNameServiceAccountsRead,
-		AuthzNameServiceAccountsUpdate,
-		AuthzNameSystemStatesDelete,
-		AuthzNameSystemStatesRead,
-		AuthzNameSystemStatesUpdate,
-		AuthzNameTeamsCreate,
-		AuthzNameTeamsDelete,
-		AuthzNameTeamsList,
-		AuthzNameTeamsRead,
-		AuthzNameTeamsUpdate,
-		AuthzNameUsersList,
-		AuthzNameUsersUpdate,
-		AuthzNameTeamsSynchronize,
-		AuthzNameUsersyncSynchronize,
-		AuthzNameDeployKeyView:
-		return true
-	}
-	return false
-}
-
-func AllAuthzNameValues() []AuthzName {
-	return []AuthzName{
-		AuthzNameAuditLogsRead,
-		AuthzNameServiceAccountsCreate,
-		AuthzNameServiceAccountsDelete,
-		AuthzNameServiceAccountsList,
-		AuthzNameServiceAccountsRead,
-		AuthzNameServiceAccountsUpdate,
-		AuthzNameSystemStatesDelete,
-		AuthzNameSystemStatesRead,
-		AuthzNameSystemStatesUpdate,
-		AuthzNameTeamsCreate,
-		AuthzNameTeamsDelete,
-		AuthzNameTeamsList,
-		AuthzNameTeamsRead,
-		AuthzNameTeamsUpdate,
-		AuthzNameUsersList,
-		AuthzNameUsersUpdate,
-		AuthzNameTeamsSynchronize,
-		AuthzNameUsersyncSynchronize,
-		AuthzNameDeployKeyView,
-	}
-}
-
 type ReconcilerConfigKey string
 
 const (
@@ -793,11 +684,6 @@ type ReconcilerState struct {
 	Reconciler ReconcilerName
 	State      pgtype.JSONB
 	TeamSlug   slug.Slug
-}
-
-type RoleAuthz struct {
-	AuthzName AuthzName
-	RoleName  RoleName
 }
 
 type ServiceAccount struct {

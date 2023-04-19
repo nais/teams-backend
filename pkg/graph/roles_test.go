@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/nais/console/pkg/roles"
+
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
@@ -25,8 +27,8 @@ func TestMutationResolver_Role(t *testing.T) {
 	ctx := authz.ContextWithActor(context.Background(), serviceAccount, []*db.Role{
 		{
 			RoleName: sqlc.RoleNameAdmin,
-			Authorizations: []sqlc.AuthzName{
-				sqlc.AuthzNameTeamsCreate,
+			Authorizations: []roles.Authorization{
+				roles.AuthorizationTeamsCreate,
 			},
 		},
 	})

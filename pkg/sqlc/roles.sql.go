@@ -74,32 +74,6 @@ func (q *Queries) AssignTeamRoleToUser(ctx context.Context, arg AssignTeamRoleTo
 	return err
 }
 
-const getRoleAuthorizations = `-- name: GetRoleAuthorizations :many
-SELECT authz_name FROM role_authz
-WHERE role_name = $1
-ORDER BY authz_name ASC
-`
-
-func (q *Queries) GetRoleAuthorizations(ctx context.Context, roleName RoleName) ([]AuthzName, error) {
-	rows, err := q.db.Query(ctx, getRoleAuthorizations, roleName)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []AuthzName
-	for rows.Next() {
-		var authz_name AuthzName
-		if err := rows.Scan(&authz_name); err != nil {
-			return nil, err
-		}
-		items = append(items, authz_name)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getUserRoles = `-- name: GetUserRoles :many
 SELECT id, role_name, user_id, target_team_slug, target_service_account_id FROM user_roles
 WHERE user_id = $1
