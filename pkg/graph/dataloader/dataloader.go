@@ -3,12 +3,12 @@ package dataloader
 import (
 	"context"
 	"net/http"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/graph-gophers/dataloader"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/slug"
+	log "github.com/sirupsen/logrus"
 )
 
 type ctxKey string
@@ -17,6 +17,7 @@ const loadersKey = ctxKey("dataloaders")
 
 // Loaders wrap your data loaders to inject via middleware
 type Loaders struct {
+	Cache           dataloader.Cache
 	UserLoader      *dataloader.Loader
 	TeamLoader      *dataloader.Loader
 	UserRolesLoader *dataloader.Loader
@@ -29,10 +30,18 @@ func NewLoaders(database db.Database) *Loaders {
 	teamReader := &TeamReader{db: database}
 	userRoleReader := &UserRoleReader{db: database}
 
+	cache := dataloader.NewCache()
+
+	opts := []dataloader.Option{
+		dataloader.WithCache(cache),
+		dataloader.WithInputCapacity(5000),
+	}
+
 	loaders := &Loaders{
-		UserLoader:      dataloader.NewBatchedLoader(userReader.GetUsers, dataloader.WithWait(100*time.Millisecond)),
-		TeamLoader:      dataloader.NewBatchedLoader(teamReader.GetTeams, dataloader.WithWait(100*time.Millisecond)),
-		UserRolesLoader: dataloader.NewBatchedLoader(userRoleReader.GetUserRoles, dataloader.WithWait(100*time.Millisecond)),
+		Cache:           cache,
+		UserLoader:      dataloader.NewBatchedLoader(userReader.GetUsers, opts...),
+		TeamLoader:      dataloader.NewBatchedLoader(teamReader.GetTeams, opts...),
+		UserRolesLoader: dataloader.NewBatchedLoader(userRoleReader.GetUserRoles, opts...),
 	}
 
 	return loaders
@@ -45,6 +54,10 @@ func Middleware(loaders *Loaders) func(http.Handler) http.Handler {
 			nextCtx := context.WithValue(r.Context(), loadersKey, loaders)
 			r = r.WithContext(nextCtx)
 			next.ServeHTTP(w, r)
+
+			// clear cache after request is complete
+			loaders.Cache.Clear()
+			log.Debugf("cleared dataloader cache after request")
 		})
 	}
 }
