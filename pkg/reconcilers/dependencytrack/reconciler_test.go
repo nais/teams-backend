@@ -2,6 +2,7 @@ package dependencytrack
 
 import (
 	"context"
+	"github.com/nais/console/pkg/dependencytrack"
 	"testing"
 
 	"github.com/google/uuid"
@@ -120,7 +121,7 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 		},
 	} {
 		mockClient := dependencytrack.NewMockClient(t)
-		reconciler, err := New(database, auditLogger, mockClient, log)
+		reconciler, err := New(database, auditLogger, []dependencytrack.Client{mockClient}, log)
 		assert.NoError(t, err)
 
 		if tt.preRun != nil {
@@ -165,7 +166,7 @@ func TestDependencytrackReconciler_Delete(t *testing.T) {
 		mockClient := dependencytrack.NewMockClient(t)
 		database := db.NewMockDatabase(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		reconciler, err := New(database, auditLogger, mockClient, log)
+		reconciler, err := New(database, auditLogger, []dependencytrack.Client{mockClient}, log)
 		assert.NoError(t, err)
 
 		if tt.preRun != nil {
