@@ -131,7 +131,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 		assert.Equal(t, createdTeam.Slug, returnedTeam.Slug)
 	})
 
-	t.Run("calling with SA, does not change roles", func(t *testing.T) {
+	t.Run("calling with SA, adds sa as team owner", func(t *testing.T) {
 		createdTeam := &db.Team{
 			Team: &sqlc.Team{Slug: teamSlug},
 		}
@@ -141,6 +141,11 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 		dbtx.
 			On("CreateTeam", txCtx, teamSlug, "some purpose", slackChannel).
 			Return(createdTeam, nil).
+			Once()
+
+		dbtx.
+			On("AssignTeamRoleToServiceAccount", txCtx, serviceAccount.GetID(), sqlc.RoleNameTeamowner, teamSlug).
+			Return(nil).
 			Once()
 
 		database.
