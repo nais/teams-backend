@@ -10,6 +10,9 @@ all: generate console
 console:
 	go build -o bin/console -ldflags "-s $(LDFLAGS)" cmd/console/*.go
 
+local:
+	go run ./cmd/console/main.go
+
 test:
 	go test ./...
 
