@@ -127,6 +127,9 @@ func (c *client) CreateUser(ctx context.Context, email string) error {
 		"username": email,
 		"email":    email,
 	})
+	if err != nil {
+		return err
+	}
 
 	token, err := c.token(ctx)
 	if err != nil {
@@ -184,6 +187,10 @@ func (c *client) DeleteTeam(ctx context.Context, uuid string) error {
 	body, err := json.Marshal(map[string]string{
 		"uuid": uuid,
 	})
+	if err != nil {
+		return err
+	}
+
 	token, err := c.token(ctx)
 	if err != nil {
 		return fmt.Errorf("getting Token: %w", err)
@@ -236,7 +243,7 @@ func (c *client) sendRequest(ctx context.Context, httpMethod string, url string,
 		if err != nil {
 			return nil, fmt.Errorf("reading response body: %w", err)
 		}
-		return nil, fail(resp.StatusCode, fmt.Errorf("%s\n", string(b)))
+		return nil, fail(resp.StatusCode, fmt.Errorf("%s", string(b)))
 	}
 	resBody, err := io.ReadAll(resp.Body)
 	return resBody, err
