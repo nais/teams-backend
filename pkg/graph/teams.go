@@ -51,15 +51,10 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		}
 
 		if actor.User.IsServiceAccount() {
-			return nil
+			return dbtx.AssignTeamRoleToServiceAccount(ctx, actor.User.GetID(), sqlc.RoleNameTeamowner, *input.Slug)
 		}
 
-		err = dbtx.SetTeamMemberRole(ctx, actor.User.GetID(), team.Slug, sqlc.RoleNameTeamowner)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return dbtx.SetTeamMemberRole(ctx, actor.User.GetID(), team.Slug, sqlc.RoleNameTeamowner)
 	})
 	if err != nil {
 		return nil, err
