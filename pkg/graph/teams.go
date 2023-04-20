@@ -712,6 +712,9 @@ func (r *teamResolver) ReconcilerState(ctx context.Context, obj *db.Team) (*mode
 		if err != nil {
 			return nil, apierror.Errorf("Unable to load the existing GCP project state.")
 		}
+		if gcpProjectState.Projects == nil {
+			gcpProjectState.Projects = make(map[string]reconcilers.GoogleGcpEnvironmentProject)
+		}
 
 		for env, projectID := range gcpProjectState.Projects {
 			gcpProjects = append(gcpProjects, &model.GcpProject{
@@ -727,6 +730,9 @@ func (r *teamResolver) ReconcilerState(ctx context.Context, obj *db.Team) (*mode
 		err := r.database.LoadReconcilerStateForTeam(ctx, sqlc.ReconcilerNameNaisNamespace, obj.Slug, naisNamespaceState)
 		if err != nil {
 			return nil, apierror.Errorf("Unable to load the existing GCP project state.")
+		}
+		if naisNamespaceState.Namespaces == nil {
+			naisNamespaceState.Namespaces = make(map[string]slug.Slug)
 		}
 
 		for environment, namespace := range naisNamespaceState.Namespaces {

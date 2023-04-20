@@ -120,6 +120,9 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	if err != nil {
 		return fmt.Errorf("unable to load NAIS namespace state for team %q: %w", input.Team.Slug, err)
 	}
+	if namespaceState.Namespaces == nil {
+		namespaceState.Namespaces = make(map[string]slug.Slug)
+	}
 
 	gcpProjectState := &reconcilers.GoogleGcpProjectState{
 		Projects: make(map[string]reconcilers.GoogleGcpEnvironmentProject),
@@ -127,6 +130,9 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 	err = r.database.LoadReconcilerStateForTeam(ctx, google_gcp_reconciler.Name, input.Team.Slug, gcpProjectState)
 	if err != nil {
 		return fmt.Errorf("unable to load GCP project state for team %q: %w", input.Team.Slug, err)
+	}
+	if gcpProjectState.Projects == nil {
+		gcpProjectState.Projects = make(map[string]reconcilers.GoogleGcpEnvironmentProject)
 	}
 
 	if len(gcpProjectState.Projects) == 0 {
@@ -206,6 +212,9 @@ func (r *naisNamespaceReconciler) Delete(ctx context.Context, teamSlug slug.Slug
 	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), teamSlug, namespaceState)
 	if err != nil {
 		return fmt.Errorf("unable to load NAIS namespace state for team %q: %w", teamSlug, err)
+	}
+	if namespaceState.Namespaces == nil {
+		namespaceState.Namespaces = make(map[string]slug.Slug)
 	}
 
 	var errors []error
