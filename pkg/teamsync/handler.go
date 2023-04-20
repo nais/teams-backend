@@ -15,6 +15,7 @@ import (
 	"github.com/nais/console/pkg/metrics"
 	"github.com/nais/console/pkg/reconcilers"
 	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
+	dependencytrack_reconciler "github.com/nais/console/pkg/reconcilers/dependencytrack"
 	github_team_reconciler "github.com/nais/console/pkg/reconcilers/github/team"
 	google_gar "github.com/nais/console/pkg/reconcilers/google/gar"
 	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
@@ -62,6 +63,7 @@ type ReconcilerWithRunOrder struct {
 type ReconcilerFactories map[sqlc.ReconcilerName]reconcilers.ReconcilerFactory
 
 var factories = ReconcilerFactories{
+	dependencytrack_reconciler.Name:        dependencytrack_reconciler.NewFromConfig,
 	azure_group_reconciler.Name:            azure_group_reconciler.NewFromConfig,
 	github_team_reconciler.Name:            github_team_reconciler.NewFromConfig,
 	google_workspace_admin_reconciler.Name: google_workspace_admin_reconciler.NewFromConfig,

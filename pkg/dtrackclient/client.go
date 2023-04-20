@@ -1,4 +1,4 @@
-package dependencytrack
+package dtrackclient
 
 import (
 	"bytes"
@@ -41,12 +41,15 @@ type Team struct {
 	OidcUsers []User `json:"oidcUsers,omitempty"`
 }
 
-func NewClient(baseUrl string, username string, password string) Client {
+func NewClient(baseUrl string, username string, password string, c *http.Client) Client {
+	if c == nil {
+		c = http.DefaultClient
+	}
 	return &client{
 		baseUrl:    baseUrl,
 		username:   username,
 		password:   password,
-		httpClient: http.DefaultClient,
+		httpClient: c,
 	}
 }
 
@@ -60,7 +63,6 @@ type RequestError struct {
 	Err        error
 }
 
-// TODO: check if team exists - name is not unique
 func (c *client) CreateTeam(ctx context.Context, teamName string, permissions []Permission) (*Team, error) {
 	body, _ := json.Marshal(&Team{
 		Name: teamName,
@@ -118,15 +120,6 @@ func (c *client) GetTeams(ctx context.Context) ([]Team, error) {
 		return nil, err
 	}
 	return teams, nil
-}
-
-func GetTeam(teams []Team, name string) *Team {
-	for _, t := range teams {
-		if t.Name == name {
-			return &t
-		}
-	}
-	return nil
 }
 
 func (c *client) CreateUser(ctx context.Context, email string) error {

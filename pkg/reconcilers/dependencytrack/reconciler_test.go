@@ -5,7 +5,10 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/dtrackclient"
+	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
@@ -15,30 +18,48 @@ import (
 
 func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 
-	//existingTeamName := "existingTeam"
-	input := setupInput("someTeam", "user1@nais.io")
+	correlationID := uuid.New()
+	input := setupInput(correlationID, "someTeam", "user1@nais.io")
+
+	teamName := input.Team.Slug.String()
+	teamUuid := uuid.New().String()
+	username := input.TeamMembers[0].Email
+
+	log, err := logger.GetLogger("text", "info")
+	assert.NoError(t, err)
+
+	auditLogger := auditlogger.NewMockAuditLogger(t)
+	database := db.NewMockDatabase(t)
+
+	ctx := context.Background()
 
 	for _, tt := range []struct {
 		name   string
-		preRun func(t *testing.T, mock *MockClient)
+		preRun func(t *testing.T, mock *dtrackclient.MockClient)
 	}{
 		{
 			name: "team does not exist, new team created and new members added",
-			preRun: func(t *testing.T, client *MockClient) {
-				teamName := "someTeam"
-				teamUuid := uuid.New().String()
-				username := "user1@nais.io"
+			preRun: func(t *testing.T, client *dtrackclient.MockClient) {
 
-				client.On("GetTeams", mock.Anything).Return([]Team{}, nil).Once()
-				client.On("CreateTeam", mock.Anything, teamName, []Permission{
-					ViewPortfolioPermission,
-				}).Return(&Team{
+				client.On("GetTeams", mock.Anything).Return([]dtrackclient.Team{}, nil).Once()
+				client.On("CreateTeam", mock.Anything, teamName, []dtrackclient.Permission{
+					dtrackclient.ViewPortfolioPermission,
+				}).Return(&dtrackclient.Team{
 					Uuid:      teamUuid,
-					Name:      "newteam",
+					Name:      teamName,
 					OidcUsers: nil,
 				}, nil).Once()
 
-				client.On("CreateUser", mock.Anything, username).Return(&User{
+				auditLogger.
+					On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
+						return len(t) == 1 && t[0].Identifier == string(input.Team.Slug)
+					}), mock.MatchedBy(func(f auditlogger.Fields) bool {
+						return f.Action == AuditActionDependencytrackCreate && f.CorrelationID == correlationID
+					}), mock.Anything, teamName, teamUuid).
+					Return(nil).
+					Once()
+
+				client.On("CreateUser", mock.Anything, username).Return(&dtrackclient.User{
 					Username: username,
 					Email:    username,
 				}).Return(nil).Once()
@@ -48,19 +69,16 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 		},
 		{
 			name: "team exists, new members added",
-			preRun: func(t *testing.T, client *MockClient) {
-				teamName := "someTeam"
-				teamUuid := uuid.New().String()
-				username := "user1@nais.io"
+			preRun: func(t *testing.T, client *dtrackclient.MockClient) {
 
-				client.On("GetTeams", mock.Anything).Return([]Team{
+				client.On("GetTeams", mock.Anything).Return([]dtrackclient.Team{
 					{
 						Name: teamName,
 						Uuid: teamUuid,
 					},
 				}, nil).Once()
 
-				client.On("CreateUser", mock.Anything, username).Return(&User{
+				client.On("CreateUser", mock.Anything, username).Return(&dtrackclient.User{
 					Username: username,
 					Email:    username,
 				}).Return(nil).Once()
@@ -70,18 +88,15 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 		},
 		{
 			name: "usermembership removed from existing team",
-			preRun: func(t *testing.T, client *MockClient) {
-				teamName := "someTeam"
-				teamUuid := uuid.New().String()
+			preRun: func(t *testing.T, client *dtrackclient.MockClient) {
 				usernameInConsole := "user1@nais.io"
 				usernameNotInConsole := "userNotInConsole@nais.io"
-				username := "user1@nais.io"
 
-				client.On("GetTeams", mock.Anything).Return([]Team{
+				client.On("GetTeams", mock.Anything).Return([]dtrackclient.Team{
 					{
 						Name: teamName,
 						Uuid: teamUuid,
-						OidcUsers: []User{
+						OidcUsers: []dtrackclient.User{
 							{
 								Username: usernameInConsole,
 								Email:    usernameInConsole,
@@ -96,7 +111,7 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 
 				client.On("DeleteUserMembership", mock.Anything, teamUuid, usernameNotInConsole).Return(nil).Once()
 
-				client.On("CreateUser", mock.Anything, username).Return(&User{
+				client.On("CreateUser", mock.Anything, username).Return(&dtrackclient.User{
 					Username: username,
 					Email:    username,
 				}).Return(nil).Once()
@@ -105,8 +120,8 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 			},
 		},
 	} {
-		mockClient := NewMockClient(t)
-		reconciler, err := New(context.Background(), mockClient)
+		mockClient := dtrackclient.NewMockClient(t)
+		reconciler, err := New(database, auditLogger, mockClient, log)
 		assert.NoError(t, err)
 
 		if tt.preRun != nil {
@@ -120,19 +135,24 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 
 func TestDependencytrackReconciler_Delete(t *testing.T) {
 
-	input := setupInput("someTeam", "user1@nais.io")
+	log, err := logger.GetLogger("text", "info")
+	assert.NoError(t, err)
+
+	correlationID := uuid.New()
+	input := setupInput(correlationID, "someTeam", "user1@nais.io")
+
+	teamName := input.Team.Slug.String()
 
 	for _, tt := range []struct {
 		name   string
-		preRun func(t *testing.T, mock *MockClient)
+		preRun func(t *testing.T, mock *dtrackclient.MockClient)
 	}{
 		{
-			name: "team does not exist, remove from dtrack",
-			preRun: func(t *testing.T, client *MockClient) {
-				teamName := "someTeam"
+			name: "delete team from console should remove team from dependencytrack",
+			preRun: func(t *testing.T, client *dtrackclient.MockClient) {
 				teamNotInConsoleUuid := uuid.New().String()
 
-				client.On("GetTeams", mock.Anything).Return([]Team{
+				client.On("GetTeams", mock.Anything).Return([]dtrackclient.Team{
 					{
 						Name: teamName,
 						Uuid: teamNotInConsoleUuid,
@@ -143,8 +163,10 @@ func TestDependencytrackReconciler_Delete(t *testing.T) {
 			},
 		},
 	} {
-		mockClient := NewMockClient(t)
-		reconciler, err := New(context.Background(), mockClient)
+		mockClient := dtrackclient.NewMockClient(t)
+		database := db.NewMockDatabase(t)
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		reconciler, err := New(database, auditLogger, mockClient, log)
 		assert.NoError(t, err)
 
 		if tt.preRun != nil {
@@ -156,7 +178,7 @@ func TestDependencytrackReconciler_Delete(t *testing.T) {
 	}
 }
 
-func setupInput(teamSlug string, members ...string) reconcilers.Input {
+func setupInput(correlationId uuid.UUID, teamSlug string, members ...string) reconcilers.Input {
 	inputTeam := db.Team{
 		Team: &sqlc.Team{
 			Slug:    slug.Slug(teamSlug),
@@ -174,100 +196,9 @@ func setupInput(teamSlug string, members ...string) reconcilers.Input {
 	}
 
 	return reconcilers.Input{
-		CorrelationID:   uuid.New(),
+		CorrelationID:   correlationId,
 		Team:            inputTeam,
 		TeamMembers:     inputMembers,
 		NumSyncAttempts: 0,
 	}
 }
-
-/*
-func TestDependencytrackReconciler_Reconcile(t *testing.T) {
-	//database := db.NewMockDatabase(t)
-	//auditLogger := auditlogger.NewMockAuditLogger(t)
-	//log := logger.NewMockLogger(t)
-
-	mock := newMock()
-
-	reconciler, err := New(context.Background(), mock)
-	assert.NoError(t, err)
-
-	permission := ViewPortfolioPermission
-	defaultTeamPermissions := []*Permission{
-		&permission,
-	}
-
-	existingTeamName := "existingTeam"
-
-	for _, tt := range []struct {
-		name    string
-		team    string
-		members []string
-		preRun  func(t *testing.T)
-	}{
-		{
-			name:    "team exists, new member added",
-			team:    existingTeamName,
-			members: []string{"nybruker@dev-nais.io"},
-			preRun: func(t *testing.T) {
-				_, err = mock.CreateTeam(context.Background(), existingTeamName, []Permission{
-					permission,
-				})
-				assert.NoError(t, err)
-				err = mock.CreateUser(context.Background(), "shouldBeDeleted@nais.io")
-				assert.NoError(t, err)
-			},
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.preRun != nil {
-				tt.preRun(t)
-			}
-
-			inputTeam := db.Team{
-				Team: &sqlc.Team{
-					Slug:    slug.Slug(tt.team),
-					Purpose: "teamPurpose",
-				},
-			}
-
-			inputMembers := make([]*db.User, 0)
-			for _, member := range tt.members {
-				inputMembers = append(inputMembers, &db.User{
-					User: &sqlc.User{
-						Email: member,
-					},
-				})
-			}
-
-			input := reconcilers.Input{
-				CorrelationID:   uuid.New(),
-				Team:            inputTeam,
-				TeamMembers:     inputMembers,
-				NumSyncAttempts: 0,
-			}
-
-			err = reconciler.Reconcile(context.Background(), input)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			assert.True(t, teamExists(mock, tt.team), "inputTeam should exist")
-			assert.ElementsMatch(t, defaultTeamPermissions, mock.permissions[tt.team])
-			assert.Equal(t, tt.members, mock.membersInTeam(tt.team), "members should match")
-
-			mock.reset()
-		})
-	}
-}
-
-func teamExists(mock *mock, team string) bool {
-	for _, t := range mock.teams {
-		if t.Name == team {
-			return true
-		}
-	}
-
-	return false
-}
-*/
