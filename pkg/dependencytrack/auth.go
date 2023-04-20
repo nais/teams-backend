@@ -1,4 +1,4 @@
-package dtrackclient
+package dependencytrack
 
 import (
 	"context"

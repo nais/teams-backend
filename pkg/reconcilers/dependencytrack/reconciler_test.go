@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/dtrackclient"
 	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/slug"
@@ -35,16 +34,16 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 
 	for _, tt := range []struct {
 		name   string
-		preRun func(t *testing.T, mock *dtrackclient.MockClient)
+		preRun func(t *testing.T, mock *dependencytrack.MockClient)
 	}{
 		{
 			name: "team does not exist, new team created and new members added",
-			preRun: func(t *testing.T, client *dtrackclient.MockClient) {
+			preRun: func(t *testing.T, client *dependencytrack.MockClient) {
 
-				client.On("GetTeams", mock.Anything).Return([]dtrackclient.Team{}, nil).Once()
-				client.On("CreateTeam", mock.Anything, teamName, []dtrackclient.Permission{
-					dtrackclient.ViewPortfolioPermission,
-				}).Return(&dtrackclient.Team{
+				client.On("GetTeams", mock.Anything).Return([]dependencytrack.Team{}, nil).Once()
+				client.On("CreateTeam", mock.Anything, teamName, []dependencytrack.Permission{
+					dependencytrack.ViewPortfolioPermission,
+				}).Return(&dependencytrack.Team{
 					Uuid:      teamUuid,
 					Name:      teamName,
 					OidcUsers: nil,
@@ -59,7 +58,7 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 					Return(nil).
 					Once()
 
-				client.On("CreateUser", mock.Anything, username).Return(&dtrackclient.User{
+				client.On("CreateUser", mock.Anything, username).Return(&dependencytrack.User{
 					Username: username,
 					Email:    username,
 				}).Return(nil).Once()
@@ -69,16 +68,16 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 		},
 		{
 			name: "team exists, new members added",
-			preRun: func(t *testing.T, client *dtrackclient.MockClient) {
+			preRun: func(t *testing.T, client *dependencytrack.MockClient) {
 
-				client.On("GetTeams", mock.Anything).Return([]dtrackclient.Team{
+				client.On("GetTeams", mock.Anything).Return([]dependencytrack.Team{
 					{
 						Name: teamName,
 						Uuid: teamUuid,
 					},
 				}, nil).Once()
 
-				client.On("CreateUser", mock.Anything, username).Return(&dtrackclient.User{
+				client.On("CreateUser", mock.Anything, username).Return(&dependencytrack.User{
 					Username: username,
 					Email:    username,
 				}).Return(nil).Once()
@@ -88,15 +87,15 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 		},
 		{
 			name: "usermembership removed from existing team",
-			preRun: func(t *testing.T, client *dtrackclient.MockClient) {
+			preRun: func(t *testing.T, client *dependencytrack.MockClient) {
 				usernameInConsole := "user1@nais.io"
 				usernameNotInConsole := "userNotInConsole@nais.io"
 
-				client.On("GetTeams", mock.Anything).Return([]dtrackclient.Team{
+				client.On("GetTeams", mock.Anything).Return([]dependencytrack.Team{
 					{
 						Name: teamName,
 						Uuid: teamUuid,
-						OidcUsers: []dtrackclient.User{
+						OidcUsers: []dependencytrack.User{
 							{
 								Username: usernameInConsole,
 								Email:    usernameInConsole,
@@ -111,7 +110,7 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 
 				client.On("DeleteUserMembership", mock.Anything, teamUuid, usernameNotInConsole).Return(nil).Once()
 
-				client.On("CreateUser", mock.Anything, username).Return(&dtrackclient.User{
+				client.On("CreateUser", mock.Anything, username).Return(&dependencytrack.User{
 					Username: username,
 					Email:    username,
 				}).Return(nil).Once()
@@ -120,7 +119,7 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 			},
 		},
 	} {
-		mockClient := dtrackclient.NewMockClient(t)
+		mockClient := dependencytrack.NewMockClient(t)
 		reconciler, err := New(database, auditLogger, mockClient, log)
 		assert.NoError(t, err)
 
@@ -145,14 +144,14 @@ func TestDependencytrackReconciler_Delete(t *testing.T) {
 
 	for _, tt := range []struct {
 		name   string
-		preRun func(t *testing.T, mock *dtrackclient.MockClient)
+		preRun func(t *testing.T, mock *dependencytrack.MockClient)
 	}{
 		{
 			name: "delete team from console should remove team from dependencytrack",
-			preRun: func(t *testing.T, client *dtrackclient.MockClient) {
+			preRun: func(t *testing.T, client *dependencytrack.MockClient) {
 				teamNotInConsoleUuid := uuid.New().String()
 
-				client.On("GetTeams", mock.Anything).Return([]dtrackclient.Team{
+				client.On("GetTeams", mock.Anything).Return([]dependencytrack.Team{
 					{
 						Name: teamName,
 						Uuid: teamNotInConsoleUuid,
@@ -163,7 +162,7 @@ func TestDependencytrackReconciler_Delete(t *testing.T) {
 			},
 		},
 	} {
-		mockClient := dtrackclient.NewMockClient(t)
+		mockClient := dependencytrack.NewMockClient(t)
 		database := db.NewMockDatabase(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		reconciler, err := New(database, auditLogger, mockClient, log)

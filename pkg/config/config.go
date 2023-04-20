@@ -4,16 +4,17 @@ import (
 	"strings"
 
 	"github.com/kelseyhightower/envconfig"
+	"github.com/nais/console/pkg/dependencytrack"
 	"github.com/nais/console/pkg/fixtures"
 	"github.com/nais/console/pkg/gcp"
 	"github.com/nais/console/pkg/legacy/envmap"
 )
 
 type DependencyTrack struct {
-	Endpoint string
-	Username string
-	Password string
+	// a list of dependency track instances (one per cluster).
+	Instances dependencytrack.Instances `envconfig:"CONSOLE_DEPENDENCYTRACK"`
 }
+
 type GitHub struct {
 	// ApplicationID The ID of the GitHub Application that is used when communicating with the GitHub APIs.
 	ApplicationID int64 `envconfig:"CONSOLE_GITHUB_APPLICATION_ID"`

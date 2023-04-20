@@ -7,7 +7,7 @@ import (
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/dtrackclient"
+	"github.com/nais/console/pkg/dependencytrack"
 	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/slug"
@@ -18,7 +18,7 @@ type dependencytrackReconciler struct {
 	database    db.Database
 	auditLogger auditlogger.AuditLogger
 	log         logger.Logger
-	client      dtrackclient.Client
+	client      dependencytrack.Client
 }
 
 // TODO: add to DB
@@ -27,7 +27,7 @@ const (
 	AuditActionDependencytrackCreate = sqlc.AuditAction("dependencytrack:group:create")
 )
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, client dtrackclient.Client, log logger.Logger) (reconcilers.Reconciler, error) {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, client dependencytrack.Client, log logger.Logger) (reconcilers.Reconciler, error) {
 	return &dependencytrackReconciler{
 		database:    database,
 		auditLogger: auditLogger,
@@ -38,10 +38,10 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, client dtrac
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
 	log = log.WithSystem(string(Name))
-	c := dtrackclient.NewClient(
-		cfg.DependencyTrack.Endpoint,
-		cfg.DependencyTrack.Username,
-		cfg.DependencyTrack.Password,
+	c := dependencytrack.NewClient(
+		"TODO",
+		"TODO",
+		"TODO",
 		nil,
 	)
 	return New(database, auditLogger, c, log)
@@ -85,8 +85,8 @@ func (r *dependencytrackReconciler) createTeamAndUsers(ctx context.Context, inpu
 
 	team := teamByName(teams, teamName)
 	if team == nil {
-		team, err = r.client.CreateTeam(ctx, teamName, []dtrackclient.Permission{
-			dtrackclient.ViewPortfolioPermission,
+		team, err = r.client.CreateTeam(ctx, teamName, []dependencytrack.Permission{
+			dependencytrack.ViewPortfolioPermission,
 		})
 		if err != nil {
 			return err
@@ -125,9 +125,9 @@ func (r *dependencytrackReconciler) createTeamAndUsers(ctx context.Context, inpu
 	return nil
 }
 
-func (r *dependencytrackReconciler) deleteUsersNotInConsole(ctx context.Context, team *dtrackclient.Team, consoleUsers []*db.User) error {
+func (r *dependencytrackReconciler) deleteUsersNotInConsole(ctx context.Context, team *dependencytrack.Team, consoleUsers []*db.User) error {
 
-	usersToRemove := make([]dtrackclient.User, 0)
+	usersToRemove := make([]dependencytrack.User, 0)
 	for _, u := range team.OidcUsers {
 		found := false
 		for _, cu := range consoleUsers {
@@ -149,7 +149,7 @@ func (r *dependencytrackReconciler) deleteUsersNotInConsole(ctx context.Context,
 	return nil
 }
 
-func teamByName(teams []dtrackclient.Team, name string) *dtrackclient.Team {
+func teamByName(teams []dependencytrack.Team, name string) *dependencytrack.Team {
 	for _, t := range teams {
 		if t.Name == name {
 			return &t
