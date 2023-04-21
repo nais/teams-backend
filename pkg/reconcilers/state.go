@@ -11,6 +11,15 @@ type AzureState struct {
 	GroupID *uuid.UUID `json:"groupId"`
 }
 
+type DependencyTrackState struct {
+	Instances map[string]*DependencyTrackTeam `json:"instances"`
+}
+
+type DependencyTrackTeam struct {
+	TeamID  string   `json:"teamId"`
+	Members []string `json:"members"`
+}
+
 type GitHubState struct {
 	Slug         *slug.Slug          `json:"slug"`
 	Repositories []*GitHubRepository `json:"repositories"`
