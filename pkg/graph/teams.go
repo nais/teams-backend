@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/nais/console/pkg/roles"
-
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
@@ -19,6 +17,7 @@ import (
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/reconcilers"
 	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
+	"github.com/nais/console/pkg/roles"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 )

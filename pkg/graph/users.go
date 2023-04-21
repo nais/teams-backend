@@ -7,8 +7,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/nais/console/pkg/roles"
-
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
@@ -16,6 +14,7 @@ import (
 	"github.com/nais/console/pkg/graph/dataloader"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
+	"github.com/nais/console/pkg/roles"
 	"github.com/nais/console/pkg/sqlc"
 )
 
