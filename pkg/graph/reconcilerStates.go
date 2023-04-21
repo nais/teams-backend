@@ -152,6 +152,9 @@ func (r *mutationResolver) SetGcpProjectID(ctx context.Context, teamSlug *slug.S
 	if err != nil {
 		return nil, apierror.Errorf("Unable to load the existing GCP project state.")
 	}
+	if state.Projects == nil {
+		state.Projects = make(map[string]reconcilers.GoogleGcpEnvironmentProject)
+	}
 
 	state.Projects[gcpEnvironment] = reconcilers.GoogleGcpEnvironmentProject{ProjectID: gcpProjectID}
 	err = r.database.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGoogleGcpProject, *teamSlug, state)
@@ -200,6 +203,9 @@ func (r *mutationResolver) SetNaisNamespace(ctx context.Context, teamSlug *slug.
 	err = r.database.LoadReconcilerStateForTeam(ctx, sqlc.ReconcilerNameNaisNamespace, *teamSlug, state)
 	if err != nil {
 		return nil, apierror.Errorf("Unable to load the existing NAIS namespace state.")
+	}
+	if state.Namespaces == nil {
+		state.Namespaces = make(map[string]slug.Slug)
 	}
 
 	state.Namespaces[gcpEnvironment] = *naisNamespace

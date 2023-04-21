@@ -78,6 +78,10 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 		return fmt.Errorf("load system state for team %q in system %q: %w", input.Team.Slug, r.Name(), err)
 	}
 
+	if state.Projects == nil {
+		state.Projects = make(map[string]reconcilers.GoogleGcpEnvironmentProject)
+	}
+
 	googleWorkspaceState := &reconcilers.GoogleWorkspaceState{}
 	err = r.database.LoadReconcilerStateForTeam(ctx, google_workspace_admin_reconciler.Name, input.Team.Slug, googleWorkspaceState)
 	if err != nil {
@@ -147,6 +151,9 @@ func (r *googleGcpReconciler) Delete(ctx context.Context, teamSlug slug.Slug, co
 	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), teamSlug, state)
 	if err != nil {
 		return fmt.Errorf("load reconciler state for team %q in reconciler %q: %w", teamSlug, r.Name(), err)
+	}
+	if state.Projects == nil {
+		state.Projects = make(map[string]reconcilers.GoogleGcpEnvironmentProject)
 	}
 
 	if len(state.Projects) == 0 {

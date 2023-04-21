@@ -335,8 +335,8 @@ func (r *garReconciler) setGarRepositoryPolicy(ctx context.Context, repository *
 }
 
 func serviceAccountNameAndAccountID(teamSlug slug.Slug, projectID string) (serviceAccountName, accountID string) {
-	accountId := console.SlugHashPrefixTruncate(teamSlug, "gar", gcp.GoogleServiceAccountMaxLength)
-	emailAddress := fmt.Sprintf("%s@%s.iam.gserviceaccount.com", accountId, projectID)
+	accountID = console.SlugHashPrefixTruncate(teamSlug, "gar", gcp.GoogleServiceAccountMaxLength)
+	emailAddress := fmt.Sprintf("%s@%s.iam.gserviceaccount.com", accountID, projectID)
 	serviceAccountName = fmt.Sprintf("projects/%s/serviceAccounts/%s", projectID, emailAddress)
 	return
 }
