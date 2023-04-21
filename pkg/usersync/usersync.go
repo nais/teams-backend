@@ -2,7 +2,6 @@ package usersync
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -18,24 +17,41 @@ import (
 	"google.golang.org/api/option"
 )
 
-type UserSynchronizer struct {
-	database         db.Database
-	auditLogger      auditlogger.AuditLogger
-	adminGroupPrefix string
-	tenantDomain     string
-	service          *admin_directory_v1.Service
-	log              logger.Logger
-}
-
-var (
-	ErrNotEnabled    = errors.New("disabled by configuration")
-	DefaultRoleNames = []sqlc.RoleName{
-		sqlc.RoleNameTeamcreator,
-		sqlc.RoleNameTeamviewer,
-		sqlc.RoleNameUserviewer,
-		sqlc.RoleNameServiceaccountcreator,
+type (
+	UserSynchronizer struct {
+		database         db.Database
+		auditLogger      auditlogger.AuditLogger
+		adminGroupPrefix string
+		tenantDomain     string
+		service          *admin_directory_v1.Service
+		log              logger.Logger
 	}
+
+	auditLogEntry struct {
+		action    sqlc.AuditAction
+		userEmail string
+		message   string
+	}
+
+	// Key is the ID from Azure AD
+	remoteUsersMap map[string]*db.User
+
+	userMap struct {
+		// byExternalID key is the ID from Azure AD
+		byExternalID map[string]*db.User
+		byEmail      map[string]*db.User
+	}
+
+	userByIDMap  map[uuid.UUID]*db.User
+	userRolesMap map[*db.User]map[sqlc.RoleName]struct{}
 )
+
+var DefaultRoleNames = []sqlc.RoleName{
+	sqlc.RoleNameTeamcreator,
+	sqlc.RoleNameTeamviewer,
+	sqlc.RoleNameUserviewer,
+	sqlc.RoleNameServiceaccountcreator,
+}
 
 func New(database db.Database, auditLogger auditlogger.AuditLogger, adminGroupPrefix, tenantDomain string, service *admin_directory_v1.Service, log logger.Logger) *UserSynchronizer {
 	return &UserSynchronizer{
@@ -70,31 +86,54 @@ func NewFromConfig(cfg *config.Config, database db.Database, auditLogger auditlo
 	return New(database, auditLogger, cfg.UserSync.AdminGroupPrefix, cfg.TenantDomain, srv, log), nil
 }
 
-type auditLogEntry struct {
-	action    sqlc.AuditAction
-	userEmail string
-	message   string
-}
-
 // Sync Fetch all users from the tenant and add them as local users in Console. If a user already exists in Console
 // the local user will get the name potentially updated. After all users have been upserted, local users that matches
 // the tenant domain that does not exist in the Google Directory will be removed.
 func (s *UserSynchronizer) Sync(ctx context.Context, correlationID uuid.UUID) error {
 	log := s.log.WithCorrelationID(correlationID)
 
+	remoteUserMapping := make(remoteUsersMap)
 	remoteUsers, err := getAllPaginatedUsers(ctx, s.service.Users, s.tenantDomain)
 	if err != nil {
-		return fmt.Errorf("list remote users: %w", err)
+		return fmt.Errorf("get remote users: %w", err)
 	}
 
 	auditLogEntries := make([]auditLogEntry, 0)
 	err = s.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
-		localUserIDs := make(map[uuid.UUID]struct{})
-		remoteUserMapping := make(map[string]*db.User)
+		allUsersRows, err := dbtx.GetUsers(ctx)
+		if err != nil {
+			return fmt.Errorf("get existing users: %w", err)
+		}
+
+		usersByID := make(userByIDMap)
+		existingUsers := userMap{
+			byExternalID: make(map[string]*db.User),
+			byEmail:      make(map[string]*db.User),
+		}
+
+		for _, user := range allUsersRows {
+			usersByID[user.ID] = user
+			existingUsers.byExternalID[user.ExternalID] = user
+			existingUsers.byEmail[user.Email] = user
+		}
+
+		allUserRolesRows, err := dbtx.GetAllUserRoles(ctx)
+		if err != nil {
+			return fmt.Errorf("get existing user roles: %w", err)
+		}
+
+		userRoles := make(userRolesMap)
+		for _, row := range allUserRolesRows {
+			user := usersByID[row.UserID]
+			if _, exists := userRoles[user]; !exists {
+				userRoles[user] = make(map[sqlc.RoleName]struct{})
+			}
+			userRoles[user][row.RoleName] = struct{}{}
+		}
 
 		for _, remoteUser := range remoteUsers {
 			email := strings.ToLower(remoteUser.PrimaryEmail)
-			localUser, created, err := getOrCreateLocalUserFromRemoteUser(ctx, dbtx, remoteUser)
+			localUser, created, err := getOrCreateLocalUserFromRemoteUser(ctx, dbtx, remoteUser, existingUsers)
 			if err != nil {
 				return fmt.Errorf("get or create local user %q: %w", email, err)
 			}
@@ -121,22 +160,31 @@ func (s *UserSynchronizer) Sync(ctx context.Context, correlationID uuid.UUID) er
 			}
 
 			for _, roleName := range DefaultRoleNames {
+				if globalRoles, userHasGlobalRoles := userRoles[localUser]; userHasGlobalRoles {
+					if _, userHasDefaultRole := globalRoles[roleName]; userHasDefaultRole {
+						continue
+					}
+				}
 				err = dbtx.AssignGlobalRoleToUser(ctx, localUser.ID, roleName)
 				if err != nil {
 					return fmt.Errorf("attach default role %q to user %q: %w", roleName, email, err)
 				}
 			}
 
-			localUserIDs[localUser.ID] = struct{}{}
 			remoteUserMapping[remoteUser.Id] = localUser
+			delete(usersByID, localUser.ID)
 		}
 
-		err = deleteUnknownUsers(ctx, dbtx, localUserIDs, &auditLogEntries)
+		deletedUsers, err := deleteUnknownUsers(ctx, dbtx, usersByID, &auditLogEntries)
 		if err != nil {
 			return err
 		}
 
-		err = assignConsoleAdmins(ctx, dbtx, s.service.Members, s.adminGroupPrefix, s.tenantDomain, remoteUserMapping, &auditLogEntries, log)
+		for _, deletedUser := range deletedUsers {
+			delete(userRoles, deletedUser)
+		}
+
+		err = assignConsoleAdmins(ctx, dbtx, s.service.Members, s.adminGroupPrefix, s.tenantDomain, remoteUserMapping, userRoles, &auditLogEntries, log)
 		if err != nil {
 			return err
 		}
@@ -163,44 +211,33 @@ func (s *UserSynchronizer) Sync(ctx context.Context, correlationID uuid.UUID) er
 }
 
 // deleteUnknownUsers Delete users from the Console database that does not exist in the Google Workspace
-func deleteUnknownUsers(ctx context.Context, dbtx db.Database, upsertedUsers map[uuid.UUID]struct{}, auditLogEntries *[]auditLogEntry) error {
-	localUsers, err := dbtx.GetUsers(ctx)
-	if err != nil {
-		return fmt.Errorf("list local users: %w", err)
-	}
-
-	for _, localUser := range localUsers {
-		if _, upserted := upsertedUsers[localUser.ID]; upserted {
-			continue
-		}
-
-		err = dbtx.DeleteUser(ctx, localUser.ID)
+func deleteUnknownUsers(ctx context.Context, dbtx db.Database, unknownUsers userByIDMap, auditLogEntries *[]auditLogEntry) ([]*db.User, error) {
+	deletedUsers := make([]*db.User, 0)
+	for _, user := range unknownUsers {
+		err := dbtx.DeleteUser(ctx, user.ID)
 		if err != nil {
-			return fmt.Errorf("delete local user %q: %w", localUser.Email, err)
+			return nil, fmt.Errorf("delete local user %q: %w", user.Email, err)
 		}
 		*auditLogEntries = append(*auditLogEntries, auditLogEntry{
 			action:    sqlc.AuditActionUsersyncDelete,
-			message:   fmt.Sprintf("Local user deleted: %q, external ID: %q", localUser.Email, localUser.ExternalID),
-			userEmail: localUser.Email,
+			message:   fmt.Sprintf("Local user deleted: %q, external ID: %q", user.Email, user.ExternalID),
+			userEmail: user.Email,
 		})
+		deletedUsers = append(deletedUsers, user)
 	}
 
-	return nil
+	return deletedUsers, nil
 }
 
 // assignConsoleAdmins Assign the global admin role to users based on the admin group. Existing admins that is not
 // present in the list of admins will get the admin role revoked.
-func assignConsoleAdmins(ctx context.Context, dbtx db.Database, membersService *admin_directory_v1.MembersService, adminGroupPrefix, tenantDomain string, remoteUserMapping map[string]*db.User, auditLogEntries *[]auditLogEntry, log logger.Logger) error {
+func assignConsoleAdmins(ctx context.Context, dbtx db.Database, membersService *admin_directory_v1.MembersService, adminGroupPrefix, tenantDomain string, remoteUserMapping map[string]*db.User, userRoles userRolesMap, auditLogEntries *[]auditLogEntry, log logger.Logger) error {
 	admins, err := getAdminUsers(ctx, membersService, adminGroupPrefix, tenantDomain, remoteUserMapping, log)
 	if err != nil {
 		return err
 	}
 
-	existingConsoleAdmins, err := getExistingConsoleAdmins(ctx, dbtx)
-	if err != nil {
-		return err
-	}
-
+	existingConsoleAdmins := getExistingConsoleAdmins(userRoles)
 	for _, existingAdmin := range existingConsoleAdmins {
 		if _, shouldBeAdmin := admins[existingAdmin.ID]; !shouldBeAdmin {
 			err = dbtx.RevokeGlobalUserRole(ctx, existingAdmin.ID, sqlc.RoleNameAdmin)
@@ -235,17 +272,16 @@ func assignConsoleAdmins(ctx context.Context, dbtx db.Database, membersService *
 }
 
 // getExistingConsoleAdmins Get all users with a globally assigned admin role
-func getExistingConsoleAdmins(ctx context.Context, dbtx db.Database) (map[uuid.UUID]*db.User, error) {
-	users, err := dbtx.GetUsersWithGloballyAssignedRole(ctx, sqlc.RoleNameAdmin)
-	if err != nil {
-		return nil, err
+func getExistingConsoleAdmins(userWithRoles userRolesMap) map[uuid.UUID]*db.User {
+	admins := make(map[uuid.UUID]*db.User)
+	for user, roles := range userWithRoles {
+		for roleName := range roles {
+			if roleName == sqlc.RoleNameAdmin {
+				admins[user.ID] = user
+			}
+		}
 	}
-
-	existingAdmins := make(map[uuid.UUID]*db.User)
-	for _, user := range users {
-		existingAdmins[user.ID] = user
-	}
-	return existingAdmins, nil
+	return admins
 }
 
 // getAdminUsers Get a list of admin users based on the Console admins group in the Google Workspace
@@ -292,31 +328,39 @@ func getAdminUsers(ctx context.Context, membersService *admin_directory_v1.Membe
 
 // localUserIsOutdated Check if a local user is outdated when compared to the remote user
 func localUserIsOutdated(localUser *db.User, remoteUser *admin_directory_v1.User) bool {
-	return localUser.Name != remoteUser.Name.FullName ||
-		!strings.EqualFold(localUser.Email, remoteUser.PrimaryEmail) ||
-		localUser.ExternalID != remoteUser.Id
+	if localUser.Name != remoteUser.Name.FullName {
+		return true
+	}
+
+	if !strings.EqualFold(localUser.Email, remoteUser.PrimaryEmail) {
+		return true
+	}
+
+	if localUser.ExternalID != remoteUser.Id {
+		return true
+	}
+
+	return false
 }
 
 // getOrCreateLocalUserFromRemoteUser Look up the local user table for a match for the remote user. If no match is
 // found, create the user.
-func getOrCreateLocalUserFromRemoteUser(ctx context.Context, dbtx db.Database, remoteUser *admin_directory_v1.User) (localUser *db.User, created bool, err error) {
-	localUser, err = dbtx.GetUserByExternalID(ctx, remoteUser.Id)
-	if err == nil {
-		return localUser, false, nil
+func getOrCreateLocalUserFromRemoteUser(ctx context.Context, dbtx db.Database, remoteUser *admin_directory_v1.User, existingUsers userMap) (*db.User, bool, error) {
+	if existingUser, exists := existingUsers.byExternalID[remoteUser.Id]; exists {
+		return existingUser, false, nil
 	}
 
 	email := strings.ToLower(remoteUser.PrimaryEmail)
-	localUser, err = dbtx.GetUserByEmail(ctx, email)
-	if err == nil {
-		return localUser, false, nil
+	if existingUser, exists := existingUsers.byEmail[email]; exists {
+		return existingUser, false, nil
 	}
 
-	localUser, err = dbtx.CreateUser(ctx, remoteUser.Name.FullName, email, remoteUser.Id)
+	createdUser, err := dbtx.CreateUser(ctx, remoteUser.Name.FullName, email, remoteUser.Id)
 	if err != nil {
 		return nil, false, err
 	}
 
-	return localUser, true, nil
+	return createdUser, true, nil
 }
 
 func getAllPaginatedUsers(ctx context.Context, svc *admin_directory_v1.UsersService, tenantDomain string) ([]*admin_directory_v1.User, error) {

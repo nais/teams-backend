@@ -2,7 +2,6 @@ package usersync_test
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"testing"
 
@@ -20,11 +19,16 @@ import (
 )
 
 func TestSync(t *testing.T) {
-	correlationID := uuid.New()
-	domain := "example.com"
-	adminGroupPrefix := "console-admins"
+	const (
+		domain           = "example.com"
+		adminGroupPrefix = "console-admins"
+	)
 
-	t.Run("No remote users", func(t *testing.T) {
+	correlationID := uuid.New()
+
+	t.Run("No local users, no remote users", func(t *testing.T) {
+		ctx := context.Background()
+
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		database := db.NewMockDatabase(t)
 		log := logger.NewMockLogger(t)
@@ -41,17 +45,93 @@ func TestSync(t *testing.T) {
 		httpClient := test.NewTestHttpClient(func(req *http.Request) *http.Response {
 			return test.Response("200 OK", `{"users":[]}`)
 		})
-
-		ctx := context.Background()
 		svc, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(httpClient))
 		assert.NoError(t, err)
 
-		usersync := usersync.New(database, auditLogger, adminGroupPrefix, domain, svc, log)
-		err = usersync.Sync(ctx, correlationID)
+		err = usersync.
+			New(database, auditLogger, adminGroupPrefix, domain, svc, log).
+			Sync(ctx, correlationID)
+		assert.NoError(t, err)
+	})
+
+	t.Run("Local users, no remote users", func(t *testing.T) {
+		ctx := context.Background()
+		txCtx := context.Background()
+
+		log := logger.NewMockLogger(t)
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		database := db.NewMockDatabase(t)
+		dbtx := db.NewMockDatabase(t)
+
+		log.
+			On("WithCorrelationID", correlationID).
+			Return(log).
+			Once()
+
+		database.
+			On("Transaction", ctx, mock.Anything).
+			Run(func(args mock.Arguments) {
+				fn := args.Get(1).(db.DatabaseTransactionFunc)
+				_ = fn(txCtx, dbtx)
+			}).
+			Return(nil).
+			Once()
+
+		user1 := &db.User{User: &sqlc.User{ID: serialUuid(1), Email: "user1@example.com", ExternalID: "123", Name: "User 1"}}
+		user2 := &db.User{User: &sqlc.User{ID: serialUuid(2), Email: "user2@example.com", ExternalID: "456", Name: "User 2"}}
+
+		dbtx.
+			On("GetUsers", txCtx).
+			Return([]*db.User{user1, user2}, nil).
+			Once()
+		dbtx.
+			On("GetAllUserRoles", txCtx).
+			Return([]*db.UserRole{
+				{UserRole: &sqlc.UserRole{UserID: user1.ID, RoleName: sqlc.RoleNameTeamcreator}},
+				{UserRole: &sqlc.UserRole{UserID: user2.ID, RoleName: sqlc.RoleNameAdmin}},
+			}, nil).
+			Once()
+		dbtx.
+			On("DeleteUser", txCtx, user1.ID).
+			Return(nil).
+			Once()
+		dbtx.
+			On("DeleteUser", txCtx, user2.ID).
+			Return(nil).
+			Once()
+
+		auditLogger.
+			On("Logf", ctx, database, targetIdentifier(user1.Email), auditAction(sqlc.AuditActionUsersyncDelete), `Local user deleted: "user1@example.com", external ID: "123"`).
+			Return(nil).
+			Once()
+		auditLogger.
+			On("Logf", ctx, database, targetIdentifier(user2.Email), auditAction(sqlc.AuditActionUsersyncDelete), `Local user deleted: "user2@example.com", external ID: "456"`).
+			Return(nil).
+			Once()
+
+		httpClient := test.NewTestHttpClient(
+			// users
+			func(req *http.Request) *http.Response {
+				return test.Response("200 OK", `{"users":[]}`)
+			},
+			// admin group members
+			func(req *http.Request) *http.Response {
+				return test.Response("200 OK", `{"members":[]}`)
+			},
+		)
+		svc, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(httpClient))
+		assert.NoError(t, err)
+
+		err = usersync.
+			New(database, auditLogger, adminGroupPrefix, domain, svc, log).
+			Sync(ctx, correlationID)
 		assert.NoError(t, err)
 	})
 
 	t.Run("Create, update and delete users", func(t *testing.T) {
+		ctx := context.Background()
+		txCtx := context.Background()
+
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		database := db.NewMockDatabase(t)
 		dbtx := db.NewMockDatabase(t)
@@ -67,15 +147,20 @@ func TestSync(t *testing.T) {
 
 		numDefaultRoleNames := len(usersync.DefaultRoleNames)
 
-		localUserWithIncorrectName := &db.User{User: &sqlc.User{ID: serialUuid(1), Email: "user1@example.com", ExternalID: "123", Name: "Incorrect Name"}}
-		localUserWithCorrectName := &db.User{User: &sqlc.User{ID: serialUuid(1), Email: "user1@example.com", ExternalID: "123", Name: "Correct Name"}}
+		localUserID1 := serialUuid(1)
+		localUserID2 := serialUuid(2)
+		localUserID3 := serialUuid(3)
+		localUserID4 := serialUuid(4)
 
-		localUserWithIncorrectEmail := &db.User{User: &sqlc.User{ID: serialUuid(2), Email: "user-123@example.com", Name: "Some Name"}}
-		localUserWithCorrectEmail := &db.User{User: &sqlc.User{ID: serialUuid(2), Email: "user3@example.com", Name: "Some Name", ExternalID: "789"}}
+		localUserWithIncorrectName := &db.User{User: &sqlc.User{ID: localUserID1, Email: "user1@example.com", ExternalID: "123", Name: "Incorrect Name"}}
+		localUserWithCorrectName := &db.User{User: &sqlc.User{ID: localUserID1, Email: "user1@example.com", ExternalID: "123", Name: "Correct Name"}}
 
-		localUserThatWillBeDeleted := &db.User{User: &sqlc.User{ID: serialUuid(3), Email: "delete-me@example.com", Name: "Delete Me", ExternalID: "321"}}
+		localUserWithIncorrectEmail := &db.User{User: &sqlc.User{ID: localUserID2, Email: "user-123@example.com", ExternalID: "789", Name: "Some Name"}}
+		localUserWithCorrectEmail := &db.User{User: &sqlc.User{ID: localUserID2, Email: "user3@example.com", ExternalID: "789", Name: "Some Name"}}
 
-		createdLocalUser := &db.User{User: &sqlc.User{ID: serialUuid(4), Email: "user2@example.com", ExternalID: "456", Name: "Create Me"}}
+		localUserThatWillBeDeleted := &db.User{User: &sqlc.User{ID: localUserID3, Email: "delete-me@example.com", ExternalID: "321", Name: "Delete Me"}}
+
+		createdLocalUser := &db.User{User: &sqlc.User{ID: localUserID4, Email: "user2@example.com", ExternalID: "456", Name: "Create Me"}}
 
 		httpClient := test.NewTestHttpClient(
 			// org users
@@ -94,42 +179,49 @@ func TestSync(t *testing.T) {
 					`{"Id": "789", "email":"inactive-user@example.com", "status":"SUSPENDED", "type": "USER"}]}`) // Invalid status, will be ignored
 			},
 		)
-
-		ctx := context.Background()
-		txCtx := context.Background()
+		svc, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(httpClient))
+		assert.NoError(t, err)
 
 		database.
 			On("Transaction", mock.Anything, mock.Anything).
 			Run(func(args mock.Arguments) {
 				fn := args.Get(1).(db.DatabaseTransactionFunc)
-				fn(txCtx, dbtx)
+				_ = fn(txCtx, dbtx)
 			}).
 			Return(nil).
 			Once()
 
-		// user1@example.com
 		dbtx.
-			On("GetUserByExternalID", txCtx, "123").
-			Return(localUserWithIncorrectName, nil).
+			On("GetAllUserRoles", txCtx).
+			Return([]*db.UserRole{
+				{UserRole: &sqlc.UserRole{UserID: localUserID1, RoleName: sqlc.RoleNameTeamcreator}},
+				{UserRole: &sqlc.UserRole{UserID: localUserID1, RoleName: sqlc.RoleNameAdmin}},
+				{UserRole: &sqlc.UserRole{UserID: localUserID2, RoleName: sqlc.RoleNameTeamviewer}},
+			}, nil).
 			Once()
+
+		dbtx.
+			On("GetUsers", txCtx).
+			Return([]*db.User{
+				localUserWithIncorrectName,
+				localUserWithIncorrectEmail,
+				localUserThatWillBeDeleted,
+			}, nil).
+			Once()
+
+		// user1@example.com
 		dbtx.
 			On("UpdateUser", txCtx, localUserWithIncorrectName.ID, "Correct Name", "user1@example.com", "123").
 			Return(localUserWithCorrectName, nil).
 			Once()
 		dbtx.
-			On("AssignGlobalRoleToUser", txCtx, localUserWithCorrectName.ID, mock.AnythingOfType("sqlc.RoleName")).
+			On("AssignGlobalRoleToUser", txCtx, localUserWithCorrectName.ID, mock.MatchedBy(func(roleName sqlc.RoleName) bool {
+				return roleName != sqlc.RoleNameTeamcreator
+			})).
 			Return(nil).
-			Times(numDefaultRoleNames)
+			Times(numDefaultRoleNames - 1)
 
 		// user2@example.com
-		dbtx.
-			On("GetUserByExternalID", txCtx, "456").
-			Return(nil, errors.New("user not found")).
-			Once()
-		dbtx.
-			On("GetUserByEmail", txCtx, "user2@example.com").
-			Return(nil, errors.New("user not found")).
-			Once()
 		dbtx.
 			On("CreateUser", txCtx, "Create Me", "user2@example.com", "456").
 			Return(createdLocalUser, nil).
@@ -141,24 +233,15 @@ func TestSync(t *testing.T) {
 
 		// user3@example.com
 		dbtx.
-			On("GetUserByExternalID", txCtx, "789").
-			Return(localUserWithIncorrectEmail, nil).
-			Once()
-		dbtx.
 			On("UpdateUser", txCtx, localUserWithIncorrectEmail.ID, "Some Name", "user3@example.com", "789").
 			Return(localUserWithCorrectEmail, nil).
 			Once()
 		dbtx.
-			On("AssignGlobalRoleToUser", txCtx, localUserWithCorrectEmail.ID, mock.AnythingOfType("sqlc.RoleName")).
+			On("AssignGlobalRoleToUser", txCtx, localUserWithCorrectEmail.ID, mock.MatchedBy(func(roleName sqlc.RoleName) bool {
+				return roleName != sqlc.RoleNameTeamviewer
+			})).
 			Return(nil).
-			Times(numDefaultRoleNames)
-
-		dbtx.
-			On("GetUsers", txCtx).
-			Return([]*db.User{
-				localUserWithCorrectName, localUserWithCorrectEmail, localUserThatWillBeDeleted, createdLocalUser,
-			}, nil).
-			Once()
+			Times(numDefaultRoleNames - 1)
 
 		dbtx.
 			On("DeleteUser", txCtx, localUserThatWillBeDeleted.ID).
@@ -166,41 +249,43 @@ func TestSync(t *testing.T) {
 			Once()
 
 		dbtx.
-			On("GetUsersWithGloballyAssignedRole", txCtx, sqlc.RoleNameAdmin).
-			Return(nil, nil).
-			Once()
-
-		dbtx.
 			On("AssignGlobalRoleToUser", txCtx, createdLocalUser.ID, sqlc.RoleNameAdmin).
 			Return(nil).
 			Once()
 
-		auditLogger.
-			On("Logf", ctx, database, targetIdentifier("user1@example.com"), auditAction(sqlc.AuditActionUsersyncUpdate), "Local user updated: \"user1@example.com\", external ID: \"123\"").
-			Return(nil).
-			Once()
-		auditLogger.
-			On("Logf", ctx, database, targetIdentifier("user2@example.com"), auditAction(sqlc.AuditActionUsersyncCreate), "Local user created: \"user2@example.com\", external ID: \"456\"").
-			Return(nil).
-			Once()
-		auditLogger.
-			On("Logf", ctx, database, targetIdentifier("user3@example.com"), auditAction(sqlc.AuditActionUsersyncUpdate), "Local user updated: \"user3@example.com\", external ID: \"789\"").
-			Return(nil).
-			Once()
-		auditLogger.
-			On("Logf", ctx, database, targetIdentifier("delete-me@example.com"), auditAction(sqlc.AuditActionUsersyncDelete), "Local user deleted: \"delete-me@example.com\", external ID: \"321\"").
-			Return(nil).
-			Once()
-		auditLogger.
-			On("Logf", ctx, database, targetIdentifier("user2@example.com"), auditAction(sqlc.AuditActionUsersyncAssignAdminRole), "Assign global admin role to user: \"user2@example.com\"").
+		dbtx.
+			On("RevokeGlobalUserRole", txCtx, localUserID1, sqlc.RoleNameAdmin).
 			Return(nil).
 			Once()
 
-		svc, err := admin_directory_v1.NewService(ctx, option.WithHTTPClient(httpClient))
-		assert.NoError(t, err)
+		auditLogger.
+			On("Logf", ctx, database, targetIdentifier("user1@example.com"), auditAction(sqlc.AuditActionUsersyncUpdate), `Local user updated: "user1@example.com", external ID: "123"`).
+			Return(nil).
+			Once()
+		auditLogger.
+			On("Logf", ctx, database, targetIdentifier("user2@example.com"), auditAction(sqlc.AuditActionUsersyncCreate), `Local user created: "user2@example.com", external ID: "456"`).
+			Return(nil).
+			Once()
+		auditLogger.
+			On("Logf", ctx, database, targetIdentifier("user3@example.com"), auditAction(sqlc.AuditActionUsersyncUpdate), `Local user updated: "user3@example.com", external ID: "789"`).
+			Return(nil).
+			Once()
+		auditLogger.
+			On("Logf", ctx, database, targetIdentifier("delete-me@example.com"), auditAction(sqlc.AuditActionUsersyncDelete), `Local user deleted: "delete-me@example.com", external ID: "321"`).
+			Return(nil).
+			Once()
+		auditLogger.
+			On("Logf", ctx, database, targetIdentifier("user2@example.com"), auditAction(sqlc.AuditActionUsersyncAssignAdminRole), `Assign global admin role to user: "user2@example.com"`).
+			Return(nil).
+			Once()
+		auditLogger.
+			On("Logf", ctx, database, targetIdentifier("user1@example.com"), auditAction(sqlc.AuditActionUsersyncRevokeAdminRole), `Revoke global admin role from user: "user1@example.com"`).
+			Return(nil).
+			Once()
 
-		usersync := usersync.New(database, auditLogger, adminGroupPrefix, domain, svc, log)
-		err = usersync.Sync(ctx, correlationID)
+		err = usersync.
+			New(database, auditLogger, adminGroupPrefix, domain, svc, log).
+			Sync(ctx, correlationID)
 		assert.NoError(t, err)
 	})
 }
