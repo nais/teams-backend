@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/db"
 	"github.com/nais/console/pkg/fixtures"
-	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -89,7 +88,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 
 		// First service account
 		dbtx.
-			On("GetServiceAccountByName", txCtx, "nais-service-account-1").
+			On("GetServiceAccountByName", txCtx, sa1.Name).
 			Return(nil, errors.New("service account not found")).
 			Once()
 		dbtx.
@@ -97,12 +96,12 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 			Return(sa1, nil).
 			Once()
 		dbtx.
-			On("RemoveAllServiceAccountRoles", txCtx, sa1.ID).
+			On("RemoveApiKeysFromServiceAccount", txCtx, sa1.ID).
 			Return(nil).
 			Once()
 		dbtx.
-			On("RemoveApiKeysFromServiceAccount", txCtx, sa1.ID).
-			Return(nil).
+			On("GetServiceAccountRoles", txCtx, sa1.ID).
+			Return(nil, nil).
 			Once()
 		dbtx.
 			On("AssignGlobalRoleToServiceAccount", txCtx, sa1.ID, sqlc.RoleNameTeamcreator).
@@ -113,34 +112,22 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 			Return(nil).
 			Once()
 		dbtx.
-			On("AssignTeamRoleToServiceAccount", txCtx, sa1.ID, sqlc.RoleNameDeploykeyviewer, slug.Slug("specific-team")).
-			Return(nil).
-			Once()
-		dbtx.
-			On("AssignTeamRoleToServiceAccount", txCtx, sa1.ID, sqlc.RoleNameDeploykeyviewer, slug.Slug("other-team")).
-			Return(nil).
-			Once()
-		dbtx.
 			On("CreateAPIKey", txCtx, "key-1", sa1.ID).
 			Return(nil).
 			Once()
 
-		// Second service account
+		// Second service account, already has the role requested
 		dbtx.
-			On("GetServiceAccountByName", txCtx, "nais-service-account-2").
+			On("GetServiceAccountByName", txCtx, sa2.Name).
 			Return(sa2, nil).
-			Once()
-		dbtx.
-			On("RemoveAllServiceAccountRoles", txCtx, sa2.ID).
-			Return(nil).
 			Once()
 		dbtx.
 			On("RemoveApiKeysFromServiceAccount", txCtx, sa2.ID).
 			Return(nil).
 			Once()
 		dbtx.
-			On("AssignGlobalRoleToServiceAccount", txCtx, sa2.ID, sqlc.RoleNameAdmin).
-			Return(nil).
+			On("GetServiceAccountRoles", txCtx, sa2.ID).
+			Return([]*db.Role{{RoleName: sqlc.RoleNameAdmin}}, nil).
 			Once()
 		dbtx.
 			On("CreateAPIKey", txCtx, "key-2", sa2.ID).
@@ -160,7 +147,7 @@ func TestSetupStaticServiceAccounts(t *testing.T) {
 		err := serviceAccounts.Decode(`[{
 			"name": "nais-service-account-1",
 			"apiKey": "key-1",
-			"roles": [{"name":"Team creator"}, {"name":"Team viewer"}, {"name":"Deploy key viewer", "teams": ["specific-team", "other-team"]}]
+			"roles": [{"name":"Team creator"}, {"name":"Team viewer"}]
 		}, {
 			"name": "nais-service-account-2",
 			"apiKey": "key-2",

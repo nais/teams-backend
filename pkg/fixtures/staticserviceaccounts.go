@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 )
 
@@ -18,8 +17,7 @@ type ServiceAccount struct {
 }
 
 type ServiceAccountRole struct {
-	Name  sqlc.RoleName `json:"name"`
-	Teams []slug.Slug   `json:"teams"`
+	Name sqlc.RoleName `json:"name"`
 }
 
 const NaisServiceAccountPrefix = "nais-"
@@ -75,29 +73,24 @@ func SetupStaticServiceAccounts(ctx context.Context, database db.Database, servi
 				}
 			}
 
-			err = dbtx.RemoveAllServiceAccountRoles(ctx, serviceAccount.ID)
-			if err != nil {
-				return err
-			}
-
 			err = dbtx.RemoveApiKeysFromServiceAccount(ctx, serviceAccount.ID)
 			if err != nil {
 				return err
 			}
 
+			existingRoles, err := dbtx.GetServiceAccountRoles(ctx, serviceAccount.ID)
+			if err != nil {
+				return err
+			}
+
 			for _, role := range serviceAccountFromInput.Roles {
-				if len(role.Teams) == 0 {
-					err = dbtx.AssignGlobalRoleToServiceAccount(ctx, serviceAccount.ID, role.Name)
-					if err != nil {
-						return err
-					}
-				} else {
-					for _, team := range role.Teams {
-						err = dbtx.AssignTeamRoleToServiceAccount(ctx, serviceAccount.ID, role.Name, team)
-						if err != nil {
-							return err
-						}
-					}
+				if hasGlobalRoleRole(role.Name, existingRoles) {
+					continue
+				}
+
+				err = dbtx.AssignGlobalRoleToServiceAccount(ctx, serviceAccount.ID, role.Name)
+				if err != nil {
+					return err
 				}
 			}
 
@@ -129,4 +122,18 @@ func SetupStaticServiceAccounts(ctx context.Context, database db.Database, servi
 
 		return nil
 	})
+}
+
+func hasGlobalRoleRole(roleName sqlc.RoleName, existingRoles []*db.Role) bool {
+	for _, r := range existingRoles {
+		if r.TargetTeamSlug != nil {
+			continue
+		}
+
+		if roleName == r.RoleName {
+			return true
+		}
+	}
+
+	return false
 }
