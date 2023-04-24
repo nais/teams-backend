@@ -58,25 +58,27 @@ func (r *dependencytrackReconciler) Reconcile(ctx context.Context, input reconci
 		return fmt.Errorf("unable to load system state for team %q in system %q: %w", input.Team.Slug, r.Name(), err)
 	}
 
-	instances := make(map[string]*reconcilers.DependencyTrackTeam)
-	members := make([]string, 0)
+	updatedInstances := make([]*reconcilers.DependencyTrackInstanceState, 0)
+	stateMembers := make([]string, 0)
 	for _, member := range input.TeamMembers {
-		members = append(members, member.Email)
+		stateMembers = append(stateMembers, member.Email)
 	}
 
 	for endpoint, client := range r.clients {
-		teamId, err := r.syncTeamAndUsers(ctx, input, client, state.Instances[endpoint])
+		instance := instanceByEndpoint(state.Instances, endpoint)
+		teamId, err := r.syncTeamAndUsers(ctx, input, client, instance)
 		if err != nil {
 			return err
 		}
-		instances[endpoint] = &reconcilers.DependencyTrackTeam{
-			TeamID:  teamId,
-			Members: members,
-		}
+		updatedInstances = append(updatedInstances, &reconcilers.DependencyTrackInstanceState{
+			Endpoint: endpoint,
+			TeamID:   teamId,
+			Members:  stateMembers,
+		})
 	}
 
 	updateState := &reconcilers.DependencyTrackState{
-		Instances: instances,
+		Instances: updatedInstances,
 	}
 
 	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, updateState)
@@ -96,9 +98,9 @@ func (r *dependencytrackReconciler) Delete(ctx context.Context, teamSlug slug.Sl
 	}
 
 	for endpoint, client := range r.clients {
-		team := state.Instances[endpoint]
-		if team != nil {
-			err = client.DeleteTeam(ctx, state.Instances[endpoint].TeamID)
+		instanceState := instanceByEndpoint(state.Instances, endpoint)
+		if instanceState != nil {
+			err = client.DeleteTeam(ctx, instanceState.TeamID)
 			if err != nil {
 				return err
 			}
@@ -107,27 +109,31 @@ func (r *dependencytrackReconciler) Delete(ctx context.Context, teamSlug slug.Sl
 	return r.database.RemoveReconcilerStateForTeam(ctx, r.Name(), teamSlug)
 }
 
-func (r *dependencytrackReconciler) syncTeamAndUsers(ctx context.Context, input reconcilers.Input, client dependencytrack.Client, teamState *reconcilers.DependencyTrackTeam) (string, error) {
+func (r *dependencytrackReconciler) syncTeamAndUsers(ctx context.Context, input reconcilers.Input, client dependencytrack.Client, instanceState *reconcilers.DependencyTrackInstanceState) (string, error) {
 
-	if teamState != nil && teamState.TeamID != "" {
+	if instanceState != nil && instanceState.TeamID != "" {
 		for _, user := range input.TeamMembers {
-			if !contains(teamState.Members, user.Email) {
-				err := client.AddToTeam(ctx, user.Email, teamState.TeamID)
+			if !contains(instanceState.Members, user.Email) {
+				err := client.CreateUser(ctx, user.Email)
+				if err != nil {
+					return "", err
+				}
+				err = client.AddToTeam(ctx, user.Email, instanceState.TeamID)
 				if err != nil {
 					return "", err
 				}
 			}
 		}
 
-		for _, user := range teamState.Members {
+		for _, user := range instanceState.Members {
 			if !inputMembersContains(input.TeamMembers, user) {
-				err := client.DeleteUserMembership(ctx, teamState.TeamID, user)
+				err := client.DeleteUserMembership(ctx, instanceState.TeamID, user)
 				if err != nil {
 					return "", err
 				}
 			}
 		}
-		return teamState.TeamID, nil
+		return instanceState.TeamID, nil
 	}
 
 	team, err := client.CreateTeam(ctx, input.Team.Slug.String(), []dependencytrack.Permission{
@@ -162,6 +168,15 @@ func (r *dependencytrackReconciler) syncTeamAndUsers(ctx context.Context, input 
 	}
 
 	return team.Uuid, nil
+}
+
+func instanceByEndpoint(instances []*reconcilers.DependencyTrackInstanceState, endpoint string) *reconcilers.DependencyTrackInstanceState {
+	for _, i := range instances {
+		if i.Endpoint == endpoint {
+			return i
+		}
+	}
+	return nil
 }
 
 func inputMembersContains(inputMembers []*db.User, user string) bool {

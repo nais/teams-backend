@@ -2,8 +2,9 @@ package dependencytrack
 
 import (
 	"context"
-	"github.com/nais/console/pkg/dependencytrack"
 	"testing"
+
+	"github.com/nais/console/pkg/dependencytrack"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
@@ -30,102 +31,122 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	database := db.NewMockDatabase(t)
+	mockClient := dependencytrack.NewMockClient(t)
+
+	instances := map[string]dependencytrack.Client{"mock": mockClient}
 
 	ctx := context.Background()
 
-	for _, tt := range []struct {
-		name   string
-		preRun func(t *testing.T, mock *dependencytrack.MockClient)
-	}{
-		{
-			name: "team does not exist, new team created and new members added",
-			preRun: func(t *testing.T, client *dependencytrack.MockClient) {
-				database.On("LoadReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Return(nil).Once()
-				client.On("CreateTeam", mock.Anything, teamName, []dependencytrack.Permission{
-					dependencytrack.ViewPortfolioPermission,
-				}).Return(&dependencytrack.Team{
-					Uuid:      teamUuid,
-					Name:      teamName,
-					OidcUsers: nil,
-				}, nil).Once()
+	t.Run("team does not exist, new team created and new members added", func(t *testing.T) {
+		database.On("LoadReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Return(nil).Once()
+		mockClient.On("CreateTeam", mock.Anything, teamName, []dependencytrack.Permission{
+			dependencytrack.ViewPortfolioPermission,
+		}).Return(&dependencytrack.Team{
+			Uuid:      teamUuid,
+			Name:      teamName,
+			OidcUsers: nil,
+		}, nil).Once()
 
-				auditLogger.
-					On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
-						return len(t) == 1 && t[0].Identifier == string(input.Team.Slug)
-					}), mock.MatchedBy(func(f auditlogger.Fields) bool {
-						return f.Action == AuditActionDependencytrackCreate && f.CorrelationID == correlationID
-					}), mock.Anything, teamName, teamUuid).
-					Return(nil).
-					Once()
+		auditLogger.
+			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
+				return len(t) == 1 && t[0].Identifier == string(input.Team.Slug)
+			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
+				return f.Action == AuditActionDependencytrackCreate && f.CorrelationID == correlationID
+			}), mock.Anything, teamName, teamUuid).
+			Return(nil).
+			Once()
 
-				client.On("CreateUser", mock.Anything, username).Return(&dependencytrack.User{
-					Username: username,
-					Email:    username,
-				}).Return(nil).Once()
+		mockClient.On("CreateUser", mock.Anything, username).Return(&dependencytrack.User{
+			Username: username,
+			Email:    username,
+		}).Return(nil).Once()
 
-				client.On("AddToTeam", mock.Anything, username, teamUuid).Return(nil).Once()
-				database.On("SetReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Return(nil).Once()
-			},
-		},
-		{
-			name: "team exists, new members added",
-			preRun: func(t *testing.T, client *dependencytrack.MockClient) {
-				database.On("LoadReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Return(nil).Once()
-				client.On("CreateUser", mock.Anything, username).Return(&dependencytrack.User{
-					Username: username,
-					Email:    username,
-				}).Return(nil).Once()
+		mockClient.On("AddToTeam", mock.Anything, username, teamUuid).Return(nil).Once()
+		database.On("SetReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Return(nil).Once()
 
-				client.On("AddToTeam", mock.Anything, username, teamUuid).Return(nil).Once()
-				database.On("SetReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Return(nil).Once()
-			},
-		},
-		{
-			name: "usermembership removed from existing team",
-			preRun: func(t *testing.T, client *dependencytrack.MockClient) {
-				usernameInConsole := "user1@nais.io"
-				usernameNotInConsole := "userNotInConsole@nais.io"
-				database.On("LoadReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Return(nil).Once()
-				client.On("GetTeams", mock.Anything).Return([]dependencytrack.Team{
-					{
-						Name: teamName,
-						Uuid: teamUuid,
-						OidcUsers: []dependencytrack.User{
-							{
-								Username: usernameInConsole,
-								Email:    usernameInConsole,
-							},
-							{
-								Username: usernameNotInConsole,
-								Email:    usernameNotInConsole,
-							},
-						},
-					},
-				}, nil).Once()
-
-				client.On("DeleteUserMembership", mock.Anything, teamUuid, usernameNotInConsole).Return(nil).Once()
-
-				client.On("CreateUser", mock.Anything, username).Return(&dependencytrack.User{
-					Username: username,
-					Email:    username,
-				}).Return(nil).Once()
-
-				client.On("AddToTeam", mock.Anything, username, teamUuid).Return(nil).Once()
-				database.On("SetReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Return(nil).Once()
-			},
-		},
-	} {
-		mockClient := dependencytrack.NewMockClient(t)
-		reconciler, err := New(database, auditLogger, map[string]dependencytrack.Client{"mock": mockClient}, log)
+		reconciler, err := New(database, auditLogger, instances, log)
 		assert.NoError(t, err)
-
-		if tt.preRun != nil {
-			tt.preRun(t, mockClient)
-		}
 
 		err = reconciler.Reconcile(context.Background(), input)
 		assert.NoError(t, err)
-	}
+	})
+
+	t.Run("team exists, new members added", func(t *testing.T) {
+		database.On("LoadReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Run(func(args mock.Arguments) {
+			state := args.Get(3).(*reconcilers.DependencyTrackState)
+			state.Instances = []*reconcilers.DependencyTrackInstanceState{
+				{
+					Endpoint: "mock",
+					TeamID:   teamUuid,
+					Members:  []string{},
+				},
+			}
+		}).Return(nil).Once()
+		mockClient.On("CreateUser", mock.Anything, username).Return(&dependencytrack.User{
+			Username: username,
+			Email:    username,
+		}).Return(nil).Once()
+
+		mockClient.On("AddToTeam", mock.Anything, username, teamUuid).Return(nil).Once()
+		database.On("SetReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Return(nil).Once()
+
+		reconciler, err := New(database, auditLogger, instances, log)
+		assert.NoError(t, err)
+
+		err = reconciler.Reconcile(context.Background(), input)
+		assert.NoError(t, err)
+	})
+
+	t.Run("team exists all input members exists, no new members added", func(t *testing.T) {
+		database.On("LoadReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Run(func(args mock.Arguments) {
+			state := args.Get(3).(*reconcilers.DependencyTrackState)
+			state.Instances = []*reconcilers.DependencyTrackInstanceState{
+				{
+					Endpoint: "mock",
+					TeamID:   teamUuid,
+					Members:  []string{username},
+				},
+			}
+		}).Return(nil).Once()
+		database.On("SetReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Return(nil).Once()
+
+		reconciler, err := New(database, auditLogger, instances, log)
+		assert.NoError(t, err)
+
+		err = reconciler.Reconcile(context.Background(), input)
+		assert.NoError(t, err)
+	})
+
+	t.Run("usermembership removed from existing team", func(t *testing.T) {
+
+		//usernameInInput := "user1@nais.io"
+		usernameNotInInput := "userNotInConsole@nais.io"
+		database.On("LoadReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Run(func(args mock.Arguments) {
+			state := args.Get(3).(*reconcilers.DependencyTrackState)
+			state.Instances = []*reconcilers.DependencyTrackInstanceState{
+				{
+					Endpoint: "mock",
+					TeamID:   teamUuid,
+					Members:  []string{usernameNotInInput},
+				},
+			}
+		}).Return(nil).Once()
+
+		mockClient.On("CreateUser", mock.Anything, username).Return(&dependencytrack.User{
+			Username: username,
+			Email:    username,
+		}).Return(nil).Once()
+		mockClient.On("AddToTeam", mock.Anything, username, teamUuid).Return(nil).Once()
+		mockClient.On("DeleteUserMembership", mock.Anything, teamUuid, usernameNotInInput).Return(nil).Once()
+
+		database.On("SetReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Return(nil).Once()
+
+		reconciler, err := New(database, auditLogger, instances, log)
+		assert.NoError(t, err)
+
+		err = reconciler.Reconcile(context.Background(), input)
+		assert.NoError(t, err)
+	})
 }
 
 func TestDependencytrackReconciler_Delete(t *testing.T) {
@@ -136,44 +157,33 @@ func TestDependencytrackReconciler_Delete(t *testing.T) {
 	correlationID := uuid.New()
 	input := setupInput(correlationID, "someTeam", "user1@nais.io")
 
-	teamName := input.Team.Slug.String()
+	mockClient := dependencytrack.NewMockClient(t)
+	database := db.NewMockDatabase(t)
+	auditLogger := auditlogger.NewMockAuditLogger(t)
 
-	for _, tt := range []struct {
-		name   string
-		preRun func(t *testing.T, mock *dependencytrack.MockClient)
-	}{
-		{
-			name: "delete team from console should remove team from dependencytrack",
-			preRun: func(t *testing.T, client *dependencytrack.MockClient) {
+	t.Run("team exists, delete team from console should remove team from dependencytrack", func(t *testing.T) {
+		teamUuid := uuid.New().String()
 
-				teamNotInConsoleUuid := uuid.New().String()
+		database.On("LoadReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Run(func(args mock.Arguments) {
+			state := args.Get(3).(*reconcilers.DependencyTrackState)
+			state.Instances = []*reconcilers.DependencyTrackInstanceState{
+				{
+					Endpoint: "mock",
+					TeamID:   teamUuid,
+					Members:  []string{},
+				},
+			}
+		}).Return(nil).Once()
 
-				client.On("GetTeams", mock.Anything).Return([]dependencytrack.Team{
-					{
-						Name: teamName,
-						Uuid: teamNotInConsoleUuid,
-					},
-				}, nil).Once()
+		mockClient.On("DeleteTeam", mock.Anything, teamUuid).Return(nil).Once()
+		database.On("RemoveReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Return(nil).Once()
 
-				client.On("DeleteTeam", mock.Anything, teamNotInConsoleUuid).Return(nil).Once()
-			},
-		},
-	} {
-		mockClient := dependencytrack.NewMockClient(t)
-		database := db.NewMockDatabase(t)
-		database.On("LoadReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Return(nil).Once()
-		auditLogger := auditlogger.NewMockAuditLogger(t)
 		reconciler, err := New(database, auditLogger, map[string]dependencytrack.Client{"mock": mockClient}, log)
 		assert.NoError(t, err)
 
-		if tt.preRun != nil {
-			tt.preRun(t, mockClient)
-		}
-
 		err = reconciler.Delete(context.Background(), input.Team.Slug, uuid.New())
 		assert.NoError(t, err)
-		database.On("SetReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Return(nil).Once()
-	}
+	})
 }
 
 func setupInput(correlationId uuid.UUID, teamSlug string, members ...string) reconcilers.Input {
