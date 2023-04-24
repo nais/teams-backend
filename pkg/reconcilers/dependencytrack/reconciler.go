@@ -196,12 +196,3 @@ func contains(ss []string, s string) bool {
 	}
 	return false
 }
-
-func teamByName(teams []dependencytrack.Team, name string) *dependencytrack.Team {
-	for _, t := range teams {
-		if t.Name == name {
-			return &t
-		}
-	}
-	return nil
-}
