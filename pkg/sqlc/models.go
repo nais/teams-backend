@@ -82,6 +82,7 @@ const (
 	AuditActionGoogleGarDelete                           AuditAction = "google:gar:delete"
 	AuditActionGoogleGcpDeleteProject                    AuditAction = "google:gcp:delete-project"
 	AuditActionNaisNamespaceDeleteNamespace              AuditAction = "nais:namespace:delete-namespace"
+	AuditActionDependencytrackGroupCreate                AuditAction = "dependencytrack:group:create"
 )
 
 func (e *AuditAction) Scan(src interface{}) error {
@@ -184,7 +185,8 @@ func (e AuditAction) Valid() bool {
 		AuditActionGoogleWorkspaceAdminDelete,
 		AuditActionGoogleGarDelete,
 		AuditActionGoogleGcpDeleteProject,
-		AuditActionNaisNamespaceDeleteNamespace:
+		AuditActionNaisNamespaceDeleteNamespace,
+		AuditActionDependencytrackGroupCreate:
 		return true
 	}
 	return false
@@ -256,6 +258,7 @@ func AllAuditActionValues() []AuditAction {
 		AuditActionGoogleGarDelete,
 		AuditActionGoogleGcpDeleteProject,
 		AuditActionNaisNamespaceDeleteNamespace,
+		AuditActionDependencytrackGroupCreate,
 	}
 }
 
@@ -403,6 +406,7 @@ const (
 	ReconcilerNameNaisNamespace        ReconcilerName = "nais:namespace"
 	ReconcilerNameNaisDeploy           ReconcilerName = "nais:deploy"
 	ReconcilerNameGoogleGcpGar         ReconcilerName = "google:gcp:gar"
+	ReconcilerNameNaisDependencytrack  ReconcilerName = "nais:dependencytrack"
 )
 
 func (e *ReconcilerName) Scan(src interface{}) error {
@@ -448,7 +452,8 @@ func (e ReconcilerName) Valid() bool {
 		ReconcilerNameGoogleWorkspaceAdmin,
 		ReconcilerNameNaisNamespace,
 		ReconcilerNameNaisDeploy,
-		ReconcilerNameGoogleGcpGar:
+		ReconcilerNameGoogleGcpGar,
+		ReconcilerNameNaisDependencytrack:
 		return true
 	}
 	return false
@@ -463,6 +468,7 @@ func AllReconcilerNameValues() []ReconcilerName {
 		ReconcilerNameNaisNamespace,
 		ReconcilerNameNaisDeploy,
 		ReconcilerNameGoogleGcpGar,
+		ReconcilerNameNaisDependencytrack,
 	}
 }
 

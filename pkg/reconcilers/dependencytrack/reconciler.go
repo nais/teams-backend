@@ -24,8 +24,8 @@ type dependencytrackReconciler struct {
 
 // TODO: add to DB
 const (
-	Name                             = sqlc.ReconcilerName("nais:dependencytrack")
-	AuditActionDependencytrackCreate = sqlc.AuditAction("dependencytrack:group:create")
+	Name                             = sqlc.ReconcilerNameNaisDependencytrack
+	AuditActionDependencytrackCreate = sqlc.AuditActionDependencytrackGroupCreate
 )
 
 func New(database db.Database, auditLogger auditlogger.AuditLogger, clients map[string]dependencytrack.Client, log logger.Logger) (reconcilers.Reconciler, error) {
@@ -37,7 +37,7 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, clients map[
 	}, nil
 }
 
-func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
+func NewFromConfig(_ context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
 	log = log.WithSystem(string(Name))
 	clients := make(map[string]dependencytrack.Client, 0)
 	for _, instance := range cfg.DependencyTrack.Instances {
@@ -90,7 +90,7 @@ func (r *dependencytrackReconciler) Reconcile(ctx context.Context, input reconci
 	return nil
 }
 
-func (r *dependencytrackReconciler) Delete(ctx context.Context, teamSlug slug.Slug, correlationID uuid.UUID) error {
+func (r *dependencytrackReconciler) Delete(ctx context.Context, teamSlug slug.Slug, _ uuid.UUID) error {
 	state := &reconcilers.DependencyTrackState{}
 	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), teamSlug, state)
 	if err != nil {
