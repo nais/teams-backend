@@ -12,7 +12,7 @@ import (
 
 type DependencyTrack struct {
 	// a list of dependency track instances (one per cluster).
-	Instances dependencytrack.Instances `envconfig:"CONSOLE_DEPENDENCYTRACK"`
+	Instances dependencytrack.Instances `envconfig:"CONSOLE_DEPENDENCYTRACK_INSTANCES"`
 }
 
 type GitHub struct {
