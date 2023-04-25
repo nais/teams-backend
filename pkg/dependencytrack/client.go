@@ -5,9 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/nais/console/pkg/logger"
 	"io"
 	"net/http"
+
+	"github.com/nais/console/pkg/logger"
 
 	"github.com/nais/console/pkg/metrics"
 	log "github.com/sirupsen/logrus"
@@ -227,6 +228,8 @@ func (r *RequestError) AlreadyExists() bool {
 
 func (c *client) sendRequest(ctx context.Context, httpMethod string, url string, headers map[string][]string, body []byte) ([]byte, error) {
 	c.log.Debugf("sending request to %s", url)
+	// TODO: remove this
+	c.log.Debugf("request headers: %v", headers)
 	req, err := http.NewRequestWithContext(ctx, httpMethod, url, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
@@ -253,6 +256,7 @@ func (c *client) sendRequest(ctx context.Context, httpMethod string, url string,
 	if err != nil {
 		return nil, fmt.Errorf("reading response body: %w", err)
 	}
+	// TODO: remove this
 	log.Debugf("response body: %s", string(resBody))
 	return resBody, err
 }
