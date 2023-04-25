@@ -2,6 +2,7 @@ package dependencytrack
 
 import (
 	"context"
+	"net/url"
 	"time"
 
 	"github.com/lestrrat-go/jwx/v2/jwt"
@@ -43,10 +44,14 @@ func (c *client) token(ctx context.Context) (string, error) {
 }
 
 func (c *client) login(ctx context.Context) (string, error) {
+	data := url.Values{
+		"username": {c.username},
+		"password": {c.password},
+	}
 	token, err := c.sendRequest(ctx, "POST", c.baseUrl+"/user/login", map[string][]string{
 		"Content-Type": {"application/x-www-form-urlencoded"},
 		"Accept":       {"text/plain"},
-	}, []byte("username="+c.username+"&password="+c.password))
+	}, []byte(data.Encode()))
 
 	if err != nil {
 		return "", err
