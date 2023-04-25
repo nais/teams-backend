@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/nais/console/pkg/logger"
 	"io"
 	"net/http"
 
@@ -29,6 +30,7 @@ type client struct {
 	password    string
 	accessToken string
 	httpClient  *http.Client
+	log         logger.Logger
 }
 
 type Permission string
@@ -41,7 +43,7 @@ type Team struct {
 	OidcUsers []User `json:"oidcUsers,omitempty"`
 }
 
-func NewClient(baseUrl string, username string, password string, c *http.Client) Client {
+func NewClient(baseUrl string, username string, password string, c *http.Client, logger logger.Logger) Client {
 	if c == nil {
 		c = http.DefaultClient
 	}
@@ -50,6 +52,7 @@ func NewClient(baseUrl string, username string, password string, c *http.Client)
 		username:   username,
 		password:   password,
 		httpClient: c,
+		log:        logger,
 	}
 }
 
@@ -223,7 +226,7 @@ func (r *RequestError) AlreadyExists() bool {
 }
 
 func (c *client) sendRequest(ctx context.Context, httpMethod string, url string, headers map[string][]string, body []byte) ([]byte, error) {
-	fmt.Printf("Sending request to %s\n", url)
+	c.log.Debugf("sending request to %s", url)
 	req, err := http.NewRequestWithContext(ctx, httpMethod, url, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
@@ -238,6 +241,7 @@ func (c *client) sendRequest(ctx context.Context, httpMethod string, url string,
 	}
 	defer resp.Body.Close()
 
+	log.Debugf("response status: %d", resp.StatusCode)
 	if resp.StatusCode > 299 {
 		b, err := io.ReadAll(resp.Body)
 		if err != nil {
@@ -246,6 +250,10 @@ func (c *client) sendRequest(ctx context.Context, httpMethod string, url string,
 		return nil, fail(resp.StatusCode, fmt.Errorf("%s", string(b)))
 	}
 	resBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading response body: %w", err)
+	}
+	log.Debugf("response body: %s", string(resBody))
 	return resBody, err
 }
 

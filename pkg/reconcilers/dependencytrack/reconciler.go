@@ -41,7 +41,7 @@ func NewFromConfig(_ context.Context, database db.Database, cfg *config.Config, 
 	log = log.WithSystem(string(Name))
 	clients := make(map[string]dependencytrack.Client, 0)
 	for _, instance := range cfg.DependencyTrack.Instances {
-		client := dependencytrack.NewClient(instance.Endpoint, instance.Username, instance.Password, nil)
+		client := dependencytrack.NewClient(instance.Endpoint, instance.Username, instance.Password, nil, log)
 		clients[instance.Endpoint] = client
 	}
 	return New(database, auditLogger, clients, log)
