@@ -47,15 +47,6 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 			OidcUsers: nil,
 		}, nil).Once()
 
-		auditLogger.
-			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
-				return len(t) == 1 && t[0].Identifier == string(input.Team.Slug)
-			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
-				return f.Action == AuditActionDependencytrackCreate && f.CorrelationID == correlationID
-			}), mock.Anything, teamName, teamUuid).
-			Return(nil).
-			Once()
-
 		mockClient.On("CreateUser", mock.Anything, username).Return(&dependencytrack.User{
 			Username: username,
 			Email:    username,

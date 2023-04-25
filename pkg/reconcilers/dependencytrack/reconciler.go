@@ -13,6 +13,7 @@ import (
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
+	log "github.com/sirupsen/logrus"
 )
 
 type dependencytrackReconciler struct {
@@ -24,8 +25,7 @@ type dependencytrackReconciler struct {
 
 // TODO: add to DB
 const (
-	Name                             = sqlc.ReconcilerNameNaisDependencytrack
-	AuditActionDependencytrackCreate = sqlc.AuditActionDependencytrackGroupCreate
+	Name = sqlc.ReconcilerNameNaisDependencytrack
 )
 
 func New(database db.Database, auditLogger auditlogger.AuditLogger, clients map[string]dependencytrack.Client, log logger.Logger) (reconcilers.Reconciler, error) {
@@ -65,6 +65,7 @@ func (r *dependencytrackReconciler) Reconcile(ctx context.Context, input reconci
 	}
 
 	for endpoint, client := range r.clients {
+		r.log.Debugf("reconciling team %q in dependencytrack instance %q", input.Team.Slug, endpoint)
 		instance := instanceByEndpoint(state.Instances, endpoint)
 		teamId, err := r.syncTeamAndUsers(ctx, input, client, instance)
 		if err != nil {
@@ -112,9 +113,11 @@ func (r *dependencytrackReconciler) Delete(ctx context.Context, teamSlug slug.Sl
 func (r *dependencytrackReconciler) syncTeamAndUsers(ctx context.Context, input reconcilers.Input, client dependencytrack.Client, instanceState *reconcilers.DependencyTrackInstanceState) (string, error) {
 
 	if instanceState != nil && instanceState.TeamID != "" {
+		log.Debugf("team %q already exists in dependencytrack instance state.", input.Team.Slug)
 		for _, user := range input.TeamMembers {
 			if !contains(instanceState.Members, user.Email) {
 				err := client.CreateUser(ctx, user.Email)
+				log.Debugf("creating user %q in dependencytrack.", user.Email)
 				if err != nil {
 					return "", err
 				}
@@ -122,6 +125,7 @@ func (r *dependencytrackReconciler) syncTeamAndUsers(ctx context.Context, input 
 				if err != nil {
 					return "", err
 				}
+				log.Debugf("adding user %q to team %q dependencytrack.", user.Email, input.Team.Slug)
 			}
 		}
 
@@ -135,6 +139,7 @@ func (r *dependencytrackReconciler) syncTeamAndUsers(ctx context.Context, input 
 		}
 		return instanceState.TeamID, nil
 	}
+	log.Debugf("team %q does not exist in dependencytrack instance state, creating.", input.Team.Slug)
 
 	team, err := client.CreateTeam(ctx, input.Team.Slug.String(), []dependencytrack.Permission{
 		dependencytrack.ViewPortfolioPermission,
@@ -143,28 +148,20 @@ func (r *dependencytrackReconciler) syncTeamAndUsers(ctx context.Context, input 
 		return "", err
 	}
 
-	targets := []auditlogger.Target{
-		auditlogger.TeamTarget(input.Team.Slug),
-	}
-	fields := auditlogger.Fields{
-		Action:        AuditActionDependencytrackCreate,
-		CorrelationID: input.CorrelationID,
-	}
-	err = r.auditLogger.Logf(ctx, r.database, targets, fields, "Created dependencytrack team %q with ID %q", team.Name, team.Uuid)
-	if err != nil {
-		return "", err
-	}
-
+	log.Debugf("created team %q in dependencytrack.", input.Team.Slug)
 	for _, user := range input.TeamMembers {
 		err = client.CreateUser(ctx, user.Email)
 		if err != nil {
 			return "", err
 		}
 
+		log.Debugf("creating user %q in dependencytrack.", user.Email)
+
 		err = client.AddToTeam(ctx, user.Email, team.Uuid)
 		if err != nil {
 			return "", err
 		}
+		log.Debugf("adding user %q to team %q dependencytrack.", user.Email, input.Team.Slug)
 	}
 
 	return team.Uuid, nil
