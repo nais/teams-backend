@@ -15,7 +15,6 @@ type DependencyTrackInstance struct {
 }
 
 func (i *Instances) Decode(value string) error {
-
 	*i = make(Instances, 0)
 	if value == "" {
 		return nil

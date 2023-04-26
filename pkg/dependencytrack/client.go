@@ -83,7 +83,6 @@ func (c *client) CreateTeam(ctx context.Context, teamName string, permissions []
 		"Accept":        {"application/json"},
 		"Authorization": {fmt.Sprintf("Bearer %s", token)},
 	}, body)
-
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +113,6 @@ func (c *client) GetTeams(ctx context.Context) ([]Team, error) {
 		"Accept":        {"application/json"},
 		"Authorization": {fmt.Sprintf("Bearer %s", token)},
 	}, nil)
-
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +185,6 @@ func (c *client) AddToTeam(ctx context.Context, username string, uuid string) er
 }
 
 func (c *client) DeleteTeam(ctx context.Context, uuid string) error {
-
 	body, err := json.Marshal(map[string]string{
 		"uuid": uuid,
 	})

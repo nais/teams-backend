@@ -52,7 +52,6 @@ func (c *client) login(ctx context.Context) (string, error) {
 		"Content-Type": {"application/x-www-form-urlencoded"},
 		"Accept":       {"text/plain"},
 	}, []byte(data.Encode()))
-
 	if err != nil {
 		return "", err
 	}

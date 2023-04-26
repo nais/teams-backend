@@ -89,7 +89,6 @@ func (r *dependencytrackReconciler) Reconcile(ctx context.Context, input reconci
 	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, updateState)
 	if err != nil {
 		r.log.WithError(err).Error("persist system state")
-
 	}
 
 	return nil
@@ -115,7 +114,6 @@ func (r *dependencytrackReconciler) Delete(ctx context.Context, teamSlug slug.Sl
 }
 
 func (r *dependencytrackReconciler) syncTeamAndUsers(ctx context.Context, input reconcilers.Input, client dependencytrack.Client, instanceState *reconcilers.DependencyTrackInstanceState) (string, error) {
-
 	if instanceState != nil && instanceState.TeamID != "" {
 		log.Debugf("team %q already exists in dependencytrack instance state.", input.Team.Slug)
 		for _, user := range input.TeamMembers {

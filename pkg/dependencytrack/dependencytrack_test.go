@@ -28,5 +28,4 @@ func TestEnvconfigToInstances(t *testing.T) {
 		Username: "admin",
 		Password: "password",
 	}}, cfg.DependencyTrack.Instances)
-
 }

@@ -18,7 +18,6 @@ import (
 )
 
 func TestDependencytrackReconciler_Reconcile(t *testing.T) {
-
 	correlationID := uuid.New()
 	input := setupInput(correlationID, "someTeam", "user1@nais.io")
 
@@ -119,8 +118,7 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 	})
 
 	t.Run("usermembership removed from existing team", func(t *testing.T) {
-
-		//usernameInInput := "user1@nais.io"
+		// usernameInInput := "user1@nais.io"
 		usernameNotInInput := "userNotInConsole@nais.io"
 		database.On("LoadReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Run(func(args mock.Arguments) {
 			state := args.Get(3).(*reconcilers.DependencyTrackState)
@@ -151,7 +149,6 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 }
 
 func TestDependencytrackReconciler_Delete(t *testing.T) {
-
 	log, err := logger.GetLogger("text", "info")
 	assert.NoError(t, err)
 	ctx := context.Background()

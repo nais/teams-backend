@@ -58,7 +58,6 @@ func TestClient_Token(t *testing.T) {
 }
 
 func TestClient_CreateTeam(t *testing.T) {
-
 	log, err := logger.GetLogger("text", "debug")
 	assert.NoError(t, err)
 
@@ -78,7 +77,6 @@ func TestClient_CreateTeam(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "test", team.Name)
 	})
-
 }
 
 func successfulLogin(t *testing.T) func(req *http.Request) *http.Response {
