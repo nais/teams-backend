@@ -29,7 +29,8 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 	log, err := logger.GetLogger("text", "info")
 	assert.NoError(t, err)
 
-	auditLogger := auditlogger.NewMockAuditLogger(t)
+	audit := auditlogger.NewMockAuditLogger(t)
+	audit.On("WithSystemName", sqlc.SystemNameNaisDependencytrack).Return(audit)
 	database := db.NewMockDatabase(t)
 	mockClient := dependencytrack.NewMockClient(t)
 
@@ -47,6 +48,15 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 			OidcUsers: nil,
 		}, nil).Once()
 
+		audit.
+			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
+				return len(t) == 1 && t[0].Identifier == string(input.Team.Slug)
+			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
+				return f.Action == sqlc.AuditActionDependencytrackGroupCreate && f.CorrelationID == correlationID
+			}), mock.Anything, teamName, teamUuid).
+			Return(nil).
+			Once()
+
 		mockClient.On("CreateUser", mock.Anything, username).Return(&dependencytrack.User{
 			Username: username,
 			Email:    username,
@@ -55,7 +65,7 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 		mockClient.On("AddToTeam", mock.Anything, username, teamUuid).Return(nil).Once()
 		database.On("SetReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Return(nil).Once()
 
-		reconciler, err := New(database, auditLogger, instances, log)
+		reconciler, err := New(database, audit, instances, log)
 		assert.NoError(t, err)
 
 		err = reconciler.Reconcile(context.Background(), input)
@@ -81,7 +91,7 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 		mockClient.On("AddToTeam", mock.Anything, username, teamUuid).Return(nil).Once()
 		database.On("SetReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Return(nil).Once()
 
-		reconciler, err := New(database, auditLogger, instances, log)
+		reconciler, err := New(database, audit, instances, log)
 		assert.NoError(t, err)
 
 		err = reconciler.Reconcile(context.Background(), input)
@@ -101,7 +111,7 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 		}).Return(nil).Once()
 		database.On("SetReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Return(nil).Once()
 
-		reconciler, err := New(database, auditLogger, instances, log)
+		reconciler, err := New(database, audit, instances, log)
 		assert.NoError(t, err)
 
 		err = reconciler.Reconcile(context.Background(), input)
@@ -132,7 +142,7 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 
 		database.On("SetReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Return(nil).Once()
 
-		reconciler, err := New(database, auditLogger, instances, log)
+		reconciler, err := New(database, audit, instances, log)
 		assert.NoError(t, err)
 
 		err = reconciler.Reconcile(context.Background(), input)

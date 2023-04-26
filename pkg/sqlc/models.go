@@ -570,6 +570,7 @@ const (
 	SystemNameUsersync             SystemName = "usersync"
 	SystemNameLegacyImporter       SystemName = "legacy-importer"
 	SystemNameAuthn                SystemName = "authn"
+	SystemNameNaisDependencytrack  SystemName = "nais:dependencytrack"
 )
 
 func (e *SystemName) Scan(src interface{}) error {
@@ -618,7 +619,8 @@ func (e SystemName) Valid() bool {
 		SystemNameGraphqlApi,
 		SystemNameUsersync,
 		SystemNameLegacyImporter,
-		SystemNameAuthn:
+		SystemNameAuthn,
+		SystemNameNaisDependencytrack:
 		return true
 	}
 	return false
@@ -636,6 +638,7 @@ func AllSystemNameValues() []SystemName {
 		SystemNameUsersync,
 		SystemNameLegacyImporter,
 		SystemNameAuthn,
+		SystemNameNaisDependencytrack,
 	}
 }
 

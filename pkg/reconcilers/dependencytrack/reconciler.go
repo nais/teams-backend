@@ -31,20 +31,24 @@ const (
 func New(database db.Database, auditLogger auditlogger.AuditLogger, clients map[string]dependencytrack.Client, log logger.Logger) (reconcilers.Reconciler, error) {
 	return &dependencytrackReconciler{
 		database:    database,
-		auditLogger: auditLogger,
+		auditLogger: auditLogger.WithSystemName(sqlc.SystemNameNaisDependencytrack),
 		log:         log,
 		clients:     clients,
 	}, nil
 }
 
-func NewFromConfig(_ context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
+func NewFromConfig(_ context.Context, database db.Database, cfg *config.Config, audit auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
 	log = log.WithSystem(string(Name))
 	clients := make(map[string]dependencytrack.Client, 0)
+	if len(cfg.DependencyTrack.Instances) == 0 {
+		return nil, fmt.Errorf("no dependencytrack instances configured")
+	}
+
 	for _, instance := range cfg.DependencyTrack.Instances {
 		client := dependencytrack.NewClient(instance.Endpoint, instance.Username, instance.Password, nil, log)
 		clients[instance.Endpoint] = client
 	}
-	return New(database, auditLogger, clients, log)
+	return New(database, audit, clients, log)
 }
 
 func (r *dependencytrackReconciler) Name() sqlc.ReconcilerName {
@@ -144,6 +148,18 @@ func (r *dependencytrackReconciler) syncTeamAndUsers(ctx context.Context, input 
 	team, err := client.CreateTeam(ctx, input.Team.Slug.String(), []dependencytrack.Permission{
 		dependencytrack.ViewPortfolioPermission,
 	})
+	if err != nil {
+		return "", err
+	}
+
+	targets := []auditlogger.Target{
+		auditlogger.TeamTarget(input.Team.Slug),
+	}
+	fields := auditlogger.Fields{
+		Action:        sqlc.AuditActionDependencytrackGroupCreate,
+		CorrelationID: input.CorrelationID,
+	}
+	err = r.auditLogger.Logf(ctx, r.database, targets, fields, "Created dependencytrack team %q with ID %q", team.Name, team.Uuid)
 	if err != nil {
 		return "", err
 	}
