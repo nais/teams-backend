@@ -4,21 +4,19 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/graph-gophers/dataloader"
+	"github.com/graph-gophers/dataloader/v7"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/metrics"
+	"github.com/nais/console/pkg/slug"
 )
 
 type TeamReader struct {
 	db db.Database
 }
 
-func (r *TeamReader) GetTeams(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
-	// read all requested teams in a single query
-	teamIDs := make([]string, len(keys))
-	for ix, key := range keys {
-		teamIDs[ix] = key.String()
-	}
+const LoaderNameTeams = "teams"
 
+func (r *TeamReader) load(ctx context.Context, keys []string) []*dataloader.Result[*db.Team] {
 	// TODO (only fetch teams requested by keys var)
 	teams, err := r.db.GetTeams(ctx)
 	if err != nil {
@@ -30,16 +28,32 @@ func (r *TeamReader) GetTeams(ctx context.Context, keys dataloader.Keys) []*data
 		teamBySlug[u.Slug.String()] = u
 	}
 
-	output := make([]*dataloader.Result, len(keys))
+	output := make([]*dataloader.Result[*db.Team], len(keys))
 	for index, teamKey := range keys {
-		team, ok := teamBySlug[teamKey.String()]
+		team, ok := teamBySlug[teamKey]
 		if ok {
-			output[index] = &dataloader.Result{Data: team, Error: nil}
+			output[index] = &dataloader.Result[*db.Team]{Data: team, Error: nil}
 		} else {
-			err := fmt.Errorf("team not found %q", teamKey.String())
-			output[index] = &dataloader.Result{Data: nil, Error: err}
+			err := fmt.Errorf("team not found %q", teamKey)
+			output[index] = &dataloader.Result[*db.Team]{Data: nil, Error: err}
 		}
 	}
 
+	metrics.IncDataloaderLoads(LoaderNameTeams)
 	return output
+}
+
+func (r *TeamReader) newCache() dataloader.Cache[string, *db.Team] {
+	return dataloader.NewCache[string, *db.Team]()
+}
+
+func GetTeam(ctx context.Context, teamSlug *slug.Slug) (*db.Team, error) {
+	metrics.IncDataloaderCalls(LoaderNameTeams)
+	loaders := For(ctx)
+	thunk := loaders.TeamsLoader.Load(ctx, teamSlug.String())
+	result, err := thunk()
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }

@@ -4,21 +4,19 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/graph-gophers/dataloader"
+	"github.com/google/uuid"
+	"github.com/graph-gophers/dataloader/v7"
 	"github.com/nais/console/pkg/db"
+	"github.com/nais/console/pkg/metrics"
 )
 
 type UserReader struct {
 	db db.Database
 }
 
-func (r *UserReader) GetUsers(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
-	// read all requested users in a single query
-	userIDs := make([]string, len(keys))
-	for ix, key := range keys {
-		userIDs[ix] = key.String()
-	}
+const LoaderNameUsers = "users"
 
+func (r *UserReader) load(ctx context.Context, keys []string) []*dataloader.Result[*db.User] {
 	// TODO (only fetch users requested by keys var)
 	users, err := r.db.GetUsers(ctx)
 	if err != nil {
@@ -30,16 +28,32 @@ func (r *UserReader) GetUsers(ctx context.Context, keys dataloader.Keys) []*data
 		userById[u.ID.String()] = u
 	}
 
-	output := make([]*dataloader.Result, len(keys))
-	for index, userKey := range keys {
-		user, ok := userById[userKey.String()]
+	output := make([]*dataloader.Result[*db.User], len(keys))
+	for index, key := range keys {
+		user, ok := userById[key]
 		if ok {
-			output[index] = &dataloader.Result{Data: user, Error: nil}
+			output[index] = &dataloader.Result[*db.User]{Data: user, Error: nil}
 		} else {
-			err := fmt.Errorf("user not found %s", userKey.String())
-			output[index] = &dataloader.Result{Data: nil, Error: err}
+			err := fmt.Errorf("user not found %s", key)
+			output[index] = &dataloader.Result[*db.User]{Data: nil, Error: err}
 		}
 	}
 
+	metrics.IncDataloaderLoads(LoaderNameUsers)
 	return output
+}
+
+func (r *UserReader) newCache() dataloader.Cache[string, *db.User] {
+	return dataloader.NewCache[string, *db.User]()
+}
+
+func GetUser(ctx context.Context, userID *uuid.UUID) (*db.User, error) {
+	metrics.IncDataloaderCalls(LoaderNameUsers)
+	loaders := For(ctx)
+	thunk := loaders.UsersLoader.Load(ctx, userID.String())
+	result, err := thunk()
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }

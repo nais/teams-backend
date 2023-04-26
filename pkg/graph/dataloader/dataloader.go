@@ -4,11 +4,9 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/google/uuid"
-	"github.com/graph-gophers/dataloader"
+	"github.com/graph-gophers/dataloader/v7"
 	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/slug"
-	log "github.com/sirupsen/logrus"
+	"github.com/nais/console/pkg/metrics"
 )
 
 type ctxKey string
@@ -17,31 +15,31 @@ const loadersKey = ctxKey("dataloaders")
 
 // Loaders wrap your data loaders to inject via middleware
 type Loaders struct {
-	Cache           dataloader.Cache
-	UserLoader      *dataloader.Loader
-	TeamLoader      *dataloader.Loader
-	UserRolesLoader *dataloader.Loader
+	UsersLoader     *dataloader.Loader[string, *db.User]
+	TeamsLoader     *dataloader.Loader[string, *db.Team]
+	UserRolesLoader *dataloader.Loader[string, []*db.UserRole]
 }
 
 // NewLoaders instantiates data loaders for the middleware
 func NewLoaders(database db.Database) *Loaders {
 	// define the data loader
-	userReader := &UserReader{db: database}
-	teamReader := &TeamReader{db: database}
-	userRoleReader := &UserRoleReader{db: database}
-
-	cache := dataloader.NewCache()
-
-	opts := []dataloader.Option{
-		dataloader.WithCache(cache),
-		dataloader.WithInputCapacity(5000),
-	}
+	usersReader := &UserReader{db: database}
+	teamsReader := &TeamReader{db: database}
+	userRolesReader := &UserRoleReader{db: database}
 
 	loaders := &Loaders{
-		Cache:           cache,
-		UserLoader:      dataloader.NewBatchedLoader(userReader.GetUsers, opts...),
-		TeamLoader:      dataloader.NewBatchedLoader(teamReader.GetTeams, opts...),
-		UserRolesLoader: dataloader.NewBatchedLoader(userRoleReader.GetUserRoles, opts...),
+		UsersLoader: dataloader.NewBatchedLoader(usersReader.load,
+			dataloader.WithCache(usersReader.newCache()),
+			dataloader.WithInputCapacity[string, *db.User](5000),
+		),
+		TeamsLoader: dataloader.NewBatchedLoader(teamsReader.load,
+			dataloader.WithCache(teamsReader.newCache()),
+			dataloader.WithInputCapacity[string, *db.Team](500),
+		),
+		UserRolesLoader: dataloader.NewBatchedLoader(userRolesReader.load,
+			dataloader.WithCache(userRolesReader.newCache()),
+			dataloader.WithInputCapacity[string, []*db.UserRole](5000),
+		),
 	}
 
 	return loaders
@@ -56,42 +54,16 @@ func Middleware(loaders *Loaders) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 
 			// clear cache after request is complete
-			loaders.Cache.Clear()
-			log.Debugf("cleared dataloader cache after request")
+			loaders.UsersLoader.ClearAll()
+			metrics.IncDataloaderCacheClears(LoaderNameUsers)
+			loaders.TeamsLoader.ClearAll()
+			metrics.IncDataloaderCacheClears(LoaderNameTeams)
+			loaders.UserRolesLoader.ClearAll()
+			metrics.IncDataloaderCacheClears(LoaderNameUserRoles)
 		})
 	}
 }
 
 func For(ctx context.Context) *Loaders {
 	return ctx.Value(loadersKey).(*Loaders)
-}
-
-func GetUser(ctx context.Context, userID *uuid.UUID) (*db.User, error) {
-	loaders := For(ctx)
-	thunk := loaders.UserLoader.Load(ctx, dataloader.StringKey(userID.String()))
-	result, err := thunk()
-	if err != nil {
-		return nil, err
-	}
-	return result.(*db.User), nil
-}
-
-func GetTeam(ctx context.Context, teamSlug *slug.Slug) (*db.Team, error) {
-	loaders := For(ctx)
-	thunk := loaders.TeamLoader.Load(ctx, dataloader.StringKey(teamSlug.String()))
-	result, err := thunk()
-	if err != nil {
-		return nil, err
-	}
-	return result.(*db.Team), nil
-}
-
-func GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*db.UserRole, error) {
-	loaders := For(ctx)
-	thunk := loaders.UserRolesLoader.Load(ctx, dataloader.StringKey(userID.String()))
-	result, err := thunk()
-	if err != nil {
-		return nil, err
-	}
-	return result.([]*db.UserRole), nil
 }
