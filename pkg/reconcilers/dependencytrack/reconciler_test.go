@@ -161,6 +161,7 @@ func TestDependencytrackReconciler_Delete(t *testing.T) {
 	mockClient := dependencytrack.NewMockClient(t)
 	database := db.NewMockDatabase(t)
 	auditLogger := auditlogger.NewMockAuditLogger(t)
+	auditLogger.On("WithSystemName", sqlc.SystemNameNaisDependencytrack).Return(auditLogger)
 
 	t.Run("team exists, delete team from console should remove team from dependencytrack", func(t *testing.T) {
 		teamUuid := uuid.New().String()
