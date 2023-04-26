@@ -31,13 +31,12 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, clients map[
 	return &dependencytrackReconciler{
 		database:    database,
 		auditLogger: auditLogger.WithSystemName(sqlc.SystemNameNaisDependencytrack),
-		log:         log,
+		log:         log.WithSystem(string(Name)),
 		clients:     clients,
 	}, nil
 }
 
 func NewFromConfig(_ context.Context, database db.Database, cfg *config.Config, audit auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
-	log = log.WithSystem(string(Name))
 	clients := make(map[string]dependencytrack.Client, 0)
 	if len(cfg.DependencyTrack.Instances) == 0 {
 		return nil, fmt.Errorf("no dependencytrack instances configured")

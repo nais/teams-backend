@@ -65,20 +65,18 @@ type naisNamespaceReconciler struct {
 func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, domain, projectID string, azureEnabled bool, pubsubClient *pubsub.Client, legacyMapping []envmap.EnvironmentMapping, log logger.Logger) *naisNamespaceReconciler {
 	return &naisNamespaceReconciler{
 		database:      database,
-		auditLogger:   auditLogger,
+		auditLogger:   auditLogger.WithSystemName(sqlc.SystemNameNaisNamespace),
 		clusters:      clusters,
 		domain:        domain,
 		projectID:     projectID,
 		azureEnabled:  azureEnabled,
 		pubsubClient:  pubsubClient,
 		legacyMapping: legacyMapping,
-		log:           log,
+		log:           log.WithSystem(string(Name)),
 	}
 }
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
-	log = log.WithSystem(string(Name))
-
 	builder, err := google_token_source.NewFromConfig(cfg)
 	if err != nil {
 		return nil, err

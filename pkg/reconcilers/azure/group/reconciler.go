@@ -29,10 +29,10 @@ type azureGroupReconciler struct {
 func New(database db.Database, auditLogger auditlogger.AuditLogger, client azureclient.Client, domain string, log logger.Logger) *azureGroupReconciler {
 	return &azureGroupReconciler{
 		database:    database,
-		auditLogger: auditLogger,
+		auditLogger: auditLogger.WithSystemName(sqlc.SystemNameAzureGroup),
 		client:      client,
 		domain:      domain,
-		log:         log,
+		log:         log.WithSystem(string(Name)),
 	}
 }
 
@@ -58,7 +58,6 @@ func convertDatabaseConfig(ctx context.Context, database db.Database) (*reconcil
 }
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
-	log = log.WithSystem(string(Name))
 	config, err := convertDatabaseConfig(ctx, database)
 	if err != nil {
 		return nil, err

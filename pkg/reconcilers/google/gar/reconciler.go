@@ -45,8 +45,8 @@ type garReconciler struct {
 func New(auditLogger auditlogger.AuditLogger, database db.Database, managementProjectID, workloadIdentityPoolName string, garClient *artifactregistry.Client, iamService *iam.Service, log logger.Logger) *garReconciler {
 	return &garReconciler{
 		database:                 database,
-		auditLogger:              auditLogger,
-		log:                      log,
+		auditLogger:              auditLogger.WithSystemName(sqlc.SystemNameGoogleGcpGar),
+		log:                      log.WithSystem(string(Name)),
 		managementProjectID:      managementProjectID,
 		workloadIdentityPoolName: workloadIdentityPoolName,
 		artifactRegistry:         garClient,
@@ -55,8 +55,6 @@ func New(auditLogger auditlogger.AuditLogger, database db.Database, managementPr
 }
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
-	log = log.WithSystem(string(Name))
-
 	builder, err := google_token_source.NewFromConfig(cfg)
 	if err != nil {
 		return nil, err

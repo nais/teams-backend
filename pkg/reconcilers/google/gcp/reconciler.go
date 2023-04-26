@@ -42,21 +42,19 @@ const (
 func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, gcpServices *GcpServices, tenantName, domain, cnrmRoleName, billingAccount string, log logger.Logger, legacyMapping []envmap.EnvironmentMapping) *googleGcpReconciler {
 	return &googleGcpReconciler{
 		database:       database,
-		auditLogger:    auditLogger,
+		auditLogger:    auditLogger.WithSystemName(sqlc.SystemNameGoogleGcpProject),
 		clusters:       clusters,
 		gcpServices:    gcpServices,
 		domain:         domain,
 		cnrmRoleName:   cnrmRoleName,
 		billingAccount: billingAccount,
 		tenantName:     tenantName,
-		log:            log,
+		log:            log.WithSystem(string(Name)),
 		legacyMapping:  legacyMapping,
 	}
 }
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
-	log = log.WithSystem(string(Name))
-
 	gcpServices, err := createGcpServices(ctx, cfg)
 	if err != nil {
 		return nil, err

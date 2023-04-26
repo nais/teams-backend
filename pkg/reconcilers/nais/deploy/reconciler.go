@@ -37,16 +37,14 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, client *http
 	return &naisDeployReconciler{
 		database:     database,
 		client:       client,
-		auditLogger:  auditLogger,
+		auditLogger:  auditLogger.WithSystemName(sqlc.SystemNameNaisDeploy),
 		endpoint:     endpoint,
 		provisionKey: provisionKey,
-		log:          log,
+		log:          log.WithSystem(string(Name)),
 	}
 }
 
 func NewFromConfig(_ context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
-	log = log.WithSystem(string(Name))
-
 	provisionKey, err := hex.DecodeString(cfg.NaisDeploy.ProvisionKey)
 	if err != nil {
 		return nil, err

@@ -39,16 +39,14 @@ const metricsSystemName = "google-admin"
 func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, adminService *admin_directory_v1.Service, log logger.Logger) *googleWorkspaceAdminReconciler {
 	return &googleWorkspaceAdminReconciler{
 		database:     database,
-		auditLogger:  auditLogger,
+		auditLogger:  auditLogger.WithSystemName(sqlc.SystemNameGoogleWorkspaceAdmin),
 		domain:       domain,
 		adminService: adminService,
-		log:          log,
+		log:          log.WithSystem(string(Name)),
 	}
 }
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
-	log = log.WithSystem(string(Name))
-
 	builder, err := google_token_source.NewFromConfig(cfg)
 	if err != nil {
 		return nil, err

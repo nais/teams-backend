@@ -35,18 +35,16 @@ var errGitHubUserNotFound = errors.New("GitHub user does not exist")
 func New(database db.Database, auditLogger auditlogger.AuditLogger, org, domain string, teamsService TeamsService, graphClient GraphClient, log logger.Logger) *githubTeamReconciler {
 	return &githubTeamReconciler{
 		database:     database,
-		auditLogger:  auditLogger,
+		auditLogger:  auditLogger.WithSystemName(sqlc.SystemNameGithubTeam),
 		org:          org,
 		domain:       domain,
 		teamsService: teamsService,
 		graphClient:  graphClient,
-		log:          log,
+		log:          log.WithSystem(string(Name)),
 	}
 }
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
-	log = log.WithSystem(string(Name))
-
 	config, err := getReconfilerConfig(ctx, cfg, database)
 	if err != nil {
 		return nil, err

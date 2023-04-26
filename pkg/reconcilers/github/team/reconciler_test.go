@@ -149,6 +149,10 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 
 		slug := slug.Slug(teamSlug)
 		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGithubTeam).
+			Return(auditLogger).
+			Once()
+		auditLogger.
 			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
 				return t[0].Identifier == string(slug)
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
@@ -157,8 +161,14 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			Return(nil).
 			Once()
 
-		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, gitHubClient, log)
-		err := reconciler.Reconcile(ctx, input)
+		log.
+			On("WithSystem", string(sqlc.SystemNameGithubTeam)).
+			Return(log).
+			Once()
+
+		err := github_team_reconciler.
+			New(database, auditLogger, org, domain, teamsService, gitHubClient, log).
+			Reconcile(ctx, input)
 		assert.NoError(t, err)
 	})
 
@@ -167,6 +177,11 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		gitHubClient := github_team_reconciler.NewMockGraphClient(t)
+
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGithubTeam).
+			Return(auditLogger).
+			Once()
 
 		database.
 			On("LoadReconcilerStateForTeam", ctx, systemName, team.Slug, mock.Anything).
@@ -187,8 +202,14 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			).
 			Once()
 
-		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, gitHubClient, log)
-		err := reconciler.Reconcile(ctx, input)
+		log.
+			On("WithSystem", string(sqlc.SystemNameGithubTeam)).
+			Return(log).
+			Once()
+
+		err := github_team_reconciler.
+			New(database, auditLogger, org, domain, teamsService, gitHubClient, log).
+			Reconcile(ctx, input)
 		assert.Error(t, err)
 	})
 
@@ -197,6 +218,11 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		gitHubClient := github_team_reconciler.NewMockGraphClient(t)
+
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGithubTeam).
+			Return(auditLogger).
+			Once()
 
 		database.
 			On("LoadReconcilerStateForTeam", ctx, systemName, team.Slug, mock.Anything).
@@ -256,11 +282,17 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			).
 			Once()
 
+		log.
+			On("WithSystem", string(sqlc.SystemNameGithubTeam)).
+			Return(log).
+			Once()
+
 		configureSyncTeamInfo(teamsService, org, teamSlug, teamPurpose)
 		configureDeleteTeamIDP(teamsService, org, teamSlug)
 
-		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, gitHubClient, log)
-		err := reconciler.Reconcile(ctx, input)
+		err := github_team_reconciler.
+			New(database, auditLogger, org, domain, teamsService, gitHubClient, log).
+			Reconcile(ctx, input)
 		assert.NoError(t, err)
 	})
 
@@ -342,10 +374,19 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			).
 			Once()
 
+		log.
+			On("WithSystem", string(sqlc.SystemNameGithubTeam)).
+			Return(log).
+			Once()
+
 		configureSyncTeamInfo(teamsService, org, existingSlug, teamPurpose)
 		configureDeleteTeamIDP(teamsService, org, existingSlug)
 
 		slug := slug.Slug(teamSlug)
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGithubTeam).
+			Return(auditLogger).
+			Once()
 		auditLogger.
 			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
 				return t[0].Identifier == string(slug)
@@ -355,8 +396,9 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			Return(nil).
 			Once()
 
-		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, gitHubClient, log)
-		err := reconciler.Reconcile(ctx, input)
+		err := github_team_reconciler.
+			New(database, auditLogger, org, domain, teamsService, gitHubClient, log).
+			Reconcile(ctx, input)
 		assert.NoError(t, err)
 	})
 }
@@ -452,11 +494,21 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGithubTeam).
+			Return(auditLogger).
+			Once()
+		auditLogger.
 			On("Logf", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
 
-		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, graphClient, log)
-		err := reconciler.Reconcile(ctx, input)
+		log.
+			On("WithSystem", string(sqlc.SystemNameGithubTeam)).
+			Return(log).
+			Once()
+
+		err := github_team_reconciler.
+			New(database, auditLogger, org, domain, teamsService, graphClient, log).
+			Reconcile(ctx, input)
 		assert.NoError(t, err)
 	})
 
@@ -466,6 +518,11 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		log = logger.NewMockLogger(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGithubTeam).
+			Return(auditLogger).
+			Once()
 
 		database.
 			On("LoadReconcilerStateForTeam", ctx, systemName, team.Slug, mock.Anything).
@@ -488,8 +545,14 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 			}, nil).
 			Once()
 
-		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, graphClient, log)
-		err := reconciler.Reconcile(ctx, input)
+		log.
+			On("WithSystem", string(sqlc.SystemNameGithubTeam)).
+			Return(log).
+			Once()
+
+		err := github_team_reconciler.
+			New(database, auditLogger, org, domain, teamsService, graphClient, log).
+			Reconcile(ctx, input)
 
 		assert.ErrorContainsf(t, err, "server error from GitHub: 418: I'm a teapot: this is a body", err.Error())
 	})
@@ -508,30 +571,57 @@ func TestGitHubReconciler_Delete(t *testing.T) {
 	log := logger.NewMockLogger(t)
 
 	t.Run("unable to load state from database", func(t *testing.T) {
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGithubTeam).
+			Return(auditLogger).
+			Once()
+
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, github_team_reconciler.Name, teamSlug, mock.Anything).
 			Return(fmt.Errorf("some error")).
 			Once()
 
-		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, graphClient, log)
-		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		log.
+			On("WithSystem", string(sqlc.SystemNameGithubTeam)).
+			Return(log).
+			Once()
+
+		err := github_team_reconciler.
+			New(database, auditLogger, org, domain, teamsService, graphClient, log).
+			Delete(ctx, teamSlug, correlationID)
 		assert.ErrorContains(t, err, "load reconciler state for team")
 	})
 
 	t.Run("state with missing slug", func(t *testing.T) {
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGithubTeam).
+			Return(auditLogger).
+			Once()
+
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, github_team_reconciler.Name, teamSlug, mock.Anything).
 			Return(nil).
 			Once()
 
-		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, graphClient, log)
-		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		log.
+			On("WithSystem", string(sqlc.SystemNameGithubTeam)).
+			Return(log).
+			Once()
+
+		err := github_team_reconciler.
+			New(database, auditLogger, org, domain, teamsService, graphClient, log).
+			Delete(ctx, teamSlug, correlationID)
 		assert.ErrorContains(t, err, "missing slug in reconciler state")
 	})
 
 	t.Run("GitHub API client fails", func(t *testing.T) {
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGithubTeam).
+			Return(auditLogger).
+			Once()
+
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, github_team_reconciler.Name, teamSlug, mock.Anything).
@@ -548,12 +638,23 @@ func TestGitHubReconciler_Delete(t *testing.T) {
 			Return(nil, fmt.Errorf("some error")).
 			Once()
 
-		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, graphClient, log)
-		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		log.
+			On("WithSystem", string(sqlc.SystemNameGithubTeam)).
+			Return(log).
+			Once()
+
+		err := github_team_reconciler.
+			New(database, auditLogger, org, domain, teamsService, graphClient, log).
+			Delete(ctx, teamSlug, correlationID)
 		assert.ErrorContains(t, err, "delete GitHub team")
 	})
 
 	t.Run("unexpected response from GitHub API", func(t *testing.T) {
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGithubTeam).
+			Return(auditLogger).
+			Once()
+
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, github_team_reconciler.Name, teamSlug, mock.Anything).
@@ -579,8 +680,14 @@ func TestGitHubReconciler_Delete(t *testing.T) {
 			).
 			Once()
 
-		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, graphClient, log)
-		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		log.
+			On("WithSystem", string(sqlc.SystemNameGithubTeam)).
+			Return(log).
+			Once()
+
+		err := github_team_reconciler.
+			New(database, auditLogger, org, domain, teamsService, graphClient, log).
+			Delete(ctx, teamSlug, correlationID)
 		assert.ErrorContains(t, err, "unexpected server response from GitHub")
 	})
 
@@ -616,6 +723,10 @@ func TestGitHubReconciler_Delete(t *testing.T) {
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGithubTeam).
+			Return(auditLogger).
+			Once()
+		auditLogger.
 			On(
 				"Logf",
 				ctx,
@@ -634,8 +745,15 @@ func TestGitHubReconciler_Delete(t *testing.T) {
 			Return(nil).
 			Once()
 
-		reconciler := github_team_reconciler.New(database, auditLogger, org, domain, teamsService, graphClient, log)
-		assert.Nil(t, reconciler.Delete(ctx, teamSlug, correlationID))
+		log.
+			On("WithSystem", string(sqlc.SystemNameGithubTeam)).
+			Return(log).
+			Once()
+
+		err := github_team_reconciler.
+			New(database, auditLogger, org, domain, teamsService, graphClient, log).
+			Delete(ctx, teamSlug, correlationID)
+		assert.Nil(t, err)
 	})
 }
 

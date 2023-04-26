@@ -73,7 +73,6 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		mockClient := azureclient.NewMockClient(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain, log)
 
 		database.
 			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.Slug, mock.Anything).
@@ -110,6 +109,10 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Once()
 
 		auditLogger.
+			On("WithSystemName", sqlc.SystemNameAzureGroup).
+			Return(auditLogger).
+			Once()
+		auditLogger.
 			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
 				return len(t) == 1 && t[0].Identifier == string(teamSlug)
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
@@ -136,7 +139,9 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Return(nil).
 			Once()
 
-		err := reconciler.Reconcile(ctx, input)
+		err := azure_group_reconciler.
+			New(database, auditLogger, mockClient, domain, log).
+			Reconcile(ctx, input)
 
 		assert.NoError(t, err)
 	})
@@ -145,7 +150,10 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		mockClient := azureclient.NewMockClient(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain, log)
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameAzureGroup).
+			Return(auditLogger).
+			Once()
 
 		database.
 			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.Slug, mock.Anything).
@@ -157,7 +165,9 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Return(nil, false, fmt.Errorf("GetOrCreateGroup failed")).
 			Once()
 
-		err := reconciler.Reconcile(ctx, input)
+		err := azure_group_reconciler.
+			New(database, auditLogger, mockClient, domain, log).
+			Reconcile(ctx, input)
 		assert.Error(t, err)
 	})
 
@@ -165,7 +175,10 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		mockClient := azureclient.NewMockClient(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain, log)
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameAzureGroup).
+			Return(auditLogger).
+			Once()
 
 		database.
 			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.Slug, mock.Anything).
@@ -181,7 +194,9 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Return(nil, fmt.Errorf("ListGroupMembers failed")).
 			Once()
 
-		err := reconciler.Reconcile(ctx, input)
+		err := azure_group_reconciler.
+			New(database, auditLogger, mockClient, domain, log).
+			Reconcile(ctx, input)
 		assert.Error(t, err)
 	})
 
@@ -189,12 +204,15 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		mockClient := azureclient.NewMockClient(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameAzureGroup).
+			Return(auditLogger).
+			Once()
 
 		removeMemberFromGroupErr := errors.New("RemoveMemberFromGroup failed")
 		mockLogger := logger.NewMockLogger(t)
+		mockLogger.On("WithSystem", string(sqlc.ReconcilerNameAzureGroup)).Return(mockLogger).Once()
 		mockLogger.On("WithError", removeMemberFromGroupErr).Return(log.WithError(err)).Once()
-
-		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain, mockLogger)
 
 		team := db.Team{
 			Team: &sqlc.Team{
@@ -222,10 +240,12 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Return(removeMemberFromGroupErr).
 			Once()
 
-		err := reconciler.Reconcile(ctx, reconcilers.Input{
-			CorrelationID: correlationID,
-			Team:          team,
-		})
+		err := azure_group_reconciler.
+			New(database, auditLogger, mockClient, domain, mockLogger).
+			Reconcile(ctx, reconcilers.Input{
+				CorrelationID: correlationID,
+				Team:          team,
+			})
 		assert.NoError(t, err)
 	})
 
@@ -233,11 +253,15 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		mockClient := azureclient.NewMockClient(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameAzureGroup).
+			Return(auditLogger).
+			Once()
 
 		getUserError := errors.New("GetUser failed")
 		mockLogger := logger.NewMockLogger(t)
+		mockLogger.On("WithSystem", string(sqlc.ReconcilerNameAzureGroup)).Return(mockLogger).Once()
 		mockLogger.On("WithError", getUserError).Return(log.WithError(getUserError)).Once()
-		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain, mockLogger)
 
 		database.
 			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.Slug, mock.Anything).
@@ -274,7 +298,9 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Return(nil).
 			Once()
 
-		err := reconciler.Reconcile(ctx, input)
+		err := azure_group_reconciler.
+			New(database, auditLogger, mockClient, domain, mockLogger).
+			Reconcile(ctx, input)
 		assert.NoError(t, err)
 	})
 
@@ -282,10 +308,15 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		mockClient := azureclient.NewMockClient(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameAzureGroup).
+			Return(auditLogger).
+			Once()
+
 		addMemberToGroupError := errors.New("AddMemberToGroup failed")
 		mockLogger := logger.NewMockLogger(t)
+		mockLogger.On("WithSystem", string(sqlc.ReconcilerNameAzureGroup)).Return(mockLogger).Once()
 		mockLogger.On("WithError", addMemberToGroupError).Return(log.WithError(addMemberToGroupError)).Once()
-		reconciler := azure_group_reconciler.New(database, auditLogger, mockClient, domain, mockLogger)
 
 		database.
 			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.Slug, mock.Anything).
@@ -309,7 +340,9 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Return(addMemberToGroupError).
 			Once()
 
-		err := reconciler.Reconcile(ctx, input)
+		err := azure_group_reconciler.
+			New(database, auditLogger, mockClient, domain, mockLogger).
+			Reconcile(ctx, input)
 		assert.NoError(t, err)
 	})
 }
@@ -331,9 +364,19 @@ func TestAzureReconciler_Delete(t *testing.T) {
 			Return(fmt.Errorf("some error")).
 			Once()
 
-		reconciler := azure_group_reconciler.New(database, auditLogger, azureClient, tenantDomain, log)
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameAzureGroup).
+			Return(auditLogger).
+			Once()
 
-		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		log.
+			On("WithSystem", string(sqlc.ReconcilerNameAzureGroup)).
+			Return(log).
+			Once()
+
+		err := azure_group_reconciler.
+			New(database, auditLogger, azureClient, tenantDomain, log).
+			Delete(ctx, teamSlug, correlationID)
 		assert.ErrorContains(t, err, "load reconciler state")
 	})
 
@@ -344,9 +387,19 @@ func TestAzureReconciler_Delete(t *testing.T) {
 			Return(nil).
 			Once()
 
-		reconciler := azure_group_reconciler.New(database, auditLogger, azureClient, tenantDomain, log)
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameAzureGroup).
+			Return(auditLogger).
+			Once()
 
-		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		log.
+			On("WithSystem", string(sqlc.ReconcilerNameAzureGroup)).
+			Return(log).
+			Once()
+
+		err := azure_group_reconciler.
+			New(database, auditLogger, azureClient, tenantDomain, log).
+			Delete(ctx, teamSlug, correlationID)
 		assert.ErrorContains(t, err, "missing group ID in reconciler state")
 	})
 
@@ -369,9 +422,19 @@ func TestAzureReconciler_Delete(t *testing.T) {
 			Return(fmt.Errorf("some error")).
 			Once()
 
-		reconciler := azure_group_reconciler.New(database, auditLogger, azureClient, tenantDomain, log)
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameAzureGroup).
+			Return(auditLogger).
+			Once()
 
-		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		log.
+			On("WithSystem", string(sqlc.ReconcilerNameAzureGroup)).
+			Return(log).
+			Once()
+
+		err := azure_group_reconciler.
+			New(database, auditLogger, azureClient, tenantDomain, log).
+			Delete(ctx, teamSlug, correlationID)
 		assert.ErrorContains(t, err, "delete Azure AD group with ID")
 	})
 
@@ -393,6 +456,10 @@ func TestAzureReconciler_Delete(t *testing.T) {
 			Once()
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameAzureGroup).
+			Return(auditLogger).
+			Once()
 		auditLogger.
 			On(
 				"Logf",
@@ -418,7 +485,14 @@ func TestAzureReconciler_Delete(t *testing.T) {
 			Return(nil).
 			Once()
 
-		reconciler := azure_group_reconciler.New(database, auditLogger, azureClient, tenantDomain, log)
-		assert.Nil(t, reconciler.Delete(ctx, teamSlug, correlationID))
+		log.
+			On("WithSystem", string(sqlc.ReconcilerNameAzureGroup)).
+			Return(log).
+			Once()
+
+		err := azure_group_reconciler.
+			New(database, auditLogger, azureClient, tenantDomain, log).
+			Delete(ctx, teamSlug, correlationID)
+		assert.Nil(t, err)
 	})
 }

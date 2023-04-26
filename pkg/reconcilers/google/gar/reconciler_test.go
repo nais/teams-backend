@@ -203,9 +203,11 @@ func TestReconcile(t *testing.T) {
 		_, iamService := mocks.start(t, ctx)
 		database := db.NewMockDatabase(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.On("WithSystemName", sqlc.SystemNameGoogleGcpGar).Return(auditLogger).Once()
 
-		reconciler := google_gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, nil, iamService, log)
-		err = reconciler.Reconcile(ctx, input)
+		err = google_gar.
+			New(auditLogger, database, managementProjectID, workloadIdentityPoolName, nil, iamService, log).
+			Reconcile(ctx, input)
 		assert.ErrorContains(t, err, fmt.Sprintf("googleapi: got HTTP response code %d", abortReconcilerCode))
 	})
 
@@ -262,9 +264,11 @@ func TestReconcile(t *testing.T) {
 			Return(nil).
 			Once()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.On("WithSystemName", sqlc.SystemNameGoogleGcpGar).Return(auditLogger).Once()
 
-		reconciler := google_gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, nil, iamService, log)
-		err = reconciler.Reconcile(ctx, input)
+		err = google_gar.
+			New(auditLogger, database, managementProjectID, workloadIdentityPoolName, nil, iamService, log).
+			Reconcile(ctx, input)
 		assert.ErrorContains(t, err, fmt.Sprintf("googleapi: got HTTP response code %d", abortReconcilerCode))
 	})
 
@@ -310,9 +314,11 @@ func TestReconcile(t *testing.T) {
 			Return(nil).
 			Once()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.On("WithSystemName", sqlc.SystemNameGoogleGcpGar).Return(auditLogger).Once()
 
-		reconciler := google_gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, artifactregistryClient, iamService, log)
-		err = reconciler.Reconcile(ctx, input)
+		err = google_gar.
+			New(auditLogger, database, managementProjectID, workloadIdentityPoolName, artifactregistryClient, iamService, log).
+			Reconcile(ctx, input)
 		assert.ErrorContains(t, err, "abort test")
 	})
 
@@ -371,9 +377,12 @@ func TestReconcile(t *testing.T) {
 			Once()
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.On("WithSystemName", sqlc.SystemNameGoogleGcpGar).Return(auditLogger).Once()
 
-		reconciler := google_gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, artifactregistryClient, iamService, log)
-		assert.NoError(t, reconciler.Reconcile(ctx, input))
+		err := google_gar.
+			New(auditLogger, database, managementProjectID, workloadIdentityPoolName, artifactregistryClient, iamService, log).
+			Reconcile(ctx, input)
+		assert.NoError(t, err)
 	})
 
 	t.Run("gar repository exists, but has outdated info", func(t *testing.T) {
@@ -416,9 +425,11 @@ func TestReconcile(t *testing.T) {
 			Return(nil).
 			Once()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.On("WithSystemName", sqlc.SystemNameGoogleGcpGar).Return(auditLogger).Once()
 
-		reconciler := google_gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, artifactregistryClient, iamService, log)
-		err = reconciler.Reconcile(ctx, input)
+		err = google_gar.
+			New(auditLogger, database, managementProjectID, workloadIdentityPoolName, artifactregistryClient, iamService, log).
+			Reconcile(ctx, input)
 		assert.ErrorContains(t, err, "abort test")
 	})
 }
@@ -442,30 +453,62 @@ func TestDelete(t *testing.T) {
 	garClient, iamService := mockedClients.start(t, ctx)
 
 	t.Run("unable to load state", func(t *testing.T) {
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGoogleGcpGar).
+			Return(auditLogger).
+			Once()
+
+		log.
+			On("WithSystem", string(sqlc.SystemNameGoogleGcpGar)).
+			Return(log).
+			Once()
+
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, google_gar.Name, teamSlug, mock.Anything).
 			Return(fmt.Errorf("some error")).
 			Once()
 
-		reconciler := google_gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, garClient, iamService, log)
-		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		err := google_gar.
+			New(auditLogger, database, managementProjectID, workloadIdentityPoolName, garClient, iamService, log).
+			Delete(ctx, teamSlug, correlationID)
 		assert.ErrorContains(t, err, "load reconciler state for team")
 	})
 
 	t.Run("state is missing repository name", func(t *testing.T) {
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGoogleGcpGar).
+			Return(auditLogger).
+			Once()
+
+		log.
+			On("WithSystem", string(sqlc.SystemNameGoogleGcpGar)).
+			Return(log).
+			Once()
+
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, google_gar.Name, teamSlug, mock.Anything).
 			Return(nil).
 			Once()
 
-		reconciler := google_gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, garClient, iamService, log)
-		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		err := google_gar.
+			New(auditLogger, database, managementProjectID, workloadIdentityPoolName, garClient, iamService, log).
+			Delete(ctx, teamSlug, correlationID)
 		assert.ErrorContains(t, err, "missing repository name")
 	})
 
 	t.Run("delete service account fails with unexpected error", func(t *testing.T) {
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGoogleGcpGar).
+			Return(auditLogger).
+			Once()
+
+		log.
+			On("WithSystem", string(sqlc.SystemNameGoogleGcpGar)).
+			Return(log).
+			Once()
+
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, google_gar.Name, teamSlug, mock.Anything).
@@ -486,8 +529,9 @@ func TestDelete(t *testing.T) {
 		}
 		garClient, iamService := mockedClients.start(t, ctx)
 
-		reconciler := google_gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, garClient, iamService, log)
-		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		err := google_gar.
+			New(auditLogger, database, managementProjectID, workloadIdentityPoolName, garClient, iamService, log).
+			Delete(ctx, teamSlug, correlationID)
 		assert.ErrorContains(t, err, "delete service account")
 	})
 
@@ -517,7 +561,16 @@ func TestDelete(t *testing.T) {
 		garClient, iamService := mockedClients.start(t, ctx)
 
 		testLogger, logs := logrustest.NewNullLogger()
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGoogleGcpGar).
+			Return(auditLogger).
+			Once()
+
 		log := logger.NewMockLogger(t)
+		log.
+			On("WithSystem", string(sqlc.SystemNameGoogleGcpGar)).
+			Return(log).
+			Once()
 		log.
 			On("WithTeamSlug", string(teamSlug)).
 			Return(log).
@@ -527,13 +580,24 @@ func TestDelete(t *testing.T) {
 			Return(&logrus.Entry{Logger: testLogger}).
 			Once()
 
-		reconciler := google_gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, garClient, iamService, log)
-		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		err := google_gar.
+			New(auditLogger, database, managementProjectID, workloadIdentityPoolName, garClient, iamService, log).
+			Delete(ctx, teamSlug, correlationID)
 		assert.ErrorContains(t, err, "delete GAR repository for team")
 		assert.Contains(t, logs.Entries[0].Message, "does not exist")
 	})
 
 	t.Run("delete repo operation fails", func(t *testing.T) {
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGoogleGcpGar).
+			Return(auditLogger).
+			Once()
+
+		log.
+			On("WithSystem", string(sqlc.SystemNameGoogleGcpGar)).
+			Return(log).
+			Once()
+
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, google_gar.Name, teamSlug, mock.Anything).
@@ -566,8 +630,9 @@ func TestDelete(t *testing.T) {
 		}
 		garClient, iamService := mockedClients.start(t, ctx)
 
-		reconciler := google_gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, garClient, iamService, log)
-		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		err := google_gar.
+			New(auditLogger, database, managementProjectID, workloadIdentityPoolName, garClient, iamService, log).
+			Delete(ctx, teamSlug, correlationID)
 		assert.ErrorContains(t, err, "wait for GAR repository deletion")
 	})
 
@@ -588,6 +653,10 @@ func TestDelete(t *testing.T) {
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGoogleGcpGar).
+			Return(auditLogger).
+			Once()
+		auditLogger.
 			On(
 				"Logf",
 				ctx,
@@ -603,6 +672,11 @@ func TestDelete(t *testing.T) {
 				repositoryName,
 			).
 			Return(nil).
+			Once()
+
+		log.
+			On("WithSystem", string(sqlc.SystemNameGoogleGcpGar)).
+			Return(log).
 			Once()
 
 		mockedClients := mocks{
@@ -623,7 +697,9 @@ func TestDelete(t *testing.T) {
 		}
 		garClient, iamService := mockedClients.start(t, ctx)
 
-		reconciler := google_gar.New(auditLogger, database, managementProjectID, workloadIdentityPoolName, garClient, iamService, log)
-		assert.NoError(t, reconciler.Delete(ctx, teamSlug, correlationID))
+		err := google_gar.
+			New(auditLogger, database, managementProjectID, workloadIdentityPoolName, garClient, iamService, log).
+			Delete(ctx, teamSlug, correlationID)
+		assert.NoError(t, err)
 	})
 }

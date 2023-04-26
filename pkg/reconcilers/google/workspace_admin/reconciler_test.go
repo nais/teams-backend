@@ -48,7 +48,17 @@ func TestReconcile(t *testing.T) {
 		}
 
 		auditLog := auditlogger.NewMockAuditLogger(t)
+		auditLog.
+			On("WithSystemName", sqlc.SystemNameGoogleWorkspaceAdmin).
+			Return(auditLog).
+			Once()
+
 		log := logger.NewMockLogger(t)
+		log.
+			On("WithSystem", string(sqlc.SystemNameGoogleWorkspaceAdmin)).
+			Return(log).
+			Once()
+
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, teamSlug, mock.Anything).
@@ -57,8 +67,9 @@ func TestReconcile(t *testing.T) {
 
 		service, _ := admin_directory_v1.NewService(ctx, option.WithoutAuthentication(), option.WithEndpoint(ts.URL))
 
-		reconciler := google_workspace_admin_reconciler.New(database, auditLog, domain, service, log)
-		err := reconciler.Reconcile(ctx, input)
+		err := google_workspace_admin_reconciler.
+			New(database, auditLog, domain, service, log).
+			Reconcile(ctx, input)
 		assert.ErrorContains(t, err, "unable to load system state")
 	})
 
@@ -166,6 +177,10 @@ func TestReconcile(t *testing.T) {
 		service, _ := admin_directory_v1.NewService(ctx, option.WithoutAuthentication(), option.WithEndpoint(ts.URL))
 
 		log := logger.NewMockLogger(t)
+		log.
+			On("WithSystem", string(sqlc.SystemNameGoogleWorkspaceAdmin)).
+			Return(log).
+			Once()
 
 		database := db.NewMockDatabase(t)
 		database.
@@ -184,6 +199,10 @@ func TestReconcile(t *testing.T) {
 			Once()
 
 		auditLog := auditlogger.NewMockAuditLogger(t)
+		auditLog.
+			On("WithSystemName", sqlc.SystemNameGoogleWorkspaceAdmin).
+			Return(auditLog).
+			Once()
 		auditLog.
 			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Identifier == string(teamSlug)
@@ -225,8 +244,9 @@ func TestReconcile(t *testing.T) {
 			Return(nil).
 			Once()
 
-		reconciler := google_workspace_admin_reconciler.New(database, auditLog, domain, service, log)
-		err := reconciler.Reconcile(ctx, input)
+		err := google_workspace_admin_reconciler.
+			New(database, auditLog, domain, service, log).
+			Reconcile(ctx, input)
 		assert.NoError(t, err)
 	})
 }
@@ -244,30 +264,62 @@ func Test_Delete(t *testing.T) {
 	defer close()
 
 	t.Run("unable to load state", func(t *testing.T) {
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGoogleWorkspaceAdmin).
+			Return(auditLogger).
+			Once()
+
+		log.
+			On("WithSystem", string(sqlc.SystemNameGoogleWorkspaceAdmin)).
+			Return(log).
+			Once()
+
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, teamSlug, mock.Anything).
 			Return(fmt.Errorf("some error")).
 			Once()
 
-		reconciler := google_workspace_admin_reconciler.New(database, auditLogger, domain, googleAdminService, log)
-		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		err := google_workspace_admin_reconciler.
+			New(database, auditLogger, domain, googleAdminService, log).
+			Delete(ctx, teamSlug, correlationID)
 		assert.ErrorContains(t, err, "load reconciler state for team")
 	})
 
 	t.Run("no group email in state", func(t *testing.T) {
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGoogleWorkspaceAdmin).
+			Return(auditLogger).
+			Once()
+
+		log.
+			On("WithSystem", string(sqlc.SystemNameGoogleWorkspaceAdmin)).
+			Return(log).
+			Once()
+
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, teamSlug, mock.Anything).
 			Return(nil).
 			Once()
 
-		reconciler := google_workspace_admin_reconciler.New(database, auditLogger, domain, googleAdminService, log)
-		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		err := google_workspace_admin_reconciler.
+			New(database, auditLogger, domain, googleAdminService, log).
+			Delete(ctx, teamSlug, correlationID)
 		assert.ErrorContains(t, err, "missing group email in reconciler state")
 	})
 
 	t.Run("Google API failure", func(t *testing.T) {
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGoogleWorkspaceAdmin).
+			Return(auditLogger).
+			Once()
+
+		log.
+			On("WithSystem", string(sqlc.SystemNameGoogleWorkspaceAdmin)).
+			Return(log).
+			Once()
+
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, teamSlug, mock.Anything).
@@ -288,12 +340,18 @@ func Test_Delete(t *testing.T) {
 		})
 		defer close()
 
-		reconciler := google_workspace_admin_reconciler.New(database, auditLogger, domain, googleAdminService, log)
-		err := reconciler.Delete(ctx, teamSlug, correlationID)
+		err := google_workspace_admin_reconciler.
+			New(database, auditLogger, domain, googleAdminService, log).
+			Delete(ctx, teamSlug, correlationID)
 		assert.ErrorContains(t, err, "delete Google directory group")
 	})
 
 	t.Run("successful delete", func(t *testing.T) {
+		log.
+			On("WithSystem", string(sqlc.SystemNameGoogleWorkspaceAdmin)).
+			Return(log).
+			Once()
+
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, teamSlug, mock.Anything).
@@ -318,6 +376,10 @@ func Test_Delete(t *testing.T) {
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGoogleWorkspaceAdmin).
+			Return(auditLogger).
+			Once()
+		auditLogger.
 			On(
 				"Logf",
 				ctx,
@@ -336,8 +398,10 @@ func Test_Delete(t *testing.T) {
 			Return(nil).
 			Once()
 
-		reconciler := google_workspace_admin_reconciler.New(database, auditLogger, domain, googleAdminService, log)
-		assert.Nil(t, reconciler.Delete(ctx, teamSlug, correlationID))
+		err := google_workspace_admin_reconciler.
+			New(database, auditLogger, domain, googleAdminService, log).
+			Delete(ctx, teamSlug, correlationID)
+		assert.Nil(t, err)
 	})
 }
 

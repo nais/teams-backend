@@ -60,21 +60,31 @@ func TestReconcile(t *testing.T) {
 	t.Run("fail early when unable to load reconciler state", func(t *testing.T) {
 		ctx := context.Background()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGoogleGcpProject).
+			Return(auditLogger).
+			Once()
+
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.Slug, mock.Anything).
 			Return(fmt.Errorf("some error")).
 			Once()
 		gcpServices := &google_gcp_reconciler.GcpServices{}
-		reconciler := google_gcp_reconciler.New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log, nil)
 
-		err := reconciler.Reconcile(ctx, input)
+		err := google_gcp_reconciler.
+			New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log, nil).
+			Reconcile(ctx, input)
 		assert.ErrorContains(t, err, "load system state")
 	})
 
 	t.Run("fail early when unable to load google workspace state", func(t *testing.T) {
 		ctx := context.Background()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGoogleGcpProject).
+			Return(auditLogger).
+			Once()
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.Slug, mock.Anything).
@@ -85,15 +95,20 @@ func TestReconcile(t *testing.T) {
 			Return(fmt.Errorf("some error")).
 			Once()
 		gcpServices := &google_gcp_reconciler.GcpServices{}
-		reconciler := google_gcp_reconciler.New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log, nil)
 
-		err := reconciler.Reconcile(ctx, input)
+		err := google_gcp_reconciler.
+			New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log, nil).
+			Reconcile(ctx, input)
 		assert.ErrorContains(t, err, "load system state")
 	})
 
 	t.Run("fail early when google workspace state is missing group email", func(t *testing.T) {
 		ctx := context.Background()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGoogleGcpProject).
+			Return(auditLogger).
+			Once()
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.Slug, mock.Anything).
@@ -104,15 +119,20 @@ func TestReconcile(t *testing.T) {
 			Return(nil).
 			Once()
 		gcpServices := &google_gcp_reconciler.GcpServices{}
-		reconciler := google_gcp_reconciler.New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log, nil)
 
-		err := reconciler.Reconcile(ctx, input)
+		err := google_gcp_reconciler.
+			New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log, nil).
+			Reconcile(ctx, input)
 		assert.ErrorContains(t, err, "no Google Workspace group exists")
 	})
 
 	t.Run("no error when we have no clusters", func(t *testing.T) {
 		ctx := context.Background()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGoogleGcpProject).
+			Return(auditLogger).
+			Once()
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.Slug, mock.Anything).
@@ -128,9 +148,10 @@ func TestReconcile(t *testing.T) {
 			Return(nil).
 			Once()
 		gcpServices := &google_gcp_reconciler.GcpServices{}
-		reconciler := google_gcp_reconciler.New(database, auditLogger, gcp.Clusters{}, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log, nil)
 
-		err := reconciler.Reconcile(ctx, input)
+		err := google_gcp_reconciler.
+			New(database, auditLogger, gcp.Clusters{}, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log, nil).
+			Reconcile(ctx, input)
 		assert.NoError(t, err)
 	})
 
@@ -165,6 +186,10 @@ func TestReconcile(t *testing.T) {
 			Once()
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGoogleGcpProject).
+			Return(auditLogger).
+			Once()
 		auditLogger.
 			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Identifier == string(teamSlug)
@@ -374,9 +399,10 @@ func TestReconcile(t *testing.T) {
 			ServiceUsageService:                   serviceUsageService.Services,
 			ServiceUsageOperationsService:         serviceUsageService.Operations,
 		}
-		reconciler := google_gcp_reconciler.New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log, nil)
 
-		err = reconciler.Reconcile(ctx, input)
+		err = google_gcp_reconciler.
+			New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log, nil).
+			Reconcile(ctx, input)
 		assert.NoError(t, err)
 	})
 }

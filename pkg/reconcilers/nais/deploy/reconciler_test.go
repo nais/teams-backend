@@ -48,6 +48,11 @@ func TestNaisDeployReconciler_Reconcile(t *testing.T) {
 		defer srv.Close()
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameNaisDeploy).
+			Return(auditLogger).
+			Once()
+
 		database := db.NewMockDatabase(t)
 
 		auditLogger.
@@ -64,35 +69,50 @@ func TestNaisDeployReconciler_Reconcile(t *testing.T) {
 			Return(nil).
 			Once()
 
-		reconciler := nais_deploy_reconciler.New(database, auditLogger, http.DefaultClient, srv.URL, key, log)
-		err := reconciler.Reconcile(ctx, input)
+		err := nais_deploy_reconciler.
+			New(database, auditLogger, http.DefaultClient, srv.URL, key, log).
+			Reconcile(ctx, input)
 
 		assert.NoError(t, err)
 	})
 
 	t.Run("internal server error when provisioning key", func(t *testing.T) {
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameNaisDeploy).
+			Return(auditLogger).
+			Once()
+
 		database := db.NewMockDatabase(t)
 
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 		}))
 		defer srv.Close()
-		reconciler := nais_deploy_reconciler.New(database, auditLogger, http.DefaultClient, srv.URL, key, log)
-		err := reconciler.Reconcile(ctx, input)
+
+		err := nais_deploy_reconciler.
+			New(database, auditLogger, http.DefaultClient, srv.URL, key, log).
+			Reconcile(ctx, input)
 		assert.EqualError(t, err, "provision NAIS deploy API key for team \"slug\": 500 Internal Server Error")
 	})
 
 	t.Run("team key does not change", func(t *testing.T) {
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameNaisDeploy).
+			Return(auditLogger).
+			Once()
+
 		database := db.NewMockDatabase(t)
 
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNoContent)
 		}))
 		defer srv.Close()
-		reconciler := nais_deploy_reconciler.New(database, auditLogger, http.DefaultClient, srv.URL, key, log)
-		err := reconciler.Reconcile(ctx, input)
+
+		err := nais_deploy_reconciler.
+			New(database, auditLogger, http.DefaultClient, srv.URL, key, log).
+			Reconcile(ctx, input)
 		assert.NoError(t, err)
 	})
 }

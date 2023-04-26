@@ -571,6 +571,8 @@ const (
 	SystemNameLegacyImporter       SystemName = "legacy-importer"
 	SystemNameAuthn                SystemName = "authn"
 	SystemNameNaisDependencytrack  SystemName = "nais:dependencytrack"
+	SystemNameNaisDeploy           SystemName = "nais:deploy"
+	SystemNameGoogleGcpGar         SystemName = "google:gcp:gar"
 )
 
 func (e *SystemName) Scan(src interface{}) error {
@@ -620,7 +622,9 @@ func (e SystemName) Valid() bool {
 		SystemNameUsersync,
 		SystemNameLegacyImporter,
 		SystemNameAuthn,
-		SystemNameNaisDependencytrack:
+		SystemNameNaisDependencytrack,
+		SystemNameNaisDeploy,
+		SystemNameGoogleGcpGar:
 		return true
 	}
 	return false
@@ -639,6 +643,8 @@ func AllSystemNameValues() []SystemName {
 		SystemNameLegacyImporter,
 		SystemNameAuthn,
 		SystemNameNaisDependencytrack,
+		SystemNameNaisDeploy,
+		SystemNameGoogleGcpGar,
 	}
 }
 
