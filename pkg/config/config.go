@@ -4,10 +4,16 @@ import (
 	"strings"
 
 	"github.com/kelseyhightower/envconfig"
+	"github.com/nais/console/pkg/dependencytrack"
 	"github.com/nais/console/pkg/fixtures"
 	"github.com/nais/console/pkg/gcp"
 	"github.com/nais/console/pkg/legacy/envmap"
 )
+
+type DependencyTrack struct {
+	// a list of dependency track instances (one per cluster).
+	Instances dependencytrack.Instances `envconfig:"CONSOLE_DEPENDENCYTRACK_INSTANCES"`
+}
 
 type GitHub struct {
 	// ApplicationID The ID of the GitHub Application that is used when communicating with the GitHub APIs.
@@ -80,12 +86,13 @@ type NaisDeploy struct {
 }
 
 type Config struct {
-	GitHub        GitHub
-	GCP           GCP
-	UserSync      UserSync
-	NaisDeploy    NaisDeploy
-	NaisNamespace NaisNamespace
-	OAuth         OAuth
+	DependencyTrack DependencyTrack
+	GitHub          GitHub
+	GCP             GCP
+	UserSync        UserSync
+	NaisDeploy      NaisDeploy
+	NaisNamespace   NaisNamespace
+	OAuth           OAuth
 
 	// Environments A list of environment names used for instance in GCP
 	Environments []string
