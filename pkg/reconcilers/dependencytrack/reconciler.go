@@ -23,7 +23,6 @@ type dependencytrackReconciler struct {
 	clients     map[string]dependencytrack.Client
 }
 
-// TODO: add to DB
 const (
 	Name = sqlc.ReconcilerNameNaisDependencytrack
 )
