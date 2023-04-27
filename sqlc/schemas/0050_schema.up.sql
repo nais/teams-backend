@@ -320,7 +320,7 @@ INSERT INTO reconcilers
 ('nais:namespace', 'NAIS namespace', 'Create NAIS namespaces for the Console teams.', false, 5),
 ('nais:deploy', 'NAIS deploy', 'Provision NAIS deploy key for Console teams.', false, 6),
 ('google:gcp:gar', 'Google Artifact Registry', 'Provision artifact registry repositories for Console teams.', false, 7),
-('nais:dependencytrack', 'DependencyTrack', 'Create teams and users in dependencytrack', 8, false);
+('nais:dependencytrack', 'DependencyTrack', 'Create teams and users in dependencytrack', false, 8);
 
 INSERT INTO reconciler_config
 (reconciler, key, display_name, description, secret) VALUES
