@@ -155,10 +155,7 @@ func (r *dependencytrackReconciler) syncTeamAndUsers(ctx context.Context, input 
 		Action:        sqlc.AuditActionDependencytrackGroupCreate,
 		CorrelationID: input.CorrelationID,
 	}
-	err = r.auditLogger.Logf(ctx, r.database, targets, fields, "Created dependencytrack team %q with ID %q", team.Name, team.Uuid)
-	if err != nil {
-		return "", err
-	}
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Created dependencytrack team %q with ID %q", team.Name, team.Uuid)
 
 	log.Debugf("created team %q in dependencytrack.", input.Team.Slug)
 	for _, user := range input.TeamMembers {

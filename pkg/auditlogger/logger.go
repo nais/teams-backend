@@ -15,7 +15,7 @@ import (
 )
 
 type AuditLogger interface {
-	Logf(ctx context.Context, dbtx db.Database, targets []Target, entry Fields, message string, messageArgs ...interface{}) error
+	Logf(ctx context.Context, dbtx db.Database, targets []Target, entry Fields, message string, messageArgs ...interface{})
 	WithSystemName(systemName sqlc.SystemName) AuditLogger
 }
 
@@ -48,19 +48,22 @@ func (l *auditLogger) WithSystemName(systemName sqlc.SystemName) AuditLogger {
 	}
 }
 
-func (l *auditLogger) Logf(ctx context.Context, dbtx db.Database, targets []Target, fields Fields, message string, messageArgs ...interface{}) error {
+func (l *auditLogger) Logf(ctx context.Context, dbtx db.Database, targets []Target, fields Fields, message string, messageArgs ...interface{}) {
 	if l.systemName == "" || !l.systemName.Valid() {
-		return fmt.Errorf("unable to create auditlog entry: missing or invalid system name")
+		l.log.Errorf("unable to create auditlog entry: missing or invalid system name")
+		return
 	}
 
 	if fields.Action == "" || !fields.Action.Valid() {
-		return fmt.Errorf("unable to create auditlog entry: missing or invalid audit action")
+		l.log.Errorf("unable to create auditlog entry: missing or invalid audit action")
+		return
 	}
 
 	if fields.CorrelationID == uuid.Nil {
 		id, err := uuid.NewUUID()
 		if err != nil {
-			return fmt.Errorf("missing correlation ID in fields and unable to generate one: %w", err)
+			l.log.WithError(err).Errorf("missing correlation ID in fields and unable to generate one")
+			return
 		}
 		fields.CorrelationID = id
 	}
@@ -84,7 +87,8 @@ func (l *auditLogger) Logf(ctx context.Context, dbtx db.Database, targets []Targ
 			message,
 		)
 		if err != nil {
-			return fmt.Errorf("create audit log entry: %w", err)
+			l.log.WithError(err).Errorf("create audit log entry")
+			return
 		}
 
 		logFields := logrus.Fields{
@@ -112,8 +116,6 @@ func (l *auditLogger) Logf(ctx context.Context, dbtx db.Database, targets []Targ
 
 		log.WithFields(logFields).Infof(message)
 	}
-
-	return nil
 }
 
 func UserTarget(email string) Target {

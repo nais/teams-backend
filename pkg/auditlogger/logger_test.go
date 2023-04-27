@@ -2,6 +2,7 @@ package auditlogger_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -25,22 +26,31 @@ func Test_Logf(t *testing.T) {
 
 	t.Run("missing system name", func(t *testing.T) {
 		log := logger.NewMockLogger(t)
+		log.
+			On("Errorf", mock.MatchedBy(func(msg string) bool {
+				return strings.Contains(msg, "missing or invalid system name")
+			})).
+			Once()
 		auditLogger := auditlogger.New(log)
-		err := auditLogger.Logf(ctx, database, []auditlogger.Target{}, auditlogger.Fields{}, msg)
-		assert.ErrorContains(t, err, "missing or invalid system name")
+		auditLogger.Logf(ctx, database, []auditlogger.Target{}, auditlogger.Fields{}, msg)
 	})
 
-	t.Run("missing system name", func(t *testing.T) {
+	t.Run("missing audit action", func(t *testing.T) {
 		log := logger.NewMockLogger(t)
 		log.
 			On("WithSystem", string(system)).
 			Return(log).
 			Once()
+		log.
+			On("Errorf", mock.MatchedBy(func(msg string) bool {
+				return strings.Contains(msg, "missing or invalid audit action")
+			})).
+			Once()
+
 		auditLogger := auditlogger.New(log)
-		err := auditLogger.
+		auditLogger.
 			WithSystemName(system).
 			Logf(ctx, database, []auditlogger.Target{}, auditlogger.Fields{}, msg)
-		assert.ErrorContains(t, err, "missing or invalid audit action")
 	})
 
 	t.Run("does not do anything without targets", func(t *testing.T) {
@@ -53,10 +63,9 @@ func Test_Logf(t *testing.T) {
 		fields := auditlogger.Fields{
 			Action: sqlc.AuditActionAzureGroupAddMember,
 		}
-		err := auditLogger.
+		auditLogger.
 			WithSystemName(system).
 			Logf(ctx, database, []auditlogger.Target{}, fields, msg)
-		assert.Nil(t, err)
 	})
 
 	t.Run("log with target and all fields", func(t *testing.T) {
@@ -151,11 +160,10 @@ func Test_Logf(t *testing.T) {
 			On("CreateAuditLogEntry", ctx, correlationID, system, &actorIdentity, sqlc.AuditLogsTargetTypeSystem, string(systemName), action, msg).
 			Return(nil).
 			Once()
-		err := auditLogger.
+		auditLogger.
 			WithSystemName(system).
 			Logf(ctx, database, targets, fields, msg)
 
-		assert.Nil(t, err)
 		assert.Len(t, hook.Entries, len(targets))
 		assert.Equal(t, msg, hook.Entries[0].Message)
 		assert.Equal(t, msg, hook.Entries[1].Message)

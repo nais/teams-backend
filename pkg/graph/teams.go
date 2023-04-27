@@ -127,7 +127,8 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, slug *slug.Slug, inpu
 			Actor:         actor,
 		}
 
-		return r.auditLogger.Logf(ctx, dbtx, targets, fields, "Team configuration saved")
+		r.auditLogger.Logf(ctx, dbtx, targets, fields, "Team configuration saved")
+		return nil
 	})
 	if err != nil {
 		return nil, err

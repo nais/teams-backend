@@ -17,20 +17,11 @@ type MockAuditLogger struct {
 }
 
 // Logf provides a mock function with given fields: ctx, dbtx, targets, entry, message, messageArgs
-func (_m *MockAuditLogger) Logf(ctx context.Context, dbtx db.Database, targets []Target, entry Fields, message string, messageArgs ...interface{}) error {
+func (_m *MockAuditLogger) Logf(ctx context.Context, dbtx db.Database, targets []Target, entry Fields, message string, messageArgs ...interface{}) {
 	var _ca []interface{}
 	_ca = append(_ca, ctx, dbtx, targets, entry, message)
 	_ca = append(_ca, messageArgs...)
-	ret := _m.Called(_ca...)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, db.Database, []Target, Fields, string, ...interface{}) error); ok {
-		r0 = rf(ctx, dbtx, targets, entry, message, messageArgs...)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
+	_m.Called(_ca...)
 }
 
 // WithSystemName provides a mock function with given fields: systemName
