@@ -418,10 +418,14 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, slug *slug.Slu
 		return nil, err
 	}
 
-	err = r.database.SetTeamMemberRole(ctx, *userID, team.Slug, desiredRole)
-	if err != nil {
-		return nil, err
-	}
+	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
+		err = dbtx.RemoveUserFromTeam(ctx, *userID, team.Slug)
+		if err != nil {
+			return err
+		}
+
+		return dbtx.SetTeamMemberRole(ctx, *userID, team.Slug, desiredRole)
+	})
 
 	targets := []auditlogger.Target{
 		auditlogger.TeamTarget(team.Slug),
