@@ -7,10 +7,8 @@ import (
 	"io"
 	"net/http"
 	"sort"
-	"strconv"
 	"strings"
 
-	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-github/v50/github"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
@@ -44,31 +42,13 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, org, domain 
 	}
 }
 
-func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
-	config, err := getReconfilerConfig(ctx, cfg, database)
-	if err != nil {
-		return nil, err
-	}
+func NewFromConfig(_ context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
+	// TODO: Use new GitHub auth component (Full URL: cfg.GitHub.AuthEndpoint)
+	httpClient := &http.Client{}
 
-	transport, err := ghinstallation.NewKeyFromFile(
-		http.DefaultTransport,
-		config.appID,
-		config.installationID,
-		config.privateKeyPath,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// Note that both HTTP clients and transports are safe for concurrent use according to the docs,
-	// so we can safely reuse them across objects and concurrent synchronizations.
-	httpClient := &http.Client{
-		Transport: transport,
-	}
 	restClient := github.NewClient(httpClient)
 	graphClient := githubv4.NewClient(httpClient)
-
-	return New(database, auditLogger, config.org, cfg.TenantDomain, restClient.Teams, graphClient, log), nil
+	return New(database, auditLogger, cfg.GitHub.Organization, cfg.TenantDomain, restClient.Teams, graphClient, log), nil
 }
 
 func (r *githubTeamReconciler) Name() sqlc.ReconcilerName {
@@ -102,13 +82,11 @@ func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.
 		return err
 	}
 
-	slug := slug.Slug(*githubTeam.Slug)
-	updatedState := reconcilers.GitHubState{
-		Slug:         &slug,
+	teamSlug := slug.Slug(*githubTeam.Slug)
+	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, reconcilers.GitHubState{
+		Slug:         &teamSlug,
 		Repositories: repos,
-	}
-
-	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, updatedState)
+	})
 	if err != nil {
 		r.log.WithError(err).Error("persist system state")
 	}
@@ -494,25 +472,6 @@ func (r *githubTeamReconciler) getTeamRepositories(ctx context.Context, teamSlug
 	})
 
 	return allRepos, nil
-}
-
-func getReconfilerConfig(ctx context.Context, cfg *config.Config, database db.Database) (*reconcilerConfig, error) {
-	config, err := database.DangerousGetReconcilerConfigValues(ctx, Name)
-	if err != nil {
-		return nil, err
-	}
-
-	installationID, err := strconv.ParseInt(config.GetValue(sqlc.ReconcilerConfigKeyGithubAppInstallationID), 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("unable to convert app installation ID %q to an integer", config.GetValue(sqlc.ReconcilerConfigKeyGithubAppInstallationID))
-	}
-
-	return &reconcilerConfig{
-		appID:          cfg.GitHub.ApplicationID,
-		privateKeyPath: cfg.GitHub.PrivateKeyPath,
-		org:            config.GetValue(sqlc.ReconcilerConfigKeyGithubOrg),
-		installationID: installationID,
-	}, nil
 }
 
 // httpError Return an error if the response status code is not as expected, or if the passed err is already set to an
