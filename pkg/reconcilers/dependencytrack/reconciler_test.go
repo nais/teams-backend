@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/nais/console/pkg/dependencytrack"
+	dependencytrack "github.com/nais/dependencytrack/pkg/client"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
@@ -31,7 +31,7 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 	audit := auditlogger.NewMockAuditLogger(t)
 	audit.On("WithSystemName", sqlc.SystemNameNaisDependencytrack).Return(audit)
 	database := db.NewMockDatabase(t)
-	mockClient := dependencytrack.NewMockClient(t)
+	mockClient := NewMockClient(t)
 
 	instances := map[string]dependencytrack.Client{"mock": mockClient}
 
@@ -56,7 +56,7 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 			Return(nil).
 			Once()
 
-		mockClient.On("CreateUser", mock.Anything, username).Return(&dependencytrack.User{
+		mockClient.On("CreateOidcUser", mock.Anything, username).Return(&dependencytrack.User{
 			Username: username,
 			Email:    username,
 		}).Return(nil).Once()
@@ -82,7 +82,7 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 				},
 			}
 		}).Return(nil).Once()
-		mockClient.On("CreateUser", mock.Anything, username).Return(&dependencytrack.User{
+		mockClient.On("CreateOidcUser", mock.Anything, username).Return(&dependencytrack.User{
 			Username: username,
 			Email:    username,
 		}).Return(nil).Once()
@@ -131,7 +131,7 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 			}
 		}).Return(nil).Once()
 
-		mockClient.On("CreateUser", mock.Anything, username).Return(&dependencytrack.User{
+		mockClient.On("CreateOidcUser", mock.Anything, username).Return(&dependencytrack.User{
 			Username: username,
 			Email:    username,
 		}).Return(nil).Once()
@@ -155,7 +155,7 @@ func TestDependencytrackReconciler_Delete(t *testing.T) {
 	correlationID := uuid.New()
 	input := setupInput(correlationID, "someTeam", "user1@nais.io")
 
-	mockClient := dependencytrack.NewMockClient(t)
+	mockClient := NewMockClient(t)
 	database := db.NewMockDatabase(t)
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	auditLogger.On("WithSystemName", sqlc.SystemNameNaisDependencytrack).Return(auditLogger)

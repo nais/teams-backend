@@ -3,17 +3,20 @@ package dependencytrack
 import (
 	"context"
 	"fmt"
+	"net/http"
+
+	"github.com/nais/console/pkg/metrics"
+	"github.com/sirupsen/logrus"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/dependencytrack"
 	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
-	log "github.com/sirupsen/logrus"
+	dependencytrack "github.com/nais/dependencytrack/pkg/client"
 )
 
 type dependencytrackReconciler struct {
@@ -43,7 +46,15 @@ func NewFromConfig(_ context.Context, database db.Database, cfg *config.Config, 
 	}
 
 	for _, instance := range cfg.DependencyTrack.Instances {
-		client := dependencytrack.NewClient(instance.Endpoint, instance.Username, instance.Password, nil, log)
+		client := dependencytrack.New(
+			instance.Endpoint,
+			instance.Username,
+			instance.Password,
+			dependencytrack.WithLogger(log.WithFields(logrus.Fields{
+				"instance": instance.Endpoint,
+			})),
+			dependencytrack.WithResponseCallback(incExternalHttpCalls),
+		)
 		clients[instance.Endpoint] = client
 	}
 	return New(database, audit, clients, log)
@@ -113,11 +124,11 @@ func (r *dependencytrackReconciler) Delete(ctx context.Context, teamSlug slug.Sl
 
 func (r *dependencytrackReconciler) syncTeamAndUsers(ctx context.Context, input reconcilers.Input, client dependencytrack.Client, instanceState *reconcilers.DependencyTrackInstanceState) (string, error) {
 	if instanceState != nil && instanceState.TeamID != "" {
-		log.Debugf("team %q already exists in dependencytrack instance state.", input.Team.Slug)
+		r.log.Debugf("team %q already exists in dependencytrack instance state.", input.Team.Slug)
 		for _, user := range input.TeamMembers {
 			if !contains(instanceState.Members, user.Email) {
-				err := client.CreateUser(ctx, user.Email)
-				log.Debugf("creating user %q in dependencytrack.", user.Email)
+				err := client.CreateOidcUser(ctx, user.Email)
+				r.log.Debugf("creating user %q in dependencytrack.", user.Email)
 				if err != nil {
 					return "", err
 				}
@@ -125,7 +136,7 @@ func (r *dependencytrackReconciler) syncTeamAndUsers(ctx context.Context, input 
 				if err != nil {
 					return "", err
 				}
-				log.Debugf("adding user %q to team %q dependencytrack.", user.Email, input.Team.Slug)
+				r.log.Debugf("adding user %q to team %q dependencytrack.", user.Email, input.Team.Slug)
 			}
 		}
 
@@ -139,7 +150,7 @@ func (r *dependencytrackReconciler) syncTeamAndUsers(ctx context.Context, input 
 		}
 		return instanceState.TeamID, nil
 	}
-	log.Debugf("team %q does not exist in dependencytrack instance state, creating.", input.Team.Slug)
+	r.log.Debugf("team %q does not exist in dependencytrack instance state, creating.", input.Team.Slug)
 
 	team, err := client.CreateTeam(ctx, input.Team.Slug.String(), []dependencytrack.Permission{
 		dependencytrack.ViewPortfolioPermission,
@@ -157,23 +168,27 @@ func (r *dependencytrackReconciler) syncTeamAndUsers(ctx context.Context, input 
 	}
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Created dependencytrack team %q with ID %q", team.Name, team.Uuid)
 
-	log.Debugf("created team %q in dependencytrack.", input.Team.Slug)
+	r.log.Debugf("created team %q in dependencytrack.", input.Team.Slug)
 	for _, user := range input.TeamMembers {
-		err = client.CreateUser(ctx, user.Email)
+		err = client.CreateOidcUser(ctx, user.Email)
 		if err != nil {
 			return "", err
 		}
 
-		log.Debugf("creating user %q in dependencytrack.", user.Email)
+		r.log.Debugf("creating user %q in dependencytrack.", user.Email)
 
 		err = client.AddToTeam(ctx, user.Email, team.Uuid)
 		if err != nil {
 			return "", err
 		}
-		log.Debugf("adding user %q to team %q dependencytrack.", user.Email, input.Team.Slug)
+		r.log.Debugf("adding user %q to team %q dependencytrack.", user.Email, input.Team.Slug)
 	}
 
 	return team.Uuid, nil
+}
+
+func incExternalHttpCalls(resp *http.Response, err error) {
+	metrics.IncExternalHTTPCalls("dependencytrack", resp, err)
 }
 
 func instanceByEndpoint(instances []*reconcilers.DependencyTrackInstanceState, endpoint string) *reconcilers.DependencyTrackInstanceState {
