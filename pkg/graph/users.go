@@ -19,7 +19,7 @@ import (
 )
 
 // SynchronizeUsers is the resolver for the synchronizeUsers field.
-func (r *mutationResolver) SynchronizeUsers(ctx context.Context) (*model.UserSync, error) {
+func (r *mutationResolver) SynchronizeUsers(ctx context.Context) (*uuid.UUID, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationUsersyncSynchronize)
 	if err != nil {
@@ -42,9 +42,7 @@ func (r *mutationResolver) SynchronizeUsers(ctx context.Context) (*model.UserSyn
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Trigger user sync")
 	r.userSync <- correlationID
 
-	return &model.UserSync{
-		CorrelationID: &correlationID,
-	}, nil
+	return &correlationID, nil
 }
 
 // Users is the resolver for the users field.
