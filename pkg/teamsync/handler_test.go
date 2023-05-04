@@ -30,7 +30,7 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 
 	ctx := context.Background()
 	database := db.NewMockDatabase(t)
-	cfg := config.Defaults()
+	cfg, _ := config.New()
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	log := logger.NewMockLogger(t)
 
@@ -269,7 +269,7 @@ func TestHandler_DeleteTeam(t *testing.T) {
 	const teamSlug = slug.Slug("my team")
 
 	ctx := context.Background()
-	cfg := config.Defaults()
+	cfg, _ := config.New()
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	correlationID := uuid.New()
 

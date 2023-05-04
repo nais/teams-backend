@@ -55,8 +55,8 @@ type UserSync struct {
 	// Google organization will be treated as the master.
 	Enabled bool `envconfig:"CONSOLE_USERSYNC_ENABLED"`
 
-	// AdminGroupPrefix The prefix of the admin group email address. Defaults to "console-admins".
-	AdminGroupPrefix string `envconfig:"CONSOLE_USERSYNC_ADMIN_GROUP_PREFIX"`
+	// AdminGroupPrefix The prefix of the admin group email address.
+	AdminGroupPrefix string `envconfig:"CONSOLE_USERSYNC_ADMIN_GROUP_PREFIX" default:"console-admins"`
 }
 
 type OAuth struct {
@@ -72,17 +72,13 @@ type OAuth struct {
 
 type NaisDeploy struct {
 	// Endpoint URL to the NAIS deploy key provisioning endpoint
-	//
-	// Example: `http://localhost:8080/api/v1/provision`
-	Endpoint string `envconfig:"CONSOLE_NAIS_DEPLOY_ENDPOINT"`
+	Endpoint string `envconfig:"CONSOLE_NAIS_DEPLOY_ENDPOINT" default:"http://localhost:8080/api/v1/provision"`
 
 	// ProvisionKey The API key used when provisioning deploy keys on behalf of NAIS teams.
 	ProvisionKey string `envconfig:"CONSOLE_NAIS_DEPLOY_PROVISION_KEY"`
 
 	// DeployKeyEndpoint URL to the NAIS deploy key endpoint
-	//
-	// Example: `http://localhost:8080/internal/api/v1/apikey`
-	DeployKeyEndpoint string `envconfig:"CONSOLE_NAIS_DEPLOY_DEPLOY_KEY_ENDPOINT"`
+	DeployKeyEndpoint string `envconfig:"CONSOLE_NAIS_DEPLOY_DEPLOY_KEY_ENDPOINT" default:"http://localhost:8080/internal/api/v1/apikey"`
 }
 
 type Config struct {
@@ -98,14 +94,10 @@ type Config struct {
 	Environments []string
 
 	// DatabaseURL The URL for the database.
-	//
-	// Example: `postgres://console:console@localhost:3002/console?sslmode=disable`
-	DatabaseURL string `envconfig:"CONSOLE_DATABASE_URL"`
+	DatabaseURL string `envconfig:"CONSOLE_DATABASE_URL" default:"postgres://console:console@localhost:3002/console?sslmode=disable"`
 
 	// FrontendURL URL to the console frontend.
-	//
-	// Example: `http://localhost:3001`
-	FrontendURL string `envconfig:"CONSOLE_FRONTEND_URL"`
+	FrontendURL string `envconfig:"CONSOLE_FRONTEND_URL" default:"http://localhost:3001"`
 
 	// Names of reconcilers to enable on first run of console
 	//
@@ -114,15 +106,13 @@ type Config struct {
 	FirstRunEnableReconcilers []fixtures.EnableableReconciler `envconfig:"CONSOLE_FIRST_RUN_ENABLE_RECONCILERS"`
 
 	// ListenAddress The host:port combination used by the http server.
-	//
-	// Example: `127.0.0.1:3000`
-	ListenAddress string `envconfig:"CONSOLE_LISTEN_ADDRESS"`
+	ListenAddress string `envconfig:"CONSOLE_LISTEN_ADDRESS" default:"127.0.0.1:3000"`
 
 	// LogFormat Customize the log format. Can be "text" or "json".
-	LogFormat string `envconfig:"CONSOLE_LOG_FORMAT"`
+	LogFormat string `envconfig:"CONSOLE_LOG_FORMAT" default:"text"`
 
 	// LogLevel The log level used in console.
-	LogLevel string `envconfig:"CONSOLE_LOG_LEVEL"`
+	LogLevel string `envconfig:"CONSOLE_LOG_LEVEL" default:"DEBUG"`
 
 	// GoogleManagementProjectID The ID of the NAIS management project in the tenant organization in GCP.
 	GoogleManagementProjectID string `envconfig:"CONSOLE_GOOGLE_MANAGEMENT_PROJECT_ID"`
@@ -136,37 +126,14 @@ type Config struct {
 	StaticServiceAccounts fixtures.ServiceAccounts `envconfig:"CONSOLE_STATIC_SERVICE_ACCOUNTS"`
 
 	// TenantDomain The domain for the tenant.
-	//
-	// Example: `nav.no`
-	TenantDomain string `envconfig:"CONSOLE_TENANT_DOMAIN"`
+	TenantDomain string `envconfig:"CONSOLE_TENANT_DOMAIN" default:"example.com"`
 
 	// TenantName The name of the tenant.
-	//
-	// Example: `nav`.
-	TenantName string `envconfig:"CONSOLE_TENANT_NAME"`
-}
-
-func Defaults() *Config {
-	return &Config{
-		DatabaseURL:   "postgres://console:console@localhost:3002/console?sslmode=disable",
-		FrontendURL:   "http://localhost:3001",
-		ListenAddress: "127.0.0.1:3000",
-		LogFormat:     "text",
-		LogLevel:      "DEBUG",
-		TenantDomain:  "example.com",
-		TenantName:    "example",
-		NaisDeploy: NaisDeploy{
-			Endpoint:          "http://localhost:8080/api/v1/provision",
-			DeployKeyEndpoint: "http://localhost:8080/internal/api/v1/apikey",
-		},
-		UserSync: UserSync{
-			AdminGroupPrefix: "console-admins",
-		},
-	}
+	TenantName string `envconfig:"CONSOLE_TENANT_NAME" default:"example"`
 }
 
 func New() (*Config, error) {
-	cfg := Defaults()
+	cfg := &Config{}
 
 	err := envconfig.Process("", cfg)
 	if err != nil {
