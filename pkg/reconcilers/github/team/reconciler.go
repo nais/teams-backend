@@ -21,6 +21,7 @@ import (
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/shurcooL/githubv4"
+	"google.golang.org/api/impersonate"
 )
 
 const (
@@ -42,13 +43,25 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, org, domain 
 	}
 }
 
-func NewFromConfig(_ context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
-	// TODO: Use new GitHub auth component (Full URL: cfg.GitHub.AuthEndpoint)
-	httpClient := &http.Client{}
+func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
+	if cfg.GitHub.AuthEndpoint == "" {
+		return nil, fmt.Errorf("missing required configuration: CONSOLE_GITHUB_AUTH_ENDPOINT")
+	}
 
-	restClient := github.NewClient(httpClient)
-	graphClient := githubv4.NewClient(httpClient)
-	return New(database, auditLogger, cfg.GitHub.Organization, cfg.TenantDomain, restClient.Teams, graphClient, log), nil
+	if cfg.GoogleManagementProjectID == "" {
+		return nil, fmt.Errorf("missing required configuration: CONSOLE_GOOGLE_MANAGEMENT_PROJECT_ID")
+	}
+
+	ts, err := impersonate.IDTokenSource(ctx, impersonate.IDTokenConfig{
+		Audience:        cfg.GitHub.AuthEndpoint,
+		TargetPrincipal: fmt.Sprintf("console@%s.iam.gserviceaccount.com", cfg.GoogleManagementProjectID),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	httpClient := NewGitHubAuthClient(ctx, cfg.GitHub.AuthEndpoint, ts)
+	return New(database, auditLogger, cfg.GitHub.Organization, cfg.TenantDomain, github.NewClient(httpClient).Teams, githubv4.NewClient(httpClient), log), nil
 }
 
 func (r *githubTeamReconciler) Name() sqlc.ReconcilerName {

@@ -20,7 +20,7 @@ type GitHub struct {
 	Organization string `envconfig:"CONSOLE_GITHUB_ORG"`
 
 	// AuthEndpoint Endpoint URL to the GitHub auth component.
-	AuthEndpoint string `envconfig:"CONSOLE_GITHUB_AUTH_ENDPOINT" default:"http://localhost:8081/api/v1/auth"`
+	AuthEndpoint string `envconfig:"CONSOLE_GITHUB_AUTH_ENDPOINT"`
 }
 
 type GCP struct {
