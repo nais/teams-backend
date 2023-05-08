@@ -11,16 +11,16 @@ import (
 )
 
 type DependencyTrack struct {
-	// a list of dependency track instances (one per cluster).
+	// Instances A list of dependency track instances (one per cluster).
 	Instances dependencytrack.Instances `envconfig:"CONSOLE_DEPENDENCYTRACK_INSTANCES"`
 }
 
 type GitHub struct {
-	// ApplicationID The ID of the GitHub Application that is used when communicating with the GitHub APIs.
-	ApplicationID int64 `envconfig:"CONSOLE_GITHUB_APPLICATION_ID"`
+	// Organization The GitHub organization slug for the tenant.
+	Organization string `envconfig:"CONSOLE_GITHUB_ORG"`
 
-	// PrivateKeyPath A path to the private key in PEM format that is used when communicating with the GitHub APIs.
-	PrivateKeyPath string `envconfig:"CONSOLE_GITHUB_PRIVATE_KEY_PATH"`
+	// AuthEndpoint Endpoint URL to the GitHub auth component.
+	AuthEndpoint string `envconfig:"CONSOLE_GITHUB_AUTH_ENDPOINT"`
 }
 
 type GCP struct {

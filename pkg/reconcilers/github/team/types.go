@@ -69,10 +69,3 @@ type LookupGitHubSamlUserByGitHubUsername struct {
 		}
 	} `graphql:"organization(login: $org)"`
 }
-
-type reconcilerConfig struct {
-	org            string
-	appID          int64
-	installationID int64
-	privateKeyPath string
-}

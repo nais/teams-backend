@@ -7,10 +7,8 @@ import (
 	"io"
 	"net/http"
 	"sort"
-	"strconv"
 	"strings"
 
-	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-github/v50/github"
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
@@ -23,6 +21,7 @@ import (
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/shurcooL/githubv4"
+	"google.golang.org/api/impersonate"
 )
 
 const (
@@ -45,30 +44,24 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, org, domain 
 }
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
-	config, err := getReconfilerConfig(ctx, cfg, database)
+	if cfg.GitHub.AuthEndpoint == "" {
+		return nil, fmt.Errorf("missing required configuration: CONSOLE_GITHUB_AUTH_ENDPOINT")
+	}
+
+	if cfg.GoogleManagementProjectID == "" {
+		return nil, fmt.Errorf("missing required configuration: CONSOLE_GOOGLE_MANAGEMENT_PROJECT_ID")
+	}
+
+	ts, err := impersonate.IDTokenSource(ctx, impersonate.IDTokenConfig{
+		Audience:        cfg.GitHub.AuthEndpoint,
+		TargetPrincipal: fmt.Sprintf("console@%s.iam.gserviceaccount.com", cfg.GoogleManagementProjectID),
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	transport, err := ghinstallation.NewKeyFromFile(
-		http.DefaultTransport,
-		config.appID,
-		config.installationID,
-		config.privateKeyPath,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// Note that both HTTP clients and transports are safe for concurrent use according to the docs,
-	// so we can safely reuse them across objects and concurrent synchronizations.
-	httpClient := &http.Client{
-		Transport: transport,
-	}
-	restClient := github.NewClient(httpClient)
-	graphClient := githubv4.NewClient(httpClient)
-
-	return New(database, auditLogger, config.org, cfg.TenantDomain, restClient.Teams, graphClient, log), nil
+	httpClient := NewGitHubAuthClient(ctx, cfg.GitHub.AuthEndpoint, ts)
+	return New(database, auditLogger, cfg.GitHub.Organization, cfg.TenantDomain, github.NewClient(httpClient).Teams, githubv4.NewClient(httpClient), log), nil
 }
 
 func (r *githubTeamReconciler) Name() sqlc.ReconcilerName {
@@ -102,13 +95,11 @@ func (r *githubTeamReconciler) Reconcile(ctx context.Context, input reconcilers.
 		return err
 	}
 
-	slug := slug.Slug(*githubTeam.Slug)
-	updatedState := reconcilers.GitHubState{
-		Slug:         &slug,
+	teamSlug := slug.Slug(*githubTeam.Slug)
+	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, reconcilers.GitHubState{
+		Slug:         &teamSlug,
 		Repositories: repos,
-	}
-
-	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, updatedState)
+	})
 	if err != nil {
 		r.log.WithError(err).Error("persist system state")
 	}
@@ -494,25 +485,6 @@ func (r *githubTeamReconciler) getTeamRepositories(ctx context.Context, teamSlug
 	})
 
 	return allRepos, nil
-}
-
-func getReconfilerConfig(ctx context.Context, cfg *config.Config, database db.Database) (*reconcilerConfig, error) {
-	config, err := database.DangerousGetReconcilerConfigValues(ctx, Name)
-	if err != nil {
-		return nil, err
-	}
-
-	installationID, err := strconv.ParseInt(config.GetValue(sqlc.ReconcilerConfigKeyGithubAppInstallationID), 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("unable to convert app installation ID %q to an integer", config.GetValue(sqlc.ReconcilerConfigKeyGithubAppInstallationID))
-	}
-
-	return &reconcilerConfig{
-		appID:          cfg.GitHub.ApplicationID,
-		privateKeyPath: cfg.GitHub.PrivateKeyPath,
-		org:            config.GetValue(sqlc.ReconcilerConfigKeyGithubOrg),
-		installationID: installationID,
-	}, nil
 }
 
 // httpError Return an error if the response status code is not as expected, or if the passed err is already set to an

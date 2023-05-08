@@ -332,11 +332,9 @@ func AllAuditLogsTargetTypeValues() []AuditLogsTargetType {
 type ReconcilerConfigKey string
 
 const (
-	ReconcilerConfigKeyAzureClientID           ReconcilerConfigKey = "azure:client_id"
-	ReconcilerConfigKeyAzureClientSecret       ReconcilerConfigKey = "azure:client_secret"
-	ReconcilerConfigKeyAzureTenantID           ReconcilerConfigKey = "azure:tenant_id"
-	ReconcilerConfigKeyGithubOrg               ReconcilerConfigKey = "github:org"
-	ReconcilerConfigKeyGithubAppInstallationID ReconcilerConfigKey = "github:app_installation_id"
+	ReconcilerConfigKeyAzureClientID     ReconcilerConfigKey = "azure:client_id"
+	ReconcilerConfigKeyAzureClientSecret ReconcilerConfigKey = "azure:client_secret"
+	ReconcilerConfigKeyAzureTenantID     ReconcilerConfigKey = "azure:tenant_id"
 )
 
 func (e *ReconcilerConfigKey) Scan(src interface{}) error {
@@ -378,9 +376,7 @@ func (e ReconcilerConfigKey) Valid() bool {
 	switch e {
 	case ReconcilerConfigKeyAzureClientID,
 		ReconcilerConfigKeyAzureClientSecret,
-		ReconcilerConfigKeyAzureTenantID,
-		ReconcilerConfigKeyGithubOrg,
-		ReconcilerConfigKeyGithubAppInstallationID:
+		ReconcilerConfigKeyAzureTenantID:
 		return true
 	}
 	return false
@@ -391,8 +387,6 @@ func AllReconcilerConfigKeyValues() []ReconcilerConfigKey {
 		ReconcilerConfigKeyAzureClientID,
 		ReconcilerConfigKeyAzureClientSecret,
 		ReconcilerConfigKeyAzureTenantID,
-		ReconcilerConfigKeyGithubOrg,
-		ReconcilerConfigKeyGithubAppInstallationID,
 	}
 }
 
