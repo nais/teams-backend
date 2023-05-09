@@ -22,9 +22,11 @@ func TestSync(t *testing.T) {
 	const (
 		domain           = "example.com"
 		adminGroupPrefix = "console-admins"
+		numRunsToStore   = 5
 	)
 
 	correlationID := uuid.New()
+	syncRuns := usersync.NewRunsHandler(numRunsToStore)
 
 	t.Run("No local users, no remote users", func(t *testing.T) {
 		ctx := context.Background()
@@ -49,7 +51,7 @@ func TestSync(t *testing.T) {
 		assert.NoError(t, err)
 
 		err = usersync.
-			New(database, auditLogger, adminGroupPrefix, domain, svc, log).
+			New(database, auditLogger, adminGroupPrefix, domain, svc, log, syncRuns).
 			Sync(ctx, correlationID)
 		assert.NoError(t, err)
 	})
@@ -123,7 +125,7 @@ func TestSync(t *testing.T) {
 		assert.NoError(t, err)
 
 		err = usersync.
-			New(database, auditLogger, adminGroupPrefix, domain, svc, log).
+			New(database, auditLogger, adminGroupPrefix, domain, svc, log, syncRuns).
 			Sync(ctx, correlationID)
 		assert.NoError(t, err)
 	})
@@ -284,7 +286,7 @@ func TestSync(t *testing.T) {
 			Once()
 
 		err = usersync.
-			New(database, auditLogger, adminGroupPrefix, domain, svc, log).
+			New(database, auditLogger, adminGroupPrefix, domain, svc, log, syncRuns).
 			Sync(ctx, correlationID)
 		assert.NoError(t, err)
 	})

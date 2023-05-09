@@ -25,6 +25,7 @@ type (
 		tenantDomain     string
 		service          *admin_directory_v1.Service
 		log              logger.Logger
+		syncRuns         *RunsHandler
 	}
 
 	auditLogEntry struct {
@@ -53,7 +54,7 @@ var DefaultRoleNames = []sqlc.RoleName{
 	sqlc.RoleNameServiceaccountcreator,
 }
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, adminGroupPrefix, tenantDomain string, service *admin_directory_v1.Service, log logger.Logger) *UserSynchronizer {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, adminGroupPrefix, tenantDomain string, service *admin_directory_v1.Service, log logger.Logger, syncRuns *RunsHandler) *UserSynchronizer {
 	return &UserSynchronizer{
 		database:         database,
 		auditLogger:      auditLogger,
@@ -61,10 +62,11 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, adminGroupPr
 		tenantDomain:     tenantDomain,
 		service:          service,
 		log:              log,
+		syncRuns:         syncRuns,
 	}
 }
 
-func NewFromConfig(cfg *config.Config, database db.Database, auditLogger auditlogger.AuditLogger, log logger.Logger) (*UserSynchronizer, error) {
+func NewFromConfig(cfg *config.Config, database db.Database, auditLogger auditlogger.AuditLogger, log logger.Logger, syncRuns *RunsHandler) (*UserSynchronizer, error) {
 	log = log.WithSystem(string(sqlc.SystemNameUsersync))
 	ctx := context.Background()
 
@@ -83,7 +85,7 @@ func NewFromConfig(cfg *config.Config, database db.Database, auditLogger auditlo
 		return nil, fmt.Errorf("retrieve directory client: %w", err)
 	}
 
-	return New(database, auditLogger, cfg.UserSync.AdminGroupPrefix, cfg.TenantDomain, srv, log), nil
+	return New(database, auditLogger, cfg.UserSync.AdminGroupPrefix, cfg.TenantDomain, srv, log, syncRuns), nil
 }
 
 // Sync Fetch all users from the tenant and add them as local users in Console. If a user already exists in Console
@@ -91,10 +93,13 @@ func NewFromConfig(cfg *config.Config, database db.Database, auditLogger auditlo
 // the tenant domain that does not exist in the Google Directory will be removed.
 func (s *UserSynchronizer) Sync(ctx context.Context, correlationID uuid.UUID) error {
 	log := s.log.WithCorrelationID(correlationID)
+	syncRun := s.syncRuns.StartNewRun(correlationID)
+	defer syncRun.Finish()
 
 	remoteUserMapping := make(remoteUsersMap)
 	remoteUsers, err := getAllPaginatedUsers(ctx, s.service.Users, s.tenantDomain)
 	if err != nil {
+		syncRun.FinishWithError(err)
 		return fmt.Errorf("get remote users: %w", err)
 	}
 
@@ -193,6 +198,7 @@ func (s *UserSynchronizer) Sync(ctx context.Context, correlationID uuid.UUID) er
 	})
 
 	if err != nil {
+		syncRun.FinishWithError(err)
 		return err
 	}
 

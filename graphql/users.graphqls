@@ -13,6 +13,9 @@ extend type Query {
         "ID of the user."
         email: String!
     ): User! @auth
+
+    "Get user sync status and logs."
+    userSync: [UserSyncRun!]! @auth
 }
 
 extend type Mutation {
@@ -23,6 +26,39 @@ extend type Mutation {
     ID that can later be matched to the log entries. The user synchronization itself is asynchronous.
     """
     synchronizeUsers: UUID! @auth
+}
+
+"User sync run type."
+type UserSyncRun {
+    "The correlation ID of the sync run."
+    correlationID: UUID!
+
+    "Timestamp of when the run started."
+    startedAt: Time!
+
+    "Timestamp of when the run finished."
+    finishedAt: Time
+
+    "Log entries for the sync run."
+    logEntries: [AuditLog!]!
+
+    "The status of the sync run."
+    status: UserSyncRunStatus!
+
+    "Optional error."
+    error: String
+}
+
+"User sync run status."
+enum UserSyncRunStatus {
+    "User sync run in progress."
+    IN_PROGRESS
+
+    "Successful user sync run."
+    SUCCESS
+
+    "Failed user sync run."
+    FAILURE
 }
 
 "User type."

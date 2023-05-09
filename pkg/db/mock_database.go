@@ -430,6 +430,29 @@ func (_m *MockDatabase) GetAllUserRoles(ctx context.Context) ([]*UserRole, error
 	return r0, r1
 }
 
+// GetAuditLogsForCorrelationID provides a mock function with given fields: ctx, correlationID
+func (_m *MockDatabase) GetAuditLogsForCorrelationID(ctx context.Context, correlationID uuid.UUID) ([]*AuditLog, error) {
+	ret := _m.Called(ctx, correlationID)
+
+	var r0 []*AuditLog
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) []*AuditLog); ok {
+		r0 = rf(ctx, correlationID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*AuditLog)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = rf(ctx, correlationID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetAuditLogsForReconciler provides a mock function with given fields: ctx, reconcilerName
 func (_m *MockDatabase) GetAuditLogsForReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) ([]*AuditLog, error) {
 	ret := _m.Called(ctx, reconcilerName)

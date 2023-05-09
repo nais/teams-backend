@@ -8,6 +8,11 @@ WHERE target_type = 'team' AND target_identifier = $1
 ORDER BY created_at DESC
 LIMIT 100;
 
+-- name: GetAuditLogsForCorrelationID :many
+SELECT * FROM audit_logs
+WHERE correlation_id = $1
+ORDER BY created_at DESC;
+
 -- name: GetAuditLogsForReconciler :many
 SELECT * FROM audit_logs
 WHERE target_type = 'reconciler' AND target_identifier = $1

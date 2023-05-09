@@ -4,8 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/nais/console/pkg/roles"
-
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
@@ -13,7 +11,9 @@ import (
 	"github.com/nais/console/pkg/deployproxy"
 	"github.com/nais/console/pkg/graph"
 	"github.com/nais/console/pkg/logger"
+	"github.com/nais/console/pkg/roles"
 	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/console/pkg/usersync"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -26,7 +26,10 @@ func TestQueryResolver_Users(t *testing.T) {
 	log, err := logger.GetLogger("text", "info")
 	assert.NoError(t, err)
 	userSync := make(chan<- uuid.UUID)
-	resolver := graph.NewResolver(nil, database, deployProxy, "example.com", userSync, auditLogger, gcpEnvironments, log).Query()
+	userSyncRuns := usersync.NewRunsHandler(5)
+	resolver := graph.
+		NewResolver(nil, database, deployProxy, "example.com", userSync, auditLogger, gcpEnvironments, log, userSyncRuns).
+		Query()
 
 	t.Run("unauthenticated user", func(t *testing.T) {
 		users, err := resolver.Users(ctx)

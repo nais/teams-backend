@@ -163,6 +163,7 @@ type Database interface {
 	GetTeamDeleteKey(ctx context.Context, key uuid.UUID) (*TeamDeleteKey, error)
 	ConfirmTeamDeleteKey(ctx context.Context, key uuid.UUID) error
 	DeleteTeam(ctx context.Context, teamSlug slug.Slug) error
+	GetAuditLogsForCorrelationID(ctx context.Context, correlationID uuid.UUID) ([]*AuditLog, error)
 }
 
 func (u User) GetID() uuid.UUID {
