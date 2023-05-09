@@ -88,14 +88,14 @@ func (r *Run) Status() RunStatus {
 	return r.status
 }
 
+func (r *Run) StartedAt() time.Time {
+	return r.startedAt
+}
+
 func (r *Run) FinishedAt() *time.Time {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 	return r.finishedAt
-}
-
-func (r *Run) StartedAt() time.Time {
-	return r.startedAt
 }
 
 func (r *Run) CorrelationID() uuid.UUID {
@@ -103,5 +103,7 @@ func (r *Run) CorrelationID() uuid.UUID {
 }
 
 func (r *Run) Error() error {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
 	return r.err
 }
