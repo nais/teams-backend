@@ -44,6 +44,10 @@ autobind:
 # modelgen, the others will be allowed when binding to fields. Configure them to
 # your liking
 models:
+  UserSyncRun:
+    model:
+      - github.com/nais/console/pkg/usersync.Run
+
   GitHubRepository:
     model:
       - github.com/nais/console/pkg/reconcilers.GitHubRepository

@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nais/console/pkg/roles"
-
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/authz"
@@ -18,9 +16,11 @@ import (
 	"github.com/nais/console/pkg/graph/apierror"
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/logger"
+	"github.com/nais/console/pkg/roles"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/pkg/teamsync"
+	"github.com/nais/console/pkg/usersync"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -59,6 +59,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 		},
 	})
 
+	userSyncRuns := usersync.NewRunsHandler(5)
 	database := db.NewMockDatabase(t)
 	teamSyncHandler := teamsync.NewMockHandler(t)
 	auditLogger := auditlogger.NewMockAuditLogger(t)
@@ -68,9 +69,11 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 	log, err := logger.GetLogger("text", "info")
 	assert.NoError(t, err)
 	userSync := make(chan<- uuid.UUID)
-	resolver := graph.NewResolver(teamSyncHandler, database, deployProxy, "example.com", userSync, auditLogger, gcpEnvironments, log).Mutation()
 	teamSlug := slug.Slug("some-slug")
 	slackChannel := "#my-slack-channel"
+	resolver := graph.
+		NewResolver(teamSyncHandler, database, deployProxy, "example.com", userSync, auditLogger, gcpEnvironments, log, userSyncRuns).
+		Mutation()
 
 	t.Run("create team with empty purpose", func(t *testing.T) {
 		_, err := resolver.CreateTeam(ctx, model.CreateTeamInput{
@@ -198,9 +201,12 @@ func TestMutationResolver_RequestTeamDeletion(t *testing.T) {
 	gcpEnvironments := []string{"env"}
 	ctx := context.Background()
 	teamSlug := slug.Slug("my-team")
+	userSyncRuns := usersync.NewRunsHandler(5)
 
 	t.Run("service accounts can not create delete keys", func(t *testing.T) {
-		resolver := graph.NewResolver(teamSyncHandler, database, deployProxy, tenantDomain, userSync, auditLogger, gcpEnvironments, log).Mutation()
+		resolver := graph.
+			NewResolver(teamSyncHandler, database, deployProxy, tenantDomain, userSync, auditLogger, gcpEnvironments, log, userSyncRuns).
+			Mutation()
 
 		serviceAccount := db.ServiceAccount{
 			ServiceAccount: &sqlc.ServiceAccount{
@@ -216,7 +222,9 @@ func TestMutationResolver_RequestTeamDeletion(t *testing.T) {
 	})
 
 	t.Run("missing authz", func(t *testing.T) {
-		resolver := graph.NewResolver(teamSyncHandler, database, deployProxy, tenantDomain, userSync, auditLogger, gcpEnvironments, log).Mutation()
+		resolver := graph.
+			NewResolver(teamSyncHandler, database, deployProxy, tenantDomain, userSync, auditLogger, gcpEnvironments, log, userSyncRuns).
+			Mutation()
 
 		user := db.User{
 			User: &sqlc.User{
@@ -255,7 +263,9 @@ func TestMutationResolver_RequestTeamDeletion(t *testing.T) {
 			Return(nil, fmt.Errorf("some error")).
 			Once()
 
-		resolver := graph.NewResolver(teamSyncHandler, database, deployProxy, tenantDomain, userSync, auditLogger, gcpEnvironments, log).Mutation()
+		resolver := graph.
+			NewResolver(teamSyncHandler, database, deployProxy, tenantDomain, userSync, auditLogger, gcpEnvironments, log, userSyncRuns).
+			Mutation()
 
 		key, err := resolver.RequestTeamDeletion(ctx, &teamSlug)
 		assert.Nil(t, key)
@@ -323,7 +333,9 @@ func TestMutationResolver_RequestTeamDeletion(t *testing.T) {
 			Return(nil).
 			Once()
 
-		resolver := graph.NewResolver(teamSyncHandler, database, deployProxy, tenantDomain, userSync, auditLogger, gcpEnvironments, log).Mutation()
+		resolver := graph.
+			NewResolver(teamSyncHandler, database, deployProxy, tenantDomain, userSync, auditLogger, gcpEnvironments, log, userSyncRuns).
+			Mutation()
 
 		returnedKey, err := resolver.RequestTeamDeletion(ctx, &teamSlug)
 		assert.Equal(t, key, returnedKey)

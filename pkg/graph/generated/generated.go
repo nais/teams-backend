@@ -20,6 +20,7 @@ import (
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/console/pkg/usersync"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
 )
@@ -52,6 +53,7 @@ type ResolverRoot interface {
 	Team() TeamResolver
 	TeamDeleteKey() TeamDeleteKeyResolver
 	User() UserResolver
+	UserSyncRun() UserSyncRunResolver
 }
 
 type DirectiveRoot struct {
@@ -126,6 +128,7 @@ type ComplexityRoot struct {
 		Teams         func(childComplexity int) int
 		User          func(childComplexity int, id *uuid.UUID) int
 		UserByEmail   func(childComplexity int, email string) int
+		UserSync      func(childComplexity int) int
 		Users         func(childComplexity int) int
 	}
 
@@ -226,6 +229,15 @@ type ComplexityRoot struct {
 		Roles      func(childComplexity int) int
 		Teams      func(childComplexity int) int
 	}
+
+	UserSyncRun struct {
+		CorrelationID func(childComplexity int) int
+		Error         func(childComplexity int) int
+		FinishedAt    func(childComplexity int) int
+		LogEntries    func(childComplexity int) int
+		StartedAt     func(childComplexity int) int
+		Status        func(childComplexity int) int
+	}
 }
 
 type AuditLogResolver interface {
@@ -264,6 +276,7 @@ type QueryResolver interface {
 	Users(ctx context.Context) ([]*db.User, error)
 	User(ctx context.Context, id *uuid.UUID) (*db.User, error)
 	UserByEmail(ctx context.Context, email string) (*db.User, error)
+	UserSync(ctx context.Context) ([]*usersync.Run, error)
 }
 type ReconcilerResolver interface {
 	Config(ctx context.Context, obj *db.Reconciler) ([]*db.ReconcilerConfig, error)
@@ -297,6 +310,11 @@ type TeamDeleteKeyResolver interface {
 type UserResolver interface {
 	Teams(ctx context.Context, obj *db.User) ([]*model.TeamMembership, error)
 	Roles(ctx context.Context, obj *db.User) ([]*db.Role, error)
+}
+type UserSyncRunResolver interface {
+	LogEntries(ctx context.Context, obj *usersync.Run) ([]*db.AuditLog, error)
+	Status(ctx context.Context, obj *usersync.Run) (model.UserSyncRunStatus, error)
+	Error(ctx context.Context, obj *usersync.Run) (*string, error)
 }
 
 type executableSchema struct {
@@ -758,6 +776,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.UserByEmail(childComplexity, args["email"].(string)), true
 
+	case "Query.userSync":
+		if e.complexity.Query.UserSync == nil {
+			break
+		}
+
+		return e.complexity.Query.UserSync(childComplexity), true
+
 	case "Query.users":
 		if e.complexity.Query.Users == nil {
 			break
@@ -1177,6 +1202,48 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.User.Teams(childComplexity), true
+
+	case "UserSyncRun.correlationID":
+		if e.complexity.UserSyncRun.CorrelationID == nil {
+			break
+		}
+
+		return e.complexity.UserSyncRun.CorrelationID(childComplexity), true
+
+	case "UserSyncRun.error":
+		if e.complexity.UserSyncRun.Error == nil {
+			break
+		}
+
+		return e.complexity.UserSyncRun.Error(childComplexity), true
+
+	case "UserSyncRun.finishedAt":
+		if e.complexity.UserSyncRun.FinishedAt == nil {
+			break
+		}
+
+		return e.complexity.UserSyncRun.FinishedAt(childComplexity), true
+
+	case "UserSyncRun.logEntries":
+		if e.complexity.UserSyncRun.LogEntries == nil {
+			break
+		}
+
+		return e.complexity.UserSyncRun.LogEntries(childComplexity), true
+
+	case "UserSyncRun.startedAt":
+		if e.complexity.UserSyncRun.StartedAt == nil {
+			break
+		}
+
+		return e.complexity.UserSyncRun.StartedAt(childComplexity), true
+
+	case "UserSyncRun.status":
+		if e.complexity.UserSyncRun.Status == nil {
+			break
+		}
+
+		return e.complexity.UserSyncRun.Status(childComplexity), true
 
 	}
 	return 0, false
@@ -1901,6 +1968,9 @@ enum TeamRole {
         "ID of the user."
         email: String!
     ): User! @auth
+
+    "Get user sync status and logs."
+    userSync: [UserSyncRun!]! @auth
 }
 
 extend type Mutation {
@@ -1911,6 +1981,39 @@ extend type Mutation {
     ID that can later be matched to the log entries. The user synchronization itself is asynchronous.
     """
     synchronizeUsers: UUID! @auth
+}
+
+"User sync run type."
+type UserSyncRun {
+    "The correlation ID of the sync run."
+    correlationID: UUID!
+
+    "Timestamp of when the run started."
+    startedAt: Time!
+
+    "Timestamp of when the run finished."
+    finishedAt: Time
+
+    "Log entries for the sync run."
+    logEntries: [AuditLog!]!
+
+    "The status of the sync run."
+    status: UserSyncRunStatus!
+
+    "Optional error."
+    error: String
+}
+
+"User sync run status."
+enum UserSyncRunStatus {
+    "User sync run in progress."
+    IN_PROGRESS
+
+    "Successful user sync run."
+    SUCCESS
+
+    "Failed user sync run."
+    FAILURE
 }
 
 "User type."
@@ -5863,6 +5966,84 @@ func (ec *executionContext) fieldContext_Query_userByEmail(ctx context.Context, 
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_userSync(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_userSync(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().UserSync(rctx)
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Auth == nil {
+				return nil, errors.New("directive auth is not implemented")
+			}
+			return ec.directives.Auth(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*usersync.Run); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/nais/console/pkg/usersync.Run`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*usersync.Run)
+	fc.Result = res
+	return ec.marshalNUserSyncRun2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋusersyncᚐRunᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_userSync(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "correlationID":
+				return ec.fieldContext_UserSyncRun_correlationID(ctx, field)
+			case "startedAt":
+				return ec.fieldContext_UserSyncRun_startedAt(ctx, field)
+			case "finishedAt":
+				return ec.fieldContext_UserSyncRun_finishedAt(ctx, field)
+			case "logEntries":
+				return ec.fieldContext_UserSyncRun_logEntries(ctx, field)
+			case "status":
+				return ec.fieldContext_UserSyncRun_status(ctx, field)
+			case "error":
+				return ec.fieldContext_UserSyncRun_error(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type UserSyncRun", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query___type(ctx, field)
 	if err != nil {
@@ -8766,6 +8947,284 @@ func (ec *executionContext) fieldContext_User_externalId(ctx context.Context, fi
 	return fc, nil
 }
 
+func (ec *executionContext) _UserSyncRun_correlationID(ctx context.Context, field graphql.CollectedField, obj *usersync.Run) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserSyncRun_correlationID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CorrelationID(), nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(uuid.UUID)
+	fc.Result = res
+	return ec.marshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_UserSyncRun_correlationID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserSyncRun",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type UUID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserSyncRun_startedAt(ctx context.Context, field graphql.CollectedField, obj *usersync.Run) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserSyncRun_startedAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.StartedAt(), nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_UserSyncRun_startedAt(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserSyncRun",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserSyncRun_finishedAt(ctx context.Context, field graphql.CollectedField, obj *usersync.Run) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserSyncRun_finishedAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FinishedAt(), nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*time.Time)
+	fc.Result = res
+	return ec.marshalOTime2ᚖtimeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_UserSyncRun_finishedAt(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserSyncRun",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserSyncRun_logEntries(ctx context.Context, field graphql.CollectedField, obj *usersync.Run) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserSyncRun_logEntries(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.UserSyncRun().LogEntries(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*db.AuditLog)
+	fc.Result = res
+	return ec.marshalNAuditLog2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐAuditLogᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_UserSyncRun_logEntries(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserSyncRun",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_AuditLog_id(ctx, field)
+			case "action":
+				return ec.fieldContext_AuditLog_action(ctx, field)
+			case "systemName":
+				return ec.fieldContext_AuditLog_systemName(ctx, field)
+			case "correlationID":
+				return ec.fieldContext_AuditLog_correlationID(ctx, field)
+			case "actor":
+				return ec.fieldContext_AuditLog_actor(ctx, field)
+			case "targetType":
+				return ec.fieldContext_AuditLog_targetType(ctx, field)
+			case "targetIdentifier":
+				return ec.fieldContext_AuditLog_targetIdentifier(ctx, field)
+			case "message":
+				return ec.fieldContext_AuditLog_message(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_AuditLog_createdAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type AuditLog", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserSyncRun_status(ctx context.Context, field graphql.CollectedField, obj *usersync.Run) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserSyncRun_status(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.UserSyncRun().Status(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(model.UserSyncRunStatus)
+	fc.Result = res
+	return ec.marshalNUserSyncRunStatus2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserSyncRunStatus(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_UserSyncRun_status(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserSyncRun",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type UserSyncRunStatus does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserSyncRun_error(ctx context.Context, field graphql.CollectedField, obj *usersync.Run) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserSyncRun_error(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.UserSyncRun().Error(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_UserSyncRun_error(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserSyncRun",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext___Directive_name(ctx, field)
 	if err != nil {
@@ -11430,6 +11889,29 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			out.Concurrently(i, func() graphql.Marshaler {
 				return rrm(innerCtx)
 			})
+		case "userSync":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_userSync(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
 		case "__type":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
@@ -12319,6 +12801,102 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var userSyncRunImplementors = []string{"UserSyncRun"}
+
+func (ec *executionContext) _UserSyncRun(ctx context.Context, sel ast.SelectionSet, obj *usersync.Run) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, userSyncRunImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("UserSyncRun")
+		case "correlationID":
+
+			out.Values[i] = ec._UserSyncRun_correlationID(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "startedAt":
+
+			out.Values[i] = ec._UserSyncRun_startedAt(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "finishedAt":
+
+			out.Values[i] = ec._UserSyncRun_finishedAt(ctx, field, obj)
+
+		case "logEntries":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._UserSyncRun_logEntries(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
+		case "status":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._UserSyncRun_status(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
+		case "error":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._UserSyncRun_error(ctx, field, obj)
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -13820,6 +14398,70 @@ func (ec *executionContext) marshalNUser2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkg�
 		return graphql.Null
 	}
 	return ec._User(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNUserSyncRun2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋusersyncᚐRunᚄ(ctx context.Context, sel ast.SelectionSet, v []*usersync.Run) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNUserSyncRun2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋusersyncᚐRun(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNUserSyncRun2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋusersyncᚐRun(ctx context.Context, sel ast.SelectionSet, v *usersync.Run) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._UserSyncRun(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNUserSyncRunStatus2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserSyncRunStatus(ctx context.Context, v interface{}) (model.UserSyncRunStatus, error) {
+	var res model.UserSyncRunStatus
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNUserSyncRunStatus2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐUserSyncRunStatus(ctx context.Context, sel ast.SelectionSet, v model.UserSyncRunStatus) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {

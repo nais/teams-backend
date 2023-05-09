@@ -45,3 +45,17 @@ func (d *database) CreateAuditLogEntry(ctx context.Context, correlationID uuid.U
 		Message:          message,
 	})
 }
+
+func (d *database) GetAuditLogsForCorrelationID(ctx context.Context, correlationID uuid.UUID) ([]*AuditLog, error) {
+	rows, err := d.querier.GetAuditLogsForCorrelationID(ctx, correlationID)
+	if err != nil {
+		return nil, err
+	}
+
+	entries := make([]*AuditLog, len(rows))
+	for i, row := range rows {
+		entries[i] = &AuditLog{AuditLog: row}
+	}
+
+	return entries, nil
+}

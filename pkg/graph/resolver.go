@@ -15,6 +15,7 @@ import (
 	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/pkg/teamsync"
+	"github.com/nais/console/pkg/usersync"
 )
 
 // This file will not be regenerated automatically.
@@ -31,9 +32,10 @@ type Resolver struct {
 	auditLogger     auditlogger.AuditLogger
 	gcpEnvironments []string
 	log             logger.Logger
+	userSyncRuns    *usersync.RunsHandler
 }
 
-func NewResolver(teamSyncHandler teamsync.Handler, database db.Database, deployProxy deployproxy.Proxy, tenantDomain string, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger) *Resolver {
+func NewResolver(teamSyncHandler teamsync.Handler, database db.Database, deployProxy deployproxy.Proxy, tenantDomain string, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger, userSyncRuns *usersync.RunsHandler) *Resolver {
 	return &Resolver{
 		teamSyncHandler: teamSyncHandler,
 		database:        database,
@@ -44,6 +46,7 @@ func NewResolver(teamSyncHandler teamsync.Handler, database db.Database, deployP
 		gcpEnvironments: gcpEnvironments,
 		log:             log.WithSystem(string(sqlc.SystemNameGraphqlApi)),
 		userSync:        userSync,
+		userSyncRuns:    userSyncRuns,
 	}
 }
 

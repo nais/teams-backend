@@ -16,6 +16,7 @@ import (
 	"github.com/nais/console/pkg/graph/model"
 	"github.com/nais/console/pkg/roles"
 	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/console/pkg/usersync"
 )
 
 // SynchronizeUsers is the resolver for the synchronizeUsers field.
@@ -76,6 +77,17 @@ func (r *queryResolver) UserByEmail(ctx context.Context, email string) (*db.User
 	}
 
 	return r.database.GetUserByEmail(ctx, email)
+}
+
+// UserSync is the resolver for the userSync field.
+func (r *queryResolver) UserSync(ctx context.Context) ([]*usersync.Run, error) {
+	actor := authz.ActorFromContext(ctx)
+	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationUsersyncSynchronize)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.userSyncRuns.GetRuns(), nil
 }
 
 // Teams is the resolver for the teams field.
@@ -157,7 +169,41 @@ func (r *userResolver) Roles(ctx context.Context, obj *db.User) ([]*db.Role, err
 	return ret, nil
 }
 
+// LogEntries is the resolver for the logEntries field.
+func (r *userSyncRunResolver) LogEntries(ctx context.Context, obj *usersync.Run) ([]*db.AuditLog, error) {
+	return r.database.GetAuditLogsForCorrelationID(ctx, obj.CorrelationID())
+}
+
+// Status is the resolver for the status field.
+func (r *userSyncRunResolver) Status(ctx context.Context, obj *usersync.Run) (model.UserSyncRunStatus, error) {
+	switch obj.Status() {
+	case usersync.RunSuccess:
+		return model.UserSyncRunStatusSuccess, nil
+	case usersync.RunFailure:
+		return model.UserSyncRunStatusFailure, nil
+	default:
+		return model.UserSyncRunStatusInProgress, nil
+	}
+}
+
+// Error is the resolver for the error field.
+func (r *userSyncRunResolver) Error(ctx context.Context, obj *usersync.Run) (*string, error) {
+	err := obj.Error()
+	if err != nil {
+		msg := err.Error()
+		return &msg, nil
+	}
+
+	return nil, nil
+}
+
 // User returns generated.UserResolver implementation.
 func (r *Resolver) User() generated.UserResolver { return &userResolver{r} }
 
-type userResolver struct{ *Resolver }
+// UserSyncRun returns generated.UserSyncRunResolver implementation.
+func (r *Resolver) UserSyncRun() generated.UserSyncRunResolver { return &userSyncRunResolver{r} }
+
+type (
+	userResolver        struct{ *Resolver }
+	userSyncRunResolver struct{ *Resolver }
+)

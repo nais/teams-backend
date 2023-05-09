@@ -169,3 +169,50 @@ func (e *TeamRole) UnmarshalGQL(v interface{}) error {
 func (e TeamRole) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
+
+// User sync run status.
+type UserSyncRunStatus string
+
+const (
+	// User sync run in progress.
+	UserSyncRunStatusInProgress UserSyncRunStatus = "IN_PROGRESS"
+	// Successful user sync run.
+	UserSyncRunStatusSuccess UserSyncRunStatus = "SUCCESS"
+	// Failed user sync run.
+	UserSyncRunStatusFailure UserSyncRunStatus = "FAILURE"
+)
+
+var AllUserSyncRunStatus = []UserSyncRunStatus{
+	UserSyncRunStatusInProgress,
+	UserSyncRunStatusSuccess,
+	UserSyncRunStatusFailure,
+}
+
+func (e UserSyncRunStatus) IsValid() bool {
+	switch e {
+	case UserSyncRunStatusInProgress, UserSyncRunStatusSuccess, UserSyncRunStatusFailure:
+		return true
+	}
+	return false
+}
+
+func (e UserSyncRunStatus) String() string {
+	return string(e)
+}
+
+func (e *UserSyncRunStatus) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = UserSyncRunStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid UserSyncRunStatus", str)
+	}
+	return nil
+}
+
+func (e UserSyncRunStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}

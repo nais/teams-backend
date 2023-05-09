@@ -57,6 +57,9 @@ type UserSync struct {
 
 	// AdminGroupPrefix The prefix of the admin group email address.
 	AdminGroupPrefix string `envconfig:"CONSOLE_USERSYNC_ADMIN_GROUP_PREFIX" default:"console-admins"`
+
+	// RunsToStore Number of runs to store for the userSync GraphQL query.
+	RunsToStore int `envconfig:"CONSOLE_USERSYNC_RUNS_TO_STORE" default:"5"`
 }
 
 type OAuth struct {

@@ -40,6 +40,42 @@ func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) 
 	return err
 }
 
+const getAuditLogsForCorrelationID = `-- name: GetAuditLogsForCorrelationID :many
+SELECT id, created_at, correlation_id, system_name, actor, action, message, target_type, target_identifier FROM audit_logs
+WHERE correlation_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) GetAuditLogsForCorrelationID(ctx context.Context, correlationID uuid.UUID) ([]*AuditLog, error) {
+	rows, err := q.db.Query(ctx, getAuditLogsForCorrelationID, correlationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*AuditLog
+	for rows.Next() {
+		var i AuditLog
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.CorrelationID,
+			&i.SystemName,
+			&i.Actor,
+			&i.Action,
+			&i.Message,
+			&i.TargetType,
+			&i.TargetIdentifier,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getAuditLogsForReconciler = `-- name: GetAuditLogsForReconciler :many
 SELECT id, created_at, correlation_id, system_name, actor, action, message, target_type, target_identifier FROM audit_logs
 WHERE target_type = 'reconciler' AND target_identifier = $1
