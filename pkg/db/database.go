@@ -12,6 +12,7 @@ import (
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/nais/console/pkg/logger"
+	"github.com/nais/console/pkg/metrics"
 	"github.com/nais/console/pkg/sqlc"
 	"github.com/nais/console/sqlc/schemas"
 )
@@ -76,6 +77,13 @@ func runMigrations(connString string) error {
 	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return err
 	}
+
+	version, dirty, err := m.Version()
+	if err != nil {
+		return err
+	}
+
+	metrics.SetSchemaVersion(version, dirty)
 
 	return nil
 }
