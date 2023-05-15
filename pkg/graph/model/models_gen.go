@@ -73,7 +73,7 @@ type SlackAlertsChannel struct {
 	// The environment for the alerts sent to the channel.
 	Environment string `json:"environment"`
 	// The name of the Slack channel.
-	ChannelName *string `json:"channelName"`
+	ChannelName string `json:"channelName"`
 }
 
 // Slack alerts channel input.

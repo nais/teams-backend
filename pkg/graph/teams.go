@@ -788,9 +788,11 @@ func (r *teamResolver) SlackAlertsChannels(ctx context.Context, obj *db.Team) ([
 	}
 
 	for _, environment := range r.gcpEnvironments {
-		var channel *string
+		var channel string
 		if value, exists := existingChannels[environment]; exists {
-			channel = &value
+			channel = value
+		} else {
+			channel = obj.SlackChannel
 		}
 		channels = append(channels, &model.SlackAlertsChannel{
 			Environment: environment,
