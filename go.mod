@@ -29,7 +29,7 @@ require (
 	github.com/vektra/mockery/v2 v2.14.0
 	golang.org/x/oauth2 v0.7.0
 	golang.org/x/text v0.9.0
-	golang.org/x/vuln v0.0.0-20230419012003-9268f8338db8
+	golang.org/x/vuln v0.1.0
 	google.golang.org/api v0.121.0
 	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 	google.golang.org/grpc v1.54.0
@@ -120,7 +120,7 @@ require (
 	go.uber.org/zap v1.19.1 // indirect
 	golang.org/x/crypto v0.8.0 // indirect
 	golang.org/x/exp v0.0.0-20230206171751-46f607a40771 // indirect
-	golang.org/x/exp/typeparams v0.0.0-20230321023759-10a507213a29 // indirect
+	golang.org/x/exp/typeparams v0.0.0-20230515195305-f3d0a9c9a5cc // indirect
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/sync v0.2.0 // indirect
