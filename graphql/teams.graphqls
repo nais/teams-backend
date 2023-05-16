@@ -64,6 +64,19 @@ extend type Mutation {
     ): Team! @auth
 
     """
+    Remove a user from a team
+
+    The updated team will be returned on success.
+    """
+    removeUserFromTeam(
+        "Team slug that the user should be removed from."
+        slug: Slug!
+
+        "ID of the user that will be removed from the team."
+        userId: UUID!
+    ): Team! @auth
+
+    """
     Manually synchronize a team
 
     This action will trigger a full synchronization of the team against the configured third party systems. The action
@@ -114,6 +127,38 @@ extend type Mutation {
 
         "List of user IDs that should be added to the team as owners."
         userIds: [UUID!]!
+    ): Team! @auth
+
+    """
+    Add a user to a team as a regular team member
+
+    If the user is already a regular member the user will not be updated. If the user is already an owner of the
+    team the user will not lose ownership. Regular team members will get read-only access to the team.
+
+    The updated team will be returned on success.
+    """
+    addTeamMember(
+        "Slug of the team that should receive a new member."
+        slug: Slug!
+
+        "ID of the user that should be added to the team as a regular member."
+        userId: UUID!
+    ): Team! @auth
+
+    """
+    Add a user to a team as a team owner
+
+    If the user is already added to the team, they will be granted ownership of the team. If the user is already an
+    owner of the team, they will not be updated. Team owners will get read/write access to the team.
+
+    The updated team will be returned on success.
+    """
+    addTeamOwner(
+        "Slug of the team that should receive a new owner."
+        slug: Slug!
+
+        "ID of the user that should be added to the team as an owner."
+        userId: UUID!
     ): Team! @auth
 
     """

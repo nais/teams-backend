@@ -206,6 +206,71 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, slug *slug.S
 	return team, nil
 }
 
+// RemoveUserFromTeam is the resolver for the removeUserFromTeam field.
+func (r *mutationResolver) RemoveUserFromTeam(ctx context.Context, slug *slug.Slug, userID *uuid.UUID) (*db.Team, error) {
+	actor := authz.ActorFromContext(ctx)
+	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, *slug)
+	if err != nil {
+		return nil, err
+	}
+
+	team, err := r.getTeamBySlug(ctx, *slug)
+	if err != nil {
+		return nil, err
+	}
+
+	correlationID, err := uuid.NewUUID()
+	if err != nil {
+		return nil, fmt.Errorf("create log correlation ID: %w", err)
+	}
+
+	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
+		members, err := dbtx.GetTeamMembers(ctx, team.Slug)
+		if err != nil {
+			return fmt.Errorf("get team members of %q: %w", *slug, err)
+		}
+
+		memberFromUserID := func(userId uuid.UUID) *db.User {
+			for _, m := range members {
+				if m.ID == userId {
+					return m
+				}
+			}
+			return nil
+		}
+
+		member := memberFromUserID(*userID)
+		if member == nil {
+			return apierror.Errorf("The user %q is not a member of team %q.", *userID, *slug)
+		}
+
+		err = dbtx.RemoveUserFromTeam(ctx, *userID, team.Slug)
+		if err != nil {
+			return err
+		}
+
+		targets := []auditlogger.Target{
+			auditlogger.TeamTarget(team.Slug),
+			auditlogger.UserTarget(member.Email),
+		}
+		fields := auditlogger.Fields{
+			Action:        sqlc.AuditActionGraphqlApiTeamRemoveMember,
+			CorrelationID: correlationID,
+			Actor:         actor,
+		}
+		r.auditLogger.Logf(ctx, dbtx, targets, fields, "Removed user: %q", member.Email)
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	r.reconcileTeam(ctx, correlationID, team.Slug)
+
+	return team, nil
+}
+
 // SynchronizeTeam is the resolver for the synchronizeTeam field.
 func (r *mutationResolver) SynchronizeTeam(ctx context.Context, slug *slug.Slug) (*model.TeamSync, error) {
 	actor := authz.ActorFromContext(ctx)
@@ -368,6 +433,106 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, slug *slug.Slug, u
 			}
 			r.auditLogger.Logf(ctx, dbtx, targets, fields, "Add team owner: %q", user.Email)
 		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	r.reconcileTeam(ctx, correlationID, team.Slug)
+
+	return team, nil
+}
+
+// AddTeamMember is the resolver for the addTeamMember field.
+func (r *mutationResolver) AddTeamMember(ctx context.Context, slug *slug.Slug, userID *uuid.UUID) (*db.Team, error) {
+	actor := authz.ActorFromContext(ctx)
+	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, *slug)
+	if err != nil {
+		return nil, err
+	}
+
+	team, err := r.getTeamBySlug(ctx, *slug)
+	if err != nil {
+		return nil, err
+	}
+
+	correlationID, err := uuid.NewUUID()
+	if err != nil {
+		return nil, fmt.Errorf("create log correlation ID: %w", err)
+	}
+
+	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
+		user, err := dbtx.GetUserByID(ctx, *userID)
+		if err != nil {
+			return err
+		}
+
+		err = dbtx.SetTeamMemberRole(ctx, *userID, team.Slug, sqlc.RoleNameTeammember)
+		if err != nil {
+			return err
+		}
+
+		targets := []auditlogger.Target{
+			auditlogger.TeamTarget(team.Slug),
+			auditlogger.UserTarget(user.Email),
+		}
+		fields := auditlogger.Fields{
+			Action:        sqlc.AuditActionGraphqlApiTeamAddMember,
+			CorrelationID: correlationID,
+			Actor:         actor,
+		}
+		r.auditLogger.Logf(ctx, dbtx, targets, fields, "Add team member: %q", user.Email)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	r.reconcileTeam(ctx, correlationID, team.Slug)
+
+	return team, nil
+}
+
+// AddTeamOwner is the resolver for the addTeamOwner field.
+func (r *mutationResolver) AddTeamOwner(ctx context.Context, slug *slug.Slug, userID *uuid.UUID) (*db.Team, error) {
+	actor := authz.ActorFromContext(ctx)
+	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, *slug)
+	if err != nil {
+		return nil, err
+	}
+
+	team, err := r.getTeamBySlug(ctx, *slug)
+	if err != nil {
+		return nil, err
+	}
+
+	correlationID, err := uuid.NewUUID()
+	if err != nil {
+		return nil, fmt.Errorf("create log correlation ID: %w", err)
+	}
+
+	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
+		user, err := dbtx.GetUserByID(ctx, *userID)
+		if err != nil {
+			return err
+		}
+
+		err = dbtx.SetTeamMemberRole(ctx, *userID, team.Slug, sqlc.RoleNameTeamowner)
+		if err != nil {
+			return err
+		}
+
+		targets := []auditlogger.Target{
+			auditlogger.TeamTarget(team.Slug),
+			auditlogger.UserTarget(user.Email),
+		}
+		fields := auditlogger.Fields{
+			Action:        sqlc.AuditActionGraphqlApiTeamAddOwner,
+			CorrelationID: correlationID,
+			Actor:         actor,
+		}
+		r.auditLogger.Logf(ctx, dbtx, targets, fields, "Add team owner: %q", user.Email)
 		return nil
 	})
 	if err != nil {
