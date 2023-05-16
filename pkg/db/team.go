@@ -180,3 +180,10 @@ func (d *database) ConfirmTeamDeleteKey(ctx context.Context, key uuid.UUID) erro
 func (d *database) DeleteTeam(ctx context.Context, teamSlug slug.Slug) error {
 	return d.querier.DeleteTeam(ctx, teamSlug)
 }
+
+func (d *database) GetTeamMemberOptOuts(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug) ([]*sqlc.GetTeamMemberOptOutsRow, error) {
+	return d.querier.GetTeamMemberOptOuts(ctx, sqlc.GetTeamMemberOptOutsParams{
+		UserID:   userID,
+		TeamSlug: teamSlug,
+	})
+}

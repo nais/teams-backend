@@ -168,6 +168,7 @@ type Database interface {
 	AddReconcilerOptOut(ctx context.Context, userID *uuid.UUID, teamSlug *slug.Slug, reconcilerName sqlc.ReconcilerName) error
 	RemoveReconcilerOptOut(ctx context.Context, userID *uuid.UUID, teamSlug *slug.Slug, reconcilerName sqlc.ReconcilerName) error
 	GetTeamMembersForReconciler(ctx context.Context, teamSlug slug.Slug, reconcilerName sqlc.ReconcilerName) ([]*User, error)
+	GetTeamMemberOptOuts(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug) ([]*sqlc.GetTeamMemberOptOutsRow, error)
 }
 
 func (u User) GetID() uuid.UUID {

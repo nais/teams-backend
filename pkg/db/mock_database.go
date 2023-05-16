@@ -812,6 +812,29 @@ func (_m *MockDatabase) GetTeamMember(ctx context.Context, teamSlug slug.Slug, u
 	return r0, r1
 }
 
+// GetTeamMemberOptOuts provides a mock function with given fields: ctx, userID, teamSlug
+func (_m *MockDatabase) GetTeamMemberOptOuts(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug) ([]*sqlc.GetTeamMemberOptOutsRow, error) {
+	ret := _m.Called(ctx, userID, teamSlug)
+
+	var r0 []*sqlc.GetTeamMemberOptOutsRow
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, slug.Slug) []*sqlc.GetTeamMemberOptOutsRow); ok {
+		r0 = rf(ctx, userID, teamSlug)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*sqlc.GetTeamMemberOptOutsRow)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, slug.Slug) error); ok {
+		r1 = rf(ctx, userID, teamSlug)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetTeamMembers provides a mock function with given fields: ctx, teamSlug
 func (_m *MockDatabase) GetTeamMembers(ctx context.Context, teamSlug slug.Slug) ([]*User, error) {
 	ret := _m.Called(ctx, teamSlug)

@@ -457,14 +457,19 @@ func (r *mutationResolver) AddTeamMember(ctx context.Context, slug *slug.Slug, m
 		return nil, err
 	}
 
+	user, err := r.database.GetUserByID(ctx, *member.UserID)
+	if err != nil {
+		return nil, apierror.ErrUserNotExists
+	}
+
 	correlationID, err := uuid.NewUUID()
 	if err != nil {
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
-		user, _ := dbtx.GetTeamMember(ctx, *slug, *member.UserID)
-		if user != nil {
+		teamMember, _ := dbtx.GetTeamMember(ctx, *slug, *member.UserID)
+		if teamMember != nil {
 			return apierror.Errorf("User is already a member of the team.")
 		}
 
@@ -780,9 +785,15 @@ func (r *teamResolver) Members(ctx context.Context, obj *db.Team) ([]*model.Team
 			role = model.TeamRoleOwner
 		}
 
+		reconcilerOptOuts, err := r.database.GetTeamMemberOptOuts(ctx, user.ID, obj.Slug)
+		if err != nil {
+			return nil, err
+		}
+
 		members[idx] = &model.TeamMember{
-			User: user,
-			Role: role,
+			User:        user,
+			Role:        role,
+			Reconcilers: reconcilerOptOuts,
 		}
 	}
 	return members, nil
@@ -963,13 +974,24 @@ func (r *teamDeleteKeyResolver) Team(ctx context.Context, obj *db.TeamDeleteKey)
 	return r.database.GetTeamBySlug(ctx, obj.TeamSlug)
 }
 
+// Enabled is the resolver for the enabled field.
+func (r *teamMemberReconcilerResolver) Enabled(ctx context.Context, obj *sqlc.GetTeamMemberOptOutsRow) (bool, error) {
+	panic(fmt.Errorf("not implemented: Enabled - enabled"))
+}
+
 // Team returns generated.TeamResolver implementation.
 func (r *Resolver) Team() generated.TeamResolver { return &teamResolver{r} }
 
 // TeamDeleteKey returns generated.TeamDeleteKeyResolver implementation.
 func (r *Resolver) TeamDeleteKey() generated.TeamDeleteKeyResolver { return &teamDeleteKeyResolver{r} }
 
+// TeamMemberReconciler returns generated.TeamMemberReconcilerResolver implementation.
+func (r *Resolver) TeamMemberReconciler() generated.TeamMemberReconcilerResolver {
+	return &teamMemberReconcilerResolver{r}
+}
+
 type (
-	teamResolver          struct{ *Resolver }
-	teamDeleteKeyResolver struct{ *Resolver }
+	teamResolver                 struct{ *Resolver }
+	teamDeleteKeyResolver        struct{ *Resolver }
+	teamMemberReconcilerResolver struct{ *Resolver }
 )

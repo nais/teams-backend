@@ -85,3 +85,14 @@ WHERE key = $1;
 -- name: DeleteTeam :exec
 DELETE FROM teams
 WHERE slug = $1;
+
+-- name: GetTeamMemberOptOuts :many
+SELECT
+    reconcilers.name,
+    NOT EXISTS(
+        SELECT reconciler_name FROM reconciler_opt_outs
+        WHERE user_id = $1 AND team_slug = $2 AND reconciler_name = reconcilers.name
+    ) AS enabled
+FROM reconcilers
+WHERE reconcilers.enabled = true
+ORDER BY reconcilers.name ASC;

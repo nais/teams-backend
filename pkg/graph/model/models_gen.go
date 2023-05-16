@@ -100,6 +100,8 @@ type TeamMember struct {
 	User *db.User `json:"user"`
 	// The role that the user has in the team.
 	Role TeamRole `json:"role"`
+	// Reconcilers for this member.
+	Reconcilers []*sqlc.GetTeamMemberOptOutsRow `json:"reconcilers"`
 }
 
 // Team member input.

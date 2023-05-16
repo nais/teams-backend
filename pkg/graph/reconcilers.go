@@ -263,19 +263,25 @@ func (r *mutationResolver) AddReconcilerOptOut(ctx context.Context, teamSlug *sl
 		return nil, err
 	}
 
+	err = r.database.AddReconcilerOptOut(ctx, userID, teamSlug, reconciler)
+	if err != nil {
+		return nil, err
+	}
+
+	reconcilerOptOuts, err := r.database.GetTeamMemberOptOuts(ctx, user.ID, *teamSlug)
+	if err != nil {
+		return nil, err
+	}
+
 	role := model.TeamRoleMember
 	if isOwner {
 		role = model.TeamRoleOwner
 	}
 
 	teamMember := &model.TeamMember{
-		User: user,
-		Role: role,
-	}
-
-	err = r.database.AddReconcilerOptOut(ctx, userID, teamSlug, reconciler)
-	if err != nil {
-		return nil, err
+		User:        user,
+		Role:        role,
+		Reconcilers: reconcilerOptOuts,
 	}
 
 	return teamMember, nil
@@ -304,19 +310,25 @@ func (r *mutationResolver) RemoveReconcilerOptOut(ctx context.Context, teamSlug 
 		return nil, err
 	}
 
+	err = r.database.RemoveReconcilerOptOut(ctx, userID, teamSlug, reconciler)
+	if err != nil {
+		return nil, err
+	}
+
+	reconcilerOptOuts, err := r.database.GetTeamMemberOptOuts(ctx, user.ID, *teamSlug)
+	if err != nil {
+		return nil, err
+	}
+
 	role := model.TeamRoleMember
 	if isOwner {
 		role = model.TeamRoleOwner
 	}
 
 	teamMember := &model.TeamMember{
-		User: user,
-		Role: role,
-	}
-
-	err = r.database.RemoveReconcilerOptOut(ctx, userID, teamSlug, reconciler)
-	if err != nil {
-		return nil, err
+		User:        user,
+		Role:        role,
+		Reconcilers: reconcilerOptOuts,
 	}
 
 	return teamMember, nil
@@ -325,6 +337,31 @@ func (r *mutationResolver) RemoveReconcilerOptOut(ctx context.Context, teamSlug 
 // Reconcilers is the resolver for the reconcilers field.
 func (r *queryResolver) Reconcilers(ctx context.Context) ([]*db.Reconciler, error) {
 	return r.database.GetReconcilers(ctx)
+}
+
+// EnabledReconcilerNames is the resolver for the enabledReconcilerNames field.
+func (r *queryResolver) EnabledReconcilerNames(ctx context.Context) ([]sqlc.ReconcilerName, error) {
+	actor := authz.ActorFromContext(ctx)
+	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationTeamsCreate)
+	if err != nil {
+		return nil, err
+	}
+
+	reconcilers, err := r.database.GetReconcilers(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	names := make([]sqlc.ReconcilerName, 0)
+	for _, reconciler := range reconcilers {
+		if !reconciler.Enabled {
+			continue
+		}
+
+		names = append(names, reconciler.Name)
+	}
+
+	return names, nil
 }
 
 // Config is the resolver for the config field.

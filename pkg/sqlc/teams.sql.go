@@ -168,6 +168,48 @@ func (q *Queries) GetTeamMember(ctx context.Context, arg GetTeamMemberParams) (*
 	return &i, err
 }
 
+const getTeamMemberOptOuts = `-- name: GetTeamMemberOptOuts :many
+SELECT
+    reconcilers.name,
+    NOT EXISTS(
+        SELECT reconciler_name FROM reconciler_opt_outs
+        WHERE user_id = $1 AND team_slug = $2 AND reconciler_name = reconcilers.name
+    ) AS enabled
+FROM reconcilers
+WHERE reconcilers.enabled = true
+ORDER BY reconcilers.name ASC
+`
+
+type GetTeamMemberOptOutsParams struct {
+	UserID   uuid.UUID
+	TeamSlug slug.Slug
+}
+
+type GetTeamMemberOptOutsRow struct {
+	Name    ReconcilerName
+	Enabled interface{}
+}
+
+func (q *Queries) GetTeamMemberOptOuts(ctx context.Context, arg GetTeamMemberOptOutsParams) ([]*GetTeamMemberOptOutsRow, error) {
+	rows, err := q.db.Query(ctx, getTeamMemberOptOuts, arg.UserID, arg.TeamSlug)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*GetTeamMemberOptOutsRow
+	for rows.Next() {
+		var i GetTeamMemberOptOutsRow
+		if err := rows.Scan(&i.Name, &i.Enabled); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTeamMembers = `-- name: GetTeamMembers :many
 SELECT users.id, users.email, users.name, users.external_id FROM user_roles
 JOIN teams ON teams.slug = user_roles.target_team_slug

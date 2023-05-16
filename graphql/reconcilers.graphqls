@@ -62,6 +62,9 @@ extend type Mutation {
 extend type Query {
     "Get a collection of reconcilers."
     reconcilers: [Reconciler!]! @admin
+
+    "Get the names of all enabled reconcilers."
+    enabledReconcilerNames: [ReconcilerName!]! @auth
 }
 
 "Reconciler type."
