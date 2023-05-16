@@ -245,9 +245,8 @@ func setupInput(correlationId uuid.UUID, teamSlug string, members ...string) rec
 	}
 
 	return reconcilers.Input{
-		CorrelationID:   correlationId,
-		Team:            inputTeam,
-		TeamMembers:     inputMembers,
-		NumSyncAttempts: 0,
+		CorrelationID: correlationId,
+		Team:          inputTeam,
+		TeamMembers:   inputMembers,
 	}
 }

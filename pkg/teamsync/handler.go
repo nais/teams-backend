@@ -245,17 +245,6 @@ func (h *handler) reconcileTeam(ctx context.Context, input Input) error {
 		return err
 	}
 
-	members, err := h.database.GetTeamMembers(ctx, input.TeamSlug)
-	if err != nil {
-		return err
-	}
-
-	reconcilerInput := reconcilers.Input{
-		Team:          *team,
-		TeamMembers:   members,
-		CorrelationID: input.CorrelationID,
-	}
-
 	log.Infof("reconcile team")
 	errors := 0
 	teamReconcilerTimer := metrics.MeasureReconcileTeamDuration()
@@ -271,10 +260,17 @@ func (h *handler) reconcileTeam(ctx context.Context, input Input) error {
 		reconcilerImpl := reconcilerWithRunOrder.reconciler
 		name := reconcilerImpl.Name()
 		log := log.WithSystem(string(name))
+
+		reconcilerInput, err := reconcilers.CreateReconcilerInput(ctx, h.database, *team, name)
+		if err != nil {
+			log.WithError(err).Errorf("get team members for reconciler")
+			continue
+		}
+
 		metrics.IncReconcilerCounter(name, metrics.ReconcilerStateStarted)
 
 		reconcileTimer := metrics.MeasureReconcilerDuration(name)
-		err := reconcilerImpl.Reconcile(ctx, reconcilerInput)
+		err = reconcilerImpl.Reconcile(ctx, reconcilerInput)
 		if err != nil {
 			metrics.IncReconcilerCounter(name, metrics.ReconcilerStateFailed)
 			log.WithError(err).Error("reconcile")

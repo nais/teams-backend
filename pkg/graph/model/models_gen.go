@@ -102,6 +102,16 @@ type TeamMember struct {
 	Role TeamRole `json:"role"`
 }
 
+// Team member input.
+type TeamMemberInput struct {
+	// The ID of user.
+	UserID *uuid.UUID `json:"userId"`
+	// The role that the user will receive.
+	Role TeamRole `json:"role"`
+	// Reconcilers to opt the team member out of.
+	ReconcilerOptOuts []sqlc.ReconcilerName `json:"reconcilerOptOuts"`
+}
+
 // Team membership type.
 type TeamMembership struct {
 	// Team instance.

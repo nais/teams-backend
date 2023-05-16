@@ -113,6 +113,7 @@ type Database interface {
 	GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)
 	GetTeams(ctx context.Context) ([]*Team, error)
 	GetTeamMembers(ctx context.Context, teamSlug slug.Slug) ([]*User, error)
+	GetTeamMember(ctx context.Context, teamSlug slug.Slug, userID uuid.UUID) (*User, error)
 	UserIsTeamOwner(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug) (bool, error)
 	SetTeamMemberRole(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug, role sqlc.RoleName) error
 	GetAuditLogsForTeam(ctx context.Context, slug slug.Slug) ([]*AuditLog, error)
@@ -164,6 +165,9 @@ type Database interface {
 	ConfirmTeamDeleteKey(ctx context.Context, key uuid.UUID) error
 	DeleteTeam(ctx context.Context, teamSlug slug.Slug) error
 	GetAuditLogsForCorrelationID(ctx context.Context, correlationID uuid.UUID) ([]*AuditLog, error)
+	AddReconcilerOptOut(ctx context.Context, userID *uuid.UUID, teamSlug *slug.Slug, reconcilerName sqlc.ReconcilerName) error
+	RemoveReconcilerOptOut(ctx context.Context, userID *uuid.UUID, teamSlug *slug.Slug, reconcilerName sqlc.ReconcilerName) error
+	GetTeamMembersForReconciler(ctx context.Context, teamSlug slug.Slug, reconcilerName sqlc.ReconcilerName) ([]*User, error)
 }
 
 func (u User) GetID() uuid.UUID {

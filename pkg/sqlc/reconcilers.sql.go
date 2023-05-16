@@ -7,7 +7,26 @@ package sqlc
 
 import (
 	"context"
+
+	"github.com/google/uuid"
+	"github.com/nais/console/pkg/slug"
 )
+
+const addReconcilerOptOut = `-- name: AddReconcilerOptOut :exec
+INSERT INTO reconciler_opt_outs (team_slug, user_id, reconciler_name)
+VALUES ($1, $2, $3) ON CONFLICT DO NOTHING
+`
+
+type AddReconcilerOptOutParams struct {
+	TeamSlug       slug.Slug
+	UserID         uuid.UUID
+	ReconcilerName ReconcilerName
+}
+
+func (q *Queries) AddReconcilerOptOut(ctx context.Context, arg AddReconcilerOptOutParams) error {
+	_, err := q.db.Exec(ctx, addReconcilerOptOut, arg.TeamSlug, arg.UserID, arg.ReconcilerName)
+	return err
+}
 
 const configureReconciler = `-- name: ConfigureReconciler :exec
 UPDATE reconciler_config
@@ -221,6 +240,22 @@ func (q *Queries) GetReconcilers(ctx context.Context) ([]*Reconciler, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const removeReconcilerOptOut = `-- name: RemoveReconcilerOptOut :exec
+DELETE FROM reconciler_opt_outs
+WHERE team_slug = $1 AND user_id = $2 AND reconciler_name = $3
+`
+
+type RemoveReconcilerOptOutParams struct {
+	TeamSlug       slug.Slug
+	UserID         uuid.UUID
+	ReconcilerName ReconcilerName
+}
+
+func (q *Queries) RemoveReconcilerOptOut(ctx context.Context, arg RemoveReconcilerOptOutParams) error {
+	_, err := q.db.Exec(ctx, removeReconcilerOptOut, arg.TeamSlug, arg.UserID, arg.ReconcilerName)
+	return err
 }
 
 const resetReconcilerConfig = `-- name: ResetReconcilerConfig :exec

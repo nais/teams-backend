@@ -92,6 +92,35 @@ func (d *database) GetTeamMembers(ctx context.Context, teamSlug slug.Slug) ([]*U
 	return members, nil
 }
 
+func (d *database) GetTeamMember(ctx context.Context, teamSlug slug.Slug, userID uuid.UUID) (*User, error) {
+	user, err := d.querier.GetTeamMember(ctx, sqlc.GetTeamMemberParams{
+		TargetTeamSlug: &teamSlug,
+		ID:             userID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &User{User: user}, nil
+}
+
+func (d *database) GetTeamMembersForReconciler(ctx context.Context, teamSlug slug.Slug, reconcilerName sqlc.ReconcilerName) ([]*User, error) {
+	rows, err := d.querier.GetTeamMembersForReconciler(ctx, sqlc.GetTeamMembersForReconcilerParams{
+		TargetTeamSlug: &teamSlug,
+		ReconcilerName: reconcilerName,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	members := make([]*User, 0)
+	for _, row := range rows {
+		members = append(members, &User{User: row})
+	}
+
+	return members, nil
+}
+
 func (d *database) SetLastSuccessfulSyncForTeam(ctx context.Context, teamSlug slug.Slug) error {
 	return d.querier.SetLastSuccessfulSyncForTeam(ctx, teamSlug)
 }

@@ -12,6 +12,7 @@ import (
 )
 
 type Querier interface {
+	AddReconcilerOptOut(ctx context.Context, arg AddReconcilerOptOutParams) error
 	AssignGlobalRoleToServiceAccount(ctx context.Context, arg AssignGlobalRoleToServiceAccountParams) error
 	AssignGlobalRoleToUser(ctx context.Context, arg AssignGlobalRoleToUserParams) error
 	AssignTeamRoleToServiceAccount(ctx context.Context, arg AssignTeamRoleToServiceAccountParams) error
@@ -51,7 +52,9 @@ type Querier interface {
 	GetSlackAlertsChannels(ctx context.Context, teamSlug slug.Slug) ([]*SlackAlertsChannel, error)
 	GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)
 	GetTeamDeleteKey(ctx context.Context, key uuid.UUID) (*TeamDeleteKey, error)
+	GetTeamMember(ctx context.Context, arg GetTeamMemberParams) (*User, error)
 	GetTeamMembers(ctx context.Context, targetTeamSlug *slug.Slug) ([]*User, error)
+	GetTeamMembersForReconciler(ctx context.Context, arg GetTeamMembersForReconcilerParams) ([]*User, error)
 	GetTeamReconcilerErrors(ctx context.Context, teamSlug slug.Slug) ([]*ReconcilerError, error)
 	GetTeams(ctx context.Context) ([]*Team, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
@@ -64,6 +67,7 @@ type Querier interface {
 	IsFirstRun(ctx context.Context) (bool, error)
 	RemoveAllServiceAccountRoles(ctx context.Context, serviceAccountID uuid.UUID) error
 	RemoveApiKeysFromServiceAccount(ctx context.Context, serviceAccountID uuid.UUID) error
+	RemoveReconcilerOptOut(ctx context.Context, arg RemoveReconcilerOptOutParams) error
 	RemoveReconcilerStateForTeam(ctx context.Context, arg RemoveReconcilerStateForTeamParams) error
 	RemoveSlackAlertsChannel(ctx context.Context, arg RemoveSlackAlertsChannelParams) error
 	RemoveUserFromTeam(ctx context.Context, arg RemoveUserFromTeamParams) error

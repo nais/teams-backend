@@ -143,6 +143,31 @@ func (q *Queries) GetTeamDeleteKey(ctx context.Context, key uuid.UUID) (*TeamDel
 	return &i, err
 }
 
+const getTeamMember = `-- name: GetTeamMember :one
+SELECT users.id, users.email, users.name, users.external_id FROM user_roles
+JOIN teams ON teams.slug = user_roles.target_team_slug
+JOIN users ON users.id = user_roles.user_id
+WHERE user_roles.target_team_slug = $1 AND users.id = $2
+ORDER BY users.name ASC
+`
+
+type GetTeamMemberParams struct {
+	TargetTeamSlug *slug.Slug
+	ID             uuid.UUID
+}
+
+func (q *Queries) GetTeamMember(ctx context.Context, arg GetTeamMemberParams) (*User, error) {
+	row := q.db.QueryRow(ctx, getTeamMember, arg.TargetTeamSlug, arg.ID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Name,
+		&i.ExternalID,
+	)
+	return &i, err
+}
+
 const getTeamMembers = `-- name: GetTeamMembers :many
 SELECT users.id, users.email, users.name, users.external_id FROM user_roles
 JOIN teams ON teams.slug = user_roles.target_team_slug
@@ -153,6 +178,50 @@ ORDER BY users.name ASC
 
 func (q *Queries) GetTeamMembers(ctx context.Context, targetTeamSlug *slug.Slug) ([]*User, error) {
 	rows, err := q.db.Query(ctx, getTeamMembers, targetTeamSlug)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.Name,
+			&i.ExternalID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTeamMembersForReconciler = `-- name: GetTeamMembersForReconciler :many
+SELECT users.id, users.email, users.name, users.external_id FROM user_roles
+JOIN teams ON teams.slug = user_roles.target_team_slug
+JOIN users ON users.id = user_roles.user_id
+WHERE
+    user_roles.target_team_slug = $1
+    AND user_roles.user_id NOT IN (
+        SELECT user_id
+        FROM reconciler_opt_outs
+        WHERE team_slug = $1 AND reconciler_name = $2
+    )
+ORDER BY users.name ASC
+`
+
+type GetTeamMembersForReconcilerParams struct {
+	TargetTeamSlug *slug.Slug
+	ReconcilerName ReconcilerName
+}
+
+func (q *Queries) GetTeamMembersForReconciler(ctx context.Context, arg GetTeamMembersForReconcilerParams) ([]*User, error) {
+	rows, err := q.db.Query(ctx, getTeamMembersForReconciler, arg.TargetTeamSlug, arg.ReconcilerName)
 	if err != nil {
 		return nil, err
 	}

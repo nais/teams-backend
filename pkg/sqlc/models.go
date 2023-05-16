@@ -689,6 +689,12 @@ type ReconcilerError struct {
 	TeamSlug      slug.Slug
 }
 
+type ReconcilerOptOut struct {
+	TeamSlug       slug.Slug
+	UserID         uuid.UUID
+	ReconcilerName ReconcilerName
+}
+
 type ReconcilerState struct {
 	Reconciler ReconcilerName
 	State      pgtype.JSONB

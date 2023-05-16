@@ -130,10 +130,9 @@ extend type Mutation {
     ): Team! @auth
 
     """
-    Add a user to a team as a regular team member
+    Add a user to a team
 
-    If the user is already a regular member the user will not be updated. If the user is already an owner of the
-    team the user will not lose ownership. Regular team members will get read-only access to the team.
+    If the user is already a member or an owner of the team, the mutation will fail.
 
     The updated team will be returned on success.
     """
@@ -141,24 +140,8 @@ extend type Mutation {
         "Slug of the team that should receive a new member."
         slug: Slug!
 
-        "ID of the user that should be added to the team as a regular member."
-        userId: UUID!
-    ): Team! @auth
-
-    """
-    Add a user to a team as a team owner
-
-    If the user is already added to the team, they will be granted ownership of the team. If the user is already an
-    owner of the team, they will not be updated. Team owners will get read/write access to the team.
-
-    The updated team will be returned on success.
-    """
-    addTeamOwner(
-        "Slug of the team that should receive a new owner."
-        slug: Slug!
-
-        "ID of the user that should be added to the team as an owner."
-        userId: UUID!
+        "The new team member."
+        member: TeamMemberInput!
     ): Team! @auth
 
     """
@@ -398,6 +381,18 @@ input SlackAlertsChannelInput {
 
     "The name of the Slack channel."
     channelName: String
+}
+
+"Team member input."
+input TeamMemberInput {
+    "The ID of user."
+    userId: UUID!
+
+    "The role that the user will receive."
+    role: TeamRole!
+
+    "Reconcilers to opt the team member out of."
+    reconcilerOptOuts: [ReconcilerName!]
 }
 
 "Available team roles."

@@ -15,6 +15,8 @@ import (
 	"github.com/nais/console/pkg/graph/apierror"
 	"github.com/nais/console/pkg/graph/generated"
 	"github.com/nais/console/pkg/graph/model"
+	"github.com/nais/console/pkg/roles"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 )
 
@@ -236,6 +238,88 @@ func (r *mutationResolver) ResetReconciler(ctx context.Context, name sqlc.Reconc
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Reset reconciler: %q", name)
 
 	return reconciler, nil
+}
+
+// AddReconcilerOptOut is the resolver for the addReconcilerOptOut field.
+func (r *mutationResolver) AddReconcilerOptOut(ctx context.Context, teamSlug *slug.Slug, userID *uuid.UUID, reconciler sqlc.ReconcilerName) (*model.TeamMember, error) {
+	actor := authz.ActorFromContext(ctx)
+	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, *teamSlug)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = r.database.GetTeamBySlug(ctx, *teamSlug)
+	if err != nil {
+		return nil, apierror.ErrTeamNotExist
+	}
+
+	user, err := r.database.GetTeamMember(ctx, *teamSlug, *userID)
+	if err != nil {
+		return nil, apierror.ErrUserIsNotTeamMember
+	}
+
+	isOwner, err := r.database.UserIsTeamOwner(ctx, user.ID, *teamSlug)
+	if err != nil {
+		return nil, err
+	}
+
+	role := model.TeamRoleMember
+	if isOwner {
+		role = model.TeamRoleOwner
+	}
+
+	teamMember := &model.TeamMember{
+		User: user,
+		Role: role,
+	}
+
+	err = r.database.AddReconcilerOptOut(ctx, userID, teamSlug, reconciler)
+	if err != nil {
+		return nil, err
+	}
+
+	return teamMember, nil
+}
+
+// RemoveReconcilerOptOut is the resolver for the removeReconcilerOptOut field.
+func (r *mutationResolver) RemoveReconcilerOptOut(ctx context.Context, teamSlug *slug.Slug, userID *uuid.UUID, reconciler sqlc.ReconcilerName) (*model.TeamMember, error) {
+	actor := authz.ActorFromContext(ctx)
+	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, *teamSlug)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = r.database.GetTeamBySlug(ctx, *teamSlug)
+	if err != nil {
+		return nil, apierror.ErrTeamNotExist
+	}
+
+	user, err := r.database.GetTeamMember(ctx, *teamSlug, *userID)
+	if err != nil {
+		return nil, apierror.ErrUserIsNotTeamMember
+	}
+
+	isOwner, err := r.database.UserIsTeamOwner(ctx, user.ID, *teamSlug)
+	if err != nil {
+		return nil, err
+	}
+
+	role := model.TeamRoleMember
+	if isOwner {
+		role = model.TeamRoleOwner
+	}
+
+	teamMember := &model.TeamMember{
+		User: user,
+		Role: role,
+	}
+
+	err = r.database.RemoveReconcilerOptOut(ctx, userID, teamSlug, reconciler)
+	if err != nil {
+		return nil, err
+	}
+
+	return teamMember, nil
 }
 
 // Reconcilers is the resolver for the reconcilers field.

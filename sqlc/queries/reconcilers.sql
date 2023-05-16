@@ -43,3 +43,11 @@ ORDER BY display_name ASC;
 SELECT key, value::TEXT
 FROM reconciler_config
 WHERE reconciler = $1;
+
+-- name: AddReconcilerOptOut :exec
+INSERT INTO reconciler_opt_outs (team_slug, user_id, reconciler_name)
+VALUES ($1, $2, $3) ON CONFLICT DO NOTHING;
+
+-- name: RemoveReconcilerOptOut :exec
+DELETE FROM reconciler_opt_outs
+WHERE team_slug = $1 AND user_id = $2 AND reconciler_name = $3;

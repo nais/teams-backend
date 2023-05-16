@@ -33,6 +33,30 @@ extend type Mutation {
         "The name of the reconciler to reset."
         name: ReconcilerName!
     ): Reconciler! @admin
+
+    "Add opt-out of a reconciler for a team member."
+    addReconcilerOptOut(
+        "The team slug."
+        teamSlug: Slug!
+
+        "The user ID of the team member."
+        userId: UUID!
+
+        "The name of the reconciler to opt the team member out of."
+        reconciler: ReconcilerName!
+    ): TeamMember!
+
+    "Remove opt-out of a reconciler for a team member."
+    removeReconcilerOptOut(
+        "The team slug."
+        teamSlug: Slug!
+
+        "The user ID of the team member."
+        userId: UUID!
+
+        "The name of the reconciler to clear the opt-out from."
+        reconciler: ReconcilerName!
+    ): TeamMember!
 }
 
 extend type Query {

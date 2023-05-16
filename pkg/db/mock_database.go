@@ -18,6 +18,20 @@ type MockDatabase struct {
 	mock.Mock
 }
 
+// AddReconcilerOptOut provides a mock function with given fields: ctx, userID, teamSlug, reconcilerName
+func (_m *MockDatabase) AddReconcilerOptOut(ctx context.Context, userID *uuid.UUID, teamSlug *slug.Slug, reconcilerName sqlc.ReconcilerName) error {
+	ret := _m.Called(ctx, userID, teamSlug, reconcilerName)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *uuid.UUID, *slug.Slug, sqlc.ReconcilerName) error); ok {
+		r0 = rf(ctx, userID, teamSlug, reconcilerName)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // AssignGlobalRoleToServiceAccount provides a mock function with given fields: ctx, serviceAccountID, roleName
 func (_m *MockDatabase) AssignGlobalRoleToServiceAccount(ctx context.Context, serviceAccountID uuid.UUID, roleName sqlc.RoleName) error {
 	ret := _m.Called(ctx, serviceAccountID, roleName)
@@ -775,6 +789,29 @@ func (_m *MockDatabase) GetTeamDeleteKey(ctx context.Context, key uuid.UUID) (*T
 	return r0, r1
 }
 
+// GetTeamMember provides a mock function with given fields: ctx, teamSlug, userID
+func (_m *MockDatabase) GetTeamMember(ctx context.Context, teamSlug slug.Slug, userID uuid.UUID) (*User, error) {
+	ret := _m.Called(ctx, teamSlug, userID)
+
+	var r0 *User
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug, uuid.UUID) *User); ok {
+		r0 = rf(ctx, teamSlug, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*User)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug, uuid.UUID) error); ok {
+		r1 = rf(ctx, teamSlug, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetTeamMembers provides a mock function with given fields: ctx, teamSlug
 func (_m *MockDatabase) GetTeamMembers(ctx context.Context, teamSlug slug.Slug) ([]*User, error) {
 	ret := _m.Called(ctx, teamSlug)
@@ -791,6 +828,29 @@ func (_m *MockDatabase) GetTeamMembers(ctx context.Context, teamSlug slug.Slug) 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug) error); ok {
 		r1 = rf(ctx, teamSlug)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetTeamMembersForReconciler provides a mock function with given fields: ctx, teamSlug, reconcilerName
+func (_m *MockDatabase) GetTeamMembersForReconciler(ctx context.Context, teamSlug slug.Slug, reconcilerName sqlc.ReconcilerName) ([]*User, error) {
+	ret := _m.Called(ctx, teamSlug, reconcilerName)
+
+	var r0 []*User
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug, sqlc.ReconcilerName) []*User); ok {
+		r0 = rf(ctx, teamSlug, reconcilerName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*User)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug, sqlc.ReconcilerName) error); ok {
+		r1 = rf(ctx, teamSlug, reconcilerName)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1061,6 +1121,20 @@ func (_m *MockDatabase) RemoveApiKeysFromServiceAccount(ctx context.Context, ser
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
 		r0 = rf(ctx, serviceAccountID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// RemoveReconcilerOptOut provides a mock function with given fields: ctx, userID, teamSlug, reconcilerName
+func (_m *MockDatabase) RemoveReconcilerOptOut(ctx context.Context, userID *uuid.UUID, teamSlug *slug.Slug, reconcilerName sqlc.ReconcilerName) error {
+	ret := _m.Called(ctx, userID, teamSlug, reconcilerName)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *uuid.UUID, *slug.Slug, sqlc.ReconcilerName) error); ok {
+		r0 = rf(ctx, userID, teamSlug, reconcilerName)
 	} else {
 		r0 = ret.Error(0)
 	}
