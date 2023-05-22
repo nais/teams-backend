@@ -73,7 +73,7 @@ type User {
     name: String!
 
     "List of team memberships."
-    teams: [TeamMembership!]!
+    teams: [TeamMember!]!
 
     "Roles attached to the user."
     roles: [Role!]!

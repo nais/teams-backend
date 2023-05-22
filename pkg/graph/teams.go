@@ -794,6 +794,7 @@ func (r *teamResolver) Members(ctx context.Context, obj *db.Team) ([]*model.Team
 			User:        user,
 			Role:        role,
 			Reconcilers: reconcilerOptOuts,
+			Team:        obj,
 		}
 	}
 	return members, nil

@@ -216,17 +216,13 @@ type ComplexityRoot struct {
 	TeamMember struct {
 		Reconcilers func(childComplexity int) int
 		Role        func(childComplexity int) int
+		Team        func(childComplexity int) int
 		User        func(childComplexity int) int
 	}
 
 	TeamMemberReconciler struct {
 		Enabled func(childComplexity int) int
 		Name    func(childComplexity int) int
-	}
-
-	TeamMembership struct {
-		Role func(childComplexity int) int
-		Team func(childComplexity int) int
 	}
 
 	TeamSync struct {
@@ -328,7 +324,7 @@ type TeamMemberReconcilerResolver interface {
 	Enabled(ctx context.Context, obj *sqlc.GetTeamMemberOptOutsRow) (bool, error)
 }
 type UserResolver interface {
-	Teams(ctx context.Context, obj *db.User) ([]*model.TeamMembership, error)
+	Teams(ctx context.Context, obj *db.User) ([]*model.TeamMember, error)
 	Roles(ctx context.Context, obj *db.User) ([]*db.Role, error)
 }
 type UserSyncRunResolver interface {
@@ -1215,6 +1211,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.TeamMember.Role(childComplexity), true
 
+	case "TeamMember.team":
+		if e.complexity.TeamMember.Team == nil {
+			break
+		}
+
+		return e.complexity.TeamMember.Team(childComplexity), true
+
 	case "TeamMember.user":
 		if e.complexity.TeamMember.User == nil {
 			break
@@ -1235,20 +1238,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.TeamMemberReconciler.Name(childComplexity), true
-
-	case "TeamMembership.role":
-		if e.complexity.TeamMembership.Role == nil {
-			break
-		}
-
-		return e.complexity.TeamMembership.Role(childComplexity), true
-
-	case "TeamMembership.team":
-		if e.complexity.TeamMembership.Team == nil {
-			break
-		}
-
-		return e.complexity.TeamMembership.Team(childComplexity), true
 
 	case "TeamSync.correlationID":
 		if e.complexity.TeamSync.CorrelationID == nil {
@@ -2045,17 +2034,11 @@ type SyncError {
     error: String!
 }
 
-"Team membership type."
-type TeamMembership {
+"Team member."
+type TeamMember {
     "Team instance."
     team: Team!
 
-    "The role that the member has in the team."
-    role: TeamRole!
-}
-
-"Team member."
-type TeamMember {
     "User instance."
     user: User!
 
@@ -2204,7 +2187,7 @@ type User {
     name: String!
 
     "List of team memberships."
-    teams: [TeamMembership!]!
+    teams: [TeamMember!]!
 
     "Roles attached to the user."
     roles: [Role!]!
@@ -4461,6 +4444,8 @@ func (ec *executionContext) fieldContext_Mutation_addReconcilerOptOut(ctx contex
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "team":
+				return ec.fieldContext_TeamMember_team(ctx, field)
 			case "user":
 				return ec.fieldContext_TeamMember_user(ctx, field)
 			case "role":
@@ -4524,6 +4509,8 @@ func (ec *executionContext) fieldContext_Mutation_removeReconcilerOptOut(ctx con
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "team":
+				return ec.fieldContext_TeamMember_team(ctx, field)
 			case "user":
 				return ec.fieldContext_TeamMember_user(ctx, field)
 			case "role":
@@ -8524,6 +8511,8 @@ func (ec *executionContext) fieldContext_Team_members(ctx context.Context, field
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "team":
+				return ec.fieldContext_TeamMember_team(ctx, field)
 			case "user":
 				return ec.fieldContext_TeamMember_user(ctx, field)
 			case "role":
@@ -9090,6 +9079,72 @@ func (ec *executionContext) fieldContext_TeamDeleteKey_team(ctx context.Context,
 	return fc, nil
 }
 
+func (ec *executionContext) _TeamMember_team(ctx context.Context, field graphql.CollectedField, obj *model.TeamMember) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_TeamMember_team(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Team, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*db.Team)
+	fc.Result = res
+	return ec.marshalNTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐTeam(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_TeamMember_team(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TeamMember",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "slug":
+				return ec.fieldContext_Team_slug(ctx, field)
+			case "purpose":
+				return ec.fieldContext_Team_purpose(ctx, field)
+			case "auditLogs":
+				return ec.fieldContext_Team_auditLogs(ctx, field)
+			case "members":
+				return ec.fieldContext_Team_members(ctx, field)
+			case "syncErrors":
+				return ec.fieldContext_Team_syncErrors(ctx, field)
+			case "lastSuccessfulSync":
+				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
+			case "reconcilerState":
+				return ec.fieldContext_Team_reconcilerState(ctx, field)
+			case "slackChannel":
+				return ec.fieldContext_Team_slackChannel(ctx, field)
+			case "slackAlertsChannels":
+				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
+			case "gitHubRepositories":
+				return ec.fieldContext_Team_gitHubRepositories(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _TeamMember_user(ctx context.Context, field graphql.CollectedField, obj *model.TeamMember) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_TeamMember_user(ctx, field)
 	if err != nil {
@@ -9330,116 +9385,6 @@ func (ec *executionContext) fieldContext_TeamMemberReconciler_enabled(ctx contex
 	return fc, nil
 }
 
-func (ec *executionContext) _TeamMembership_team(ctx context.Context, field graphql.CollectedField, obj *model.TeamMembership) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_TeamMembership_team(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Team, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*db.Team)
-	fc.Result = res
-	return ec.marshalNTeam2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐTeam(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_TeamMembership_team(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TeamMembership",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "slug":
-				return ec.fieldContext_Team_slug(ctx, field)
-			case "purpose":
-				return ec.fieldContext_Team_purpose(ctx, field)
-			case "auditLogs":
-				return ec.fieldContext_Team_auditLogs(ctx, field)
-			case "members":
-				return ec.fieldContext_Team_members(ctx, field)
-			case "syncErrors":
-				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "lastSuccessfulSync":
-				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
-			case "reconcilerState":
-				return ec.fieldContext_Team_reconcilerState(ctx, field)
-			case "slackChannel":
-				return ec.fieldContext_Team_slackChannel(ctx, field)
-			case "slackAlertsChannels":
-				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
-			case "gitHubRepositories":
-				return ec.fieldContext_Team_gitHubRepositories(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _TeamMembership_role(ctx context.Context, field graphql.CollectedField, obj *model.TeamMembership) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_TeamMembership_role(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Role, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(model.TeamRole)
-	fc.Result = res
-	return ec.marshalNTeamRole2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamRole(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_TeamMembership_role(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TeamMembership",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type TeamRole does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _TeamSync_correlationID(ctx context.Context, field graphql.CollectedField, obj *model.TeamSync) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_TeamSync_correlationID(ctx, field)
 	if err != nil {
@@ -9642,9 +9587,9 @@ func (ec *executionContext) _User_teams(ctx context.Context, field graphql.Colle
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*model.TeamMembership)
+	res := resTmp.([]*model.TeamMember)
 	fc.Result = res
-	return ec.marshalNTeamMembership2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamMembershipᚄ(ctx, field.Selections, res)
+	return ec.marshalNTeamMember2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamMemberᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_User_teams(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -9656,11 +9601,15 @@ func (ec *executionContext) fieldContext_User_teams(ctx context.Context, field g
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "team":
-				return ec.fieldContext_TeamMembership_team(ctx, field)
+				return ec.fieldContext_TeamMember_team(ctx, field)
+			case "user":
+				return ec.fieldContext_TeamMember_user(ctx, field)
 			case "role":
-				return ec.fieldContext_TeamMembership_role(ctx, field)
+				return ec.fieldContext_TeamMember_role(ctx, field)
+			case "reconcilers":
+				return ec.fieldContext_TeamMember_reconcilers(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type TeamMembership", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type TeamMember", field.Name)
 		},
 	}
 	return fc, nil
@@ -13558,6 +13507,13 @@ func (ec *executionContext) _TeamMember(ctx context.Context, sel ast.SelectionSe
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("TeamMember")
+		case "team":
+
+			out.Values[i] = ec._TeamMember_team(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "user":
 
 			out.Values[i] = ec._TeamMember_user(ctx, field, obj)
@@ -13627,41 +13583,6 @@ func (ec *executionContext) _TeamMemberReconciler(ctx context.Context, sel ast.S
 				return innerFunc(ctx)
 
 			})
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var teamMembershipImplementors = []string{"TeamMembership"}
-
-func (ec *executionContext) _TeamMembership(ctx context.Context, sel ast.SelectionSet, obj *model.TeamMembership) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, teamMembershipImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("TeamMembership")
-		case "team":
-
-			out.Values[i] = ec._TeamMembership_team(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "role":
-
-			out.Values[i] = ec._TeamMembership_role(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -15247,60 +15168,6 @@ func (ec *executionContext) marshalNTeamMemberReconciler2ᚖgithubᚗcomᚋnais�
 		return graphql.Null
 	}
 	return ec._TeamMemberReconciler(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalNTeamMembership2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamMembershipᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.TeamMembership) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNTeamMembership2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamMembership(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) marshalNTeamMembership2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamMembership(ctx context.Context, sel ast.SelectionSet, v *model.TeamMembership) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._TeamMembership(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNTeamRole2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamRole(ctx context.Context, v interface{}) (model.TeamRole, error) {

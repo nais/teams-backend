@@ -248,7 +248,7 @@ func (r *mutationResolver) AddReconcilerOptOut(ctx context.Context, teamSlug *sl
 		return nil, err
 	}
 
-	_, err = r.database.GetTeamBySlug(ctx, *teamSlug)
+	team, err := r.database.GetTeamBySlug(ctx, *teamSlug)
 	if err != nil {
 		return nil, apierror.ErrTeamNotExist
 	}
@@ -278,13 +278,12 @@ func (r *mutationResolver) AddReconcilerOptOut(ctx context.Context, teamSlug *sl
 		role = model.TeamRoleOwner
 	}
 
-	teamMember := &model.TeamMember{
+	return &model.TeamMember{
+		Team:        team,
 		User:        user,
 		Role:        role,
 		Reconcilers: reconcilerOptOuts,
-	}
-
-	return teamMember, nil
+	}, nil
 }
 
 // RemoveReconcilerOptOut is the resolver for the removeReconcilerOptOut field.
@@ -295,7 +294,7 @@ func (r *mutationResolver) RemoveReconcilerOptOut(ctx context.Context, teamSlug 
 		return nil, err
 	}
 
-	_, err = r.database.GetTeamBySlug(ctx, *teamSlug)
+	team, err := r.database.GetTeamBySlug(ctx, *teamSlug)
 	if err != nil {
 		return nil, apierror.ErrTeamNotExist
 	}
@@ -325,13 +324,12 @@ func (r *mutationResolver) RemoveReconcilerOptOut(ctx context.Context, teamSlug 
 		role = model.TeamRoleOwner
 	}
 
-	teamMember := &model.TeamMember{
+	return &model.TeamMember{
+		Team:        team,
 		User:        user,
 		Role:        role,
 		Reconcilers: reconcilerOptOuts,
-	}
-
-	return teamMember, nil
+	}, nil
 }
 
 // Reconcilers is the resolver for the reconcilers field.

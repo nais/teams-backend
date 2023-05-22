@@ -91,7 +91,7 @@ func (r *queryResolver) UserSync(ctx context.Context) ([]*usersync.Run, error) {
 }
 
 // Teams is the resolver for the teams field.
-func (r *userResolver) Teams(ctx context.Context, obj *db.User) ([]*model.TeamMembership, error) {
+func (r *userResolver) Teams(ctx context.Context, obj *db.User) ([]*model.TeamMember, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationTeamsList)
 	if err != nil {
@@ -103,7 +103,7 @@ func (r *userResolver) Teams(ctx context.Context, obj *db.User) ([]*model.TeamMe
 		return nil, err
 	}
 
-	teams := make([]*model.TeamMembership, 0)
+	teams := make([]*model.TeamMember, 0)
 	for _, role := range userRoles {
 		if role.TargetTeamSlug == nil {
 			continue
@@ -123,9 +123,17 @@ func (r *userResolver) Teams(ctx context.Context, obj *db.User) ([]*model.TeamMe
 		if err != nil {
 			return nil, err
 		}
-		teams = append(teams, &model.TeamMembership{
-			Team: team,
-			Role: teamRole,
+
+		reconcilerOptOuts, err := r.database.GetTeamMemberOptOuts(ctx, obj.ID, team.Slug)
+		if err != nil {
+			return nil, err
+		}
+
+		teams = append(teams, &model.TeamMember{
+			Team:        team,
+			Role:        teamRole,
+			User:        obj,
+			Reconcilers: reconcilerOptOuts,
 		})
 
 	}

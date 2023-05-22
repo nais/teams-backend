@@ -332,17 +332,11 @@ type SyncError {
     error: String!
 }
 
-"Team membership type."
-type TeamMembership {
+"Team member."
+type TeamMember {
     "Team instance."
     team: Team!
 
-    "The role that the member has in the team."
-    role: TeamRole!
-}
-
-"Team member."
-type TeamMember {
     "User instance."
     user: User!
 
