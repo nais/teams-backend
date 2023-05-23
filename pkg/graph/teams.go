@@ -6,7 +6,6 @@ package graph
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
@@ -650,7 +649,7 @@ func (r *mutationResolver) ConfirmTeamDeletion(ctx context.Context, key *uuid.UU
 		return nil, apierror.Errorf("You cannot confirm your own delete key.")
 	}
 
-	if deleteKey.ConfirmedAt.Valid {
+	if deleteKey.ConfirmedAt != nil {
 		return nil, apierror.Errorf("Key has already been confirmed, team is currently being deleted.")
 	}
 
@@ -823,14 +822,6 @@ func (r *teamResolver) SyncErrors(ctx context.Context, obj *db.Team) ([]*model.S
 	}
 
 	return syncErrors, nil
-}
-
-// LastSuccessfulSync is the resolver for the lastSuccessfulSync field.
-func (r *teamResolver) LastSuccessfulSync(ctx context.Context, obj *db.Team) (*time.Time, error) {
-	if !obj.LastSuccessfulSync.Valid {
-		return nil, nil
-	}
-	return &obj.LastSuccessfulSync.Time, nil
 }
 
 // ReconcilerState is the resolver for the reconcilerState field.

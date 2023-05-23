@@ -43,11 +43,9 @@ type Config struct {
 }
 
 type ResolverRoot interface {
-	AuditLog() AuditLogResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
 	Reconciler() ReconcilerResolver
-	ReconcilerConfig() ReconcilerConfigResolver
 	Role() RoleResolver
 	ServiceAccount() ServiceAccountResolver
 	Team() TeamResolver
@@ -248,9 +246,6 @@ type ComplexityRoot struct {
 	}
 }
 
-type AuditLogResolver interface {
-	Actor(ctx context.Context, obj *db.AuditLog) (*string, error)
-}
 type MutationResolver interface {
 	SetGitHubTeamSlug(ctx context.Context, teamSlug *slug.Slug, gitHubTeamSlug *slug.Slug) (*db.Team, error)
 	SetGoogleWorkspaceGroupEmail(ctx context.Context, teamSlug *slug.Slug, googleWorkspaceGroupEmail string) (*db.Team, error)
@@ -297,9 +292,6 @@ type ReconcilerResolver interface {
 
 	AuditLogs(ctx context.Context, obj *db.Reconciler) ([]*db.AuditLog, error)
 }
-type ReconcilerConfigResolver interface {
-	Value(ctx context.Context, obj *db.ReconcilerConfig) (*string, error)
-}
 type RoleResolver interface {
 	Name(ctx context.Context, obj *db.Role) (sqlc.RoleName, error)
 }
@@ -310,7 +302,7 @@ type TeamResolver interface {
 	AuditLogs(ctx context.Context, obj *db.Team) ([]*db.AuditLog, error)
 	Members(ctx context.Context, obj *db.Team) ([]*model.TeamMember, error)
 	SyncErrors(ctx context.Context, obj *db.Team) ([]*model.SyncError, error)
-	LastSuccessfulSync(ctx context.Context, obj *db.Team) (*time.Time, error)
+
 	ReconcilerState(ctx context.Context, obj *db.Team) (*model.ReconcilerState, error)
 
 	SlackAlertsChannels(ctx context.Context, obj *db.Team) ([]*model.SlackAlertsChannel, error)
@@ -3031,7 +3023,7 @@ func (ec *executionContext) _AuditLog_actor(ctx context.Context, field graphql.C
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.AuditLog().Actor(rctx, obj)
+		return obj.Actor, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3049,8 +3041,8 @@ func (ec *executionContext) fieldContext_AuditLog_actor(ctx context.Context, fie
 	fc = &graphql.FieldContext{
 		Object:     "AuditLog",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
 		},
@@ -7504,7 +7496,7 @@ func (ec *executionContext) _ReconcilerConfig_value(ctx context.Context, field g
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.ReconcilerConfig().Value(rctx, obj)
+		return obj.Value, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -7522,8 +7514,8 @@ func (ec *executionContext) fieldContext_ReconcilerConfig_value(ctx context.Cont
 	fc = &graphql.FieldContext{
 		Object:     "ReconcilerConfig",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
 		},
@@ -8642,7 +8634,7 @@ func (ec *executionContext) _Team_lastSuccessfulSync(ctx context.Context, field 
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Team().LastSuccessfulSync(rctx, obj)
+		return obj.LastSuccessfulSync, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -8660,8 +8652,8 @@ func (ec *executionContext) fieldContext_Team_lastSuccessfulSync(ctx context.Con
 	fc = &graphql.FieldContext{
 		Object:     "Team",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Time does not have child fields")
 		},
@@ -12084,73 +12076,60 @@ func (ec *executionContext) _AuditLog(ctx context.Context, sel ast.SelectionSet,
 			out.Values[i] = ec._AuditLog_id(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "action":
 
 			out.Values[i] = ec._AuditLog_action(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "systemName":
 
 			out.Values[i] = ec._AuditLog_systemName(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "correlationID":
 
 			out.Values[i] = ec._AuditLog_correlationID(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "actor":
-			field := field
 
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._AuditLog_actor(ctx, field, obj)
-				return res
-			}
+			out.Values[i] = ec._AuditLog_actor(ctx, field, obj)
 
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
 		case "targetType":
 
 			out.Values[i] = ec._AuditLog_targetType(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "targetIdentifier":
 
 			out.Values[i] = ec._AuditLog_targetIdentifier(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "message":
 
 			out.Values[i] = ec._AuditLog_message(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "createdAt":
 
 			out.Values[i] = ec._AuditLog_createdAt(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -13002,53 +12981,40 @@ func (ec *executionContext) _ReconcilerConfig(ctx context.Context, sel ast.Selec
 			out.Values[i] = ec._ReconcilerConfig_key(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "displayName":
 
 			out.Values[i] = ec._ReconcilerConfig_displayName(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "description":
 
 			out.Values[i] = ec._ReconcilerConfig_description(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "configured":
 
 			out.Values[i] = ec._ReconcilerConfig_configured(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "secret":
 
 			out.Values[i] = ec._ReconcilerConfig_secret(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "value":
-			field := field
 
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._ReconcilerConfig_value(ctx, field, obj)
-				return res
-			}
+			out.Values[i] = ec._ReconcilerConfig_value(ctx, field, obj)
 
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -13388,22 +13354,9 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 
 			})
 		case "lastSuccessfulSync":
-			field := field
 
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Team_lastSuccessfulSync(ctx, field, obj)
-				return res
-			}
+			out.Values[i] = ec._Team_lastSuccessfulSync(ctx, field, obj)
 
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
 		case "reconcilerState":
 			field := field
 

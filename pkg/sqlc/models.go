@@ -5,7 +5,6 @@
 package sqlc
 
 import (
-	"database/sql"
 	"database/sql/driver"
 	"fmt"
 	"time"
@@ -652,7 +651,7 @@ type AuditLog struct {
 	CreatedAt        time.Time
 	CorrelationID    uuid.UUID
 	SystemName       SystemName
-	Actor            sql.NullString
+	Actor            *string
 	Action           AuditAction
 	Message          string
 	TargetType       AuditLogsTargetType
@@ -676,7 +675,7 @@ type ReconcilerConfig struct {
 	Key         ReconcilerConfigKey
 	DisplayName string
 	Description string
-	Value       sql.NullString
+	Value       *string
 	Secret      bool
 }
 
@@ -711,7 +710,7 @@ type ServiceAccountRole struct {
 	RoleName               RoleName
 	ServiceAccountID       uuid.UUID
 	TargetTeamSlug         *slug.Slug
-	TargetServiceAccountID uuid.NullUUID
+	TargetServiceAccountID *uuid.UUID
 }
 
 type Session struct {
@@ -729,7 +728,7 @@ type SlackAlertsChannel struct {
 type Team struct {
 	Slug               slug.Slug
 	Purpose            string
-	LastSuccessfulSync sql.NullTime
+	LastSuccessfulSync *time.Time
 	SlackChannel       string
 }
 
@@ -738,7 +737,7 @@ type TeamDeleteKey struct {
 	TeamSlug    slug.Slug
 	CreatedAt   time.Time
 	CreatedBy   uuid.UUID
-	ConfirmedAt sql.NullTime
+	ConfirmedAt *time.Time
 }
 
 type User struct {
@@ -753,5 +752,5 @@ type UserRole struct {
 	RoleName               RoleName
 	UserID                 uuid.UUID
 	TargetTeamSlug         *slug.Slug
-	TargetServiceAccountID uuid.NullUUID
+	TargetServiceAccountID *uuid.UUID
 }

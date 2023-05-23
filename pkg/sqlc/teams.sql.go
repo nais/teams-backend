@@ -7,7 +7,6 @@ package sqlc
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/slug"
@@ -384,8 +383,8 @@ RETURNING slug, purpose, last_successful_sync, slack_channel
 `
 
 type UpdateTeamParams struct {
-	Purpose      sql.NullString
-	SlackChannel sql.NullString
+	Purpose      *string
+	SlackChannel *string
 	Slug         slug.Slug
 }
 

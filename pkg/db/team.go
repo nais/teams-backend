@@ -18,8 +18,8 @@ func (d *database) RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, tea
 func (d *database) UpdateTeam(ctx context.Context, teamSlug slug.Slug, purpose, slackChannel *string) (*Team, error) {
 	team, err := d.querier.UpdateTeam(ctx, sqlc.UpdateTeamParams{
 		Slug:         teamSlug,
-		Purpose:      nullString(purpose),
-		SlackChannel: nullString(slackChannel),
+		Purpose:      purpose,
+		SlackChannel: slackChannel,
 	})
 	if err != nil {
 		return nil, err

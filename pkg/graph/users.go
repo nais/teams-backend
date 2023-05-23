@@ -160,16 +160,10 @@ func (r *userResolver) Roles(ctx context.Context, obj *db.User) ([]*db.Role, err
 			return nil, err
 		}
 
-		var tsa *uuid.UUID
-		ntsa := ur.TargetServiceAccountID
-		if ntsa.Valid {
-			tsa = &ntsa.UUID
-		}
-
 		ret = append(ret, &db.Role{
 			Authorizations:         authz,
 			RoleName:               ur.RoleName,
-			TargetServiceAccountID: tsa,
+			TargetServiceAccountID: ur.TargetServiceAccountID,
 			TargetTeamSlug:         ur.TargetTeamSlug,
 		})
 	}

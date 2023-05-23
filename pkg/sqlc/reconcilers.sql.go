@@ -7,7 +7,6 @@ package sqlc
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/slug"
@@ -188,7 +187,7 @@ type GetReconcilerConfigRow struct {
 	DisplayName string
 	Description string
 	Configured  bool
-	Value       sql.NullString
+	Value       *string
 	Secret      bool
 }
 

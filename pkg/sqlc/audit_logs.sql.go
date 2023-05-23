@@ -7,7 +7,6 @@ package sqlc
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/google/uuid"
 )
@@ -19,7 +18,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)
 
 type CreateAuditLogParams struct {
 	CorrelationID    uuid.UUID
-	Actor            sql.NullString
+	Actor            *string
 	SystemName       SystemName
 	TargetType       AuditLogsTargetType
 	TargetIdentifier string
