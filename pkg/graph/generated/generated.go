@@ -124,29 +124,29 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		DeployKey              func(childComplexity int, slug *slug.Slug) int
-		EnabledReconcilerNames func(childComplexity int) int
-		Me                     func(childComplexity int) int
-		Reconcilers            func(childComplexity int) int
-		Roles                  func(childComplexity int) int
-		Team                   func(childComplexity int, slug *slug.Slug) int
-		TeamDeleteKey          func(childComplexity int, key *uuid.UUID) int
-		Teams                  func(childComplexity int) int
-		User                   func(childComplexity int, id *uuid.UUID) int
-		UserByEmail            func(childComplexity int, email string) int
-		UserSync               func(childComplexity int) int
-		Users                  func(childComplexity int) int
+		DeployKey     func(childComplexity int, slug *slug.Slug) int
+		Me            func(childComplexity int) int
+		Reconcilers   func(childComplexity int) int
+		Roles         func(childComplexity int) int
+		Team          func(childComplexity int, slug *slug.Slug) int
+		TeamDeleteKey func(childComplexity int, key *uuid.UUID) int
+		Teams         func(childComplexity int) int
+		User          func(childComplexity int, id *uuid.UUID) int
+		UserByEmail   func(childComplexity int, email string) int
+		UserSync      func(childComplexity int) int
+		Users         func(childComplexity int) int
 	}
 
 	Reconciler struct {
-		AuditLogs   func(childComplexity int) int
-		Config      func(childComplexity int) int
-		Configured  func(childComplexity int) int
-		Description func(childComplexity int) int
-		DisplayName func(childComplexity int) int
-		Enabled     func(childComplexity int) int
-		Name        func(childComplexity int) int
-		RunOrder    func(childComplexity int) int
+		AuditLogs           func(childComplexity int) int
+		Config              func(childComplexity int) int
+		Configured          func(childComplexity int) int
+		Description         func(childComplexity int) int
+		DisplayName         func(childComplexity int) int
+		Enabled             func(childComplexity int) int
+		Name                func(childComplexity int) int
+		RunOrder            func(childComplexity int) int
+		UsesTeamMemberships func(childComplexity int) int
 	}
 
 	ReconcilerConfig struct {
@@ -280,7 +280,6 @@ type MutationResolver interface {
 type QueryResolver interface {
 	Me(ctx context.Context) (db.AuthenticatedUser, error)
 	Reconcilers(ctx context.Context) ([]*db.Reconciler, error)
-	EnabledReconcilerNames(ctx context.Context) ([]sqlc.ReconcilerName, error)
 	Roles(ctx context.Context) ([]sqlc.RoleName, error)
 	Teams(ctx context.Context) ([]*db.Team, error)
 	Team(ctx context.Context, slug *slug.Slug) (*db.Team, error)
@@ -292,6 +291,7 @@ type QueryResolver interface {
 	UserSync(ctx context.Context) ([]*usersync.Run, error)
 }
 type ReconcilerResolver interface {
+	UsesTeamMemberships(ctx context.Context, obj *db.Reconciler) (bool, error)
 	Config(ctx context.Context, obj *db.Reconciler) ([]*db.ReconcilerConfig, error)
 	Configured(ctx context.Context, obj *db.Reconciler) (bool, error)
 
@@ -764,13 +764,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.DeployKey(childComplexity, args["slug"].(*slug.Slug)), true
 
-	case "Query.enabledReconcilerNames":
-		if e.complexity.Query.EnabledReconcilerNames == nil {
-			break
-		}
-
-		return e.complexity.Query.EnabledReconcilerNames(childComplexity), true
-
 	case "Query.me":
 		if e.complexity.Query.Me == nil {
 			break
@@ -916,6 +909,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Reconciler.RunOrder(childComplexity), true
+
+	case "Reconciler.usesTeamMemberships":
+		if e.complexity.Reconciler.UsesTeamMemberships == nil {
+			break
+		}
+
+		return e.complexity.Reconciler.UsesTeamMemberships(childComplexity), true
 
 	case "ReconcilerConfig.configured":
 		if e.complexity.ReconcilerConfig.Configured == nil {
@@ -1533,7 +1533,7 @@ directive @admin on FIELD_DEFINITION`, BuiltIn: false},
         name: ReconcilerName!
     ): Reconciler! @admin
 
-    "Add opt-out of a reconciler for a team member."
+    "Add opt-out of a reconciler for a team member. Only reconcilers that uses team memberships can be opted out from."
     addReconcilerOptOut(
         "The team slug."
         teamSlug: Slug!
@@ -1560,10 +1560,7 @@ directive @admin on FIELD_DEFINITION`, BuiltIn: false},
 
 extend type Query {
     "Get a collection of reconcilers."
-    reconcilers: [Reconciler!]! @admin
-
-    "Get the names of all enabled reconcilers."
-    enabledReconcilerNames: [ReconcilerName!]! @auth
+    reconcilers: [Reconciler!]! @auth
 }
 
 "Reconciler type."
@@ -1580,17 +1577,20 @@ type Reconciler {
     "Whether or not the reconciler is available for teams in Console."
     enabled: Boolean!
 
+    "Whether or not the reconciler uses team memberships when syncing."
+    usesTeamMemberships: Boolean!
+
     "Reconciler configuration keys and descriptions."
-    config: [ReconcilerConfig!]!
+    config: [ReconcilerConfig!]! @admin
 
     "Whether or not the reconciler is fully configured and ready to be enabled."
-    configured: Boolean!
+    configured: Boolean! @admin
 
     "The run order of the reconciler."
     runOrder: Int!
 
     "Audit logs for this reconciler."
-    auditLogs: [AuditLog!]!
+    auditLogs: [AuditLog!]! @admin
 }
 
 "Reconciler configuration type."
@@ -4100,6 +4100,8 @@ func (ec *executionContext) fieldContext_Mutation_enableReconciler(ctx context.C
 				return ec.fieldContext_Reconciler_description(ctx, field)
 			case "enabled":
 				return ec.fieldContext_Reconciler_enabled(ctx, field)
+			case "usesTeamMemberships":
+				return ec.fieldContext_Reconciler_usesTeamMemberships(ctx, field)
 			case "config":
 				return ec.fieldContext_Reconciler_config(ctx, field)
 			case "configured":
@@ -4193,6 +4195,8 @@ func (ec *executionContext) fieldContext_Mutation_disableReconciler(ctx context.
 				return ec.fieldContext_Reconciler_description(ctx, field)
 			case "enabled":
 				return ec.fieldContext_Reconciler_enabled(ctx, field)
+			case "usesTeamMemberships":
+				return ec.fieldContext_Reconciler_usesTeamMemberships(ctx, field)
 			case "config":
 				return ec.fieldContext_Reconciler_config(ctx, field)
 			case "configured":
@@ -4286,6 +4290,8 @@ func (ec *executionContext) fieldContext_Mutation_configureReconciler(ctx contex
 				return ec.fieldContext_Reconciler_description(ctx, field)
 			case "enabled":
 				return ec.fieldContext_Reconciler_enabled(ctx, field)
+			case "usesTeamMemberships":
+				return ec.fieldContext_Reconciler_usesTeamMemberships(ctx, field)
 			case "config":
 				return ec.fieldContext_Reconciler_config(ctx, field)
 			case "configured":
@@ -4379,6 +4385,8 @@ func (ec *executionContext) fieldContext_Mutation_resetReconciler(ctx context.Co
 				return ec.fieldContext_Reconciler_description(ctx, field)
 			case "enabled":
 				return ec.fieldContext_Reconciler_enabled(ctx, field)
+			case "usesTeamMemberships":
+				return ec.fieldContext_Reconciler_usesTeamMemberships(ctx, field)
 			case "config":
 				return ec.fieldContext_Reconciler_config(ctx, field)
 			case "configured":
@@ -5854,10 +5862,10 @@ func (ec *executionContext) _Query_reconcilers(ctx context.Context, field graphq
 			return ec.resolvers.Query().Reconcilers(rctx)
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Admin == nil {
-				return nil, errors.New("directive admin is not implemented")
+			if ec.directives.Auth == nil {
+				return nil, errors.New("directive auth is not implemented")
 			}
-			return ec.directives.Admin(ctx, nil, directive0)
+			return ec.directives.Auth(ctx, nil, directive0)
 		}
 
 		tmp, err := directive1(rctx)
@@ -5903,6 +5911,8 @@ func (ec *executionContext) fieldContext_Query_reconcilers(ctx context.Context, 
 				return ec.fieldContext_Reconciler_description(ctx, field)
 			case "enabled":
 				return ec.fieldContext_Reconciler_enabled(ctx, field)
+			case "usesTeamMemberships":
+				return ec.fieldContext_Reconciler_usesTeamMemberships(ctx, field)
 			case "config":
 				return ec.fieldContext_Reconciler_config(ctx, field)
 			case "configured":
@@ -5913,70 +5923,6 @@ func (ec *executionContext) fieldContext_Query_reconcilers(ctx context.Context, 
 				return ec.fieldContext_Reconciler_auditLogs(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Reconciler", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_enabledReconcilerNames(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_enabledReconcilerNames(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		directive0 := func(rctx context.Context) (interface{}, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().EnabledReconcilerNames(rctx)
-		}
-		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Auth == nil {
-				return nil, errors.New("directive auth is not implemented")
-			}
-			return ec.directives.Auth(ctx, nil, directive0)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.([]sqlc.ReconcilerName); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be []github.com/nais/console/pkg/sqlc.ReconcilerName`, tmp)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]sqlc.ReconcilerName)
-	fc.Result = res
-	return ec.marshalNReconcilerName2ᚕgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐReconcilerNameᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_enabledReconcilerNames(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ReconcilerName does not have child fields")
 		},
 	}
 	return fc, nil
@@ -7010,6 +6956,50 @@ func (ec *executionContext) fieldContext_Reconciler_enabled(ctx context.Context,
 	return fc, nil
 }
 
+func (ec *executionContext) _Reconciler_usesTeamMemberships(ctx context.Context, field graphql.CollectedField, obj *db.Reconciler) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Reconciler_usesTeamMemberships(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Reconciler().UsesTeamMemberships(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Reconciler_usesTeamMemberships(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Reconciler",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Reconciler_config(ctx context.Context, field graphql.CollectedField, obj *db.Reconciler) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Reconciler_config(ctx, field)
 	if err != nil {
@@ -7023,8 +7013,28 @@ func (ec *executionContext) _Reconciler_config(ctx context.Context, field graphq
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Reconciler().Config(rctx, obj)
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Reconciler().Config(rctx, obj)
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Admin == nil {
+				return nil, errors.New("directive admin is not implemented")
+			}
+			return ec.directives.Admin(ctx, obj, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*db.ReconcilerConfig); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/nais/console/pkg/db.ReconcilerConfig`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -7081,8 +7091,28 @@ func (ec *executionContext) _Reconciler_configured(ctx context.Context, field gr
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Reconciler().Configured(rctx, obj)
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Reconciler().Configured(rctx, obj)
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Admin == nil {
+				return nil, errors.New("directive admin is not implemented")
+			}
+			return ec.directives.Admin(ctx, obj, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(bool); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be bool`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -7169,8 +7199,28 @@ func (ec *executionContext) _Reconciler_auditLogs(ctx context.Context, field gra
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Reconciler().AuditLogs(rctx, obj)
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Reconciler().AuditLogs(rctx, obj)
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Admin == nil {
+				return nil, errors.New("directive admin is not implemented")
+			}
+			return ec.directives.Admin(ctx, obj, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*db.AuditLog); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/nais/console/pkg/db.AuditLog`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -12551,29 +12601,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			out.Concurrently(i, func() graphql.Marshaler {
 				return rrm(innerCtx)
 			})
-		case "enabledReconcilerNames":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_enabledReconcilerNames(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return rrm(innerCtx)
-			})
 		case "roles":
 			field := field
 
@@ -12842,6 +12869,26 @@ func (ec *executionContext) _Reconciler(ctx context.Context, sel ast.SelectionSe
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
+		case "usesTeamMemberships":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Reconciler_usesTeamMemberships(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
 		case "config":
 			field := field
 
@@ -14651,38 +14698,6 @@ func (ec *executionContext) marshalNReconcilerName2githubᚗcomᚋnaisᚋconsole
 		}
 	}
 	return res
-}
-
-func (ec *executionContext) unmarshalNReconcilerName2ᚕgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐReconcilerNameᚄ(ctx context.Context, v interface{}) ([]sqlc.ReconcilerName, error) {
-	var vSlice []interface{}
-	if v != nil {
-		vSlice = graphql.CoerceList(v)
-	}
-	var err error
-	res := make([]sqlc.ReconcilerName, len(vSlice))
-	for i := range vSlice {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNReconcilerName2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐReconcilerName(ctx, vSlice[i])
-		if err != nil {
-			return nil, err
-		}
-	}
-	return res, nil
-}
-
-func (ec *executionContext) marshalNReconcilerName2ᚕgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐReconcilerNameᚄ(ctx context.Context, sel ast.SelectionSet, v []sqlc.ReconcilerName) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	for i := range v {
-		ret[i] = ec.marshalNReconcilerName2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐReconcilerName(ctx, sel, v[i])
-	}
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
 }
 
 func (ec *executionContext) marshalNReconcilerState2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐReconcilerState(ctx context.Context, sel ast.SelectionSet, v model.ReconcilerState) graphql.Marshaler {

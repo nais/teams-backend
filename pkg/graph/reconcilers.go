@@ -334,32 +334,29 @@ func (r *mutationResolver) RemoveReconcilerOptOut(ctx context.Context, teamSlug 
 
 // Reconcilers is the resolver for the reconcilers field.
 func (r *queryResolver) Reconcilers(ctx context.Context) ([]*db.Reconciler, error) {
-	return r.database.GetReconcilers(ctx)
-}
-
-// EnabledReconcilerNames is the resolver for the enabledReconcilerNames field.
-func (r *queryResolver) EnabledReconcilerNames(ctx context.Context) ([]sqlc.ReconcilerName, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationTeamsCreate)
 	if err != nil {
 		return nil, err
 	}
 
-	reconcilers, err := r.database.GetReconcilers(ctx)
-	if err != nil {
-		return nil, err
+	return r.database.GetReconcilers(ctx)
+}
+
+// UsesTeamMemberships is the resolver for the usesTeamMemberships field.
+func (r *reconcilerResolver) UsesTeamMemberships(ctx context.Context, obj *db.Reconciler) (bool, error) {
+	switch obj.Name {
+	case sqlc.ReconcilerNameGithubTeam:
+		return true, nil
+	case sqlc.ReconcilerNameAzureGroup:
+		return true, nil
+	case sqlc.ReconcilerNameGoogleWorkspaceAdmin:
+		return true, nil
+	case sqlc.ReconcilerNameNaisDependencytrack:
+		return true, nil
+	default:
+		return false, nil
 	}
-
-	names := make([]sqlc.ReconcilerName, 0)
-	for _, reconciler := range reconcilers {
-		if !reconciler.Enabled {
-			continue
-		}
-
-		names = append(names, reconciler.Name)
-	}
-
-	return names, nil
 }
 
 // Config is the resolver for the config field.
