@@ -11844,26 +11844,29 @@ func (ec *executionContext) unmarshalInputCreateTeamInput(ctx context.Context, o
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-			it.Slug, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, v)
+			data, err := ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋslugᚐSlug(ctx, v)
 			if err != nil {
 				return it, err
 			}
+			it.Slug = data
 		case "purpose":
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("purpose"))
-			it.Purpose, err = ec.unmarshalNString2string(ctx, v)
+			data, err := ec.unmarshalNString2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
+			it.Purpose = data
 		case "slackChannel":
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slackChannel"))
-			it.SlackChannel, err = ec.unmarshalNString2string(ctx, v)
+			data, err := ec.unmarshalNString2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
+			it.SlackChannel = data
 		}
 	}
 
@@ -11888,18 +11891,20 @@ func (ec *executionContext) unmarshalInputReconcilerConfigInput(ctx context.Cont
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("key"))
-			it.Key, err = ec.unmarshalNReconcilerConfigKey2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐReconcilerConfigKey(ctx, v)
+			data, err := ec.unmarshalNReconcilerConfigKey2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐReconcilerConfigKey(ctx, v)
 			if err != nil {
 				return it, err
 			}
+			it.Key = data
 		case "value":
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("value"))
-			it.Value, err = ec.unmarshalNString2string(ctx, v)
+			data, err := ec.unmarshalNString2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
+			it.Value = data
 		}
 	}
 
@@ -11924,18 +11929,20 @@ func (ec *executionContext) unmarshalInputSlackAlertsChannelInput(ctx context.Co
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("environment"))
-			it.Environment, err = ec.unmarshalNString2string(ctx, v)
+			data, err := ec.unmarshalNString2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
+			it.Environment = data
 		case "channelName":
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("channelName"))
-			it.ChannelName, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
+			it.ChannelName = data
 		}
 	}
 
@@ -11960,26 +11967,29 @@ func (ec *executionContext) unmarshalInputTeamMemberInput(ctx context.Context, o
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
-			it.UserID, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
+			data, err := ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
 			if err != nil {
 				return it, err
 			}
+			it.UserID = data
 		case "role":
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("role"))
-			it.Role, err = ec.unmarshalNTeamRole2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamRole(ctx, v)
+			data, err := ec.unmarshalNTeamRole2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐTeamRole(ctx, v)
 			if err != nil {
 				return it, err
 			}
+			it.Role = data
 		case "reconcilerOptOuts":
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("reconcilerOptOuts"))
-			it.ReconcilerOptOuts, err = ec.unmarshalOReconcilerName2ᚕgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐReconcilerNameᚄ(ctx, v)
+			data, err := ec.unmarshalOReconcilerName2ᚕgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐReconcilerNameᚄ(ctx, v)
 			if err != nil {
 				return it, err
 			}
+			it.ReconcilerOptOuts = data
 		}
 	}
 
@@ -12004,26 +12014,29 @@ func (ec *executionContext) unmarshalInputUpdateTeamInput(ctx context.Context, o
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("purpose"))
-			it.Purpose, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
+			it.Purpose = data
 		case "slackChannel":
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slackChannel"))
-			it.SlackChannel, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
+			it.SlackChannel = data
 		case "slackAlertsChannels":
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slackAlertsChannels"))
-			it.SlackAlertsChannels, err = ec.unmarshalOSlackAlertsChannelInput2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSlackAlertsChannelInputᚄ(ctx, v)
+			data, err := ec.unmarshalOSlackAlertsChannelInput2ᚕᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋgraphᚋmodelᚐSlackAlertsChannelInputᚄ(ctx, v)
 			if err != nil {
 				return it, err
 			}
+			it.SlackAlertsChannels = data
 		}
 	}
 

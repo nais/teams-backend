@@ -53,19 +53,19 @@ type ReconcilerConfigInput struct {
 // Reconciler state type.
 type ReconcilerState struct {
 	// The GitHub team slug.
-	GitHubTeamSlug *slug.Slug `json:"gitHubTeamSlug"`
+	GitHubTeamSlug *slug.Slug `json:"gitHubTeamSlug,omitempty"`
 	// The Google Workspace group email.
-	GoogleWorkspaceGroupEmail *string `json:"googleWorkspaceGroupEmail"`
+	GoogleWorkspaceGroupEmail *string `json:"googleWorkspaceGroupEmail,omitempty"`
 	// The Azure AD group ID.
-	AzureADGroupID *uuid.UUID `json:"azureADGroupId"`
+	AzureADGroupID *uuid.UUID `json:"azureADGroupId,omitempty"`
 	// A list of GCP projects.
 	GcpProjects []*GcpProject `json:"gcpProjects"`
 	// A list of NAIS namespaces.
 	NaisNamespaces []*NaisNamespace `json:"naisNamespaces"`
 	// Timestamp of when the NAIS deploy key was provisioned.
-	NaisDeployKeyProvisioned *time.Time `json:"naisDeployKeyProvisioned"`
+	NaisDeployKeyProvisioned *time.Time `json:"naisDeployKeyProvisioned,omitempty"`
 	// Name of the GAR repository for the team.
-	GarRepositoryName *string `json:"garRepositoryName"`
+	GarRepositoryName *string `json:"garRepositoryName,omitempty"`
 }
 
 // Slack alerts channel type.
@@ -81,7 +81,7 @@ type SlackAlertsChannelInput struct {
 	// The environment for the alerts sent to the channel.
 	Environment string `json:"environment"`
 	// The name of the Slack channel.
-	ChannelName *string `json:"channelName"`
+	ChannelName *string `json:"channelName,omitempty"`
 }
 
 // Sync error type.
@@ -113,7 +113,7 @@ type TeamMemberInput struct {
 	// The role that the user will receive.
 	Role TeamRole `json:"role"`
 	// Reconcilers to opt the team member out of.
-	ReconcilerOptOuts []sqlc.ReconcilerName `json:"reconcilerOptOuts"`
+	ReconcilerOptOuts []sqlc.ReconcilerName `json:"reconcilerOptOuts,omitempty"`
 }
 
 // Team sync type.
@@ -125,11 +125,11 @@ type TeamSync struct {
 // Input for updating an existing team.
 type UpdateTeamInput struct {
 	// Specify team purpose to update the existing value.
-	Purpose *string `json:"purpose"`
+	Purpose *string `json:"purpose,omitempty"`
 	// Specify the Slack channel to update the existing value.
-	SlackChannel *string `json:"slackChannel"`
+	SlackChannel *string `json:"slackChannel,omitempty"`
 	// A list of Slack channels for NAIS alerts.
-	SlackAlertsChannels []*SlackAlertsChannelInput `json:"slackAlertsChannels"`
+	SlackAlertsChannels []*SlackAlertsChannelInput `json:"slackAlertsChannels,omitempty"`
 }
 
 // Available team roles.
