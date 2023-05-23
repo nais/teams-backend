@@ -387,9 +387,8 @@ func (r *reconcilerResolver) AuditLogs(ctx context.Context, obj *db.Reconciler) 
 
 // Value is the resolver for the value field.
 func (r *reconcilerConfigResolver) Value(ctx context.Context, obj *db.ReconcilerConfig) (*string, error) {
-	switch value := obj.Value.(type) {
-	case string:
-		return &value, nil
+	if obj.Value.Valid {
+		return &obj.Value.String, nil
 	}
 
 	return nil, nil

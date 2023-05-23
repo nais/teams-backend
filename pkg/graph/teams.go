@@ -975,9 +975,14 @@ func (r *teamDeleteKeyResolver) Team(ctx context.Context, obj *db.TeamDeleteKey)
 	return r.database.GetTeamBySlug(ctx, obj.TeamSlug)
 }
 
-// Enabled is the resolver for the enabled field.
-func (r *teamMemberReconcilerResolver) Enabled(ctx context.Context, obj *sqlc.GetTeamMemberOptOutsRow) (bool, error) {
-	panic(fmt.Errorf("not implemented: Enabled - enabled"))
+// Reconciler is the resolver for the reconciler field.
+func (r *teamMemberReconcilerResolver) Reconciler(ctx context.Context, obj *sqlc.GetTeamMemberOptOutsRow) (*db.Reconciler, error) {
+	reconciler, err := r.database.GetReconciler(ctx, obj.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	return reconciler, nil
 }
 
 // Team returns generated.TeamResolver implementation.

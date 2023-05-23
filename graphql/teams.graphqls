@@ -343,14 +343,14 @@ type TeamMember {
     "The role that the user has in the team."
     role: TeamRole!
 
-    "Reconcilers for this member."
+    "Reconcilers for this member in this team."
     reconcilers: [TeamMemberReconciler!]!
 }
 
 "Team member reconcilers."
 type TeamMemberReconciler {
-    "Name of the reconciler."
-    name: ReconcilerName!
+    "The reconciler."
+    reconciler: Reconciler!
 
     "Whether or not the reconciler is enabled for the team member."
     enabled: Boolean!

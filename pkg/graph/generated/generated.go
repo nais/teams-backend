@@ -221,8 +221,8 @@ type ComplexityRoot struct {
 	}
 
 	TeamMemberReconciler struct {
-		Enabled func(childComplexity int) int
-		Name    func(childComplexity int) int
+		Enabled    func(childComplexity int) int
+		Reconciler func(childComplexity int) int
 	}
 
 	TeamSync struct {
@@ -321,7 +321,7 @@ type TeamDeleteKeyResolver interface {
 	Team(ctx context.Context, obj *db.TeamDeleteKey) (*db.Team, error)
 }
 type TeamMemberReconcilerResolver interface {
-	Enabled(ctx context.Context, obj *sqlc.GetTeamMemberOptOutsRow) (bool, error)
+	Reconciler(ctx context.Context, obj *sqlc.GetTeamMemberOptOutsRow) (*db.Reconciler, error)
 }
 type UserResolver interface {
 	Teams(ctx context.Context, obj *db.User) ([]*model.TeamMember, error)
@@ -1232,12 +1232,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.TeamMemberReconciler.Enabled(childComplexity), true
 
-	case "TeamMemberReconciler.name":
-		if e.complexity.TeamMemberReconciler.Name == nil {
+	case "TeamMemberReconciler.reconciler":
+		if e.complexity.TeamMemberReconciler.Reconciler == nil {
 			break
 		}
 
-		return e.complexity.TeamMemberReconciler.Name(childComplexity), true
+		return e.complexity.TeamMemberReconciler.Reconciler(childComplexity), true
 
 	case "TeamSync.correlationID":
 		if e.complexity.TeamSync.CorrelationID == nil {
@@ -2045,14 +2045,14 @@ type TeamMember {
     "The role that the user has in the team."
     role: TeamRole!
 
-    "Reconcilers for this member."
+    "Reconcilers for this member in this team."
     reconcilers: [TeamMemberReconciler!]!
 }
 
 "Team member reconcilers."
 type TeamMemberReconciler {
-    "Name of the reconciler."
-    name: ReconcilerName!
+    "The reconciler."
+    reconciler: Reconciler!
 
     "Whether or not the reconciler is enabled for the team member."
     enabled: Boolean!
@@ -9336,8 +9336,8 @@ func (ec *executionContext) fieldContext_TeamMember_reconcilers(ctx context.Cont
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "name":
-				return ec.fieldContext_TeamMemberReconciler_name(ctx, field)
+			case "reconciler":
+				return ec.fieldContext_TeamMemberReconciler_reconciler(ctx, field)
 			case "enabled":
 				return ec.fieldContext_TeamMemberReconciler_enabled(ctx, field)
 			}
@@ -9347,8 +9347,8 @@ func (ec *executionContext) fieldContext_TeamMember_reconcilers(ctx context.Cont
 	return fc, nil
 }
 
-func (ec *executionContext) _TeamMemberReconciler_name(ctx context.Context, field graphql.CollectedField, obj *sqlc.GetTeamMemberOptOutsRow) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_TeamMemberReconciler_name(ctx, field)
+func (ec *executionContext) _TeamMemberReconciler_reconciler(ctx context.Context, field graphql.CollectedField, obj *sqlc.GetTeamMemberOptOutsRow) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_TeamMemberReconciler_reconciler(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -9361,7 +9361,7 @@ func (ec *executionContext) _TeamMemberReconciler_name(ctx context.Context, fiel
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Name, nil
+		return ec.resolvers.TeamMemberReconciler().Reconciler(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -9373,19 +9373,39 @@ func (ec *executionContext) _TeamMemberReconciler_name(ctx context.Context, fiel
 		}
 		return graphql.Null
 	}
-	res := resTmp.(sqlc.ReconcilerName)
+	res := resTmp.(*db.Reconciler)
 	fc.Result = res
-	return ec.marshalNReconcilerName2githubᚗcomᚋnaisᚋconsoleᚋpkgᚋsqlcᚐReconcilerName(ctx, field.Selections, res)
+	return ec.marshalNReconciler2ᚖgithubᚗcomᚋnaisᚋconsoleᚋpkgᚋdbᚐReconciler(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_TeamMemberReconciler_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_TeamMemberReconciler_reconciler(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "TeamMemberReconciler",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ReconcilerName does not have child fields")
+			switch field.Name {
+			case "name":
+				return ec.fieldContext_Reconciler_name(ctx, field)
+			case "displayName":
+				return ec.fieldContext_Reconciler_displayName(ctx, field)
+			case "description":
+				return ec.fieldContext_Reconciler_description(ctx, field)
+			case "enabled":
+				return ec.fieldContext_Reconciler_enabled(ctx, field)
+			case "usesTeamMemberships":
+				return ec.fieldContext_Reconciler_usesTeamMemberships(ctx, field)
+			case "config":
+				return ec.fieldContext_Reconciler_config(ctx, field)
+			case "configured":
+				return ec.fieldContext_Reconciler_configured(ctx, field)
+			case "runOrder":
+				return ec.fieldContext_Reconciler_runOrder(ctx, field)
+			case "auditLogs":
+				return ec.fieldContext_Reconciler_auditLogs(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Reconciler", field.Name)
 		},
 	}
 	return fc, nil
@@ -9405,7 +9425,7 @@ func (ec *executionContext) _TeamMemberReconciler_enabled(ctx context.Context, f
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.TeamMemberReconciler().Enabled(rctx, obj)
+		return obj.Enabled, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -9426,8 +9446,8 @@ func (ec *executionContext) fieldContext_TeamMemberReconciler_enabled(ctx contex
 	fc = &graphql.FieldContext{
 		Object:     "TeamMemberReconciler",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Boolean does not have child fields")
 		},
@@ -13603,14 +13623,7 @@ func (ec *executionContext) _TeamMemberReconciler(ctx context.Context, sel ast.S
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("TeamMemberReconciler")
-		case "name":
-
-			out.Values[i] = ec._TeamMemberReconciler_name(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
-			}
-		case "enabled":
+		case "reconciler":
 			field := field
 
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
@@ -13619,7 +13632,7 @@ func (ec *executionContext) _TeamMemberReconciler(ctx context.Context, sel ast.S
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._TeamMemberReconciler_enabled(ctx, field, obj)
+				res = ec._TeamMemberReconciler_reconciler(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -13630,6 +13643,13 @@ func (ec *executionContext) _TeamMemberReconciler(ctx context.Context, sel ast.S
 				return innerFunc(ctx)
 
 			})
+		case "enabled":
+
+			out.Values[i] = ec._TeamMemberReconciler_enabled(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

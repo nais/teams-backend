@@ -34,10 +34,18 @@ SET value = sqlc.arg(value)::TEXT
 WHERE reconciler = $1 AND key = $2;
 
 -- name: GetReconcilerConfig :many
-SELECT reconciler, key, display_name, description, (value IS NOT NULL)::BOOL AS configured, (CASE WHEN secret = false THEN value ELSE NULL END) AS value, secret
-FROM reconciler_config
-WHERE reconciler = $1
-ORDER BY display_name ASC;
+SELECT
+    rc.reconciler,
+    rc.key,
+    rc.display_name,
+    rc.description,
+    (rc.value IS NOT NULL)::BOOL AS configured,
+    rc2.value,
+    rc.secret
+FROM reconciler_config rc
+LEFT JOIN reconciler_config rc2 ON rc2.reconciler = rc.reconciler AND rc2.key = rc.key AND rc2.secret = false
+WHERE rc.reconciler = $1
+ORDER BY rc.display_name ASC;
 
 -- name: DangerousGetReconcilerConfigValues :many
 SELECT key, value::TEXT
