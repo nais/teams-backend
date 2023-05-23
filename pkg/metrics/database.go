@@ -10,14 +10,12 @@ import (
 
 const DirtyLabel = "dirty"
 
-var (
-	schemaVersion = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Namespace: namespace,
-		Subsystem: subsystem,
-		Name:      "schema_version",
-		Help:      "Current database schema version",
-	}, []string{DirtyLabel})
-)
+var schemaVersion = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	Namespace: namespace,
+	Subsystem: subsystem,
+	Name:      "schema_version",
+	Help:      "Current database schema version",
+}, []string{DirtyLabel})
 
 func SetSchemaVersion(version uint, dirty bool) {
 	m, err := schemaVersion.GetMetricWithLabelValues(strconv.FormatBool(dirty))
