@@ -2,9 +2,15 @@ package dependencytrack
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
-	dependencytrack "github.com/nais/dependencytrack/pkg/client"
+	"github.com/nais/console/pkg/config"
+	"github.com/nais/console/pkg/dependencytrack"
+
+	"github.com/nais/dependencytrack/pkg/client"
 
 	"github.com/google/uuid"
 	"github.com/nais/console/pkg/auditlogger"
@@ -16,6 +22,42 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
+
+func TestNewFromConfig(t *testing.T) {
+	log, err := logger.GetLogger("text", "info")
+	assert.NoError(t, err)
+	audit := auditlogger.NewMockAuditLogger(t)
+	audit.On("WithSystemName", sqlc.SystemNameNaisDependencytrack).Return(audit)
+	database := db.NewMockDatabase(t)
+
+	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		fmt.Printf("Request: %s %s\n", req.Method, req.URL.String())
+		rw.WriteHeader(http.StatusOK)
+		_, err = rw.Write([]byte("4.8.0"))
+		if err != nil {
+			return
+		}
+	}))
+
+	cfg := &config.Config{
+		DependencyTrack: config.DependencyTrack{
+			Instances: []dependencytrack.DependencyTrackInstance{
+				{
+					Endpoint: "https://dependencytrack-backend.dev-gcp.nav.cloud.nais.io",
+					Username: "na",
+					Password: "na",
+				},
+				{
+					Endpoint: server.URL,
+					Username: "na",
+					Password: "na",
+				},
+			},
+		},
+	}
+	_, err = NewFromConfig(context.Background(), database, cfg, audit, log)
+	assert.NoError(t, err)
+}
 
 func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 	correlationID := uuid.New()
@@ -33,15 +75,15 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 	database := db.NewMockDatabase(t)
 	mockClient := NewMockClient(t)
 
-	instances := map[string]dependencytrack.Client{"mock": mockClient}
+	instances := map[string]client.Client{"mock": mockClient}
 
 	ctx := context.Background()
 
 	t.Run("team does not exist, new team created and new members added", func(t *testing.T) {
 		database.On("LoadReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Return(nil).Once()
-		mockClient.On("CreateTeam", mock.Anything, teamName, []dependencytrack.Permission{
-			dependencytrack.ViewPortfolioPermission,
-		}).Return(&dependencytrack.Team{
+		mockClient.On("CreateTeam", mock.Anything, teamName, []client.Permission{
+			client.ViewPortfolioPermission,
+		}).Return(&client.Team{
 			Uuid:      teamUuid,
 			Name:      teamName,
 			OidcUsers: nil,
@@ -56,7 +98,7 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 			Return(nil).
 			Once()
 
-		mockClient.On("CreateOidcUser", mock.Anything, username).Return(&dependencytrack.User{
+		mockClient.On("CreateOidcUser", mock.Anything, username).Return(&client.User{
 			Username: username,
 			Email:    username,
 		}).Return(nil).Once()
@@ -82,7 +124,7 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 				},
 			}
 		}).Return(nil).Once()
-		mockClient.On("CreateOidcUser", mock.Anything, username).Return(&dependencytrack.User{
+		mockClient.On("CreateOidcUser", mock.Anything, username).Return(&client.User{
 			Username: username,
 			Email:    username,
 		}).Return(nil).Once()
@@ -131,7 +173,7 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 			}
 		}).Return(nil).Once()
 
-		mockClient.On("CreateOidcUser", mock.Anything, username).Return(&dependencytrack.User{
+		mockClient.On("CreateOidcUser", mock.Anything, username).Return(&client.User{
 			Username: username,
 			Email:    username,
 		}).Return(nil).Once()
@@ -177,7 +219,7 @@ func TestDependencytrackReconciler_Delete(t *testing.T) {
 		mockClient.On("DeleteTeam", mock.Anything, teamUuid).Return(nil).Once()
 		database.On("RemoveReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Return(nil).Once()
 
-		reconciler, err := New(database, auditLogger, map[string]dependencytrack.Client{"mock": mockClient}, log)
+		reconciler, err := New(database, auditLogger, map[string]client.Client{"mock": mockClient}, log)
 		assert.NoError(t, err)
 
 		err = reconciler.Delete(context.Background(), input.Team.Slug, uuid.New())

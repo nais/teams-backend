@@ -87,6 +87,29 @@ func (_m *MockClient) CreateOidcUser(ctx context.Context, email string) error {
 	return r0
 }
 
+// CreateProject provides a mock function with given fields: ctx, name, version, group, tags
+func (_m *MockClient) CreateProject(ctx context.Context, name string, version string, group string, tags []string) (*client.Project, error) {
+	ret := _m.Called(ctx, name, version, group, tags)
+
+	var r0 *client.Project
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, []string) *client.Project); ok {
+		r0 = rf(ctx, name, version, group, tags)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*client.Project)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, string, []string) error); ok {
+		r1 = rf(ctx, name, version, group, tags)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CreateTeam provides a mock function with given fields: ctx, teamName, permissions
 func (_m *MockClient) CreateTeam(ctx context.Context, teamName string, permissions []client.Permission) (*client.Team, error) {
 	ret := _m.Called(ctx, teamName, permissions)
@@ -261,6 +284,52 @@ func (_m *MockClient) GetProject(ctx context.Context, name string, version strin
 	return r0, r1
 }
 
+// GetProjects provides a mock function with given fields: ctx
+func (_m *MockClient) GetProjects(ctx context.Context) ([]*client.Project, error) {
+	ret := _m.Called(ctx)
+
+	var r0 []*client.Project
+	if rf, ok := ret.Get(0).(func(context.Context) []*client.Project); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*client.Project)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetProjectsByTag provides a mock function with given fields: ctx, tag
+func (_m *MockClient) GetProjectsByTag(ctx context.Context, tag string) ([]*client.Project, error) {
+	ret := _m.Called(ctx, tag)
+
+	var r0 []*client.Project
+	if rf, ok := ret.Get(0).(func(context.Context, string) []*client.Project); ok {
+		r0 = rf(ctx, tag)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*client.Project)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, tag)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetTeam provides a mock function with given fields: ctx, team
 func (_m *MockClient) GetTeam(ctx context.Context, team string) (*client.Team, error) {
 	ret := _m.Called(ctx, team)
@@ -330,6 +399,20 @@ func (_m *MockClient) Headers(ctx context.Context) (http.Header, error) {
 	return r0, r1
 }
 
+// PortfolioRefresh provides a mock function with given fields: ctx
+func (_m *MockClient) PortfolioRefresh(ctx context.Context) error {
+	ret := _m.Called(ctx)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = rf(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // RemoveAdminUsers provides a mock function with given fields: ctx, users
 func (_m *MockClient) RemoveAdminUsers(ctx context.Context, users *client.AdminUsers) error {
 	ret := _m.Called(ctx, users)
@@ -370,6 +453,27 @@ func (_m *MockClient) UploadProject(ctx context.Context, name string, version st
 	}
 
 	return r0
+}
+
+// Version provides a mock function with given fields: ctx
+func (_m *MockClient) Version(ctx context.Context) (string, error) {
+	ret := _m.Called(ctx)
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func(context.Context) string); ok {
+		r0 = rf(ctx)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 type mockConstructorTestingTNewMockClient interface {

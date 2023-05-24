@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/nais/console/pkg/metrics"
 	"github.com/sirupsen/logrus"
@@ -12,6 +13,7 @@ import (
 	"github.com/nais/console/pkg/auditlogger"
 	"github.com/nais/console/pkg/config"
 	"github.com/nais/console/pkg/db"
+	dtrack "github.com/nais/console/pkg/dependencytrack"
 	"github.com/nais/console/pkg/logger"
 	"github.com/nais/console/pkg/reconcilers"
 	"github.com/nais/console/pkg/slug"
@@ -39,23 +41,18 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, clients map[
 	}, nil
 }
 
-func NewFromConfig(_ context.Context, database db.Database, cfg *config.Config, audit auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
+func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, audit auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
 	clients := make(map[string]dependencytrack.Client, 0)
 	if len(cfg.DependencyTrack.Instances) == 0 {
 		return nil, fmt.Errorf("no dependencytrack instances configured")
 	}
 
 	for _, instance := range cfg.DependencyTrack.Instances {
-		client := dependencytrack.New(
-			instance.Endpoint,
-			instance.Username,
-			instance.Password,
-			dependencytrack.WithLogger(log.WithFields(logrus.Fields{
-				"instance": instance.Endpoint,
-			})),
-			dependencytrack.WithResponseCallback(incExternalHttpCalls),
-		)
-		clients[instance.Endpoint] = client
+		c := createClient(ctx, instance, log)
+		if c != nil {
+			clients[instance.Endpoint] = *c
+			log.Infof("dependencytrack instance %q added to reconciler", instance.Endpoint)
+		}
 	}
 	return New(database, audit, clients, log)
 }
@@ -120,6 +117,25 @@ func (r *dependencytrackReconciler) Delete(ctx context.Context, teamSlug slug.Sl
 		}
 	}
 	return r.database.RemoveReconcilerStateForTeam(ctx, r.Name(), teamSlug)
+}
+
+func createClient(ctx context.Context, instance dtrack.DependencyTrackInstance, log logger.Logger) *dependencytrack.Client {
+	client := dependencytrack.New(
+		instance.Endpoint,
+		instance.Username,
+		instance.Password,
+		dependencytrack.WithLogger(log.WithFields(logrus.Fields{
+			"instance": instance.Endpoint,
+		})),
+		dependencytrack.WithResponseCallback(incExternalHttpCalls),
+	)
+	pingCtx, cancel := context.WithTimeout(ctx, time.Second*1)
+	defer cancel()
+	if _, err := client.Version(pingCtx); err != nil {
+		log.Warnf("dependencytrack instance %q is not available, skipping", instance.Endpoint)
+		return nil
+	}
+	return &client
 }
 
 func (r *dependencytrackReconciler) syncTeamAndUsers(ctx context.Context, input reconcilers.Input, client dependencytrack.Client, instanceState *reconcilers.DependencyTrackInstanceState) (string, error) {
