@@ -81,9 +81,7 @@ CREATE TYPE audit_logs_target_type AS ENUM (
 CREATE TYPE reconciler_config_key AS ENUM (
     'azure:client_id',
     'azure:client_secret',
-    'azure:tenant_id',
-    'github:app_installation_id',
-    'github:org'
+    'azure:tenant_id'
 );
 
 CREATE TYPE reconciler_name AS ENUM (
@@ -178,6 +176,13 @@ CREATE TABLE reconciler_states (
     state jsonb DEFAULT '{}'::jsonb NOT NULL,
     team_slug text NOT NULL,
     PRIMARY KEY (reconciler, team_slug)
+);
+
+CREATE TABLE reconciler_opt_outs (
+    team_slug text NOT NULL,
+    user_id UUID NOT NULL,
+    reconciler_name reconciler_name NOT NULL,
+    PRIMARY KEY(team_slug, user_id, reconciler_name)
 );
 
 CREATE TABLE reconcilers (
@@ -290,6 +295,11 @@ ALTER TABLE reconciler_states
 ADD FOREIGN KEY (reconciler) REFERENCES reconcilers(name) ON DELETE CASCADE,
 ADD FOREIGN KEY (team_slug) REFERENCES teams(slug) ON DELETE CASCADE;
 
+ALTER TABLE reconciler_opt_outs
+ADD FOREIGN KEY (team_slug) REFERENCES teams(slug) ON DELETE CASCADE,
+ADD FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+ADD FOREIGN KEY (reconciler_name) REFERENCES reconcilers(name) ON DELETE CASCADE;
+
 ALTER TABLE service_account_roles
 ADD FOREIGN KEY (service_account_id) REFERENCES service_accounts(id) ON DELETE CASCADE,
 ADD FOREIGN KEY (target_service_account_id) REFERENCES service_accounts(id) ON DELETE CASCADE,
@@ -326,8 +336,6 @@ INSERT INTO reconciler_config
 (reconciler, key, display_name, description, secret) VALUES
 ('azure:group', 'azure:client_secret', 'Client secret', 'The client secret of the application registration.', true),
 ('azure:group', 'azure:client_id', 'Client ID', 'The client ID of the application registration that Console will use when communicating with the Azure AD APIs. The application must have the following API permissions: Group.Create, GroupMember.ReadWrite.All.', false),
-('azure:group', 'azure:tenant_id', 'Tenant ID', 'The ID of the Azure AD tenant.', false),
-('github:team', 'github:org', 'Organization', 'The slug of the GitHub organization.', false),
-('github:team', 'github:app_installation_id', 'App installation ID', 'The installation ID for the GitHub application when installed on the org.', false);
+('azure:group', 'azure:tenant_id', 'Tenant ID', 'The ID of the Azure AD tenant.', false);
 
 COMMIT;
