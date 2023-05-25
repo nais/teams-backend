@@ -30,9 +30,9 @@ jobs:
       - uses: nais/platform-build-push-sign@d5680102b2e7006e7b4184acc9604aa321176107 # ratchet:nais/platform-build-push-sign@main
         id: build_push_sign
         with:
-          name: console
+          name: teams-backend
           dockerfile: Dockerfile
-          google_service_account: gh-console
+          google_service_account: gh-teams-backend
           push: ${{ github.actor != 'dependabot[bot]' }}
           workload_identity_provider: ${{ secrets.NAIS_IO_WORKLOAD_IDENTITY_PROVIDER }}
   rollout:
@@ -45,4 +45,4 @@ jobs:
       - uses: nais/fasit-deploy@b2c0b6d049b53bef41b321eec406fe66938576fd # ratchet:nais/fasit-deploy@main
         with:
           json: '{"backend": {"image": {"tag": "${{ needs.build_and_push.outputs.version }}"}}}'
-          feature_name: console
+          feature_name: teams
