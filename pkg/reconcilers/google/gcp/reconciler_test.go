@@ -28,34 +28,36 @@ import (
 	"google.golang.org/api/serviceusage/v1"
 )
 
-func TestReconcile(t *testing.T) {
-	log, err := logger.GetLogger("text", "info")
-	assert.NoError(t, err)
-	const (
-		env              = "prod"
-		teamFolderID     = 123
-		clusterProjectID = "some-project-123"
-		tenantName       = "example"
-		tenantDomain     = "example.com"
-		cnrmRoleName     = "organizations/123/roles/name"
-		billingAccount   = "billingAccounts/123"
-		numberOfAPIs     = 12
-	)
+const (
+	env              = "prod"
+	teamFolderID     = 123
+	clusterProjectID = "some-project-123"
+	tenantName       = "example"
+	tenantDomain     = "example.com"
+	cnrmRoleName     = "organizations/123/roles/name"
+	billingAccount   = "billingAccounts/123"
+	numberOfAPIs     = 12
+)
 
-	clusters := gcp.Clusters{
+var (
+	clusters = gcp.Clusters{
 		env: {
 			TeamsFolderID: teamFolderID,
 			ProjectID:     clusterProjectID,
 		},
 	}
-
-	teamSlug := slug.Slug("slug")
-	correlationID := uuid.New()
-	team := db.Team{Team: &sqlc.Team{Slug: teamSlug}}
-	input := reconcilers.Input{
+	teamSlug      = slug.Slug("slug")
+	correlationID = uuid.New()
+	team          = db.Team{Team: &sqlc.Team{Slug: teamSlug}}
+	input         = reconcilers.Input{
 		CorrelationID: correlationID,
 		Team:          team,
 	}
+)
+
+func TestReconcile(t *testing.T) {
+	log, err := logger.GetLogger("text", "info")
+	assert.NoError(t, err)
 
 	t.Run("fail early when unable to load reconciler state", func(t *testing.T) {
 		ctx := context.Background()
@@ -441,4 +443,54 @@ func TestGetProjectDisplayName(t *testing.T) {
 	for _, tt := range tests {
 		assert.Equal(t, tt.displayName, google_gcp_reconciler.GetProjectDisplayName(slug.Slug(tt.slug), tt.environment))
 	}
+}
+
+func TestDelete(t *testing.T) {
+	ctx := context.Background()
+
+	log, err := logger.GetLogger("text", "info")
+	assert.NoError(t, err)
+	gcpServices := &google_gcp_reconciler.GcpServices{}
+
+	t.Run("fail early when unable to load reconciler state", func(t *testing.T) {
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		database := db.NewMockDatabase(t)
+
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGoogleGcpProject).
+			Return(auditLogger).
+			Once()
+		database.
+			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, teamSlug, mock.Anything).
+			Return(fmt.Errorf("some error")).
+			Once()
+
+		err = google_gcp_reconciler.
+			New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log, nil).
+			Delete(ctx, teamSlug, correlationID)
+		assert.ErrorContains(t, err, "load reconciler state")
+	})
+
+	t.Run("remove state when it does not refer to any projects", func(t *testing.T) {
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		database := db.NewMockDatabase(t)
+
+		auditLogger.
+			On("WithSystemName", sqlc.SystemNameGoogleGcpProject).
+			Return(auditLogger).
+			Once()
+		database.
+			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, teamSlug, mock.Anything).
+			Return(nil).
+			Once()
+		database.
+			On("RemoveReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, teamSlug).
+			Return(nil).
+			Once()
+
+		err = google_gcp_reconciler.
+			New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log, nil).
+			Delete(ctx, teamSlug, correlationID)
+		assert.NoError(t, err)
+	})
 }

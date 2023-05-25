@@ -169,10 +169,16 @@ func (r *googleGcpReconciler) Delete(ctx context.Context, teamSlug slug.Slug, co
 			continue
 		}
 
+		auditLogMessage := fmt.Sprintf("Delete GCP project: %q", teamProject.ProjectID)
 		_, err = r.gcpServices.CloudResourceManagerProjectsService.Delete("projects/" + teamProject.ProjectID).Context(ctx).Do()
 		if err != nil {
-			errors = append(errors, err)
-			continue
+			googleError, ok := err.(*googleapi.Error)
+			if !ok || googleError.Code != 404 {
+				errors = append(errors, err)
+				continue
+			}
+
+			auditLogMessage = fmt.Sprintf("GCP project %q no longer exists, removing from state", teamProject.ProjectID)
 		}
 
 		targets := []auditlogger.Target{
@@ -182,7 +188,7 @@ func (r *googleGcpReconciler) Delete(ctx context.Context, teamSlug slug.Slug, co
 			Action:        sqlc.AuditActionGoogleGcpDeleteProject,
 			CorrelationID: correlationID,
 		}
-		r.auditLogger.Logf(ctx, r.database, targets, fields, "Delete GCP project: %q", teamProject.ProjectID)
+		r.auditLogger.Logf(ctx, r.database, targets, fields, auditLogMessage)
 		delete(state.Projects, environment)
 	}
 
