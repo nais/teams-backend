@@ -77,7 +77,12 @@ func GetErrorPresenter(log logger.Logger) graphql.ErrorPresenterFunc {
 			// This won't make it back to the caller if they have cancelled the request on their end
 			err.Message = "Request cancelled"
 		default:
-			log.Errorf("unhandled error: %s", err)
+			identity := "<unknown>"
+			actor := authz.ActorFromContext(ctx)
+			if actor != nil {
+				identity = actor.User.Identity()
+			}
+			log.WithActor(identity).Errorf("unhandled error: %q", err)
 			err.Message = ErrInternal.Error()
 		}
 
