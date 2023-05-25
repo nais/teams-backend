@@ -59,7 +59,6 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 			},
 		}
 		database.On("GetTeamBySlug", mock.Anything, teamSlug).Return(team, nil).Once()
-		database.On("GetTeamMembers", mock.Anything, teamSlug).Return(nil, nil).Once()
 
 		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
 		handler.Schedule(input)
@@ -161,7 +160,22 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 			TeamSlug:      teamSlug,
 		}
 		database.On("GetTeamBySlug", mock.Anything, teamSlug).Return(team, nil).Once()
-		database.On("GetTeamMembers", mock.Anything, teamSlug).Return(nil, nil).Once()
+
+		membersForAzureReconciler := []*db.User{{User: &sqlc.User{ID: uuid.New()}}}
+		membersForGitHubReconciler := []*db.User{{User: &sqlc.User{ID: uuid.New()}}}
+		membersForNaisDeployReconciler := []*db.User{{User: &sqlc.User{ID: uuid.New()}}}
+		database.
+			On("GetTeamMembersForReconciler", mock.Anything, teamSlug, sqlc.ReconcilerNameAzureGroup).
+			Return(membersForAzureReconciler, nil).
+			Once()
+		database.
+			On("GetTeamMembersForReconciler", mock.Anything, teamSlug, sqlc.ReconcilerNameGithubTeam).
+			Return(membersForGitHubReconciler, nil).
+			Once()
+		database.
+			On("GetTeamMembersForReconciler", mock.Anything, teamSlug, sqlc.ReconcilerNameNaisDeploy).
+			Return(membersForNaisDeployReconciler, nil).
+			Once()
 
 		runOrder := 1
 
@@ -172,7 +186,9 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 				Return(azure_group_reconciler.Name).
 				Once()
 			reconciler.
-				On("Reconcile", mock.Anything, mock.MatchedBy(func(in reconcilers.Input) bool { return in.Team.Slug == teamSlug })).
+				On("Reconcile", mock.Anything, mock.MatchedBy(func(in reconcilers.Input) bool {
+					return in.Team.Slug == teamSlug && in.TeamMembers[0].ID == membersForAzureReconciler[0].ID
+				})).
 				Run(func(args mock.Arguments) {
 					assert.Equal(t, 1, runOrder)
 					runOrder++
@@ -188,7 +204,9 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 				Return(github_team_reconciler.Name).
 				Once()
 			reconciler.
-				On("Reconcile", mock.Anything, mock.MatchedBy(func(in reconcilers.Input) bool { return in.Team.Slug == teamSlug })).
+				On("Reconcile", mock.Anything, mock.MatchedBy(func(in reconcilers.Input) bool {
+					return in.Team.Slug == teamSlug && in.TeamMembers[0].ID == membersForGitHubReconciler[0].ID
+				})).
 				Run(func(args mock.Arguments) {
 					assert.Equal(t, 2, runOrder)
 					runOrder++
@@ -204,7 +222,9 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 				Return(nais_deploy_reconciler.Name).
 				Once()
 			rec.
-				On("Reconcile", mock.Anything, mock.MatchedBy(func(in reconcilers.Input) bool { return in.Team.Slug == teamSlug })).
+				On("Reconcile", mock.Anything, mock.MatchedBy(func(in reconcilers.Input) bool {
+					return in.Team.Slug == teamSlug && in.TeamMembers[0].ID == membersForNaisDeployReconciler[0].ID
+				})).
 				Run(func(args mock.Arguments) {
 					assert.Equal(t, 3, runOrder)
 				}).
@@ -247,10 +267,6 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 		database.
 			On("GetTeamBySlug", mock.Anything, teamSlug).
 			Return(team, nil).
-			Twice()
-		database.
-			On("GetTeamMembers", mock.Anything, teamSlug).
-			Return(nil, nil).
 			Twice()
 		database.
 			On("SetLastSuccessfulSyncForTeam", mock.Anything, teamSlug).

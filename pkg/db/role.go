@@ -101,21 +101,16 @@ func (d *database) GetAllUserRoles(ctx context.Context) ([]*UserRole, error) {
 	return roles, nil
 }
 
-func (d *database) roleFromRoleBinding(_ context.Context, roleName sqlc.RoleName, targetServiceAccountID uuid.NullUUID, targetTeamSlug *slug.Slug) (*Role, error) {
+func (d *database) roleFromRoleBinding(_ context.Context, roleName sqlc.RoleName, targetServiceAccountID *uuid.UUID, targetTeamSlug *slug.Slug) (*Role, error) {
 	authorizations, err := roles.Authorizations(roleName)
 	if err != nil {
 		return nil, err
 	}
 
-	var saID *uuid.UUID
-	if targetServiceAccountID.Valid {
-		saID = &targetServiceAccountID.UUID
-	}
-
 	return &Role{
 		Authorizations:         authorizations,
 		RoleName:               roleName,
-		TargetServiceAccountID: saID,
+		TargetServiceAccountID: targetServiceAccountID,
 		TargetTeamSlug:         targetTeamSlug,
 	}, nil
 }

@@ -3,6 +3,8 @@ package db
 import (
 	"context"
 
+	"github.com/google/uuid"
+	"github.com/nais/console/pkg/slug"
 	"github.com/nais/console/pkg/sqlc"
 )
 
@@ -99,6 +101,22 @@ func (d *database) DangerousGetReconcilerConfigValues(ctx context.Context, recon
 	}
 
 	return &ReconcilerConfigValues{values: values}, nil
+}
+
+func (d *database) AddReconcilerOptOut(ctx context.Context, userID *uuid.UUID, teamSlug *slug.Slug, reconcilerName sqlc.ReconcilerName) error {
+	return d.querier.AddReconcilerOptOut(ctx, sqlc.AddReconcilerOptOutParams{
+		TeamSlug:       *teamSlug,
+		UserID:         *userID,
+		ReconcilerName: reconcilerName,
+	})
+}
+
+func (d *database) RemoveReconcilerOptOut(ctx context.Context, userID *uuid.UUID, teamSlug *slug.Slug, reconcilerName sqlc.ReconcilerName) error {
+	return d.querier.RemoveReconcilerOptOut(ctx, sqlc.RemoveReconcilerOptOutParams{
+		TeamSlug:       *teamSlug,
+		UserID:         *userID,
+		ReconcilerName: reconcilerName,
+	})
 }
 
 func wrapReconcilers(rows []*sqlc.Reconciler) []*Reconciler {

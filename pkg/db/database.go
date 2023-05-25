@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -53,14 +52,6 @@ func New(ctx context.Context, dbUrl string, log logger.Logger) (Database, error)
 	}, nil
 }
 
-func NullStringToStringP(ns sql.NullString) *string {
-	var strP *string
-	if ns.String != "" {
-		strP = &ns.String
-	}
-	return strP
-}
-
 func runMigrations(connString string) error {
 	d, err := iofs.New(schemas.FS, ".")
 	if err != nil {
@@ -86,14 +77,4 @@ func runMigrations(connString string) error {
 	metrics.SetSchemaVersion(version, dirty)
 
 	return nil
-}
-
-func nullString(s *string) sql.NullString {
-	if s == nil {
-		return sql.NullString{}
-	}
-	return sql.NullString{
-		String: *s,
-		Valid:  true,
-	}
 }

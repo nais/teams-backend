@@ -37,7 +37,7 @@ func (d *database) GetAuditLogsForReconciler(ctx context.Context, reconcilerName
 func (d *database) CreateAuditLogEntry(ctx context.Context, correlationID uuid.UUID, systemName sqlc.SystemName, actor *string, targetType sqlc.AuditLogsTargetType, targetIdentifier string, action sqlc.AuditAction, message string) error {
 	return d.querier.CreateAuditLog(ctx, sqlc.CreateAuditLogParams{
 		CorrelationID:    correlationID,
-		Actor:            nullString(actor),
+		Actor:            actor,
 		SystemName:       systemName,
 		TargetType:       targetType,
 		TargetIdentifier: targetIdentifier,

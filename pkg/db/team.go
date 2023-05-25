@@ -18,8 +18,8 @@ func (d *database) RemoveUserFromTeam(ctx context.Context, userID uuid.UUID, tea
 func (d *database) UpdateTeam(ctx context.Context, teamSlug slug.Slug, purpose, slackChannel *string) (*Team, error) {
 	team, err := d.querier.UpdateTeam(ctx, sqlc.UpdateTeamParams{
 		Slug:         teamSlug,
-		Purpose:      nullString(purpose),
-		SlackChannel: nullString(slackChannel),
+		Purpose:      purpose,
+		SlackChannel: slackChannel,
 	})
 	if err != nil {
 		return nil, err
@@ -92,6 +92,35 @@ func (d *database) GetTeamMembers(ctx context.Context, teamSlug slug.Slug) ([]*U
 	return members, nil
 }
 
+func (d *database) GetTeamMember(ctx context.Context, teamSlug slug.Slug, userID uuid.UUID) (*User, error) {
+	user, err := d.querier.GetTeamMember(ctx, sqlc.GetTeamMemberParams{
+		TargetTeamSlug: &teamSlug,
+		ID:             userID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &User{User: user}, nil
+}
+
+func (d *database) GetTeamMembersForReconciler(ctx context.Context, teamSlug slug.Slug, reconcilerName sqlc.ReconcilerName) ([]*User, error) {
+	rows, err := d.querier.GetTeamMembersForReconciler(ctx, sqlc.GetTeamMembersForReconcilerParams{
+		TargetTeamSlug: &teamSlug,
+		ReconcilerName: reconcilerName,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	members := make([]*User, 0)
+	for _, row := range rows {
+		members = append(members, &User{User: row})
+	}
+
+	return members, nil
+}
+
 func (d *database) SetLastSuccessfulSyncForTeam(ctx context.Context, teamSlug slug.Slug) error {
 	return d.querier.SetLastSuccessfulSyncForTeam(ctx, teamSlug)
 }
@@ -150,4 +179,11 @@ func (d *database) ConfirmTeamDeleteKey(ctx context.Context, key uuid.UUID) erro
 
 func (d *database) DeleteTeam(ctx context.Context, teamSlug slug.Slug) error {
 	return d.querier.DeleteTeam(ctx, teamSlug)
+}
+
+func (d *database) GetTeamMemberOptOuts(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug) ([]*sqlc.GetTeamMemberOptOutsRow, error) {
+	return d.querier.GetTeamMemberOptOuts(ctx, sqlc.GetTeamMemberOptOutsParams{
+		UserID:   userID,
+		TeamSlug: teamSlug,
+	})
 }

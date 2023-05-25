@@ -18,6 +18,26 @@ JOIN users ON users.id = user_roles.user_id
 WHERE user_roles.target_team_slug = $1
 ORDER BY users.name ASC;
 
+-- name: GetTeamMember :one
+SELECT users.* FROM user_roles
+JOIN teams ON teams.slug = user_roles.target_team_slug
+JOIN users ON users.id = user_roles.user_id
+WHERE user_roles.target_team_slug = $1 AND users.id = $2
+ORDER BY users.name ASC;
+
+-- name: GetTeamMembersForReconciler :many
+SELECT users.* FROM user_roles
+JOIN teams ON teams.slug = user_roles.target_team_slug
+JOIN users ON users.id = user_roles.user_id
+WHERE
+    user_roles.target_team_slug = $1
+    AND user_roles.user_id NOT IN (
+        SELECT user_id
+        FROM reconciler_opt_outs
+        WHERE team_slug = $1 AND reconciler_name = $2
+    )
+ORDER BY users.name ASC;
+
 -- name: UpdateTeam :one
 UPDATE teams
 SET purpose = COALESCE(sqlc.narg(purpose), purpose),
@@ -65,3 +85,14 @@ WHERE key = $1;
 -- name: DeleteTeam :exec
 DELETE FROM teams
 WHERE slug = $1;
+
+-- name: GetTeamMemberOptOuts :many
+SELECT
+    reconcilers.name,
+    NOT EXISTS(
+        SELECT reconciler_name FROM reconciler_opt_outs
+        WHERE user_id = $1 AND team_slug = $2 AND reconciler_name = reconcilers.name
+    ) AS enabled
+FROM reconcilers
+WHERE reconcilers.enabled = true
+ORDER BY reconcilers.name ASC;

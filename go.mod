@@ -7,7 +7,7 @@ require (
 	cloud.google.com/go/iam v0.13.0
 	cloud.google.com/go/longrunning v0.4.1
 	cloud.google.com/go/pubsub v1.30.0
-	github.com/99designs/gqlgen v0.17.16
+	github.com/99designs/gqlgen v0.17.31
 	github.com/coreos/go-oidc/v3 v3.1.0
 	github.com/go-chi/chi v1.5.4
 	github.com/go-chi/cors v1.2.0
@@ -19,17 +19,17 @@ require (
 	github.com/jackc/pgtype v1.14.0
 	github.com/jackc/pgx/v4 v4.18.1
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/kyleconroy/sqlc v1.17.2
+	github.com/kyleconroy/sqlc v1.18.0
 	github.com/nais/dependencytrack v0.0.0-20230524071500-e4d7c9c6ba79
 	github.com/prometheus/client_golang v1.13.0
 	github.com/shurcooL/githubv4 v0.0.0-20221203213311-70889c5dac07
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.2
-	github.com/vektah/gqlparser/v2 v2.5.0
+	github.com/vektah/gqlparser/v2 v2.5.1
 	github.com/vektra/mockery/v2 v2.14.0
 	golang.org/x/oauth2 v0.7.0
 	golang.org/x/text v0.9.0
-	golang.org/x/vuln v0.0.0-20230419012003-9268f8338db8
+	golang.org/x/vuln v0.1.0
 	google.golang.org/api v0.121.0
 	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 	google.golang.org/grpc v1.54.0
@@ -44,9 +44,9 @@ require (
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/agnivade/levenshtein v1.1.1 // indirect
-	github.com/antlr/antlr4/runtime/Go/antlr v0.0.0-20220626175859-9abda183db8e // indirect
+	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230321174746-8dcc6526cfb1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/bytecodealliance/wasmtime-go/v5 v5.0.0 // indirect
+	github.com/bytecodealliance/wasmtime-go/v8 v8.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/cubicdaiya/gonp v1.0.4 // indirect
@@ -65,9 +65,9 @@ require (
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
-	github.com/hashicorp/golang-lru v0.5.4 // indirect
+	github.com/hashicorp/golang-lru/v2 v2.0.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
-	github.com/inconshreveable/mousetrap v1.0.1 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
@@ -81,17 +81,17 @@ require (
 	github.com/lestrrat-go/iter v1.0.2 // indirect
 	github.com/lestrrat-go/jwx/v2 v2.0.9 // indirect
 	github.com/lestrrat-go/option v1.0.1 // indirect
-	github.com/lib/pq v1.10.7 // indirect
+	github.com/lib/pq v1.10.9 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
-	github.com/mattn/go-colorable v0.1.12 // indirect
-	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc2 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.2 // indirect
-	github.com/pganalyze/pg_query_go/v2 v2.2.0 // indirect
+	github.com/pganalyze/pg_query_go/v4 v4.2.0 // indirect
 	github.com/pingcap/errors v0.11.5-0.20210425183316-da1aaba5fb63 // indirect
 	github.com/pingcap/log v0.0.0-20210906054005-afc726e70354 // indirect
 	github.com/pingcap/tidb/parser v0.0.0-20220725134311-c80026e61f00 // indirect
@@ -101,18 +101,19 @@ require (
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20200410134404-eec4a21b6bb0 // indirect
+	github.com/riza-io/grpc-go v0.1.0 // indirect
 	github.com/rs/zerolog v1.27.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shurcooL/graphql v0.0.0-20220606043923-3cf50f8a0a29 // indirect
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
-	github.com/spf13/cobra v1.6.1 // indirect
+	github.com/spf13/cobra v1.7.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.12.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/subosito/gotenv v1.4.0 // indirect
-	github.com/urfave/cli/v2 v2.14.1 // indirect
+	github.com/urfave/cli/v2 v2.25.3 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
@@ -120,7 +121,7 @@ require (
 	go.uber.org/zap v1.19.1 // indirect
 	golang.org/x/crypto v0.8.0 // indirect
 	golang.org/x/exp v0.0.0-20230206171751-46f607a40771 // indirect
-	golang.org/x/exp/typeparams v0.0.0-20230321023759-10a507213a29 // indirect
+	golang.org/x/exp/typeparams v0.0.0-20230515195305-f3d0a9c9a5cc // indirect
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/sync v0.2.0 // indirect

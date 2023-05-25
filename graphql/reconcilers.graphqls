@@ -33,11 +33,35 @@ extend type Mutation {
         "The name of the reconciler to reset."
         name: ReconcilerName!
     ): Reconciler! @admin
+
+    "Add opt-out of a reconciler for a team member. Only reconcilers that uses team memberships can be opted out from."
+    addReconcilerOptOut(
+        "The team slug."
+        teamSlug: Slug!
+
+        "The user ID of the team member."
+        userId: UUID!
+
+        "The name of the reconciler to opt the team member out of."
+        reconciler: ReconcilerName!
+    ): TeamMember!
+
+    "Remove opt-out of a reconciler for a team member."
+    removeReconcilerOptOut(
+        "The team slug."
+        teamSlug: Slug!
+
+        "The user ID of the team member."
+        userId: UUID!
+
+        "The name of the reconciler to clear the opt-out from."
+        reconciler: ReconcilerName!
+    ): TeamMember!
 }
 
 extend type Query {
     "Get a collection of reconcilers."
-    reconcilers: [Reconciler!]! @admin
+    reconcilers: [Reconciler!]! @auth
 }
 
 "Reconciler type."
@@ -54,17 +78,20 @@ type Reconciler {
     "Whether or not the reconciler is available for teams in Console."
     enabled: Boolean!
 
+    "Whether or not the reconciler uses team memberships when syncing."
+    usesTeamMemberships: Boolean!
+
     "Reconciler configuration keys and descriptions."
-    config: [ReconcilerConfig!]!
+    config: [ReconcilerConfig!]! @admin
 
     "Whether or not the reconciler is fully configured and ready to be enabled."
-    configured: Boolean!
+    configured: Boolean! @admin
 
     "The run order of the reconciler."
     runOrder: Int!
 
     "Audit logs for this reconciler."
-    auditLogs: [AuditLog!]!
+    auditLogs: [AuditLog!]! @admin
 }
 
 "Reconciler configuration type."

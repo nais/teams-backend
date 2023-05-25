@@ -2,7 +2,6 @@ package graph_test
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"testing"
 	"time"
@@ -302,7 +301,7 @@ func TestMutationResolver_RequestTeamDeletion(t *testing.T) {
 				TeamSlug:    teamSlug,
 				CreatedAt:   time.Time{},
 				CreatedBy:   uuid.UUID{},
-				ConfirmedAt: sql.NullTime{},
+				ConfirmedAt: nil,
 			},
 		}
 
