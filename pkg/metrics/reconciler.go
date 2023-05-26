@@ -11,7 +11,7 @@ import (
 
 const (
 	namespace = "nais"
-	subsystem = "console"
+	subsystem = "teams_backend"
 )
 
 type ReconcilerState string

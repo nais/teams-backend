@@ -69,7 +69,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 	defer cancel()
 
 	bt, _ := version.BuildTime()
-	log.Infof("console.nais.io version %s built on %s", version.Version(), bt)
+	log.Infof("teams-backend version %s built on %s", version.Version(), bt)
 
 	database, err := db.New(ctx, cfg.DatabaseURL, log)
 	if err != nil {

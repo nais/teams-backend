@@ -15,7 +15,7 @@ import (
 
 const (
 	ManagedByLabelName  = "managed-by"
-	ManagedByLabelValue = "console"
+	ManagedByLabelValue = "teams-backend"
 
 	// TeamNamePrefix Prefix that can be used for team-like objects in external systems
 	TeamNamePrefix              = "nais-team-"
