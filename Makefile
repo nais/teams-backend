@@ -3,15 +3,15 @@ DATE = $(shell date "+%Y-%m-%d")
 LAST_COMMIT = $(shell git rev-parse --short HEAD)
 LDFLAGS := -X github.com/nais/console/pkg/version.Revision=$(LAST_COMMIT) -X github.com/nais/console/pkg/version.Date=$(DATE) -X github.com/nais/console/pkg/version.BuildUnixTime=$(BUILDTIME)
 
-.PHONY: static console test generate
+.PHONY: static teams-backend test generate
 
-all: generate console
+all: generate teams-backend
 
-console:
-	go build -o bin/console -ldflags "-s $(LDFLAGS)" cmd/console/*.go
+teams-backend:
+	go build -o bin/teams-backend -ldflags "-s $(LDFLAGS)" cmd/teams-backend/*.go
 
 local:
-	go run ./cmd/console/main.go
+	go run ./cmd/teams-backend/main.go
 
 test:
 	go test ./...
@@ -50,13 +50,13 @@ generate-mocks:
 	go run mvdan.cc/gofumpt -w ./pkg/graph/
 
 static:
-	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/console -ldflags "-s $(LDFLAGS)" cmd/console/main.go
+	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/teams-backend -ldflags "-s $(LDFLAGS)" cmd/teams-backend/main.go
 
 docker:
-	docker build -t ghcr.io/nais/console:latest .
+	docker build -t ghcr.io/nais/teams-backend:latest .
 
 rollback:
 	echo "TODO: command that git checkouts code that works, leave migrations at HEAD, specify migration version i pkg/db/database.Migrate()"
 
 seed:
-	go run cmd/database_seeder/main.go -users 1000 -teams 100 -owners 2 -members 10
+	go run cmd/database-seeder/main.go -users 1000 -teams 100 -owners 2 -members 10

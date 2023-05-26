@@ -10,5 +10,5 @@ RUN make check
 RUN make static
 
 FROM cgr.dev/chainguard/static
-COPY --from=builder /src/bin/console /app/console
-CMD ["/app/console"]
+COPY --from=builder /src/bin/teams-backend /app/teams-backend
+CMD ["/app/teams-backend"]
