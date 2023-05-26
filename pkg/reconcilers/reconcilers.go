@@ -2,8 +2,6 @@ package reconcilers
 
 import (
 	"context"
-	"errors"
-
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/config"
@@ -28,9 +26,6 @@ type Reconciler interface {
 	Delete(ctx context.Context, teamSlug slug.Slug, correlationID uuid.UUID) error
 	Name() sqlc.ReconcilerName
 }
-
-// ErrReconcilerNotEnabled Custom error to use when a reconciler is not enabled via configuration
-var ErrReconcilerNotEnabled = errors.New("reconciler not enabled")
 
 // ReconcilerFactory The constructor function for all reconcilers
 type ReconcilerFactory func(context.Context, db.Database, *config.Config, auditlogger.AuditLogger, logger.Logger) (Reconciler, error)
