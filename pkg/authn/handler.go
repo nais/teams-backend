@@ -209,5 +209,5 @@ func (h *handler) DeleteCookie(w http.ResponseWriter, name string) {
 }
 
 func shouldUseSecureCookies(frontendURL url.URL) bool {
-	return frontendURL.Host != "console.local.nais.io"
+	return frontendURL.Host != "teams.local.nais.io"
 }
