@@ -1437,36 +1437,36 @@ directive @auth on FIELD_DEFINITION
 "Require an authenticated user with the admin role for all requests with this directive."
 directive @admin on FIELD_DEFINITION`, BuiltIn: false},
 	{Name: "../../../graphql/reconcilerStates.graphqls", Input: `extend type Mutation {
-    "Set the GitHub team slug for a Console team."
+    "Set the GitHub team slug for a NAIS team."
     setGitHubTeamSlug(
-        "The slug for the Console team."
+        "The slug for the NAIS team."
         teamSlug: Slug!
 
         "The slug for the connected GitHub team."
         gitHubTeamSlug: Slug!
     ): Team! @admin
 
-    "Set the Google Workspace group email for a Console team."
+    "Set the Google Workspace group email for a NAIS team."
     setGoogleWorkspaceGroupEmail(
-        "The slug for the Console team."
+        "The slug for the NAIS team."
         teamSlug: Slug!
 
         "The email for the connected Google workspace group."
         googleWorkspaceGroupEmail: String!
     ): Team! @admin
 
-    "Set the Azure AD group ID for a Console team."
+    "Set the Azure AD group ID for a NAIS team."
     setAzureADGroupId(
-        "The slug for the Console team."
+        "The slug for the NAIS team."
         teamSlug: Slug!
 
         "The UUID for the connected Azure AD group."
         azureADGroupId: UUID!
     ): Team! @admin
 
-    "Set the GCP project ID for a Console team in a specific environment."
+    "Set the GCP project ID for a NAIS team in a specific environment."
     setGcpProjectId(
-        "The slug for the Console team."
+        "The slug for the NAIS team."
         teamSlug: Slug!
 
         "The environment for the GCP project."
@@ -1476,9 +1476,9 @@ directive @admin on FIELD_DEFINITION`, BuiltIn: false},
         gcpProjectId: String!
     ): Team! @admin
 
-    "Set the NAIS namespace for a Console team in a specific environment."
+    "Set the NAIS namespace for a NAIS team in a specific environment."
     setNaisNamespace(
-        "The slug for the Console team."
+        "The slug for the NAIS team."
         teamSlug: Slug!
 
         "The environment for the namespace."
@@ -1566,7 +1566,7 @@ type Reconciler {
     "Description of what the reconciler is responsible for."
     description: String!
 
-    "Whether or not the reconciler is available for teams in Console."
+    "Whether or not the reconciler is enabled."
     enabled: Boolean!
 
     "Whether or not the reconciler uses team memberships when syncing."
@@ -1615,7 +1615,7 @@ input ReconcilerConfigInput {
     value: String!
 }`, BuiltIn: false},
 	{Name: "../../../graphql/roles.graphqls", Input: `extend type Query {
-    "List all Console roles."
+    "List all roles."
     roles: [RoleName!]!
 }
 
@@ -1676,7 +1676,7 @@ scalar ReconcilerName
 
 "String value representing a system name."
 scalar SystemName`, BuiltIn: false},
-	{Name: "../../../graphql/schema.graphqls", Input: `"The query root of the Console GraphQL interface."
+	{Name: "../../../graphql/schema.graphqls", Input: `"The query root for the teams-backend GraphQL API."
 type Query
 
 "The root query for implementing GraphQL mutations."
@@ -1787,7 +1787,7 @@ extend type Mutation {
     Manually synchronize all teams
 
     This action will trigger a full synchronization of all teams against the configured third party systems. The action
-    is asynchronous. The operation can take a while, depending on the amount of teams currently in Console.
+    is asynchronous. The operation can take a while, depending on the amount of teams currently managed.
     """
     synchronizeAllTeams: TeamSync! @auth
 
@@ -1873,7 +1873,7 @@ extend type Mutation {
     Confirm a team deletion
 
     This will start the actual team deletion process, which will be done in an asynchronous manner. All external
-    entities controlled by Console will also be deleted.
+    entities controlled by NAIS will also be deleted.
 
     WARNING: There is no going back after starting this process.
 

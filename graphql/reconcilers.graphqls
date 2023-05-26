@@ -75,7 +75,7 @@ type Reconciler {
     "Description of what the reconciler is responsible for."
     description: String!
 
-    "Whether or not the reconciler is available for teams in Console."
+    "Whether or not the reconciler is enabled."
     enabled: Boolean!
 
     "Whether or not the reconciler uses team memberships when syncing."

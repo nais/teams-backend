@@ -93,7 +93,7 @@ extend type Mutation {
     Manually synchronize all teams
 
     This action will trigger a full synchronization of all teams against the configured third party systems. The action
-    is asynchronous. The operation can take a while, depending on the amount of teams currently in Console.
+    is asynchronous. The operation can take a while, depending on the amount of teams currently managed.
     """
     synchronizeAllTeams: TeamSync! @auth
 
@@ -179,7 +179,7 @@ extend type Mutation {
     Confirm a team deletion
 
     This will start the actual team deletion process, which will be done in an asynchronous manner. All external
-    entities controlled by Console will also be deleted.
+    entities controlled by NAIS will also be deleted.
 
     WARNING: There is no going back after starting this process.
 

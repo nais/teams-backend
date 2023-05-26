@@ -1,5 +1,5 @@
 extend type Query {
-    "List all Console roles."
+    "List all roles."
     roles: [RoleName!]!
 }
 

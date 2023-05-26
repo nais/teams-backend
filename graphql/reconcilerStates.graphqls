@@ -1,34 +1,34 @@
 extend type Mutation {
-    "Set the GitHub team slug for a Console team."
+    "Set the GitHub team slug for a NAIS team."
     setGitHubTeamSlug(
-        "The slug for the Console team."
+        "The slug for the NAIS team."
         teamSlug: Slug!
 
         "The slug for the connected GitHub team."
         gitHubTeamSlug: Slug!
     ): Team! @admin
 
-    "Set the Google Workspace group email for a Console team."
+    "Set the Google Workspace group email for a NAIS team."
     setGoogleWorkspaceGroupEmail(
-        "The slug for the Console team."
+        "The slug for the NAIS team."
         teamSlug: Slug!
 
         "The email for the connected Google workspace group."
         googleWorkspaceGroupEmail: String!
     ): Team! @admin
 
-    "Set the Azure AD group ID for a Console team."
+    "Set the Azure AD group ID for a NAIS team."
     setAzureADGroupId(
-        "The slug for the Console team."
+        "The slug for the NAIS team."
         teamSlug: Slug!
 
         "The UUID for the connected Azure AD group."
         azureADGroupId: UUID!
     ): Team! @admin
 
-    "Set the GCP project ID for a Console team in a specific environment."
+    "Set the GCP project ID for a NAIS team in a specific environment."
     setGcpProjectId(
-        "The slug for the Console team."
+        "The slug for the NAIS team."
         teamSlug: Slug!
 
         "The environment for the GCP project."
@@ -38,9 +38,9 @@ extend type Mutation {
         gcpProjectId: String!
     ): Team! @admin
 
-    "Set the NAIS namespace for a Console team in a specific environment."
+    "Set the NAIS namespace for a NAIS team in a specific environment."
     setNaisNamespace(
-        "The slug for the Console team."
+        "The slug for the NAIS team."
         teamSlug: Slug!
 
         "The environment for the namespace."
