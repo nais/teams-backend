@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/roles"
-	"github.com/nais/console/pkg/slug"
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/db"
+	"github.com/nais/teams-backend/pkg/roles"
+	"github.com/nais/teams-backend/pkg/slug"
+	"github.com/nais/teams-backend/pkg/sqlc"
 )
 
 type ContextKey string

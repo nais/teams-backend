@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/azureclient"
-	"github.com/nais/console/pkg/test"
+	"github.com/nais/teams-backend/pkg/azureclient"
+	"github.com/nais/teams-backend/pkg/test"
 	"github.com/stretchr/testify/assert"
 )
 

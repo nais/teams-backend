@@ -3,7 +3,7 @@ package model_test
 import (
 	"testing"
 
-	"github.com/nais/console/pkg/graph/model"
+	"github.com/nais/teams-backend/pkg/graph/model"
 
 	"github.com/stretchr/testify/assert"
 )

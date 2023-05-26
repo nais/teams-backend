@@ -5,7 +5,7 @@ package authn
 import (
 	http "net/http"
 
-	db "github.com/nais/console/pkg/db"
+	db "github.com/nais/teams-backend/pkg/db"
 
 	mock "github.com/stretchr/testify/mock"
 )

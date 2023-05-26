@@ -3,9 +3,9 @@ package db_test
 import (
 	"testing"
 
-	"github.com/nais/console/pkg/slug"
+	"github.com/nais/teams-backend/pkg/slug"
 
-	"github.com/nais/console/pkg/db"
+	"github.com/nais/teams-backend/pkg/db"
 	"github.com/stretchr/testify/assert"
 )
 

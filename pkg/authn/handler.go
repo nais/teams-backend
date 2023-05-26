@@ -10,9 +10,9 @@ import (
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/logger"
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/db"
+	"github.com/nais/teams-backend/pkg/logger"
+	"github.com/nais/teams-backend/pkg/sqlc"
 	"golang.org/x/oauth2"
 )
 

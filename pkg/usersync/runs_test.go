@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/usersync"
+	"github.com/nais/teams-backend/pkg/usersync"
 	"github.com/stretchr/testify/assert"
 )
 

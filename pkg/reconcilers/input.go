@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/db"
+	"github.com/nais/teams-backend/pkg/sqlc"
 )
 
 // Input Input for reconcilers

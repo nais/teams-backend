@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/db"
+	"github.com/nais/teams-backend/pkg/sqlc"
 )
 
 type ServiceAccount struct {

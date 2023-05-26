@@ -5,7 +5,7 @@ package deployproxy
 import (
 	context "context"
 
-	slug "github.com/nais/console/pkg/slug"
+	slug "github.com/nais/teams-backend/pkg/slug"
 	mock "github.com/stretchr/testify/mock"
 )
 

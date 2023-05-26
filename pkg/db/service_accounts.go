@@ -3,7 +3,7 @@ package db
 import (
 	"context"
 
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/sqlc"
 
 	"github.com/google/uuid"
 )

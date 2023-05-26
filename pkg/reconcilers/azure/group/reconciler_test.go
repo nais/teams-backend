@@ -8,16 +8,16 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/azureclient"
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/logger"
-	"github.com/nais/console/pkg/reconcilers"
-	"github.com/nais/console/pkg/slug"
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/azureclient"
+	"github.com/nais/teams-backend/pkg/db"
+	"github.com/nais/teams-backend/pkg/logger"
+	"github.com/nais/teams-backend/pkg/reconcilers"
+	"github.com/nais/teams-backend/pkg/slug"
+	"github.com/nais/teams-backend/pkg/sqlc"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/nais/console/pkg/auditlogger"
-	azure_group_reconciler "github.com/nais/console/pkg/reconcilers/azure/group"
+	"github.com/nais/teams-backend/pkg/auditlogger"
+	azure_group_reconciler "github.com/nais/teams-backend/pkg/reconcilers/azure/group"
 	"github.com/stretchr/testify/assert"
 )
 

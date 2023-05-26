@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/authn"
-	"github.com/nais/console/pkg/authz"
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/middleware"
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/authn"
+	"github.com/nais/teams-backend/pkg/authz"
+	"github.com/nais/teams-backend/pkg/db"
+	"github.com/nais/teams-backend/pkg/middleware"
+	"github.com/nais/teams-backend/pkg/sqlc"
 	"github.com/stretchr/testify/assert"
 )
 

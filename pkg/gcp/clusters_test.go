@@ -3,7 +3,7 @@ package gcp_test
 import (
 	"testing"
 
-	"github.com/nais/console/pkg/gcp"
+	"github.com/nais/teams-backend/pkg/gcp"
 	"github.com/stretchr/testify/assert"
 )
 

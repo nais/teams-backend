@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/nais/console/pkg/slug"
+	"github.com/nais/teams-backend/pkg/slug"
 )
 
 type ProvisionApiKeyRequest struct {

@@ -7,8 +7,8 @@ package graph
 import (
 	"context"
 
-	"github.com/nais/console/pkg/authz"
-	"github.com/nais/console/pkg/db"
+	"github.com/nais/teams-backend/pkg/authz"
+	"github.com/nais/teams-backend/pkg/db"
 )
 
 // Me is the resolver for the me field.

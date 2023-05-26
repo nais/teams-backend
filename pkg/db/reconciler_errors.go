@@ -3,10 +3,10 @@ package db
 import (
 	"context"
 
-	"github.com/nais/console/pkg/slug"
+	"github.com/nais/teams-backend/pkg/slug"
 
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/sqlc"
 )
 
 func (d *database) SetReconcilerErrorForTeam(ctx context.Context, correlationID uuid.UUID, slug slug.Slug, reconcilerName sqlc.ReconcilerName, err error) error {

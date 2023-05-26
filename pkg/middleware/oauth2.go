@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/authn"
-	"github.com/nais/console/pkg/authz"
-	"github.com/nais/console/pkg/db"
+	"github.com/nais/teams-backend/pkg/authn"
+	"github.com/nais/teams-backend/pkg/authz"
+	"github.com/nais/teams-backend/pkg/db"
 )
 
 // Oauth2Authentication If the request has a session cookie, look up the session from the store, and if it exists, try

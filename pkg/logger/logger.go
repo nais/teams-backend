@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/sqlc"
 	"github.com/sirupsen/logrus"
 )
 

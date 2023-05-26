@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/slug"
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/slug"
+	"github.com/nais/teams-backend/pkg/sqlc"
 )
 
 func (d *database) GetReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) (*Reconciler, error) {

@@ -3,10 +3,10 @@ package directives
 import (
 	"context"
 
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/sqlc"
 
 	"github.com/99designs/gqlgen/graphql"
-	"github.com/nais/console/pkg/authz"
+	"github.com/nais/teams-backend/pkg/authz"
 )
 
 // Admin Require a user with the admin role to allow the request

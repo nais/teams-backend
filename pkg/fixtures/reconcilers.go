@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/db"
+	"github.com/nais/teams-backend/pkg/sqlc"
 	"github.com/sirupsen/logrus"
 )
 

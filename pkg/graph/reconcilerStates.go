@@ -10,14 +10,14 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/auditlogger"
-	"github.com/nais/console/pkg/authz"
-	"github.com/nais/console/pkg/console"
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/graph/apierror"
-	"github.com/nais/console/pkg/reconcilers"
-	"github.com/nais/console/pkg/slug"
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/auditlogger"
+	"github.com/nais/teams-backend/pkg/authz"
+	"github.com/nais/teams-backend/pkg/console"
+	"github.com/nais/teams-backend/pkg/db"
+	"github.com/nais/teams-backend/pkg/graph/apierror"
+	"github.com/nais/teams-backend/pkg/reconcilers"
+	"github.com/nais/teams-backend/pkg/slug"
+	"github.com/nais/teams-backend/pkg/sqlc"
 )
 
 // SetGitHubTeamSlug is the resolver for the setGitHubTeamSlug field.

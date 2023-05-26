@@ -6,18 +6,18 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/nais/console/pkg/metrics"
+	"github.com/nais/teams-backend/pkg/metrics"
 	"github.com/sirupsen/logrus"
 
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/auditlogger"
-	"github.com/nais/console/pkg/config"
-	"github.com/nais/console/pkg/db"
-	dtrack "github.com/nais/console/pkg/dependencytrack"
-	"github.com/nais/console/pkg/logger"
-	"github.com/nais/console/pkg/reconcilers"
-	"github.com/nais/console/pkg/slug"
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/auditlogger"
+	"github.com/nais/teams-backend/pkg/config"
+	"github.com/nais/teams-backend/pkg/db"
+	dtrack "github.com/nais/teams-backend/pkg/dependencytrack"
+	"github.com/nais/teams-backend/pkg/logger"
+	"github.com/nais/teams-backend/pkg/reconcilers"
+	"github.com/nais/teams-backend/pkg/slug"
+	"github.com/nais/teams-backend/pkg/sqlc"
 	dependencytrack "github.com/nais/dependencytrack/pkg/client"
 )
 

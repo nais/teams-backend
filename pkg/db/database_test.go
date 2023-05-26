@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/golang-migrate/migrate/v4/source/iofs"
-	"github.com/nais/console/sqlc/schemas"
+	"github.com/nais/teams-backend/sqlc/schemas"
 	"github.com/stretchr/testify/assert"
 )
 

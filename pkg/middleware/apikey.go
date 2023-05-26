@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/nais/console/pkg/db"
+	"github.com/nais/teams-backend/pkg/db"
 
-	"github.com/nais/console/pkg/authz"
+	"github.com/nais/teams-backend/pkg/authz"
 )
 
 // ApiKeyAuthentication If the request has an authorization header, we will try to pull the service account who owns it

@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"strings"
 
-	"github.com/nais/console/pkg/slug"
+	"github.com/nais/teams-backend/pkg/slug"
 )
 
 func Strp(s string) *string {

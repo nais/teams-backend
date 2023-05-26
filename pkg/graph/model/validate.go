@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/nais/console/pkg/graph/apierror"
+	"github.com/nais/teams-backend/pkg/graph/apierror"
 )
 
 var (

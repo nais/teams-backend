@@ -3,7 +3,7 @@ package console_test
 import (
 	"testing"
 
-	helpers "github.com/nais/console/pkg/console"
+	helpers "github.com/nais/teams-backend/pkg/console"
 	"github.com/stretchr/testify/assert"
 )
 

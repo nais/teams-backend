@@ -4,12 +4,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/nais/console/pkg/roles"
+	"github.com/nais/teams-backend/pkg/roles"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/nais/console/pkg/slug"
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/slug"
+	"github.com/nais/teams-backend/pkg/sqlc"
 )
 
 const teamDeleteKeyLifetime = time.Minute * 5

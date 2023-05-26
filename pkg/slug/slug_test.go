@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/nais/console/pkg/slug"
+	"github.com/nais/teams-backend/pkg/slug"
 	"github.com/stretchr/testify/assert"
 )
 

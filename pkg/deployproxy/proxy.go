@@ -12,10 +12,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/nais/console/pkg/graph/apierror"
-	"github.com/nais/console/pkg/logger"
-	"github.com/nais/console/pkg/metrics"
-	"github.com/nais/console/pkg/slug"
+	"github.com/nais/teams-backend/pkg/graph/apierror"
+	"github.com/nais/teams-backend/pkg/logger"
+	"github.com/nais/teams-backend/pkg/metrics"
+	"github.com/nais/teams-backend/pkg/slug"
 )
 
 const metricSystemName = "deploy-proxy"

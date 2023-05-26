@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/nais/console/pkg/config"
+	"github.com/nais/teams-backend/pkg/config"
 	"golang.org/x/oauth2"
 	admin_directory "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/cloudresourcemanager/v3"

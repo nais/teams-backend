@@ -16,18 +16,18 @@ sql:
         emit_pointers_for_null_types: true
         overrides:
           - column: reconciler_errors.team_slug
-            go_type: github.com/nais/console/pkg/slug.Slug
+            go_type: github.com/nais/teams-backend/pkg/slug.Slug
           - column: reconciler_states.team_slug
-            go_type: github.com/nais/console/pkg/slug.Slug
+            go_type: github.com/nais/teams-backend/pkg/slug.Slug
           - column: service_account_roles.target_team_slug
-            go_type: "*github.com/nais/console/pkg/slug.Slug"
+            go_type: "*github.com/nais/teams-backend/pkg/slug.Slug"
           - column: teams.slug
-            go_type: github.com/nais/console/pkg/slug.Slug
+            go_type: github.com/nais/teams-backend/pkg/slug.Slug
           - column: user_roles.target_team_slug
-            go_type: "*github.com/nais/console/pkg/slug.Slug"
+            go_type: "*github.com/nais/teams-backend/pkg/slug.Slug"
           - column: slack_alerts_channels.team_slug
-            go_type: github.com/nais/console/pkg/slug.Slug
+            go_type: github.com/nais/teams-backend/pkg/slug.Slug
           - column: team_delete_keys.team_slug
-            go_type: github.com/nais/console/pkg/slug.Slug
+            go_type: github.com/nais/teams-backend/pkg/slug.Slug
           - column: reconciler_opt_outs.team_slug
-            go_type: github.com/nais/console/pkg/slug.Slug
+            go_type: github.com/nais/teams-backend/pkg/slug.Slug

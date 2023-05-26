@@ -1,4 +1,4 @@
-module github.com/nais/console
+module github.com/nais/teams-backend
 
 go 1.20
 

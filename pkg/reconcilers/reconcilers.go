@@ -5,12 +5,12 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/auditlogger"
-	"github.com/nais/console/pkg/config"
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/logger"
-	"github.com/nais/console/pkg/slug"
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/auditlogger"
+	"github.com/nais/teams-backend/pkg/config"
+	"github.com/nais/teams-backend/pkg/db"
+	"github.com/nais/teams-backend/pkg/logger"
+	"github.com/nais/teams-backend/pkg/slug"
+	"github.com/nais/teams-backend/pkg/sqlc"
 )
 
 const (

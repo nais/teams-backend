@@ -3,10 +3,10 @@ package model_test
 import (
 	"testing"
 
-	"github.com/nais/console/pkg/graph/apierror"
+	"github.com/nais/teams-backend/pkg/graph/apierror"
 
-	"github.com/nais/console/pkg/graph/model"
-	"github.com/nais/console/pkg/slug"
+	"github.com/nais/teams-backend/pkg/graph/model"
+	"github.com/nais/teams-backend/pkg/slug"
 	"github.com/stretchr/testify/assert"
 )
 

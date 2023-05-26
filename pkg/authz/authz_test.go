@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/nais/console/pkg/authz"
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/roles"
-	"github.com/nais/console/pkg/slug"
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/authz"
+	"github.com/nais/teams-backend/pkg/db"
+	"github.com/nais/teams-backend/pkg/roles"
+	"github.com/nais/teams-backend/pkg/slug"
+	"github.com/nais/teams-backend/pkg/sqlc"
 	"github.com/stretchr/testify/assert"
 )
 

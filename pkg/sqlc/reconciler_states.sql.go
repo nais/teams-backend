@@ -9,7 +9,7 @@ import (
 	"context"
 
 	"github.com/jackc/pgtype"
-	"github.com/nais/console/pkg/slug"
+	"github.com/nais/teams-backend/pkg/slug"
 )
 
 const getReconcilerStateForTeam = `-- name: GetReconcilerStateForTeam :one

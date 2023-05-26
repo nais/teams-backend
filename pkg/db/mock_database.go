@@ -5,10 +5,10 @@ package db
 import (
 	context "context"
 
-	slug "github.com/nais/console/pkg/slug"
+	slug "github.com/nais/teams-backend/pkg/slug"
 	mock "github.com/stretchr/testify/mock"
 
-	sqlc "github.com/nais/console/pkg/sqlc"
+	sqlc "github.com/nais/teams-backend/pkg/sqlc"
 
 	uuid "github.com/google/uuid"
 )

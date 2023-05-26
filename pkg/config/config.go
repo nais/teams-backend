@@ -4,10 +4,10 @@ import (
 	"strings"
 
 	"github.com/kelseyhightower/envconfig"
-	"github.com/nais/console/pkg/dependencytrack"
-	"github.com/nais/console/pkg/fixtures"
-	"github.com/nais/console/pkg/gcp"
-	"github.com/nais/console/pkg/legacy/envmap"
+	"github.com/nais/teams-backend/pkg/dependencytrack"
+	"github.com/nais/teams-backend/pkg/fixtures"
+	"github.com/nais/teams-backend/pkg/gcp"
+	"github.com/nais/teams-backend/pkg/legacy/envmap"
 )
 
 type DependencyTrack struct {

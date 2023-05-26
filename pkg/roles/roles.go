@@ -3,7 +3,7 @@ package roles
 import (
 	"fmt"
 
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/sqlc"
 )
 
 type Authorization string

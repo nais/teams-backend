@@ -3,8 +3,8 @@ package google_token_source_test
 import (
 	"testing"
 
-	"github.com/nais/console/pkg/config"
-	"github.com/nais/console/pkg/google_token_source"
+	"github.com/nais/teams-backend/pkg/config"
+	"github.com/nais/teams-backend/pkg/google_token_source"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/graph-gophers/dataloader/v7"
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/metrics"
+	"github.com/nais/teams-backend/pkg/db"
+	"github.com/nais/teams-backend/pkg/metrics"
 )
 
 type ctxKey string

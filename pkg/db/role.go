@@ -3,12 +3,12 @@ package db
 import (
 	"context"
 
-	"github.com/nais/console/pkg/roles"
+	"github.com/nais/teams-backend/pkg/roles"
 
-	"github.com/nais/console/pkg/slug"
+	"github.com/nais/teams-backend/pkg/slug"
 
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/sqlc"
 )
 
 func (d *database) AssignGlobalRoleToUser(ctx context.Context, userID uuid.UUID, roleName sqlc.RoleName) error {

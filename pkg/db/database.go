@@ -10,10 +10,10 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/nais/console/pkg/logger"
-	"github.com/nais/console/pkg/metrics"
-	"github.com/nais/console/pkg/sqlc"
-	"github.com/nais/console/sqlc/schemas"
+	"github.com/nais/teams-backend/pkg/logger"
+	"github.com/nais/teams-backend/pkg/metrics"
+	"github.com/nais/teams-backend/pkg/sqlc"
+	"github.com/nais/teams-backend/sqlc/schemas"
 )
 
 const databaseConnectRetries = 5

@@ -36,7 +36,7 @@ resolver:
 # gqlgen will search for any type names in the schema in these go packages
 # if they match it will use them, otherwise it will generate them.
 autobind:
-  - "github.com/nais/console/pkg/db"
+  - github.com/nais/teams-backend/pkg/db
 
 # This section declares type mapping between the GraphQL and go type systems
 #
@@ -46,51 +46,51 @@ autobind:
 models:
   TeamMemberReconciler:
     model:
-      - github.com/nais/console/pkg/sqlc.GetTeamMemberOptOutsRow
+      - github.com/nais/teams-backend/pkg/sqlc.GetTeamMemberOptOutsRow
 
   UserSyncRun:
     model:
-      - github.com/nais/console/pkg/usersync.Run
+      - github.com/nais/teams-backend/pkg/usersync.Run
 
   GitHubRepository:
     model:
-      - github.com/nais/console/pkg/reconcilers.GitHubRepository
+      - github.com/nais/teams-backend/pkg/reconcilers.GitHubRepository
 
   GitHubRepositoryPermission:
     model:
-      - github.com/nais/console/pkg/reconcilers.GitHubRepositoryPermission
+      - github.com/nais/teams-backend/pkg/reconcilers.GitHubRepositoryPermission
 
   AuditAction:
     model:
-      - github.com/nais/console/pkg/sqlc.AuditAction
+      - github.com/nais/teams-backend/pkg/sqlc.AuditAction
 
   AuditLogsTargetType:
     model:
-      - github.com/nais/console/pkg/sqlc.AuditLogsTargetType
+      - github.com/nais/teams-backend/pkg/sqlc.AuditLogsTargetType
 
   ReconcilerName:
     model:
-      - github.com/nais/console/pkg/sqlc.ReconcilerName
+      - github.com/nais/teams-backend/pkg/sqlc.ReconcilerName
 
   RoleName:
     model:
-      - github.com/nais/console/pkg/sqlc.RoleName
+      - github.com/nais/teams-backend/pkg/sqlc.RoleName
 
   Slug:
     model:
-      - github.com/nais/console/pkg/slug.Slug
+      - github.com/nais/teams-backend/pkg/slug.Slug
 
   SystemName:
     model:
-      - github.com/nais/console/pkg/sqlc.SystemName
+      - github.com/nais/teams-backend/pkg/sqlc.SystemName
 
   ReconcilerConfigKey:
     model:
-      - github.com/nais/console/pkg/sqlc.ReconcilerConfigKey
+      - github.com/nais/teams-backend/pkg/sqlc.ReconcilerConfigKey
 
   UUID:
     model:
-      - github.com/nais/console/pkg/db.UUID
+      - github.com/nais/teams-backend/pkg/db.UUID
 
   Int:
     model:

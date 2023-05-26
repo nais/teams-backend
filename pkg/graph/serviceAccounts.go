@@ -7,10 +7,10 @@ package graph
 import (
 	"context"
 
-	"github.com/nais/console/pkg/authz"
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/graph/generated"
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/authz"
+	"github.com/nais/teams-backend/pkg/db"
+	"github.com/nais/teams-backend/pkg/graph/generated"
+	"github.com/nais/teams-backend/pkg/sqlc"
 )
 
 // Roles is the resolver for the roles field.

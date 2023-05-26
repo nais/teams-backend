@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/nais/console/pkg/slug"
+	"github.com/nais/teams-backend/pkg/slug"
 
 	"github.com/jackc/pgtype"
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/sqlc"
 )
 
 // LoadReconcilerStateForTeam Load the team state for a given reconciler into the state parameter

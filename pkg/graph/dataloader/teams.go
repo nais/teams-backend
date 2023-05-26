@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	"github.com/graph-gophers/dataloader/v7"
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/metrics"
-	"github.com/nais/console/pkg/slug"
+	"github.com/nais/teams-backend/pkg/db"
+	"github.com/nais/teams-backend/pkg/metrics"
+	"github.com/nais/teams-backend/pkg/slug"
 )
 
 type TeamReader struct {

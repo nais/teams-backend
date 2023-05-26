@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/slug"
-	"github.com/nais/console/pkg/teamsync"
+	"github.com/nais/teams-backend/pkg/slug"
+	"github.com/nais/teams-backend/pkg/teamsync"
 
 	"github.com/stretchr/testify/assert"
 )

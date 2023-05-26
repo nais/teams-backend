@@ -9,17 +9,17 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/auditlogger"
-	"github.com/nais/console/pkg/authz"
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/graph/apierror"
-	"github.com/nais/console/pkg/graph/generated"
-	"github.com/nais/console/pkg/graph/model"
-	"github.com/nais/console/pkg/reconcilers"
-	google_gcp_reconciler "github.com/nais/console/pkg/reconcilers/google/gcp"
-	"github.com/nais/console/pkg/roles"
-	"github.com/nais/console/pkg/slug"
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/auditlogger"
+	"github.com/nais/teams-backend/pkg/authz"
+	"github.com/nais/teams-backend/pkg/db"
+	"github.com/nais/teams-backend/pkg/graph/apierror"
+	"github.com/nais/teams-backend/pkg/graph/generated"
+	"github.com/nais/teams-backend/pkg/graph/model"
+	"github.com/nais/teams-backend/pkg/reconcilers"
+	google_gcp_reconciler "github.com/nais/teams-backend/pkg/reconcilers/google/gcp"
+	"github.com/nais/teams-backend/pkg/roles"
+	"github.com/nais/teams-backend/pkg/slug"
+	"github.com/nais/teams-backend/pkg/sqlc"
 )
 
 // CreateTeam is the resolver for the createTeam field.

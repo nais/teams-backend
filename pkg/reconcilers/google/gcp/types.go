@@ -1,11 +1,11 @@
 package google_gcp_reconciler
 
 import (
-	"github.com/nais/console/pkg/auditlogger"
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/gcp"
-	"github.com/nais/console/pkg/legacy/envmap"
-	"github.com/nais/console/pkg/logger"
+	"github.com/nais/teams-backend/pkg/auditlogger"
+	"github.com/nais/teams-backend/pkg/db"
+	"github.com/nais/teams-backend/pkg/gcp"
+	"github.com/nais/teams-backend/pkg/legacy/envmap"
+	"github.com/nais/teams-backend/pkg/logger"
 	"google.golang.org/api/cloudbilling/v1"
 	"google.golang.org/api/cloudresourcemanager/v3"
 	"google.golang.org/api/iam/v1"

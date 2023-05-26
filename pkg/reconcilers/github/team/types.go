@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/google/go-github/v50/github"
-	"github.com/nais/console/pkg/auditlogger"
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/logger"
+	"github.com/nais/teams-backend/pkg/auditlogger"
+	"github.com/nais/teams-backend/pkg/db"
+	"github.com/nais/teams-backend/pkg/logger"
 	"github.com/shurcooL/githubv4"
 )
 

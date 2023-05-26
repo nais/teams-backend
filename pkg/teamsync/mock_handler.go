@@ -5,12 +5,12 @@ package teamsync
 import (
 	context "context"
 
-	db "github.com/nais/console/pkg/db"
+	db "github.com/nais/teams-backend/pkg/db"
 	mock "github.com/stretchr/testify/mock"
 
-	slug "github.com/nais/console/pkg/slug"
+	slug "github.com/nais/teams-backend/pkg/slug"
 
-	sqlc "github.com/nais/console/pkg/sqlc"
+	sqlc "github.com/nais/teams-backend/pkg/sqlc"
 
 	uuid "github.com/google/uuid"
 )

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/nais/console/pkg/fixtures"
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/fixtures"
+	"github.com/nais/teams-backend/pkg/sqlc"
 	"github.com/stretchr/testify/assert"
 )
 

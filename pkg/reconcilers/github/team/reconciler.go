@@ -11,15 +11,15 @@ import (
 
 	"github.com/google/go-github/v50/github"
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/auditlogger"
-	"github.com/nais/console/pkg/config"
-	helpers "github.com/nais/console/pkg/console"
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/logger"
-	"github.com/nais/console/pkg/metrics"
-	"github.com/nais/console/pkg/reconcilers"
-	"github.com/nais/console/pkg/slug"
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/auditlogger"
+	"github.com/nais/teams-backend/pkg/config"
+	helpers "github.com/nais/teams-backend/pkg/console"
+	"github.com/nais/teams-backend/pkg/db"
+	"github.com/nais/teams-backend/pkg/logger"
+	"github.com/nais/teams-backend/pkg/metrics"
+	"github.com/nais/teams-backend/pkg/reconcilers"
+	"github.com/nais/teams-backend/pkg/slug"
+	"github.com/nais/teams-backend/pkg/sqlc"
 	"github.com/shurcooL/githubv4"
 	"google.golang.org/api/impersonate"
 )
@@ -181,7 +181,7 @@ func (r *githubTeamReconciler) removeTeamIDPSync(ctx context.Context, slug strin
 	metrics.IncExternalHTTPCalls(metricsSystemName, unwrapResponse(resp), err)
 	if err != nil && strings.Contains(err.Error(), "team is not externally managed") {
 		// Special case: org has not been configured for team IDP sync, which we don't want to treat as an error
-		// FIXME: https://github.com/nais/console/issues/77
+		// FIXME: https://github.com/nais/teams-backend/issues/77
 		return nil
 	}
 

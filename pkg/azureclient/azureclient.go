@@ -9,7 +9,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/metrics"
+	"github.com/nais/teams-backend/pkg/metrics"
 )
 
 const metricsSystemName = "azure"

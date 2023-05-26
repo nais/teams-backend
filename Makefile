@@ -1,7 +1,7 @@
 BUILDTIME = $(shell date "+%s")
 DATE = $(shell date "+%Y-%m-%d")
 LAST_COMMIT = $(shell git rev-parse --short HEAD)
-LDFLAGS := -X github.com/nais/console/pkg/version.Revision=$(LAST_COMMIT) -X github.com/nais/console/pkg/version.Date=$(DATE) -X github.com/nais/console/pkg/version.BuildUnixTime=$(BUILDTIME)
+LDFLAGS := -X github.com/nais/teams-backend/pkg/version.Revision=$(LAST_COMMIT) -X github.com/nais/teams-backend/pkg/version.Date=$(DATE) -X github.com/nais/teams-backend/pkg/version.BuildUnixTime=$(BUILDTIME)
 
 .PHONY: static teams-backend test generate
 

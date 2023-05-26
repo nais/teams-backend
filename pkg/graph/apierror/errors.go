@@ -8,9 +8,9 @@ import (
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/jackc/pgconn"
-	"github.com/nais/console/pkg/authz"
-	"github.com/nais/console/pkg/logger"
-	"github.com/nais/console/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/authz"
+	"github.com/nais/teams-backend/pkg/logger"
+	"github.com/nais/teams-backend/pkg/sqlc"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 

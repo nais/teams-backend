@@ -6,16 +6,16 @@ import (
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/google/uuid"
-	"github.com/nais/console/pkg/auditlogger"
-	"github.com/nais/console/pkg/db"
-	"github.com/nais/console/pkg/deployproxy"
-	"github.com/nais/console/pkg/graph/apierror"
-	"github.com/nais/console/pkg/graph/model"
-	"github.com/nais/console/pkg/logger"
-	"github.com/nais/console/pkg/slug"
-	"github.com/nais/console/pkg/sqlc"
-	"github.com/nais/console/pkg/teamsync"
-	"github.com/nais/console/pkg/usersync"
+	"github.com/nais/teams-backend/pkg/auditlogger"
+	"github.com/nais/teams-backend/pkg/db"
+	"github.com/nais/teams-backend/pkg/deployproxy"
+	"github.com/nais/teams-backend/pkg/graph/apierror"
+	"github.com/nais/teams-backend/pkg/graph/model"
+	"github.com/nais/teams-backend/pkg/logger"
+	"github.com/nais/teams-backend/pkg/slug"
+	"github.com/nais/teams-backend/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/teamsync"
+	"github.com/nais/teams-backend/pkg/usersync"
 )
 
 // This file will not be regenerated automatically.
