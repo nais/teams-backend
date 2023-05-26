@@ -6,8 +6,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/authz"
-	"github.com/nais/teams-backend/pkg/console"
 	"github.com/nais/teams-backend/pkg/db"
+	"github.com/nais/teams-backend/pkg/helpers"
 	"github.com/nais/teams-backend/pkg/logger"
 	"github.com/nais/teams-backend/pkg/slug"
 	"github.com/nais/teams-backend/pkg/sqlc"
@@ -72,7 +72,7 @@ func (l *auditLogger) Logf(ctx context.Context, dbtx db.Database, targets []Targ
 
 	var actor *string
 	if fields.Actor != nil {
-		actor = console.Strp(fields.Actor.User.Identity())
+		actor = helpers.Strp(fields.Actor.User.Identity())
 	}
 
 	for _, target := range targets {

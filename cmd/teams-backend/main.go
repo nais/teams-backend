@@ -11,8 +11,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/nais/teams-backend/pkg/teamsync"
-
 	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/playground"
@@ -33,6 +31,7 @@ import (
 	"github.com/nais/teams-backend/pkg/logger"
 	"github.com/nais/teams-backend/pkg/middleware"
 	"github.com/nais/teams-backend/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/teamsync"
 	"github.com/nais/teams-backend/pkg/usersync"
 	"github.com/nais/teams-backend/pkg/version"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

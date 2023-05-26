@@ -12,9 +12,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/authz"
-	"github.com/nais/teams-backend/pkg/console"
 	"github.com/nais/teams-backend/pkg/db"
 	"github.com/nais/teams-backend/pkg/graph/apierror"
+	"github.com/nais/teams-backend/pkg/helpers"
 	"github.com/nais/teams-backend/pkg/reconcilers"
 	"github.com/nais/teams-backend/pkg/slug"
 	"github.com/nais/teams-backend/pkg/sqlc"
@@ -137,7 +137,7 @@ func (r *mutationResolver) SetGcpProjectID(ctx context.Context, teamSlug *slug.S
 		return nil, apierror.ErrTeamNotExist
 	}
 
-	if !console.Contains(r.gcpEnvironments, gcpEnvironment) {
+	if !helpers.Contains(r.gcpEnvironments, gcpEnvironment) {
 		return nil, apierror.Errorf("Unknown GCP environment %q. Supported environments are: %s", gcpEnvironment, strings.Join(r.gcpEnvironments, ", "))
 	}
 
@@ -189,7 +189,7 @@ func (r *mutationResolver) SetNaisNamespace(ctx context.Context, teamSlug *slug.
 		return nil, apierror.ErrTeamNotExist
 	}
 
-	if !console.Contains(r.gcpEnvironments, gcpEnvironment) {
+	if !helpers.Contains(r.gcpEnvironments, gcpEnvironment) {
 		return nil, apierror.Errorf("Unknown GCP environment %q. Supported environments are: %s", gcpEnvironment, strings.Join(r.gcpEnvironments, ", "))
 	}
 

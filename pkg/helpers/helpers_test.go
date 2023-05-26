@@ -1,9 +1,9 @@
-package console_test
+package helpers_test
 
 import (
 	"testing"
 
-	helpers "github.com/nais/teams-backend/pkg/console"
+	"github.com/nais/teams-backend/pkg/helpers"
 	"github.com/stretchr/testify/assert"
 )
 

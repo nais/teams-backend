@@ -11,10 +11,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/config"
-	"github.com/nais/teams-backend/pkg/console"
 	"github.com/nais/teams-backend/pkg/db"
 	"github.com/nais/teams-backend/pkg/gcp"
 	"github.com/nais/teams-backend/pkg/google_token_source"
+	"github.com/nais/teams-backend/pkg/helpers"
 	"github.com/nais/teams-backend/pkg/logger"
 	"github.com/nais/teams-backend/pkg/reconcilers"
 	google_workspace_admin_reconciler "github.com/nais/teams-backend/pkg/reconcilers/google/workspace_admin"
@@ -333,7 +333,7 @@ func (r *garReconciler) setGarRepositoryPolicy(ctx context.Context, repository *
 }
 
 func serviceAccountNameAndAccountID(teamSlug slug.Slug, projectID string) (serviceAccountName, accountID string) {
-	accountID = console.SlugHashPrefixTruncate(teamSlug, "gar", gcp.GoogleServiceAccountMaxLength)
+	accountID = helpers.SlugHashPrefixTruncate(teamSlug, "gar", gcp.GoogleServiceAccountMaxLength)
 	emailAddress := fmt.Sprintf("%s@%s.iam.gserviceaccount.com", accountID, projectID)
 	serviceAccountName = fmt.Sprintf("projects/%s/serviceAccounts/%s", projectID, emailAddress)
 	return

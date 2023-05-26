@@ -14,10 +14,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/config"
-	"github.com/nais/teams-backend/pkg/console"
 	"github.com/nais/teams-backend/pkg/db"
 	"github.com/nais/teams-backend/pkg/gcp"
 	"github.com/nais/teams-backend/pkg/google_token_source"
+	"github.com/nais/teams-backend/pkg/helpers"
 	"github.com/nais/teams-backend/pkg/legacy/envmap"
 	"github.com/nais/teams-backend/pkg/logger"
 	"github.com/nais/teams-backend/pkg/metrics"
@@ -605,9 +605,9 @@ func GenerateProjectID(domain, environment string, slug slug.Slug) string {
 	hasher.Write([]byte(domain))
 
 	parts := make([]string, 3)
-	parts[0] = strings.TrimSuffix(console.Truncate(string(slug), 20), "-")
-	parts[1] = strings.TrimSuffix(console.Truncate(environment, 4), "-")
-	parts[2] = console.Truncate(hex.EncodeToString(hasher.Sum(nil)), 4)
+	parts[0] = strings.TrimSuffix(helpers.Truncate(string(slug), 20), "-")
+	parts[1] = strings.TrimSuffix(helpers.Truncate(environment, 4), "-")
+	parts[2] = helpers.Truncate(hex.EncodeToString(hasher.Sum(nil)), 4)
 
 	return strings.Join(parts, "-")
 }
@@ -616,7 +616,7 @@ func GenerateProjectID(domain, environment string, slug slug.Slug) string {
 func GetProjectDisplayName(slug slug.Slug, environment string) string {
 	suffix := "-" + environment
 	maxSlugLength := GoogleProjectDisplayNameMaxLength - len(suffix)
-	prefix := console.Truncate(string(slug), maxSlugLength)
+	prefix := helpers.Truncate(string(slug), maxSlugLength)
 	prefix = strings.TrimSuffix(prefix, "-")
 	return prefix + suffix
 }

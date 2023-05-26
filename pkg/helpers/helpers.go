@@ -1,4 +1,4 @@
-package console
+package helpers
 
 import (
 	"crypto/sha256"
