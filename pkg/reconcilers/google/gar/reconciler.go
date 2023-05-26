@@ -213,7 +213,7 @@ func (r *garReconciler) setServiceAccountPolicy(ctx context.Context, serviceAcco
 func (r *garReconciler) getOrCreateOrUpdateGarRepository(ctx context.Context, input reconcilers.Input, log logger.Logger) (*artifactregistrypb.Repository, error) {
 	parent := fmt.Sprintf("projects/%s/locations/europe-north1", r.managementProjectID)
 	name := fmt.Sprintf("%s/repositories/%s", parent, input.Team.Slug)
-	description := fmt.Sprintf("Docker repository for team %q. Managed by NAIS Console.", input.Team.Slug)
+	description := fmt.Sprintf("Docker repository for team %q. Managed by teams-backend.", input.Team.Slug)
 
 	getRequest := &artifactregistrypb.GetRepositoryRequest{
 		Name: name,
@@ -289,7 +289,7 @@ func (r *garReconciler) updateGarRepository(ctx context.Context, repository *art
 	}
 
 	if repository.Description != description {
-		repository.Description = fmt.Sprintf("Docker repository for team %q. Managed by NAIS Console.", slug)
+		repository.Description = fmt.Sprintf("Docker repository for team %q. Managed by teams-backend.", slug)
 		changes = append(changes, "description")
 	}
 

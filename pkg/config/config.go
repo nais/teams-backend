@@ -45,14 +45,14 @@ type GCP struct {
 }
 
 type NaisNamespace struct {
-	// AzureEnabled When set to true Console will send the Azure group ID of the team, if it has been created by the
-	// Azure AD group reconciler, to naisd when creating a namespace for the Console team.
+	// AzureEnabled When set to true teams-backend will send the Azure group ID of the team, if it has been created by
+	// the Azure AD group reconciler, to naisd when creating a namespace for the NAIS team.
 	AzureEnabled bool `envconfig:"CONSOLE_NAIS_NAMESPACE_AZURE_ENABLED"`
 }
 
 type UserSync struct {
-	// Enabled When set to true Console will keep the user database in sync with the connected Google organization. The
-	// Google organization will be treated as the master.
+	// Enabled When set to true teams-backend will keep the user database in sync with the connected Google
+	// organization. The Google organization will be treated as the master.
 	Enabled bool `envconfig:"CONSOLE_USERSYNC_ENABLED"`
 
 	// AdminGroupPrefix The prefix of the admin group email address.
@@ -99,10 +99,10 @@ type Config struct {
 	// DatabaseURL The URL for the database.
 	DatabaseURL string `envconfig:"CONSOLE_DATABASE_URL" default:"postgres://console:console@localhost:3002/console?sslmode=disable"`
 
-	// FrontendURL URL to the console frontend.
+	// FrontendURL URL to the teams-frontend instance.
 	FrontendURL string `envconfig:"CONSOLE_FRONTEND_URL" default:"http://localhost:3001"`
 
-	// Names of reconcilers to enable on first run of console
+	// Names of reconcilers to enable on first run of teams-backend
 	//
 	// Example: google:gcp:project,nais:namespace
 	// Valid: [google:gcp:project|google:workspace-admin|nais:namespace|nais:deploy]
@@ -114,7 +114,7 @@ type Config struct {
 	// LogFormat Customize the log format. Can be "text" or "json".
 	LogFormat string `envconfig:"CONSOLE_LOG_FORMAT" default:"text"`
 
-	// LogLevel The log level used in console.
+	// LogLevel The log level used in teams-backend.
 	LogLevel string `envconfig:"CONSOLE_LOG_LEVEL" default:"DEBUG"`
 
 	// GoogleManagementProjectID The ID of the NAIS management project in the tenant organization in GCP.

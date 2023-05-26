@@ -160,8 +160,7 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 	})
 
 	t.Run("usermembership removed from existing team", func(t *testing.T) {
-		// usernameInInput := "user1@nais.io"
-		usernameNotInInput := "userNotInConsole@nais.io"
+		usernameNotInInput := "userNotInTeamsBackend@nais.io"
 		database.On("LoadReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Run(func(args mock.Arguments) {
 			state := args.Get(3).(*reconcilers.DependencyTrackState)
 			state.Instances = []*reconcilers.DependencyTrackInstanceState{
@@ -202,7 +201,7 @@ func TestDependencytrackReconciler_Delete(t *testing.T) {
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	auditLogger.On("WithSystemName", sqlc.SystemNameNaisDependencytrack).Return(auditLogger)
 
-	t.Run("team exists, delete team from console should remove team from dependencytrack", func(t *testing.T) {
+	t.Run("team exists, delete team from teams-backend should remove team from dependencytrack", func(t *testing.T) {
 		teamUuid := uuid.New().String()
 
 		database.On("LoadReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Run(func(args mock.Arguments) {

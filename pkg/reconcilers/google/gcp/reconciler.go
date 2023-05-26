@@ -465,7 +465,7 @@ func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.C
 		AccountId: reconcilers.CnrmServiceAccountAccountID,
 		ServiceAccount: &iam.ServiceAccount{
 			DisplayName: "CNRM service account",
-			Description: "Managed by Console",
+			Description: "Managed by teams-backend",
 		},
 	}
 	serviceAccount, err = r.gcpServices.IamProjectsServiceAccountsService.Create("projects/"+teamProjectID, createServiceAccountRequest).Do()

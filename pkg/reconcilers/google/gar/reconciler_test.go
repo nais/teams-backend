@@ -176,7 +176,7 @@ func TestReconcile(t *testing.T) {
 	expectedRepository := artifactregistrypb.Repository{
 		Name:        fmt.Sprintf("%s/repositories/%s", garRepositoryParent, string(team.Slug)),
 		Format:      artifactregistrypb.Repository_DOCKER,
-		Description: fmt.Sprintf("Docker repository for team %q. Managed by NAIS Console.", team.Slug),
+		Description: fmt.Sprintf("Docker repository for team %q. Managed by teams-backend.", team.Slug),
 		Labels: map[string]string{
 			"team":                         string(team.Slug),
 			reconcilers.ManagedByLabelName: reconcilers.ManagedByLabelValue,

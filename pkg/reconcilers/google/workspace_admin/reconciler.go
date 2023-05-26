@@ -31,10 +31,9 @@ type googleWorkspaceAdminReconciler struct {
 }
 
 const (
-	Name = sqlc.ReconcilerNameGoogleWorkspaceAdmin
+	Name              = sqlc.ReconcilerNameGoogleWorkspaceAdmin
+	metricsSystemName = "google-admin"
 )
-
-const metricsSystemName = "google-admin"
 
 func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, adminService *admin_directory_v1.Service, log logger.Logger) *googleWorkspaceAdminReconciler {
 	return &googleWorkspaceAdminReconciler{
@@ -191,7 +190,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 		return fmt.Errorf("list existing members in Google Directory group: %w", err)
 	}
 
-	consoleUserMap := make(map[string]*db.User)
+	teamsBackendUserMap := make(map[string]*db.User)
 	membersToRemove := remoteOnlyMembers(membersAccordingToGoogle, input.TeamMembers)
 	for _, member := range membersToRemove {
 		remoteMemberEmail := strings.ToLower(member.Email)
@@ -202,14 +201,14 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 			continue
 		}
 
-		if _, exists := consoleUserMap[remoteMemberEmail]; !exists {
+		if _, exists := teamsBackendUserMap[remoteMemberEmail]; !exists {
 			user, err := r.database.GetUserByEmail(ctx, remoteMemberEmail)
 			if err == sql.ErrNoRows {
 				r.log.Warnf("Remote Google user %q not found in local database", remoteMemberEmail)
 			} else if err != nil {
 				return err
 			} else {
-				consoleUserMap[remoteMemberEmail] = user
+				teamsBackendUserMap[remoteMemberEmail] = user
 			}
 		}
 
@@ -298,14 +297,14 @@ func (r *googleWorkspaceAdminReconciler) syncGroupInfo(ctx context.Context, team
 	return nil
 }
 
-// remoteOnlyMembers Given a list of Google group members and a list of Console users, return Google group members not
-// present in Console user list.
-func remoteOnlyMembers(googleGroupMembers []*admin_directory_v1.Member, consoleUsers []*db.User) []*admin_directory_v1.Member {
+// remoteOnlyMembers Given a list of Google group members and a list of teams-backend users, return Google group members not
+// present in teams-backend user list.
+func remoteOnlyMembers(googleGroupMembers []*admin_directory_v1.Member, teamsBackendUsers []*db.User) []*admin_directory_v1.Member {
 	googleGroupMemberMap := make(map[string]*admin_directory_v1.Member)
 	for _, member := range googleGroupMembers {
 		googleGroupMemberMap[strings.ToLower(member.Email)] = member
 	}
-	for _, user := range consoleUsers {
+	for _, user := range teamsBackendUsers {
 		delete(googleGroupMemberMap, user.Email)
 	}
 	googleGroupMembers = make([]*admin_directory_v1.Member, 0, len(googleGroupMemberMap))
@@ -317,17 +316,17 @@ func remoteOnlyMembers(googleGroupMembers []*admin_directory_v1.Member, consoleU
 
 // localOnlyMembers Given a list of Google group members and a list of users, return users not present in members
 // directory.
-func localOnlyMembers(googleGroupMembers []*admin_directory_v1.Member, consoleUsers []*db.User) []*db.User {
+func localOnlyMembers(googleGroupMembers []*admin_directory_v1.Member, teamsBackendUsers []*db.User) []*db.User {
 	localUserMap := make(map[string]*db.User)
-	for _, user := range consoleUsers {
+	for _, user := range teamsBackendUsers {
 		localUserMap[user.Email] = user
 	}
 	for _, member := range googleGroupMembers {
 		delete(localUserMap, strings.ToLower(member.Email))
 	}
-	consoleUsers = make([]*db.User, 0, len(localUserMap))
+	teamsBackendUsers = make([]*db.User, 0, len(localUserMap))
 	for _, user := range localUserMap {
-		consoleUsers = append(consoleUsers, user)
+		teamsBackendUsers = append(teamsBackendUsers, user)
 	}
-	return consoleUsers
+	return teamsBackendUsers
 }

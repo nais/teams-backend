@@ -64,7 +64,7 @@ func (r *Resolver) addTeamToReconcilerQueue(input teamsync.Input) error {
 	err := r.teamSyncHandler.Schedule(input)
 	if err != nil {
 		r.log.WithTeamSlug(string(input.TeamSlug)).WithError(err).Errorf("add team to reconciler queue")
-		return apierror.Errorf("Console is about to restart, unable to reconcile team: %q", input.TeamSlug)
+		return apierror.Errorf("teams-backend is about to restart, unable to reconcile team: %q", input.TeamSlug)
 	}
 	return nil
 }

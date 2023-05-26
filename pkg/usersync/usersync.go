@@ -88,9 +88,9 @@ func NewFromConfig(cfg *config.Config, database db.Database, auditLogger auditlo
 	return New(database, auditLogger, cfg.UserSync.AdminGroupPrefix, cfg.TenantDomain, srv, log, syncRuns), nil
 }
 
-// Sync Fetch all users from the tenant and add them as local users in Console. If a user already exists in Console
-// the local user will get the name potentially updated. After all users have been upserted, local users that matches
-// the tenant domain that does not exist in the Google Directory will be removed.
+// Sync Fetch all users from the tenant and add them as local users in teams-backend. If a user already exists in
+// teams-backend the local user will get the name potentially updated. After all users have been upserted, local users
+// that matches the tenant domain that does not exist in the Google Directory will be removed.
 func (s *UserSynchronizer) Sync(ctx context.Context, correlationID uuid.UUID) error {
 	log := s.log.WithCorrelationID(correlationID)
 	syncRun := s.syncRuns.StartNewRun(correlationID)
@@ -189,7 +189,7 @@ func (s *UserSynchronizer) Sync(ctx context.Context, correlationID uuid.UUID) er
 			delete(userRoles, deletedUser)
 		}
 
-		err = assignConsoleAdmins(ctx, dbtx, s.service.Members, s.adminGroupPrefix, s.tenantDomain, remoteUserMapping, userRoles, &auditLogEntries, log)
+		err = assignTeamsBackendAdmins(ctx, dbtx, s.service.Members, s.adminGroupPrefix, s.tenantDomain, remoteUserMapping, userRoles, &auditLogEntries, log)
 		if err != nil {
 			return err
 		}
@@ -216,7 +216,7 @@ func (s *UserSynchronizer) Sync(ctx context.Context, correlationID uuid.UUID) er
 	return nil
 }
 
-// deleteUnknownUsers Delete users from the Console database that does not exist in the Google Workspace
+// deleteUnknownUsers Delete users from the teams-backend database that does not exist in the Google Workspace
 func deleteUnknownUsers(ctx context.Context, dbtx db.Database, unknownUsers userByIDMap, auditLogEntries *[]auditLogEntry) ([]*db.User, error) {
 	deletedUsers := make([]*db.User, 0)
 	for _, user := range unknownUsers {
@@ -235,16 +235,16 @@ func deleteUnknownUsers(ctx context.Context, dbtx db.Database, unknownUsers user
 	return deletedUsers, nil
 }
 
-// assignConsoleAdmins Assign the global admin role to users based on the admin group. Existing admins that is not
+// assignTeamsBackendAdmins Assign the global admin role to users based on the admin group. Existing admins that is not
 // present in the list of admins will get the admin role revoked.
-func assignConsoleAdmins(ctx context.Context, dbtx db.Database, membersService *admin_directory_v1.MembersService, adminGroupPrefix, tenantDomain string, remoteUserMapping map[string]*db.User, userRoles userRolesMap, auditLogEntries *[]auditLogEntry, log logger.Logger) error {
+func assignTeamsBackendAdmins(ctx context.Context, dbtx db.Database, membersService *admin_directory_v1.MembersService, adminGroupPrefix, tenantDomain string, remoteUserMapping map[string]*db.User, userRoles userRolesMap, auditLogEntries *[]auditLogEntry, log logger.Logger) error {
 	admins, err := getAdminUsers(ctx, membersService, adminGroupPrefix, tenantDomain, remoteUserMapping, log)
 	if err != nil {
 		return err
 	}
 
-	existingConsoleAdmins := getExistingConsoleAdmins(userRoles)
-	for _, existingAdmin := range existingConsoleAdmins {
+	existingAdmins := getExistingTeamsBackendAdmins(userRoles)
+	for _, existingAdmin := range existingAdmins {
 		if _, shouldBeAdmin := admins[existingAdmin.ID]; !shouldBeAdmin {
 			err = dbtx.RevokeGlobalUserRole(ctx, existingAdmin.ID, sqlc.RoleNameAdmin)
 			if err != nil {
@@ -260,7 +260,7 @@ func assignConsoleAdmins(ctx context.Context, dbtx db.Database, membersService *
 	}
 
 	for _, admin := range admins {
-		if _, isAlreadyAdmin := existingConsoleAdmins[admin.ID]; !isAlreadyAdmin {
+		if _, isAlreadyAdmin := existingAdmins[admin.ID]; !isAlreadyAdmin {
 			err = dbtx.AssignGlobalRoleToUser(ctx, admin.ID, sqlc.RoleNameAdmin)
 			if err != nil {
 				return err
@@ -277,8 +277,8 @@ func assignConsoleAdmins(ctx context.Context, dbtx db.Database, membersService *
 	return nil
 }
 
-// getExistingConsoleAdmins Get all users with a globally assigned admin role
-func getExistingConsoleAdmins(userWithRoles userRolesMap) map[uuid.UUID]*db.User {
+// getExistingTeamsBackendAdmins Get all users with a globally assigned admin role
+func getExistingTeamsBackendAdmins(userWithRoles userRolesMap) map[uuid.UUID]*db.User {
 	admins := make(map[uuid.UUID]*db.User)
 	for user, roles := range userWithRoles {
 		for roleName := range roles {
@@ -290,7 +290,7 @@ func getExistingConsoleAdmins(userWithRoles userRolesMap) map[uuid.UUID]*db.User
 	return admins
 }
 
-// getAdminUsers Get a list of admin users based on the Console admins group in the Google Workspace
+// getAdminUsers Get a list of admin users based on the teams-backend admins group in the Google Workspace
 func getAdminUsers(ctx context.Context, membersService *admin_directory_v1.MembersService, adminGroupPrefix, tenantDomain string, remoteUserMapping map[string]*db.User, log logger.Logger) (map[uuid.UUID]*db.User, error) {
 	adminGroupKey := adminGroupPrefix + "@" + tenantDomain
 	groupMembers := make([]*admin_directory_v1.Member, 0)
@@ -312,11 +312,11 @@ func getAdminUsers(ctx context.Context, membersService *admin_directory_v1.Membe
 			// Special case: When the group does not exist we want to remove all existing admins. The group might never
 			// have been created by the tenant admins in the first place, or it might have been deleted. In any case, we
 			// want to treat this case as if the group exists, and that it is empty, effectively removing all admins.
-			log.Warnf("console admins group %q does not exist", adminGroupKey)
+			log.Warnf("teams-backend admins group %q does not exist", adminGroupKey)
 			return admins, nil
 		}
 
-		return nil, fmt.Errorf("list members in Console admins group: %w", err)
+		return nil, fmt.Errorf("list members in teams-backend admins group: %w", err)
 	}
 
 	for _, member := range groupMembers {

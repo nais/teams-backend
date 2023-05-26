@@ -143,7 +143,7 @@ func (h *handler) Schedule(input Input) error {
 	return h.syncQueue.Add(input)
 }
 
-// InitReconcilers initializes the currently enabled reconcilers during startup of Console
+// InitReconcilers initializes the currently enabled reconcilers during startup of teams-backend
 func (h *handler) InitReconcilers(ctx context.Context) error {
 	enabledReconcilers, err := h.database.GetEnabledReconcilers(ctx)
 	if err != nil {

@@ -155,7 +155,7 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 		return fmt.Errorf("list existing members in Azure group %q: %s", grp.MailNickname, err)
 	}
 
-	consoleUserMap := make(map[string]*db.User)
+	teamsBackendUserMap := make(map[string]*db.User)
 	membersToRemove := remoteOnlyMembers(members, input.TeamMembers)
 	for _, member := range membersToRemove {
 		remoteEmail := strings.ToLower(member.Mail)
@@ -165,13 +165,13 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 			continue
 		}
 
-		if _, exists := consoleUserMap[remoteEmail]; !exists {
+		if _, exists := teamsBackendUserMap[remoteEmail]; !exists {
 			user, err := r.database.GetUserByEmail(ctx, remoteEmail)
 			if err != nil {
 				r.log.WithError(err).Warnf("lookup local user with email %q: %s", remoteEmail)
 				continue
 			}
-			consoleUserMap[remoteEmail] = user
+			teamsBackendUserMap[remoteEmail] = user
 		}
 
 		targets := []auditlogger.Target{
@@ -186,37 +186,37 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 	}
 
 	membersToAdd := localOnlyMembers(members, input.TeamMembers)
-	for _, consoleUser := range membersToAdd {
-		member, err := r.client.GetUser(ctx, consoleUser.Email)
+	for _, teamsBackendUser := range membersToAdd {
+		member, err := r.client.GetUser(ctx, teamsBackendUser.Email)
 		if err != nil {
-			r.log.WithError(err).Warnf("lookup user with email %q in Azure", consoleUser.Email)
+			r.log.WithError(err).Warnf("lookup user with email %q in Azure", teamsBackendUser.Email)
 			continue
 		}
 		err = r.client.AddMemberToGroup(ctx, grp, member)
 		if err != nil {
-			r.log.WithError(err).Warnf("add member %q to Azure group %q", consoleUser.Email, grp.MailNickname)
+			r.log.WithError(err).Warnf("add member %q to Azure group %q", teamsBackendUser.Email, grp.MailNickname)
 			continue
 		}
 
 		targets := []auditlogger.Target{
 			auditlogger.TeamTarget(input.Team.Slug),
-			auditlogger.UserTarget(consoleUser.Email),
+			auditlogger.UserTarget(teamsBackendUser.Email),
 		}
 		fields := auditlogger.Fields{
 			Action:        sqlc.AuditActionAzureGroupAddMember,
 			CorrelationID: input.CorrelationID,
 		}
-		r.auditLogger.Logf(ctx, r.database, targets, fields, "Added member %q to Azure group %q", consoleUser.Email, grp.MailNickname)
+		r.auditLogger.Logf(ctx, r.database, targets, fields, "Added member %q to Azure group %q", teamsBackendUser.Email, grp.MailNickname)
 	}
 
 	return nil
 }
 
-// localOnlyMembers Given a list of Azure group members and a list of Console users, return Console users not present in
-// the Azure group member list. The email address is used to compare objects.
-func localOnlyMembers(azureGroupMembers []*azureclient.Member, consoleUsers []*db.User) []*db.User {
+// localOnlyMembers Given a list of Azure group members and a list of teams-backend users, return teams-backend users
+// not present in the Azure group member list. The email address is used to compare objects.
+func localOnlyMembers(azureGroupMembers []*azureclient.Member, teamsBackendUsers []*db.User) []*db.User {
 	localUserMap := make(map[string]*db.User)
-	for _, user := range consoleUsers {
+	for _, user := range teamsBackendUsers {
 		localUserMap[user.Email] = user
 	}
 	for _, member := range azureGroupMembers {
@@ -229,14 +229,14 @@ func localOnlyMembers(azureGroupMembers []*azureclient.Member, consoleUsers []*d
 	return localUsers
 }
 
-// remoteOnlyMembers Given a list of Azure group members and a list of Console users, return Azure group members not
-// present in Console user list. The email address is used to compare objects.
-func remoteOnlyMembers(azureGroupMembers []*azureclient.Member, consoleUsers []*db.User) []*azureclient.Member {
+// remoteOnlyMembers Given a list of Azure group members and a list of teams-backend users, return Azure group members
+// not present in teams-backend user list. The email address is used to compare objects.
+func remoteOnlyMembers(azureGroupMembers []*azureclient.Member, teamsBackendUsers []*db.User) []*azureclient.Member {
 	azureGroupMemberMap := make(map[string]*azureclient.Member)
 	for _, member := range azureGroupMembers {
 		azureGroupMemberMap[strings.ToLower(member.Mail)] = member
 	}
-	for _, user := range consoleUsers {
+	for _, user := range teamsBackendUsers {
 		delete(azureGroupMemberMap, user.Email)
 	}
 	azureGroupMembers = make([]*azureclient.Member, 0, len(azureGroupMemberMap))

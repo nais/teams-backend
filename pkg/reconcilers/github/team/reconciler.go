@@ -252,12 +252,12 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 		return fmt.Errorf("list existing members in GitHub team %q: %w", *githubTeam.Slug, err)
 	}
 
-	consoleUserWithGitHubUser, err := r.mapSSOUsers(ctx, input.TeamMembers)
+	teamsBackendUserWithGitHubUser, err := r.mapSSOUsers(ctx, input.TeamMembers)
 	if err != nil {
 		return err
 	}
 
-	membersToRemove := remoteOnlyMembers(membersAccordingToGitHub, consoleUserWithGitHubUser)
+	membersToRemove := remoteOnlyMembers(membersAccordingToGitHub, teamsBackendUserWithGitHubUser)
 	for _, gitHubUser := range membersToRemove {
 		username := gitHubUser.GetLogin()
 		resp, err := r.teamsService.RemoveTeamMembershipBySlug(ctx, r.org, *githubTeam.Slug, username)
@@ -276,7 +276,7 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 		if email != nil {
 			_, err = r.database.GetUserByEmail(ctx, *email)
 			if err != nil {
-				r.log.WithError(err).Warnf("get Console user with email %q", *email)
+				r.log.WithError(err).Warnf("get teams-backend user with email %q", *email)
 				email = nil
 			}
 		}
@@ -291,8 +291,8 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 		r.auditLogger.Logf(ctx, r.database, targets, fields, "Deleted member %q from GitHub team %q", username, *githubTeam.Slug)
 	}
 
-	membersToAdd := localOnlyMembers(consoleUserWithGitHubUser, membersAccordingToGitHub)
-	for username, consoleUser := range membersToAdd {
+	membersToAdd := localOnlyMembers(teamsBackendUserWithGitHubUser, membersAccordingToGitHub)
+	for username, teamsBackendUser := range membersToAdd {
 		_, resp, err := r.teamsService.AddTeamMembershipBySlug(ctx, r.org, *githubTeam.Slug, username, &github.TeamAddTeamMembershipOptions{})
 		metrics.IncExternalHTTPCalls(metricsSystemName, unwrapResponse(resp), err)
 		err = httpError(http.StatusOK, resp, err)
@@ -303,7 +303,7 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 
 		targets := []auditlogger.Target{
 			auditlogger.TeamTarget(input.Team.Slug),
-			auditlogger.UserTarget(consoleUser.Email),
+			auditlogger.UserTarget(teamsBackendUser.Email),
 		}
 		fields := auditlogger.Fields{
 			Action:        sqlc.AuditActionGithubTeamAddMember,
@@ -342,37 +342,37 @@ func (r *githubTeamReconciler) getTeamMembers(ctx context.Context, slug string) 
 	return allMembers, nil
 }
 
-// localOnlyMembers Given a mapping of GitHub usernames to Console users, and a list of GitHub team members according to
+// localOnlyMembers Given a mapping of GitHub usernames to teams-backend users, and a list of GitHub team members according to
 // GitHub, return members only present in the mapping.
-func localOnlyMembers(consoleUsers map[string]*db.User, membersAccordingToGitHub []*github.User) map[string]*db.User {
+func localOnlyMembers(teamsBackendUsers map[string]*db.User, membersAccordingToGitHub []*github.User) map[string]*db.User {
 	gitHubUsernameMap := make(map[string]*github.User, 0)
 	for _, gitHubUser := range membersAccordingToGitHub {
 		gitHubUsernameMap[gitHubUser.GetLogin()] = gitHubUser
 	}
 
 	localOnly := make(map[string]*db.User, 0)
-	for gitHubUsername, consoleUser := range consoleUsers {
+	for gitHubUsername, teamsBackendUser := range teamsBackendUsers {
 		if _, exists := gitHubUsernameMap[gitHubUsername]; !exists {
-			localOnly[gitHubUsername] = consoleUser
+			localOnly[gitHubUsername] = teamsBackendUser
 		}
 	}
 	return localOnly
 }
 
-// remoteOnlyMembers Given a list of GitHub team members and a mapping of known GitHub usernames to Console users,
+// remoteOnlyMembers Given a list of GitHub team members and a mapping of known GitHub usernames to teams-backend users,
 // return members not present in the mapping.
-func remoteOnlyMembers(membersAccordingToGitHub []*github.User, consoleUsers map[string]*db.User) []*github.User {
+func remoteOnlyMembers(membersAccordingToGitHub []*github.User, teamsBackendUsers map[string]*db.User) []*github.User {
 	unknownMembers := make([]*github.User, 0)
 	for _, member := range membersAccordingToGitHub {
-		if _, exists := consoleUsers[member.GetLogin()]; !exists {
+		if _, exists := teamsBackendUsers[member.GetLogin()]; !exists {
 			unknownMembers = append(unknownMembers, member)
 		}
 	}
 	return unknownMembers
 }
 
-// mapSSOUsers Return a mapping of GitHub usernames to Console user objects. Console users with no matching GitHub user
-// will be ignored.
+// mapSSOUsers Return a mapping of GitHub usernames to teams-backend user objects. teams-backend users with no matching
+// GitHub user will be ignored.
 func (r *githubTeamReconciler) mapSSOUsers(ctx context.Context, users []*db.User) (map[string]*db.User, error) {
 	userMap := make(map[string]*db.User)
 	for _, user := range users {
@@ -516,9 +516,9 @@ func unwrapResponse(resp *github.Response) *http.Response {
 	return resp.Response
 }
 
-// gitHubTeamIsUpToDate check if a GitHub team is up to date compared to the Console team
-func gitHubTeamIsUpToDate(consoleTeam db.Team, gitHubTeam github.Team) bool {
-	if consoleTeam.Purpose != helpers.StringWithFallback(gitHubTeam.Description, "") {
+// gitHubTeamIsUpToDate check if a GitHub team is up to date compared to the teams-backend team
+func gitHubTeamIsUpToDate(naisTeam db.Team, gitHubTeam github.Team) bool {
+	if naisTeam.Purpose != helpers.StringWithFallback(gitHubTeam.Description, "") {
 		return false
 	}
 
