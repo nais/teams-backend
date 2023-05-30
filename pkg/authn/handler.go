@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -83,12 +82,23 @@ func (h *handler) Login(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, consentUrl, http.StatusFound)
 }
 
+func updateRedirectURL(redirectURL *url.URL, urlFromCookie string) {
+	redirectPath, err := url.QueryUnescape(urlFromCookie)
+	if err == nil {
+		u, err := url.Parse(redirectPath)
+		if err == nil {
+			redirectURL.Path = u.Path
+			redirectURL.RawQuery = u.RawQuery
+		}
+	}
+}
+
 func (h *handler) Callback(w http.ResponseWriter, r *http.Request) {
 	frontendURL := h.frontendURL
 
-	redirectURI, err := r.Cookie(RedirectURICookie)
+	redirectURIRaw, err := r.Cookie(RedirectURICookie)
 	if err == nil {
-		frontendURL.Path = strings.TrimPrefix(redirectURI.Value, "/")
+		updateRedirectURL(&frontendURL, redirectURIRaw.Value)
 	}
 
 	h.DeleteCookie(w, RedirectURICookie)
