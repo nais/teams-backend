@@ -21,6 +21,8 @@ var (
 		"kube-node-lease",
 		"kube-public",
 		"kyverno",
+		"cnrm-system",
+		"configconnector-operator-system",
 	}
 )
 
