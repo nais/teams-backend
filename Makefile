@@ -31,7 +31,7 @@ generate-gql:
 
 generate-sqlc:
 	go run github.com/kyleconroy/sqlc/cmd/sqlc generate
-	go run mvdan.cc/gofumpt -w ./pkg/graph/
+	go run mvdan.cc/gofumpt -w ./pkg/sqlc/
 
 generate-mocks:
 	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/azureclient --name Client
