@@ -22,6 +22,7 @@ var (
 	ErrTeamPurpose         = Errorf("You must specify the purpose for your team. This is a human-readable string which is used in external systems, and is important because other people might need to to understand what your team is all about.")
 	ErrTeamNotExist        = Errorf("The team you are referring to does not exist in our database.")
 	ErrTeamPrefixRedundant = Errorf("The name prefix 'team' is redundant. When you create a team, it is by definition a team. Try again with a different name, perhaps just removing the prefix?")
+	ErrTeamSlugReserved    = Errorf("The specified slug is reserved by the platform.")
 	ErrUserIsNotTeamMember = Errorf("The user is not a member of the team.")
 )
 

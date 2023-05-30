@@ -60,7 +60,6 @@ func TestCreateTeamInput_Validate_Slug(t *testing.T) {
 		"channel4",
 		"some-long-string-less-than-31c",
 		"nais",
-		"nais-system",
 		"naisuratur",
 		"naisan",
 	}
@@ -79,6 +78,10 @@ func TestCreateTeamInput_Validate_Slug(t *testing.T) {
 		"you-aint-got-the-æøå",
 		"Uppercase",
 		"rollback()",
+		"kube-node-lease",
+		"kube-public",
+		"kube-system",
+		"nais-system",
 	}
 
 	for _, s := range validSlugs {

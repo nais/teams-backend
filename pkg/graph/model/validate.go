@@ -13,6 +13,14 @@ var (
 
 	// Rules can be found here: https://api.slack.com/methods/conversations.create#naming
 	slackChannelNameRegex = regexp.MustCompile("^#[a-z0-9æøå_-]{2,80}$")
+
+	// Slugs that are reserved
+	reservedSlugs = []string{
+		"nais-system",
+		"kube-system",
+		"kube-node-lease",
+		"kube-public",
+	}
 )
 
 func ptr[T any](value T) *T {
@@ -32,6 +40,12 @@ func (input CreateTeamInput) Validate() error {
 
 	if strings.HasPrefix(slug, "team") {
 		return apierror.ErrTeamPrefixRedundant
+	}
+
+	for _, reserved := range reservedSlugs {
+		if slug == reserved {
+			return apierror.ErrTeamSlugReserved
+		}
 	}
 
 	if !slackChannelNameRegex.MatchString(input.SlackChannel) {
