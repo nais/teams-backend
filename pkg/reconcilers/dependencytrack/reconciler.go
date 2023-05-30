@@ -10,6 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/google/uuid"
+	dependencytrack "github.com/nais/dependencytrack/pkg/client"
 	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/config"
 	"github.com/nais/teams-backend/pkg/db"
@@ -18,7 +19,6 @@ import (
 	"github.com/nais/teams-backend/pkg/reconcilers"
 	"github.com/nais/teams-backend/pkg/slug"
 	"github.com/nais/teams-backend/pkg/sqlc"
-	dependencytrack "github.com/nais/dependencytrack/pkg/client"
 )
 
 type dependencytrackReconciler struct {
