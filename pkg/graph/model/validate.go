@@ -20,6 +20,7 @@ var (
 		"kube-system",
 		"kube-node-lease",
 		"kube-public",
+		"kyverno",
 	}
 )
 

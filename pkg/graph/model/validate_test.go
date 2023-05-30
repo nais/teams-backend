@@ -82,6 +82,7 @@ func TestCreateTeamInput_Validate_Slug(t *testing.T) {
 		"kube-public",
 		"kube-system",
 		"nais-system",
+		"kyverno",
 	}
 
 	for _, s := range validSlugs {
