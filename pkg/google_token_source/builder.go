@@ -18,11 +18,11 @@ type Builder struct {
 
 func NewFromConfig(cfg *config.Config) (*Builder, error) {
 	if cfg.GoogleManagementProjectID == "" {
-		return nil, fmt.Errorf("missing required configuration: CONSOLE_GOOGLE_MANAGEMENT_PROJECT_ID")
+		return nil, fmt.Errorf("missing required configuration: TEAMS_BACKEND_GOOGLE_MANAGEMENT_PROJECT_ID")
 	}
 
 	if cfg.TenantDomain == "" {
-		return nil, fmt.Errorf("missing required configuration: CONSOLE_TENANT_DOMAIN")
+		return nil, fmt.Errorf("missing required configuration: TEAMS_BACKEND_TENANT_DOMAIN")
 	}
 
 	return &Builder{

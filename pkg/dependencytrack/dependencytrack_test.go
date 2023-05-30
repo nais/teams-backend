@@ -14,11 +14,11 @@ type Config struct {
 
 type DependencyTrack struct {
 	// One dependency track instance for each cluster.
-	Instances Instances `envconfig:"CONSOLE_DEPENDENCYTRACK"`
+	Instances Instances `envconfig:"TEAMS_BACKEND_DEPENDENCYTRACK"`
 }
 
 func TestEnvconfigToInstances(t *testing.T) {
-	err := os.Setenv("CONSOLE_DEPENDENCYTRACK", `[{"endpoint": "https://dependencytrack.nais.io", "username": "admin", "password": "password"}]`)
+	err := os.Setenv("TEAMS_BACKEND_DEPENDENCYTRACK", `[{"endpoint": "https://dependencytrack.nais.io", "username": "admin", "password": "password"}]`)
 	assert.NoError(t, err)
 	var cfg Config
 	err = envconfig.Process("myapp", &cfg)

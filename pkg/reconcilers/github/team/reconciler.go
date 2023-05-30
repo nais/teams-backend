@@ -45,11 +45,11 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, org, domain 
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
 	if cfg.GitHub.AuthEndpoint == "" {
-		return nil, fmt.Errorf("missing required configuration: CONSOLE_GITHUB_AUTH_ENDPOINT")
+		return nil, fmt.Errorf("missing required configuration: TEAMS_BACKEND_GITHUB_AUTH_ENDPOINT")
 	}
 
 	if cfg.GoogleManagementProjectID == "" {
-		return nil, fmt.Errorf("missing required configuration: CONSOLE_GOOGLE_MANAGEMENT_PROJECT_ID")
+		return nil, fmt.Errorf("missing required configuration: TEAMS_BACKEND_GOOGLE_MANAGEMENT_PROJECT_ID")
 	}
 
 	ts, err := impersonate.IDTokenSource(ctx, impersonate.IDTokenConfig{

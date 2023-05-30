@@ -21,7 +21,7 @@ When a user is removed from the GCP organization, the user sync will remove the 
 ### Service accounts
 A service account corresponds to one (or several) external systems, and is identified through a unique name. The name must start with a lowercase letter, and can consist of lowercase letters, numbers and hyphens. The name can not end with a hyphen. Service accounts must use API keys to interact with the GraphQL API, and are not able to sign in using the frontend.
 
-Service accounts can only be created via the `CONSOLE_STATIC_SERVICE_ACCOUNTS` environment variable that must be passed to Console on startup. The environment variable must contain a JSON string that matches the following schema:
+Service accounts can only be created via the `TEAMS_BACKEND_STATIC_SERVICE_ACCOUNTS` environment variable that must be passed to Console on startup. The environment variable must contain a JSON string that matches the following schema:
 
 ```json
 {
