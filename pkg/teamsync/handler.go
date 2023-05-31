@@ -217,7 +217,7 @@ func (h *handler) RemoveReconciler(reconcilerName sqlc.ReconcilerName) {
 }
 
 func (h *handler) ScheduleAllTeams(ctx context.Context, correlationID uuid.UUID) ([]*db.Team, error) {
-	teams, err := h.database.GetTeams(ctx)
+	teams, err := h.database.GetActiveTeams(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +240,7 @@ func (h *handler) ScheduleAllTeams(ctx context.Context, correlationID uuid.UUID)
 func (h *handler) reconcileTeam(ctx context.Context, input Input) error {
 	log := h.log.WithTeamSlug(string(input.TeamSlug))
 
-	team, err := h.database.GetTeamBySlug(ctx, input.TeamSlug)
+	team, err := h.database.GetActiveTeamBySlug(ctx, input.TeamSlug)
 	if err != nil {
 		return err
 	}

@@ -3,9 +3,32 @@ INSERT INTO teams (slug, purpose, slack_channel)
 VALUES ($1, $2, $3)
 RETURNING *;
 
+-- name: GetActiveTeams :many
+SELECT teams.* FROM teams
+WHERE NOT EXISTS (
+    SELECT team_delete_keys.team_slug
+    FROM team_delete_keys
+    WHERE
+        team_delete_keys.team_slug = teams.slug
+        AND team_delete_keys.confirmed_at IS NOT NULL
+)
+ORDER BY teams.slug ASC;
+
 -- name: GetTeams :many
 SELECT teams.* FROM teams
 ORDER BY teams.slug ASC;
+
+-- name: GetActiveTeamBySlug :one
+SELECT teams.* FROM teams
+WHERE
+    teams.slug = $1
+    AND NOT EXISTS (
+        SELECT team_delete_keys.team_slug
+        FROM team_delete_keys
+        WHERE
+            team_delete_keys.team_slug = $1
+            AND team_delete_keys.confirmed_at IS NOT NULL
+    );
 
 -- name: GetTeamBySlug :one
 SELECT teams.* FROM teams

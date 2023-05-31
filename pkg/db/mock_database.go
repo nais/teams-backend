@@ -421,6 +421,52 @@ func (_m *MockDatabase) FirstRunComplete(ctx context.Context) error {
 	return r0
 }
 
+// GetActiveTeamBySlug provides a mock function with given fields: ctx, _a1
+func (_m *MockDatabase) GetActiveTeamBySlug(ctx context.Context, _a1 slug.Slug) (*Team, error) {
+	ret := _m.Called(ctx, _a1)
+
+	var r0 *Team
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug) *Team); ok {
+		r0 = rf(ctx, _a1)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*Team)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug) error); ok {
+		r1 = rf(ctx, _a1)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetActiveTeams provides a mock function with given fields: ctx
+func (_m *MockDatabase) GetActiveTeams(ctx context.Context) ([]*Team, error) {
+	ret := _m.Called(ctx)
+
+	var r0 []*Team
+	if rf, ok := ret.Get(0).(func(context.Context) []*Team); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*Team)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetAllUserRoles provides a mock function with given fields: ctx
 func (_m *MockDatabase) GetAllUserRoles(ctx context.Context) ([]*UserRole, error) {
 	ret := _m.Called(ctx)

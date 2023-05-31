@@ -58,7 +58,7 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 				Purpose: "some purpose",
 			},
 		}
-		database.On("GetTeamBySlug", mock.Anything, teamSlug).Return(team, nil).Once()
+		database.On("GetActiveTeamBySlug", mock.Anything, teamSlug).Return(team, nil).Once()
 
 		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
 		handler.Schedule(input)
@@ -159,7 +159,7 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 			CorrelationID: uuid.New(),
 			TeamSlug:      teamSlug,
 		}
-		database.On("GetTeamBySlug", mock.Anything, teamSlug).Return(team, nil).Once()
+		database.On("GetActiveTeamBySlug", mock.Anything, teamSlug).Return(team, nil).Once()
 
 		membersForAzureReconciler := []*db.User{{User: &sqlc.User{ID: uuid.New()}}}
 		membersForGitHubReconciler := []*db.User{{User: &sqlc.User{ID: uuid.New()}}}
@@ -265,7 +265,7 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 			},
 		}
 		database.
-			On("GetTeamBySlug", mock.Anything, teamSlug).
+			On("GetActiveTeamBySlug", mock.Anything, teamSlug).
 			Return(team, nil).
 			Twice()
 		database.

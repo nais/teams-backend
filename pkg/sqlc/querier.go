@@ -35,6 +35,8 @@ type Querier interface {
 	DisableReconciler(ctx context.Context, name ReconcilerName) (*Reconciler, error)
 	EnableReconciler(ctx context.Context, name ReconcilerName) (*Reconciler, error)
 	FirstRunComplete(ctx context.Context) error
+	GetActiveTeamBySlug(ctx context.Context, argSlug slug.Slug) (*Team, error)
+	GetActiveTeams(ctx context.Context) ([]*Team, error)
 	GetAllUserRoles(ctx context.Context) ([]*UserRole, error)
 	GetAuditLogsForCorrelationID(ctx context.Context, correlationID uuid.UUID) ([]*AuditLog, error)
 	GetAuditLogsForReconciler(ctx context.Context, targetIdentifier string) ([]*AuditLog, error)

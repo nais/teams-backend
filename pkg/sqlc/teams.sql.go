@@ -81,6 +81,68 @@ func (q *Queries) DeleteTeam(ctx context.Context, argSlug slug.Slug) error {
 	return err
 }
 
+const getActiveTeamBySlug = `-- name: GetActiveTeamBySlug :one
+SELECT teams.slug, teams.purpose, teams.last_successful_sync, teams.slack_channel FROM teams
+WHERE
+    teams.slug = $1
+    AND NOT EXISTS (
+        SELECT team_delete_keys.team_slug
+        FROM team_delete_keys
+        WHERE
+            team_delete_keys.team_slug = $1
+            AND team_delete_keys.confirmed_at IS NOT NULL
+    )
+`
+
+func (q *Queries) GetActiveTeamBySlug(ctx context.Context, argSlug slug.Slug) (*Team, error) {
+	row := q.db.QueryRow(ctx, getActiveTeamBySlug, argSlug)
+	var i Team
+	err := row.Scan(
+		&i.Slug,
+		&i.Purpose,
+		&i.LastSuccessfulSync,
+		&i.SlackChannel,
+	)
+	return &i, err
+}
+
+const getActiveTeams = `-- name: GetActiveTeams :many
+SELECT teams.slug, teams.purpose, teams.last_successful_sync, teams.slack_channel FROM teams
+WHERE NOT EXISTS (
+    SELECT team_delete_keys.team_slug
+    FROM team_delete_keys
+    WHERE
+        team_delete_keys.team_slug = teams.slug
+        AND team_delete_keys.confirmed_at IS NOT NULL
+)
+ORDER BY teams.slug ASC
+`
+
+func (q *Queries) GetActiveTeams(ctx context.Context) ([]*Team, error) {
+	rows, err := q.db.Query(ctx, getActiveTeams)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*Team
+	for rows.Next() {
+		var i Team
+		if err := rows.Scan(
+			&i.Slug,
+			&i.Purpose,
+			&i.LastSuccessfulSync,
+			&i.SlackChannel,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getSlackAlertsChannels = `-- name: GetSlackAlertsChannels :many
 SELECT team_slug, environment, channel_name FROM slack_alerts_channels
 WHERE team_slug = $1

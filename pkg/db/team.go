@@ -41,6 +41,15 @@ func (d *database) CreateTeam(ctx context.Context, slug slug.Slug, purpose, slac
 	return &Team{Team: team}, nil
 }
 
+func (d *database) GetActiveTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error) {
+	team, err := d.querier.GetActiveTeamBySlug(ctx, slug)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Team{Team: team}, nil
+}
+
 func (d *database) GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error) {
 	team, err := d.querier.GetTeamBySlug(ctx, slug)
 	if err != nil {
@@ -52,6 +61,20 @@ func (d *database) GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, er
 
 func (d *database) GetTeams(ctx context.Context) ([]*Team, error) {
 	teams, err := d.querier.GetTeams(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	collection := make([]*Team, 0)
+	for _, team := range teams {
+		collection = append(collection, &Team{Team: team})
+	}
+
+	return collection, nil
+}
+
+func (d *database) GetActiveTeams(ctx context.Context) ([]*Team, error) {
+	teams, err := d.querier.GetActiveTeams(ctx)
 	if err != nil {
 		return nil, err
 	}
