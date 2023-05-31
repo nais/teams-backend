@@ -54,10 +54,13 @@ JOIN teams ON teams.slug = user_roles.target_team_slug
 JOIN users ON users.id = user_roles.user_id
 WHERE
     user_roles.target_team_slug = $1
-    AND user_roles.user_id NOT IN (
-        SELECT user_id
-        FROM reconciler_opt_outs
-        WHERE team_slug = $1 AND reconciler_name = $2
+    AND NOT EXISTS (
+        SELECT roo.user_id
+        FROM reconciler_opt_outs AS roo
+        WHERE
+            roo.team_slug = $1
+            AND roo.reconciler_name = $2
+            AND roo.user_id = users.id
     )
 ORDER BY users.name ASC;
 
