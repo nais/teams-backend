@@ -6,9 +6,11 @@ package graph
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
+	pgx "github.com/jackc/pgx/v4"
 	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/authz"
 	"github.com/nais/teams-backend/pkg/db"
@@ -955,6 +957,16 @@ func (r *teamResolver) GitHubRepositories(ctx context.Context, obj *db.Team) ([]
 		return nil, apierror.Errorf("Unable to load the GitHub state for the team.")
 	}
 	return state.Repositories, nil
+}
+
+// DeletionInProgress is the resolver for the deletionInProgress field.
+func (r *teamResolver) DeletionInProgress(ctx context.Context, obj *db.Team) (bool, error) {
+	_, err := r.database.GetActiveTeamBySlug(ctx, obj.Slug)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return true, nil
+	}
+
+	return false, err
 }
 
 // CreatedBy is the resolver for the createdBy field.

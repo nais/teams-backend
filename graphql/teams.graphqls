@@ -246,6 +246,9 @@ type Team {
 
     "A list of GitHub repositories for the team."
     gitHubRepositories: [GitHubRepository!]!
+
+    "Whether or not the team is currently being deleted."
+    deletionInProgress: Boolean!
 }
 
 "GitHub repository type."
