@@ -169,7 +169,7 @@ func (r *googleGcpReconciler) Delete(ctx context.Context, teamSlug slug.Slug, co
 		_, err = r.gcpServices.CloudResourceManagerProjectsService.Delete("projects/" + teamProject.ProjectID).Context(ctx).Do()
 		if err != nil {
 			googleError, ok := err.(*googleapi.Error)
-			if ok && (googleError.Code == 400 || googleError.Code == 404) {
+			if ok && (googleError.Code == 400 || googleError.Code == 404 || googleError.Code == 403) {
 				auditLogMessage = fmt.Sprintf("GCP project %q no longer exists, removing from state", teamProject.ProjectID)
 			} else {
 				errors = append(errors, err)
