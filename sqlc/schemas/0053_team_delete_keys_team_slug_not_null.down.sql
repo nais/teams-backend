@@ -1,0 +1,6 @@
+BEGIN;
+
+ALTER TABLE team_delete_keys
+ALTER COLUMN team_slug DROP NOT NULL;
+
+COMMIT;
