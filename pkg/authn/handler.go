@@ -84,13 +84,17 @@ func (h *handler) Login(w http.ResponseWriter, r *http.Request) {
 
 func updateRedirectURL(redirectURL *url.URL, urlFromCookie string) {
 	redirectPath, err := url.QueryUnescape(urlFromCookie)
-	if err == nil {
-		u, err := url.Parse(redirectPath)
-		if err == nil {
-			redirectURL.Path = u.Path
-			redirectURL.RawQuery = u.RawQuery
-		}
+	if err != nil {
+		return
 	}
+
+	u, err := url.Parse(redirectPath)
+	if err != nil {
+		return
+	}
+
+	redirectURL.Path = u.Path
+	redirectURL.RawQuery = u.RawQuery
 }
 
 func (h *handler) Callback(w http.ResponseWriter, r *http.Request) {

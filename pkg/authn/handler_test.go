@@ -12,8 +12,6 @@ func TestRedirectURI(t *testing.T) {
 	assert.NoError(t, err)
 
 	t.Run("test values", func(t *testing.T) {
-		baseUrlCopy := baseUrl
-
 		tests := []struct {
 			raw   string
 			path  string
@@ -36,7 +34,7 @@ func TestRedirectURI(t *testing.T) {
 			},
 		}
 		for _, tt := range tests {
-			baseUrlCopy = baseUrl
+			baseUrlCopy := baseUrl
 			updateRedirectURL(baseUrlCopy, tt.raw)
 			assert.Equal(t, baseUrlCopy.Path, tt.path)
 			assert.Equal(t, baseUrlCopy.RawQuery, tt.query)
