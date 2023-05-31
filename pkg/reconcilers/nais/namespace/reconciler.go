@@ -211,8 +211,10 @@ func (r *naisNamespaceReconciler) Delete(ctx context.Context, teamSlug slug.Slug
 	if err != nil {
 		return fmt.Errorf("unable to load NAIS namespace state for team %q: %w", teamSlug, err)
 	}
-	if namespaceState.Namespaces == nil {
-		namespaceState.Namespaces = make(map[string]slug.Slug)
+
+	if len(namespaceState.Namespaces) == 0 {
+		r.log.Warnf("no namespaces for team %q in reconciler %q, assume already deleted", teamSlug, r.Name())
+		return nil
 	}
 
 	var errors []error

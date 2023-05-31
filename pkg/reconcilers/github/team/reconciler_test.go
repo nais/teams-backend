@@ -605,15 +605,29 @@ func TestGitHubReconciler_Delete(t *testing.T) {
 			Return(nil).
 			Once()
 
+		database.On("RemoveReconcilerStateForTeam",
+			ctx,
+			github_team_reconciler.Name,
+			teamSlug).
+			Return(nil).
+			Once()
+
 		log.
 			On("WithSystem", string(sqlc.SystemNameGithubTeam)).
 			Return(log).
 			Once()
 
+		log.
+			On("Warnf",
+				"missing slug in reconciler state for team %q in reconciler %q, assume already deleted",
+				teamSlug,
+				github_team_reconciler.Name).
+			Once()
+
 		err := github_team_reconciler.
 			New(database, auditLogger, org, domain, teamsService, graphClient, log).
 			Delete(ctx, teamSlug, correlationID)
-		assert.ErrorContains(t, err, "missing slug in reconciler state")
+		assert.NoError(t, err)
 	})
 
 	t.Run("GitHub API client fails", func(t *testing.T) {

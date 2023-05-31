@@ -106,7 +106,8 @@ func (r *googleWorkspaceAdminReconciler) Delete(ctx context.Context, teamSlug sl
 	}
 
 	if state.GroupEmail == nil {
-		return fmt.Errorf("missing group email in reconciler state for team %q in reconciler %q", teamSlug, r.Name())
+		r.log.Warnf("missing group email in reconciler state for team %q in reconciler %q, assume already deleted", teamSlug, r.Name())
+		return r.database.RemoveReconcilerStateForTeam(ctx, r.Name(), teamSlug)
 	}
 
 	grpEmail := *state.GroupEmail

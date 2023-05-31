@@ -127,7 +127,8 @@ func (r *azureGroupReconciler) Delete(ctx context.Context, teamSlug slug.Slug, c
 	}
 
 	if state.GroupID == nil {
-		return fmt.Errorf("missing group ID in reconciler state for team %q in reconciler %q", teamSlug, r.Name())
+		r.log.Warnf("missing group ID in reconciler state for team %q in reconciler %q, assume already deleted", teamSlug, r.Name())
+		return r.database.RemoveReconcilerStateForTeam(ctx, r.Name(), teamSlug)
 	}
 
 	grpID := *state.GroupID

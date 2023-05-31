@@ -128,7 +128,9 @@ func (r *garReconciler) Delete(ctx context.Context, teamSlug slug.Slug, correlat
 	}
 
 	if state.RepositoryName == nil {
-		return fmt.Errorf("missing repository name in reconciler state for team %q in reconciler %q", teamSlug, r.Name())
+		r.log.Warnf("missing repository name in reconciler state for team %q in reconciler %q, assume already deleted", teamSlug, r.Name())
+		return r.database.RemoveReconcilerStateForTeam(ctx, r.Name(), teamSlug)
+
 	}
 
 	serviceAccountName, _ := serviceAccountNameAndAccountID(teamSlug, r.managementProjectID)

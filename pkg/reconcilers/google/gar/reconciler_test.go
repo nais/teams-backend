@@ -486,16 +486,29 @@ func TestDelete(t *testing.T) {
 			Return(log).
 			Once()
 
+		log.
+			On("Warnf",
+				"missing repository name in reconciler state for team %q in reconciler %q, assume already deleted",
+				teamSlug,
+				google_gar.Name).
+			Once()
+
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, google_gar.Name, teamSlug, mock.Anything).
+			Return(nil).
+			Once()
+		database.On("RemoveReconcilerStateForTeam",
+			ctx,
+			google_gar.Name,
+			teamSlug).
 			Return(nil).
 			Once()
 
 		err := google_gar.
 			New(auditLogger, database, managementProjectID, workloadIdentityPoolName, garClient, iamService, log).
 			Delete(ctx, teamSlug, correlationID)
-		assert.ErrorContains(t, err, "missing repository name")
+		assert.NoError(t, err)
 	})
 
 	t.Run("delete service account fails with unexpected error", func(t *testing.T) {

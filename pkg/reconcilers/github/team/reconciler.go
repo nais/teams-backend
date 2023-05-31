@@ -115,7 +115,8 @@ func (r *githubTeamReconciler) Delete(ctx context.Context, teamSlug slug.Slug, c
 	}
 
 	if state.Slug == nil {
-		return fmt.Errorf("missing slug in reconciler state for team %q in reconciler %q", teamSlug, r.Name())
+		r.log.Warnf("missing slug in reconciler state for team %q in reconciler %q, assume already deleted", teamSlug, r.Name())
+		return r.database.RemoveReconcilerStateForTeam(ctx, r.Name(), teamSlug)
 	}
 
 	gitHubTeamSlug := *state.Slug

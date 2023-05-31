@@ -150,12 +150,8 @@ func (r *googleGcpReconciler) Delete(ctx context.Context, teamSlug slug.Slug, co
 	if err != nil {
 		return fmt.Errorf("load reconciler state for team %q in reconciler %q: %w", teamSlug, r.Name(), err)
 	}
-	if state.Projects == nil {
-		state.Projects = make(map[string]reconcilers.GoogleGcpEnvironmentProject)
-	}
-
 	if len(state.Projects) == 0 {
-		log.Info("no GCP projects in reconciler state, nothing to delete")
+		log.Info("no GCP projects in reconciler state, assume already deleted")
 		return r.database.RemoveReconcilerStateForTeam(ctx, r.Name(), teamSlug)
 	}
 

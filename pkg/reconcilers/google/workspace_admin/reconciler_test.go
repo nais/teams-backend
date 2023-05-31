@@ -297,16 +297,30 @@ func Test_Delete(t *testing.T) {
 			Return(log).
 			Once()
 
+		log.
+			On("Warnf",
+				"missing group email in reconciler state for team %q in reconciler %q, assume already deleted",
+				teamSlug,
+				google_workspace_admin_reconciler.Name).
+			Once()
+
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, google_workspace_admin_reconciler.Name, teamSlug, mock.Anything).
 			Return(nil).
 			Once()
 
+		database.On("RemoveReconcilerStateForTeam",
+			ctx,
+			google_workspace_admin_reconciler.Name,
+			teamSlug).
+			Return(nil).
+			Once()
+
 		err := google_workspace_admin_reconciler.
 			New(database, auditLogger, domain, googleAdminService, log).
 			Delete(ctx, teamSlug, correlationID)
-		assert.ErrorContains(t, err, "missing group email in reconciler state")
+		assert.NoError(t, err)
 	})
 
 	t.Run("Google API failure", func(t *testing.T) {

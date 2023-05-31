@@ -387,6 +387,13 @@ func TestAzureReconciler_Delete(t *testing.T) {
 			Return(nil).
 			Once()
 
+		database.On("RemoveReconcilerStateForTeam",
+			ctx,
+			azure_group_reconciler.Name,
+			teamSlug).
+			Return(nil).
+			Once()
+
 		auditLogger.
 			On("WithSystemName", sqlc.SystemNameAzureGroup).
 			Return(auditLogger).
@@ -397,10 +404,17 @@ func TestAzureReconciler_Delete(t *testing.T) {
 			Return(log).
 			Once()
 
+		log.
+			On("Warnf",
+				"missing group ID in reconciler state for team %q in reconciler %q, assume already deleted",
+				teamSlug,
+				azure_group_reconciler.Name).
+			Once()
+
 		err := azure_group_reconciler.
 			New(database, auditLogger, azureClient, tenantDomain, log).
 			Delete(ctx, teamSlug, correlationID)
-		assert.ErrorContains(t, err, "missing group ID in reconciler state")
+		assert.NoError(t, err)
 	})
 
 	t.Run("Azure client error", func(t *testing.T) {
