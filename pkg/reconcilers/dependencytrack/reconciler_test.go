@@ -83,6 +83,8 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 		database.On("LoadReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Return(nil).Once()
 		mockClient.On("CreateTeam", mock.Anything, teamName, []client.Permission{
 			client.ViewPortfolioPermission,
+			client.ViewVulnerabilityPermission,
+			client.ViewPolicyViolationPermission,
 		}).Return(&client.Team{
 			Uuid:      teamUuid,
 			Name:      teamName,

@@ -168,9 +168,7 @@ func (r *dependencytrackReconciler) syncTeamAndUsers(ctx context.Context, input 
 	}
 	r.log.Debugf("team %q does not exist in dependencytrack instance state, creating.", input.Team.Slug)
 
-	team, err := client.CreateTeam(ctx, input.Team.Slug.String(), []dependencytrack.Permission{
-		dependencytrack.ViewPortfolioPermission,
-	})
+	team, err := createTeam(ctx, input, client)
 	if err != nil {
 		return "", err
 	}
@@ -201,6 +199,38 @@ func (r *dependencytrackReconciler) syncTeamAndUsers(ctx context.Context, input 
 	}
 
 	return team.Uuid, nil
+}
+
+func createTeam(ctx context.Context, input reconcilers.Input, client dependencytrack.Client) (*dependencytrack.Team, error) {
+	team := &dependencytrack.Team{}
+	var err error
+
+	if input.Team.Slug.String() == "nais" || input.Team.Slug.String() == "aura" {
+		team, err = client.CreateTeam(ctx, input.Team.Slug.String(), []dependencytrack.Permission{
+			dependencytrack.ViewPortfolioPermission,
+			dependencytrack.ViewVulnerabilityPermission,
+			dependencytrack.ViewPolicyViolationPermission,
+			dependencytrack.AccessManagementPermission,
+			dependencytrack.PolicyManagementPermission,
+			dependencytrack.PolicyViolationAnalysisPermission,
+			dependencytrack.SystemConfigurationPermission,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return team, nil
+	}
+
+	team, err = client.CreateTeam(ctx, input.Team.Slug.String(), []dependencytrack.Permission{
+		dependencytrack.ViewPortfolioPermission,
+		dependencytrack.ViewVulnerabilityPermission,
+		dependencytrack.ViewPolicyViolationPermission,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return team, err
 }
 
 func incExternalHttpCalls(resp *http.Response, err error) {

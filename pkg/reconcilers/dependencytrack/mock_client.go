@@ -59,6 +59,29 @@ func (_m *MockClient) CreateAdminUsers(ctx context.Context, users *client.AdminU
 	return r0
 }
 
+// CreateChildProject provides a mock function with given fields: ctx, project, name, version, group, tags
+func (_m *MockClient) CreateChildProject(ctx context.Context, project *client.Project, name string, version string, group string, tags []string) (*client.Project, error) {
+	ret := _m.Called(ctx, project, name, version, group, tags)
+
+	var r0 *client.Project
+	if rf, ok := ret.Get(0).(func(context.Context, *client.Project, string, string, string, []string) *client.Project); ok {
+		r0 = rf(ctx, project, name, version, group, tags)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*client.Project)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *client.Project, string, string, string, []string) error); ok {
+		r1 = rf(ctx, project, name, version, group, tags)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CreateManagedUser provides a mock function with given fields: ctx, username, password
 func (_m *MockClient) CreateManagedUser(ctx context.Context, username string, password string) error {
 	ret := _m.Called(ctx, username, password)

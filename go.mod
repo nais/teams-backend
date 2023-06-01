@@ -20,11 +20,11 @@ require (
 	github.com/jackc/pgx/v4 v4.18.1
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/kyleconroy/sqlc v1.18.0
-	github.com/nais/dependencytrack v0.0.0-20230524071500-e4d7c9c6ba79
+	github.com/nais/dependencytrack v0.0.0-20230601124820-174536eef155
 	github.com/prometheus/client_golang v1.13.0
 	github.com/shurcooL/githubv4 v0.0.0-20221203213311-70889c5dac07
-	github.com/sirupsen/logrus v1.9.0
-	github.com/stretchr/testify v1.8.2
+	github.com/sirupsen/logrus v1.9.2
+	github.com/stretchr/testify v1.8.4
 	github.com/vektah/gqlparser/v2 v2.5.1
 	github.com/vektra/mockery/v2 v2.14.0
 	golang.org/x/oauth2 v0.7.0
@@ -127,7 +127,7 @@ require (
 	golang.org/x/sync v0.2.0 // indirect
 	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/term v0.8.0 // indirect
-	golang.org/x/tools v0.9.1 // indirect
+	golang.org/x/tools v0.9.2 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/ini.v1 v1.66.6 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
