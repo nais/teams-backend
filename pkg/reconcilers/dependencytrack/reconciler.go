@@ -202,30 +202,23 @@ func (r *dependencytrackReconciler) syncTeamAndUsers(ctx context.Context, input 
 }
 
 func createTeam(ctx context.Context, input reconcilers.Input, client dependencytrack.Client) (*dependencytrack.Team, error) {
-	team := &dependencytrack.Team{}
-	var err error
+	permissions := []dependencytrack.Permission{
+		dependencytrack.ViewPortfolioPermission,
+		dependencytrack.ViewVulnerabilityPermission,
+		dependencytrack.ViewPolicyViolationPermission,
+	}
 
-	if input.Team.Slug.String() == "nais" || input.Team.Slug.String() == "aura" {
-		team, err = client.CreateTeam(ctx, input.Team.Slug.String(), []dependencytrack.Permission{
-			dependencytrack.ViewPortfolioPermission,
-			dependencytrack.ViewVulnerabilityPermission,
-			dependencytrack.ViewPolicyViolationPermission,
+	if teamIsNaisTeam(input.Team.Slug) {
+		extraPermissions := []dependencytrack.Permission{
 			dependencytrack.AccessManagementPermission,
 			dependencytrack.PolicyManagementPermission,
 			dependencytrack.PolicyViolationAnalysisPermission,
 			dependencytrack.SystemConfigurationPermission,
-		})
-		if err != nil {
-			return nil, err
 		}
-		return team, nil
+		permissions = append(permissions, extraPermissions...)
 	}
 
-	team, err = client.CreateTeam(ctx, input.Team.Slug.String(), []dependencytrack.Permission{
-		dependencytrack.ViewPortfolioPermission,
-		dependencytrack.ViewVulnerabilityPermission,
-		dependencytrack.ViewPolicyViolationPermission,
-	})
+	team, err := client.CreateTeam(ctx, input.Team.Slug.String(), permissions)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +227,7 @@ func createTeam(ctx context.Context, input reconcilers.Input, client dependencyt
 }
 
 func incExternalHttpCalls(resp *http.Response, err error) {
-	metrics.IncExternalHTTPCalls("dependencytrack", resp, err)
+	metrics.IncExternalHTTPCalls(string(Name), resp, err)
 }
 
 func instanceByEndpoint(instances []*reconcilers.DependencyTrackInstanceState, endpoint string) *reconcilers.DependencyTrackInstanceState {
@@ -262,4 +255,8 @@ func contains(ss []string, s string) bool {
 		}
 	}
 	return false
+}
+
+func teamIsNaisTeam(teamSlug slug.Slug) bool {
+	return string(teamSlug) == "nais" || string(teamSlug) == "aura"
 }
