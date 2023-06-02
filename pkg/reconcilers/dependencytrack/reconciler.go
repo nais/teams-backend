@@ -1,13 +1,10 @@
-package dependencytrack
+package dependencytrack_reconciler
 
 import (
 	"context"
 	"fmt"
 	"net/http"
 	"time"
-
-	"github.com/nais/teams-backend/pkg/metrics"
-	"github.com/sirupsen/logrus"
 
 	"github.com/google/uuid"
 	dependencytrack "github.com/nais/dependencytrack/pkg/client"
@@ -16,12 +13,14 @@ import (
 	"github.com/nais/teams-backend/pkg/db"
 	dtrack "github.com/nais/teams-backend/pkg/dependencytrack"
 	"github.com/nais/teams-backend/pkg/logger"
+	"github.com/nais/teams-backend/pkg/metrics"
 	"github.com/nais/teams-backend/pkg/reconcilers"
 	"github.com/nais/teams-backend/pkg/slug"
 	"github.com/nais/teams-backend/pkg/sqlc"
+	"github.com/sirupsen/logrus"
 )
 
-type dependencytrackReconciler struct {
+type reconciler struct {
 	database    db.Database
 	auditLogger auditlogger.AuditLogger
 	log         logger.Logger
@@ -33,7 +32,7 @@ const (
 )
 
 func New(database db.Database, auditLogger auditlogger.AuditLogger, clients map[string]dependencytrack.Client, log logger.Logger) (reconcilers.Reconciler, error) {
-	return &dependencytrackReconciler{
+	return &reconciler{
 		database:    database,
 		auditLogger: auditLogger.WithSystemName(sqlc.SystemNameNaisDependencytrack),
 		log:         log.WithSystem(string(Name)),
@@ -57,11 +56,11 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 	return New(database, audit, clients, log)
 }
 
-func (r *dependencytrackReconciler) Name() sqlc.ReconcilerName {
+func (r *reconciler) Name() sqlc.ReconcilerName {
 	return Name
 }
 
-func (r *dependencytrackReconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
+func (r *reconciler) Reconcile(ctx context.Context, input reconcilers.Input) error {
 	state := &reconcilers.DependencyTrackState{}
 	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, state)
 	if err != nil {
@@ -100,7 +99,7 @@ func (r *dependencytrackReconciler) Reconcile(ctx context.Context, input reconci
 	return nil
 }
 
-func (r *dependencytrackReconciler) Delete(ctx context.Context, teamSlug slug.Slug, _ uuid.UUID) error {
+func (r *reconciler) Delete(ctx context.Context, teamSlug slug.Slug, _ uuid.UUID) error {
 	state := &reconcilers.DependencyTrackState{}
 	err := r.database.LoadReconcilerStateForTeam(ctx, r.Name(), teamSlug, state)
 	if err != nil {
@@ -138,7 +137,7 @@ func createClient(ctx context.Context, instance dtrack.DependencyTrackInstance, 
 	return &client
 }
 
-func (r *dependencytrackReconciler) syncTeamAndUsers(ctx context.Context, input reconcilers.Input, client dependencytrack.Client, instanceState *reconcilers.DependencyTrackInstanceState) (string, error) {
+func (r *reconciler) syncTeamAndUsers(ctx context.Context, input reconcilers.Input, client dependencytrack.Client, instanceState *reconcilers.DependencyTrackInstanceState) (string, error) {
 	if instanceState != nil && instanceState.TeamID != "" {
 		r.log.Debugf("team %q already exists in dependencytrack instance state.", input.Team.Slug)
 		for _, user := range input.TeamMembers {
