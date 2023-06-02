@@ -7,14 +7,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/nais/teams-backend/pkg/config"
-	"github.com/nais/teams-backend/pkg/dependencytrack"
-
-	"github.com/nais/dependencytrack/pkg/client"
-
 	"github.com/google/uuid"
+	"github.com/nais/dependencytrack/pkg/client"
 	"github.com/nais/teams-backend/pkg/auditlogger"
+	"github.com/nais/teams-backend/pkg/config"
 	"github.com/nais/teams-backend/pkg/db"
+	"github.com/nais/teams-backend/pkg/dependencytrack"
 	"github.com/nais/teams-backend/pkg/logger"
 	"github.com/nais/teams-backend/pkg/reconcilers"
 	"github.com/nais/teams-backend/pkg/slug"
@@ -27,16 +25,15 @@ func TestNewFromConfig(t *testing.T) {
 	log, err := logger.GetLogger("text", "info")
 	assert.NoError(t, err)
 	audit := auditlogger.NewMockAuditLogger(t)
-	audit.On("WithSystemName", sqlc.SystemNameNaisDependencytrack).Return(audit)
+	audit.
+		On("WithSystemName", sqlc.SystemNameNaisDependencytrack).
+		Return(audit)
 	database := db.NewMockDatabase(t)
 
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		fmt.Printf("Request: %s %s\n", req.Method, req.URL.String())
 		rw.WriteHeader(http.StatusOK)
-		_, err = rw.Write([]byte("4.8.0"))
-		if err != nil {
-			return
-		}
+		rw.Write([]byte("4.8.0"))
 	}))
 
 	cfg := &config.Config{
@@ -95,8 +92,17 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
 				return len(t) == 1 && t[0].Identifier == string(input.Team.Slug)
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
-				return f.Action == sqlc.AuditActionDependencytrackGroupCreate && f.CorrelationID == correlationID
+				return f.Action == sqlc.AuditActionDependencytrackTeamCreate && f.CorrelationID == correlationID
 			}), mock.Anything, teamName, teamUuid).
+			Return(nil).
+			Once()
+
+		audit.
+			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
+				return len(t) == 2 && t[0].Identifier == string(input.Team.Slug) && t[1].Identifier == "user1@nais.io"
+			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
+				return f.Action == sqlc.AuditActionDependencytrackTeamAddMember && f.CorrelationID == correlationID
+			}), mock.Anything, "user1@nais.io", input.Team.Slug).
 			Return(nil).
 			Once()
 
@@ -116,6 +122,15 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 	})
 
 	t.Run("team exists, new members added", func(t *testing.T) {
+		audit.
+			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
+				return len(t) == 2 && t[0].Identifier == string(input.Team.Slug) && t[1].Identifier == "user1@nais.io"
+			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
+				return f.Action == sqlc.AuditActionDependencytrackTeamAddMember && f.CorrelationID == correlationID
+			}), mock.Anything, "user1@nais.io", input.Team.Slug).
+			Return(nil).
+			Once()
+
 		database.On("LoadReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Run(func(args mock.Arguments) {
 			state := args.Get(3).(*reconcilers.DependencyTrackState)
 			state.Instances = []*reconcilers.DependencyTrackInstanceState{
@@ -163,6 +178,25 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 
 	t.Run("usermembership removed from existing team", func(t *testing.T) {
 		usernameNotInInput := "userNotInTeamsBackend@nais.io"
+
+		audit.
+			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
+				return len(t) == 2 && t[0].Identifier == string(input.Team.Slug) && t[1].Identifier == "user1@nais.io"
+			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
+				return f.Action == sqlc.AuditActionDependencytrackTeamAddMember && f.CorrelationID == correlationID
+			}), mock.Anything, "user1@nais.io", input.Team.Slug).
+			Return(nil).
+			Once()
+
+		audit.
+			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
+				return len(t) == 2 && t[0].Identifier == string(input.Team.Slug) && t[1].Identifier == usernameNotInInput
+			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
+				return f.Action == sqlc.AuditActionDependencytrackTeamDeleteMember && f.CorrelationID == correlationID
+			}), mock.Anything, usernameNotInInput, input.Team.Slug).
+			Return(nil).
+			Once()
+
 		database.On("LoadReconcilerStateForTeam", ctx, Name, input.Team.Slug, mock.Anything).Run(func(args mock.Arguments) {
 			state := args.Get(3).(*reconcilers.DependencyTrackState)
 			state.Instances = []*reconcilers.DependencyTrackInstanceState{

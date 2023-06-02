@@ -22,7 +22,9 @@ const (
 	AuditActionAzureGroupCreate                          AuditAction = "azure:group:create"
 	AuditActionAzureGroupDelete                          AuditAction = "azure:group:delete"
 	AuditActionAzureGroupDeleteMember                    AuditAction = "azure:group:delete-member"
-	AuditActionDependencytrackGroupCreate                AuditAction = "dependencytrack:group:create"
+	AuditActionDependencytrackTeamAddMember              AuditAction = "dependencytrack:team:add-member"
+	AuditActionDependencytrackTeamCreate                 AuditAction = "dependencytrack:team:create"
+	AuditActionDependencytrackTeamDeleteMember           AuditAction = "dependencytrack:team:delete-member"
 	AuditActionGithubTeamAddMember                       AuditAction = "github:team:add-member"
 	AuditActionGithubTeamAddMembers                      AuditAction = "github:team:add-members"
 	AuditActionGithubTeamCreate                          AuditAction = "github:team:create"
@@ -126,7 +128,9 @@ func (e AuditAction) Valid() bool {
 		AuditActionAzureGroupCreate,
 		AuditActionAzureGroupDelete,
 		AuditActionAzureGroupDeleteMember,
-		AuditActionDependencytrackGroupCreate,
+		AuditActionDependencytrackTeamAddMember,
+		AuditActionDependencytrackTeamCreate,
+		AuditActionDependencytrackTeamDeleteMember,
 		AuditActionGithubTeamAddMember,
 		AuditActionGithubTeamAddMembers,
 		AuditActionGithubTeamCreate,
@@ -198,7 +202,9 @@ func AllAuditActionValues() []AuditAction {
 		AuditActionAzureGroupCreate,
 		AuditActionAzureGroupDelete,
 		AuditActionAzureGroupDeleteMember,
-		AuditActionDependencytrackGroupCreate,
+		AuditActionDependencytrackTeamAddMember,
+		AuditActionDependencytrackTeamCreate,
+		AuditActionDependencytrackTeamDeleteMember,
 		AuditActionGithubTeamAddMember,
 		AuditActionGithubTeamAddMembers,
 		AuditActionGithubTeamCreate,
