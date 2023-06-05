@@ -3,7 +3,6 @@ package teamsync
 import (
 	"context"
 	"fmt"
-	"github.com/nais/teams-backend/pkg/types"
 	"sort"
 	"sync"
 	"time"
@@ -25,6 +24,7 @@ import (
 	nais_namespace_reconciler "github.com/nais/teams-backend/pkg/reconcilers/nais/namespace"
 	"github.com/nais/teams-backend/pkg/slug"
 	"github.com/nais/teams-backend/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/types"
 )
 
 type Handler interface {
