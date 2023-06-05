@@ -79,6 +79,12 @@ query {
 
 `teams-backend` will, on each start up of the application, ensure that the service accounts specified in the JSON value exists. If a service account is removed from the JSON value, `teams-backend` will remove it from the database as well.
 
+### Running locally
+A config file for minimal working local setup with usersync / login (dev-nais.io user required) enabled can be downloaded like this:
+```sh
+gcloud --project="nais-management-7178" secrets versions access --secret="teams-backend-local-config" latest # (nais.io users have access to this secret)
+```
+
 ## GraphQL API
 
 `teams-backend` runs [GraphiQL](https://github.com/graphql/graphiql) by default, and this can be used to explore and use the GraphQL API. After you have started `teams-backend` you will find graphiql on http://localhost:3000. Use the `TEAMS_BACKEND_STATIC_SERVICE_ACCOUNTS` configuration parameter to create a service accounut to use with the API.
