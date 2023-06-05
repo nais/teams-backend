@@ -59,12 +59,17 @@ Example:
   {
     "name": "nais-service-account-1",
     "apiKey": "key1",
-    "roles": ["Team viewer", "User viewer"]
+    "roles": [
+      {"name": "Team viewer"},
+      {"name": "User viewer"}
+    ]
   },
   {
     "name": "nais-service-account-2",
     "apiKey": "key2",
-    "roles": ["Team creator"]
+    "roles": [
+      {"name": "Team creator"}
+    ]
   }
 ]
 ```
