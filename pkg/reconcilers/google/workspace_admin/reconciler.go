@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/nais/teams-backend/pkg/types"
+
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/config"
@@ -38,10 +40,10 @@ const (
 func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, adminService *admin_directory_v1.Service, log logger.Logger) *googleWorkspaceAdminReconciler {
 	return &googleWorkspaceAdminReconciler{
 		database:     database,
-		auditLogger:  auditLogger.WithSystemName(sqlc.SystemNameGoogleWorkspaceAdmin),
+		auditLogger:  auditLogger.WithComponentName(types.ComponentNameGoogleWorkspaceAdmin),
 		domain:       domain,
 		adminService: adminService,
-		log:          log.WithSystem(string(Name)),
+		log:          log.WithComponent(types.ComponentNameGoogleWorkspaceAdmin),
 	}
 }
 
@@ -121,7 +123,7 @@ func (r *googleWorkspaceAdminReconciler) Delete(ctx context.Context, teamSlug sl
 		auditlogger.TeamTarget(teamSlug),
 	}
 	fields := auditlogger.Fields{
-		Action:        sqlc.AuditActionGoogleWorkspaceAdminDelete,
+		Action:        types.AuditActionGoogleWorkspaceAdminDelete,
 		CorrelationID: correlationID,
 	}
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Delete Google directory group with email %q", grpEmail)
@@ -158,7 +160,7 @@ func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(ctx context.Context, s
 		auditlogger.TeamTarget(input.Team.Slug),
 	}
 	fields := auditlogger.Fields{
-		Action:        sqlc.AuditActionGoogleWorkspaceAdminCreate,
+		Action:        types.AuditActionGoogleWorkspaceAdminCreate,
 		CorrelationID: input.CorrelationID,
 	}
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Created Google Directory group %q", group.Email)
@@ -218,7 +220,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 			auditlogger.UserTarget(remoteMemberEmail),
 		}
 		fields := auditlogger.Fields{
-			Action:        sqlc.AuditActionGoogleWorkspaceAdminDeleteMember,
+			Action:        types.AuditActionGoogleWorkspaceAdminDeleteMember,
 			CorrelationID: input.CorrelationID,
 		}
 		r.auditLogger.Logf(ctx, r.database, targets, fields, "Deleted member %q from Google Directory group %q", member.Email, grp.Email)
@@ -244,7 +246,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 			auditlogger.UserTarget(user.Email),
 		}
 		fields := auditlogger.Fields{
-			Action:        sqlc.AuditActionGoogleWorkspaceAdminAddMember,
+			Action:        types.AuditActionGoogleWorkspaceAdminAddMember,
 			CorrelationID: input.CorrelationID,
 		}
 		r.auditLogger.Logf(ctx, r.database, targets, fields, "Added member %q to Google Directory group %q", member.Email, grp.Email)
@@ -275,7 +277,7 @@ func (r *googleWorkspaceAdminReconciler) addToGKESecurityGroup(ctx context.Conte
 		auditlogger.TeamTarget(input.Team.Slug),
 	}
 	fields := auditlogger.Fields{
-		Action:        sqlc.AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup,
+		Action:        types.AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup,
 		CorrelationID: input.CorrelationID,
 	}
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Added group %q to GKE security group %q", member.Email, groupKey)

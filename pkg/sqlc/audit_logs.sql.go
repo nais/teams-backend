@@ -12,17 +12,17 @@ import (
 )
 
 const createAuditLog = `-- name: CreateAuditLog :exec
-INSERT INTO audit_logs (correlation_id, actor, system_name, target_type, target_identifier, action, message)
+INSERT INTO audit_logs (correlation_id, actor, component_name, target_type, target_identifier, action, message)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
 `
 
 type CreateAuditLogParams struct {
 	CorrelationID    uuid.UUID
 	Actor            *string
-	SystemName       SystemName
-	TargetType       AuditLogsTargetType
+	ComponentName    string
+	TargetType       string
 	TargetIdentifier string
-	Action           AuditAction
+	Action           string
 	Message          string
 }
 
@@ -30,7 +30,7 @@ func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) 
 	_, err := q.db.Exec(ctx, createAuditLog,
 		arg.CorrelationID,
 		arg.Actor,
-		arg.SystemName,
+		arg.ComponentName,
 		arg.TargetType,
 		arg.TargetIdentifier,
 		arg.Action,
@@ -40,7 +40,7 @@ func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) 
 }
 
 const getAuditLogsForCorrelationID = `-- name: GetAuditLogsForCorrelationID :many
-SELECT id, created_at, correlation_id, system_name, actor, action, message, target_type, target_identifier FROM audit_logs
+SELECT id, created_at, correlation_id, component_name, actor, action, message, target_type, target_identifier FROM audit_logs
 WHERE correlation_id = $1
 ORDER BY created_at DESC
 `
@@ -58,7 +58,7 @@ func (q *Queries) GetAuditLogsForCorrelationID(ctx context.Context, correlationI
 			&i.ID,
 			&i.CreatedAt,
 			&i.CorrelationID,
-			&i.SystemName,
+			&i.ComponentName,
 			&i.Actor,
 			&i.Action,
 			&i.Message,
@@ -76,7 +76,7 @@ func (q *Queries) GetAuditLogsForCorrelationID(ctx context.Context, correlationI
 }
 
 const getAuditLogsForReconciler = `-- name: GetAuditLogsForReconciler :many
-SELECT id, created_at, correlation_id, system_name, actor, action, message, target_type, target_identifier FROM audit_logs
+SELECT id, created_at, correlation_id, component_name, actor, action, message, target_type, target_identifier FROM audit_logs
 WHERE target_type = 'reconciler' AND target_identifier = $1
 ORDER BY created_at DESC
 LIMIT 100
@@ -95,7 +95,7 @@ func (q *Queries) GetAuditLogsForReconciler(ctx context.Context, targetIdentifie
 			&i.ID,
 			&i.CreatedAt,
 			&i.CorrelationID,
-			&i.SystemName,
+			&i.ComponentName,
 			&i.Actor,
 			&i.Action,
 			&i.Message,
@@ -113,7 +113,7 @@ func (q *Queries) GetAuditLogsForReconciler(ctx context.Context, targetIdentifie
 }
 
 const getAuditLogsForTeam = `-- name: GetAuditLogsForTeam :many
-SELECT id, created_at, correlation_id, system_name, actor, action, message, target_type, target_identifier FROM audit_logs
+SELECT id, created_at, correlation_id, component_name, actor, action, message, target_type, target_identifier FROM audit_logs
 WHERE target_type = 'team' AND target_identifier = $1
 ORDER BY created_at DESC
 LIMIT 100
@@ -132,7 +132,7 @@ func (q *Queries) GetAuditLogsForTeam(ctx context.Context, targetIdentifier stri
 			&i.ID,
 			&i.CreatedAt,
 			&i.CorrelationID,
-			&i.SystemName,
+			&i.ComponentName,
 			&i.Actor,
 			&i.Action,
 			&i.Message,

@@ -4,9 +4,10 @@ import (
 	"io"
 	"testing"
 
+	"github.com/nais/teams-backend/pkg/types"
+
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/logger"
-	"github.com/nais/teams-backend/pkg/sqlc"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 )
@@ -18,16 +19,16 @@ const (
 	actorKey         = "actor"
 	correlationIDKey = "correlationID"
 	reconcilerKey    = "reconciler"
-	systemKey        = "system"
+	componentKey     = "componentName"
 	teamKey          = "team"
 	userKey          = "user"
 
-	actor      = "actor@example.com"
-	reconciler = "nais:namespace"
-	baseSystem = sqlc.SystemNameConsole
-	system     = "usersync"
-	teamSlug   = "team-slug"
-	user       = "user@example.com"
+	actor         = "actor@example.com"
+	reconciler    = "nais:namespace"
+	baseSystem    = types.ComponentNameConsole
+	componentName = types.ComponentNameUsersync
+	teamSlug      = "team-slug"
+	user          = "user@example.com"
 )
 
 var correlationID = uuid.New()
@@ -55,8 +56,8 @@ func Test_logger_WithFields(t *testing.T) {
 	t.Run("base logger", func(t *testing.T) {
 		base.Info("some info")
 		fields := logHook.LastEntry().Data
-		assert.Contains(t, fields, systemKey)
-		assert.Equal(t, baseSystem, fields[systemKey])
+		assert.Contains(t, fields, componentKey)
+		assert.Equal(t, baseSystem, fields[componentKey])
 	})
 
 	t.Run("actor logger", func(t *testing.T) {
@@ -74,10 +75,10 @@ func Test_logger_WithFields(t *testing.T) {
 	})
 
 	t.Run("system logger", func(t *testing.T) {
-		base.WithSystem(system).Error("some error")
+		base.WithComponent(componentName).Error("some error")
 		fields := logHook.LastEntry().Data
-		assert.Contains(t, fields, systemKey)
-		assert.Equal(t, system, fields[systemKey])
+		assert.Contains(t, fields, componentKey)
+		assert.Equal(t, componentName, fields[componentKey])
 	})
 
 	t.Run("team logger", func(t *testing.T) {
@@ -104,7 +105,7 @@ func Test_logger_WithFields(t *testing.T) {
 	t.Run("multiple loggers", func(t *testing.T) {
 		actorLogger := base.WithActor(actor)
 		reconcilerLogger := actorLogger.WithReconciler(reconciler)
-		systemLogger := reconcilerLogger.WithSystem(system)
+		systemLogger := reconcilerLogger.WithComponent(componentName)
 		teamLogger := systemLogger.WithTeamSlug(teamSlug)
 		userLogger := teamLogger.WithUser(user)
 
@@ -120,12 +121,12 @@ func Test_logger_WithFields(t *testing.T) {
 		userEntry := logHook.LastEntry()
 
 		assert.NotContains(t, actorEntry.Data, reconcilerKey)
-		assert.Equal(t, reconcilerEntry.Data[systemKey], baseSystem)
+		assert.Equal(t, reconcilerEntry.Data[componentKey], baseSystem)
 		assert.NotContains(t, systemEntry.Data, teamKey)
 		assert.NotContains(t, teamEntry.Data, userKey)
 		assert.Contains(t, userEntry.Data, actorKey)
 		assert.Contains(t, userEntry.Data, reconcilerKey)
-		assert.Contains(t, userEntry.Data, systemKey)
+		assert.Contains(t, userEntry.Data, componentKey)
 		assert.Contains(t, userEntry.Data, teamKey)
 		assert.Contains(t, userEntry.Data, userKey)
 	})

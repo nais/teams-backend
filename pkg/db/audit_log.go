@@ -3,6 +3,8 @@ package db
 import (
 	"context"
 
+	"github.com/nais/teams-backend/pkg/types"
+
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/slug"
 	"github.com/nais/teams-backend/pkg/sqlc"
@@ -34,14 +36,14 @@ func (d *database) GetAuditLogsForReconciler(ctx context.Context, reconcilerName
 	return entries, nil
 }
 
-func (d *database) CreateAuditLogEntry(ctx context.Context, correlationID uuid.UUID, systemName sqlc.SystemName, actor *string, targetType sqlc.AuditLogsTargetType, targetIdentifier string, action sqlc.AuditAction, message string) error {
+func (d *database) CreateAuditLogEntry(ctx context.Context, correlationID uuid.UUID, componentName types.ComponentName, actor *string, targetType types.AuditLogsTargetType, targetIdentifier string, action types.AuditAction, message string) error {
 	return d.querier.CreateAuditLog(ctx, sqlc.CreateAuditLogParams{
 		CorrelationID:    correlationID,
 		Actor:            actor,
-		SystemName:       systemName,
-		TargetType:       targetType,
+		ComponentName:    string(componentName),
+		TargetType:       string(targetType),
 		TargetIdentifier: targetIdentifier,
-		Action:           action,
+		Action:           string(action),
 		Message:          message,
 	})
 }

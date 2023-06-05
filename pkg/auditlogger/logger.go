@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/nais/teams-backend/pkg/types"
+
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/authz"
 	"github.com/nais/teams-backend/pkg/db"
@@ -16,21 +18,21 @@ import (
 
 type AuditLogger interface {
 	Logf(ctx context.Context, dbtx db.Database, targets []Target, entry Fields, message string, messageArgs ...interface{})
-	WithSystemName(systemName sqlc.SystemName) AuditLogger
+	WithComponentName(componentName types.ComponentName) AuditLogger
 }
 
 type auditLogger struct {
-	systemName sqlc.SystemName
-	log        logger.Logger
+	componentName types.ComponentName
+	log           logger.Logger
 }
 
 type Target struct {
-	Type       sqlc.AuditLogsTargetType
+	Type       types.AuditLogsTargetType
 	Identifier string
 }
 
 type Fields struct {
-	Action        sqlc.AuditAction
+	Action        types.AuditAction
 	Actor         *authz.Actor
 	CorrelationID uuid.UUID
 }
@@ -41,20 +43,20 @@ func New(log logger.Logger) AuditLogger {
 	}
 }
 
-func (l *auditLogger) WithSystemName(systemName sqlc.SystemName) AuditLogger {
+func (l *auditLogger) WithComponentName(componentName types.ComponentName) AuditLogger {
 	return &auditLogger{
-		systemName: systemName,
-		log:        l.log.WithSystem(string(systemName)),
+		componentName: componentName,
+		log:           l.log.WithComponent(componentName),
 	}
 }
 
 func (l *auditLogger) Logf(ctx context.Context, dbtx db.Database, targets []Target, fields Fields, message string, messageArgs ...interface{}) {
-	if l.systemName == "" || !l.systemName.Valid() {
+	if l.componentName == "" {
 		l.log.Errorf("unable to create auditlog entry: missing or invalid system name")
 		return
 	}
 
-	if fields.Action == "" || !fields.Action.Valid() {
+	if fields.Action == "" {
 		l.log.Errorf("unable to create auditlog entry: missing or invalid audit action")
 		return
 	}
@@ -79,7 +81,7 @@ func (l *auditLogger) Logf(ctx context.Context, dbtx db.Database, targets []Targ
 		err := dbtx.CreateAuditLogEntry(
 			ctx,
 			fields.CorrelationID,
-			l.systemName,
+			l.componentName,
 			actor,
 			target.Type,
 			target.Identifier,
@@ -104,11 +106,11 @@ func (l *auditLogger) Logf(ctx context.Context, dbtx db.Database, targets []Targ
 		}
 
 		switch target.Type {
-		case sqlc.AuditLogsTargetTypeTeam:
+		case types.AuditLogsTargetTypeTeam:
 			log = log.WithTeamSlug(target.Identifier)
-		case sqlc.AuditLogsTargetTypeUser:
+		case types.AuditLogsTargetTypeUser:
 			log = log.WithUser(target.Identifier)
-		case sqlc.AuditLogsTargetTypeReconciler:
+		case types.AuditLogsTargetTypeReconciler:
 			log = log.WithReconciler(target.Identifier)
 		default:
 			logFields["target_identifier"] = target.Identifier
@@ -119,17 +121,17 @@ func (l *auditLogger) Logf(ctx context.Context, dbtx db.Database, targets []Targ
 }
 
 func UserTarget(email string) Target {
-	return Target{Type: sqlc.AuditLogsTargetTypeUser, Identifier: email}
+	return Target{Type: types.AuditLogsTargetTypeUser, Identifier: email}
 }
 
 func TeamTarget(slug slug.Slug) Target {
-	return Target{Type: sqlc.AuditLogsTargetTypeTeam, Identifier: string(slug)}
+	return Target{Type: types.AuditLogsTargetTypeTeam, Identifier: string(slug)}
 }
 
 func ReconcilerTarget(name sqlc.ReconcilerName) Target {
-	return Target{Type: sqlc.AuditLogsTargetTypeReconciler, Identifier: string(name)}
+	return Target{Type: types.AuditLogsTargetTypeReconciler, Identifier: string(name)}
 }
 
-func SystemTarget(name sqlc.SystemName) Target {
-	return Target{Type: sqlc.AuditLogsTargetTypeSystem, Identifier: string(name)}
+func ComponentTarget(name types.ComponentName) Target {
+	return Target{Type: types.AuditLogsTargetTypeSystem, Identifier: string(name)}
 }

@@ -40,4 +40,4 @@ scalar ReconcilerConfigKey
 scalar ReconcilerName
 
 "String value representing a system name."
-scalar SystemName
+scalar ComponentName

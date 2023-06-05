@@ -6,8 +6,8 @@ type AuditLog {
     "String representation of the action performed."
     action: AuditAction!
 
-    "The related system."
-    systemName: SystemName!
+    "The related component."
+    componentName: ComponentName!
 
     "The related correlation ID."
     correlationID: UUID!

@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/nais/teams-backend/pkg/types"
+
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/db"
@@ -49,7 +51,7 @@ func TestNaisDeployReconciler_Reconcile(t *testing.T) {
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
-			On("WithSystemName", sqlc.SystemNameNaisDeploy).
+			On("WithComponentName", types.ComponentNameNaisDeploy).
 			Return(auditLogger).
 			Once()
 
@@ -59,7 +61,7 @@ func TestNaisDeployReconciler_Reconcile(t *testing.T) {
 			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
 				return t[0].Identifier == string(teamSlug)
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
-				return f.Action == sqlc.AuditActionNaisDeployProvisionDeployKey && f.CorrelationID == correlationID
+				return f.Action == types.AuditActionNaisDeployProvisionDeployKey && f.CorrelationID == correlationID
 			}), mock.Anything, mock.Anything).
 			Return(nil).
 			Once()
@@ -79,7 +81,7 @@ func TestNaisDeployReconciler_Reconcile(t *testing.T) {
 	t.Run("internal server error when provisioning key", func(t *testing.T) {
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
-			On("WithSystemName", sqlc.SystemNameNaisDeploy).
+			On("WithComponentName", types.ComponentNameNaisDeploy).
 			Return(auditLogger).
 			Once()
 
@@ -99,7 +101,7 @@ func TestNaisDeployReconciler_Reconcile(t *testing.T) {
 	t.Run("team key does not change", func(t *testing.T) {
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
-			On("WithSystemName", sqlc.SystemNameNaisDeploy).
+			On("WithComponentName", types.ComponentNameNaisDeploy).
 			Return(auditLogger).
 			Once()
 

@@ -10,6 +10,8 @@ import (
 
 	sqlc "github.com/nais/teams-backend/pkg/sqlc"
 
+	types "github.com/nais/teams-backend/pkg/types"
+
 	uuid "github.com/google/uuid"
 )
 
@@ -130,13 +132,13 @@ func (_m *MockDatabase) CreateAPIKey(ctx context.Context, apiKey string, service
 	return r0
 }
 
-// CreateAuditLogEntry provides a mock function with given fields: ctx, correlationID, systemName, actor, targetType, targetIdentifier, action, message
-func (_m *MockDatabase) CreateAuditLogEntry(ctx context.Context, correlationID uuid.UUID, systemName sqlc.SystemName, actor *string, targetType sqlc.AuditLogsTargetType, targetIdentifier string, action sqlc.AuditAction, message string) error {
-	ret := _m.Called(ctx, correlationID, systemName, actor, targetType, targetIdentifier, action, message)
+// CreateAuditLogEntry provides a mock function with given fields: ctx, correlationID, componentName, actor, targetType, targetIdentifier, action, message
+func (_m *MockDatabase) CreateAuditLogEntry(ctx context.Context, correlationID uuid.UUID, componentName types.ComponentName, actor *string, targetType types.AuditLogsTargetType, targetIdentifier string, action types.AuditAction, message string) error {
+	ret := _m.Called(ctx, correlationID, componentName, actor, targetType, targetIdentifier, action, message)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, sqlc.SystemName, *string, sqlc.AuditLogsTargetType, string, sqlc.AuditAction, string) error); ok {
-		r0 = rf(ctx, correlationID, systemName, actor, targetType, targetIdentifier, action, message)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, types.ComponentName, *string, types.AuditLogsTargetType, string, types.AuditAction, string) error); ok {
+		r0 = rf(ctx, correlationID, componentName, actor, targetType, targetIdentifier, action, message)
 	} else {
 		r0 = ret.Error(0)
 	}

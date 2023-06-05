@@ -20,6 +20,7 @@ import (
 	"github.com/nais/teams-backend/pkg/reconcilers"
 	"github.com/nais/teams-backend/pkg/slug"
 	"github.com/nais/teams-backend/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/types"
 	"github.com/nais/teams-backend/pkg/usersync"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
@@ -43,6 +44,7 @@ type Config struct {
 }
 
 type ResolverRoot interface {
+	AuditLog() AuditLogResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
 	Reconciler() ReconcilerResolver
@@ -64,11 +66,11 @@ type ComplexityRoot struct {
 	AuditLog struct {
 		Action           func(childComplexity int) int
 		Actor            func(childComplexity int) int
+		ComponentName    func(childComplexity int) int
 		CorrelationID    func(childComplexity int) int
 		CreatedAt        func(childComplexity int) int
 		ID               func(childComplexity int) int
 		Message          func(childComplexity int) int
-		SystemName       func(childComplexity int) int
 		TargetIdentifier func(childComplexity int) int
 		TargetType       func(childComplexity int) int
 	}
@@ -247,6 +249,12 @@ type ComplexityRoot struct {
 	}
 }
 
+type AuditLogResolver interface {
+	Action(ctx context.Context, obj *db.AuditLog) (types.AuditAction, error)
+	ComponentName(ctx context.Context, obj *db.AuditLog) (types.ComponentName, error)
+
+	TargetType(ctx context.Context, obj *db.AuditLog) (types.AuditLogsTargetType, error)
+}
 type MutationResolver interface {
 	SetGitHubTeamSlug(ctx context.Context, teamSlug *slug.Slug, gitHubTeamSlug *slug.Slug) (*db.Team, error)
 	SetGoogleWorkspaceGroupEmail(ctx context.Context, teamSlug *slug.Slug, googleWorkspaceGroupEmail string) (*db.Team, error)
@@ -356,6 +364,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.AuditLog.Actor(childComplexity), true
 
+	case "AuditLog.componentName":
+		if e.complexity.AuditLog.ComponentName == nil {
+			break
+		}
+
+		return e.complexity.AuditLog.ComponentName(childComplexity), true
+
 	case "AuditLog.correlationID":
 		if e.complexity.AuditLog.CorrelationID == nil {
 			break
@@ -383,13 +398,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.AuditLog.Message(childComplexity), true
-
-	case "AuditLog.systemName":
-		if e.complexity.AuditLog.SystemName == nil {
-			break
-		}
-
-		return e.complexity.AuditLog.SystemName(childComplexity), true
 
 	case "AuditLog.targetIdentifier":
 		if e.complexity.AuditLog.TargetIdentifier == nil {
@@ -1412,8 +1420,8 @@ type AuditLog {
     "String representation of the action performed."
     action: AuditAction!
 
-    "The related system."
-    systemName: SystemName!
+    "The related component."
+    componentName: ComponentName!
 
     "The related correlation ID."
     correlationID: UUID!
@@ -1684,7 +1692,7 @@ scalar ReconcilerConfigKey
 scalar ReconcilerName
 
 "String value representing a system name."
-scalar SystemName`, BuiltIn: false},
+scalar ComponentName`, BuiltIn: false},
 	{Name: "../../../graphql/schema.graphqls", Input: `"The query root for the teams-backend GraphQL API."
 type Query
 
@@ -2903,7 +2911,7 @@ func (ec *executionContext) _AuditLog_action(ctx context.Context, field graphql.
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Action, nil
+		return ec.resolvers.AuditLog().Action(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2915,17 +2923,17 @@ func (ec *executionContext) _AuditLog_action(ctx context.Context, field graphql.
 		}
 		return graphql.Null
 	}
-	res := resTmp.(sqlc.AuditAction)
+	res := resTmp.(types.AuditAction)
 	fc.Result = res
-	return ec.marshalNAuditAction2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋsqlcᚐAuditAction(ctx, field.Selections, res)
+	return ec.marshalNAuditAction2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋtypesᚐAuditAction(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_AuditLog_action(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "AuditLog",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type AuditAction does not have child fields")
 		},
@@ -2933,8 +2941,8 @@ func (ec *executionContext) fieldContext_AuditLog_action(ctx context.Context, fi
 	return fc, nil
 }
 
-func (ec *executionContext) _AuditLog_systemName(ctx context.Context, field graphql.CollectedField, obj *db.AuditLog) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_AuditLog_systemName(ctx, field)
+func (ec *executionContext) _AuditLog_componentName(ctx context.Context, field graphql.CollectedField, obj *db.AuditLog) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_AuditLog_componentName(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -2947,7 +2955,7 @@ func (ec *executionContext) _AuditLog_systemName(ctx context.Context, field grap
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.SystemName, nil
+		return ec.resolvers.AuditLog().ComponentName(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2959,19 +2967,19 @@ func (ec *executionContext) _AuditLog_systemName(ctx context.Context, field grap
 		}
 		return graphql.Null
 	}
-	res := resTmp.(sqlc.SystemName)
+	res := resTmp.(types.ComponentName)
 	fc.Result = res
-	return ec.marshalNSystemName2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋsqlcᚐSystemName(ctx, field.Selections, res)
+	return ec.marshalNComponentName2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋtypesᚐComponentName(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_AuditLog_systemName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_AuditLog_componentName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "AuditLog",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type SystemName does not have child fields")
+			return nil, errors.New("field of type ComponentName does not have child fields")
 		},
 	}
 	return fc, nil
@@ -3076,7 +3084,7 @@ func (ec *executionContext) _AuditLog_targetType(ctx context.Context, field grap
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.TargetType, nil
+		return ec.resolvers.AuditLog().TargetType(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3088,17 +3096,17 @@ func (ec *executionContext) _AuditLog_targetType(ctx context.Context, field grap
 		}
 		return graphql.Null
 	}
-	res := resTmp.(sqlc.AuditLogsTargetType)
+	res := resTmp.(types.AuditLogsTargetType)
 	fc.Result = res
-	return ec.marshalNAuditLogsTargetType2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋsqlcᚐAuditLogsTargetType(ctx, field.Selections, res)
+	return ec.marshalNAuditLogsTargetType2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋtypesᚐAuditLogsTargetType(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_AuditLog_targetType(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "AuditLog",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type AuditLogsTargetType does not have child fields")
 		},
@@ -7283,8 +7291,8 @@ func (ec *executionContext) fieldContext_Reconciler_auditLogs(ctx context.Contex
 				return ec.fieldContext_AuditLog_id(ctx, field)
 			case "action":
 				return ec.fieldContext_AuditLog_action(ctx, field)
-			case "systemName":
-				return ec.fieldContext_AuditLog_systemName(ctx, field)
+			case "componentName":
+				return ec.fieldContext_AuditLog_componentName(ctx, field)
 			case "correlationID":
 				return ec.fieldContext_AuditLog_correlationID(ctx, field)
 			case "actor":
@@ -8535,8 +8543,8 @@ func (ec *executionContext) fieldContext_Team_auditLogs(ctx context.Context, fie
 				return ec.fieldContext_AuditLog_id(ctx, field)
 			case "action":
 				return ec.fieldContext_AuditLog_action(ctx, field)
-			case "systemName":
-				return ec.fieldContext_AuditLog_systemName(ctx, field)
+			case "componentName":
+				return ec.fieldContext_AuditLog_componentName(ctx, field)
 			case "correlationID":
 				return ec.fieldContext_AuditLog_correlationID(ctx, field)
 			case "actor":
@@ -10037,8 +10045,8 @@ func (ec *executionContext) fieldContext_UserSyncRun_logEntries(ctx context.Cont
 				return ec.fieldContext_AuditLog_id(ctx, field)
 			case "action":
 				return ec.fieldContext_AuditLog_action(ctx, field)
-			case "systemName":
-				return ec.fieldContext_AuditLog_systemName(ctx, field)
+			case "componentName":
+				return ec.fieldContext_AuditLog_componentName(ctx, field)
 			case "correlationID":
 				return ec.fieldContext_AuditLog_correlationID(ctx, field)
 			case "actor":
@@ -12179,60 +12187,99 @@ func (ec *executionContext) _AuditLog(ctx context.Context, sel ast.SelectionSet,
 			out.Values[i] = ec._AuditLog_id(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "action":
+			field := field
 
-			out.Values[i] = ec._AuditLog_action(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuditLog_action(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
 			}
-		case "systemName":
 
-			out.Values[i] = ec._AuditLog_systemName(ctx, field, obj)
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
 
-			if out.Values[i] == graphql.Null {
-				invalids++
+			})
+		case "componentName":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuditLog_componentName(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
 			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
 		case "correlationID":
 
 			out.Values[i] = ec._AuditLog_correlationID(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "actor":
 
 			out.Values[i] = ec._AuditLog_actor(ctx, field, obj)
 
 		case "targetType":
+			field := field
 
-			out.Values[i] = ec._AuditLog_targetType(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuditLog_targetType(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
 			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
 		case "targetIdentifier":
 
 			out.Values[i] = ec._AuditLog_targetIdentifier(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "message":
 
 			out.Values[i] = ec._AuditLog_message(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "createdAt":
 
 			out.Values[i] = ec._AuditLog_createdAt(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -14268,13 +14315,13 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 
 // region    ***************************** type.gotpl *****************************
 
-func (ec *executionContext) unmarshalNAuditAction2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋsqlcᚐAuditAction(ctx context.Context, v interface{}) (sqlc.AuditAction, error) {
+func (ec *executionContext) unmarshalNAuditAction2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋtypesᚐAuditAction(ctx context.Context, v interface{}) (types.AuditAction, error) {
 	tmp, err := graphql.UnmarshalString(v)
-	res := sqlc.AuditAction(tmp)
+	res := types.AuditAction(tmp)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNAuditAction2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋsqlcᚐAuditAction(ctx context.Context, sel ast.SelectionSet, v sqlc.AuditAction) graphql.Marshaler {
+func (ec *executionContext) marshalNAuditAction2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋtypesᚐAuditAction(ctx context.Context, sel ast.SelectionSet, v types.AuditAction) graphql.Marshaler {
 	res := graphql.MarshalString(string(v))
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -14338,13 +14385,13 @@ func (ec *executionContext) marshalNAuditLog2ᚖgithubᚗcomᚋnaisᚋteamsᚑba
 	return ec._AuditLog(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNAuditLogsTargetType2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋsqlcᚐAuditLogsTargetType(ctx context.Context, v interface{}) (sqlc.AuditLogsTargetType, error) {
+func (ec *executionContext) unmarshalNAuditLogsTargetType2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋtypesᚐAuditLogsTargetType(ctx context.Context, v interface{}) (types.AuditLogsTargetType, error) {
 	tmp, err := graphql.UnmarshalString(v)
-	res := sqlc.AuditLogsTargetType(tmp)
+	res := types.AuditLogsTargetType(tmp)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNAuditLogsTargetType2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋsqlcᚐAuditLogsTargetType(ctx context.Context, sel ast.SelectionSet, v sqlc.AuditLogsTargetType) graphql.Marshaler {
+func (ec *executionContext) marshalNAuditLogsTargetType2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋtypesᚐAuditLogsTargetType(ctx context.Context, sel ast.SelectionSet, v types.AuditLogsTargetType) graphql.Marshaler {
 	res := graphql.MarshalString(string(v))
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -14371,6 +14418,22 @@ func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v interf
 
 func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.SelectionSet, v bool) graphql.Marshaler {
 	res := graphql.MarshalBoolean(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) unmarshalNComponentName2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋtypesᚐComponentName(ctx context.Context, v interface{}) (types.ComponentName, error) {
+	tmp, err := graphql.UnmarshalString(v)
+	res := types.ComponentName(tmp)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNComponentName2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋtypesᚐComponentName(ctx context.Context, sel ast.SelectionSet, v types.ComponentName) graphql.Marshaler {
+	res := graphql.MarshalString(string(v))
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -15074,22 +15137,6 @@ func (ec *executionContext) marshalNSyncError2ᚖgithubᚗcomᚋnaisᚋteamsᚑb
 		return graphql.Null
 	}
 	return ec._SyncError(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalNSystemName2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋsqlcᚐSystemName(ctx context.Context, v interface{}) (sqlc.SystemName, error) {
-	tmp, err := graphql.UnmarshalString(v)
-	res := sqlc.SystemName(tmp)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNSystemName2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋsqlcᚐSystemName(ctx context.Context, sel ast.SelectionSet, v sqlc.SystemName) graphql.Marshaler {
-	res := graphql.MarshalString(string(v))
-	if res == graphql.Null {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-	}
-	return res
 }
 
 func (ec *executionContext) marshalNTeam2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋdbᚐTeam(ctx context.Context, sel ast.SelectionSet, v db.Team) graphql.Marshaler {

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/nais/teams-backend/pkg/types"
+
 	"cloud.google.com/go/pubsub"
 
 	"github.com/google/uuid"
@@ -65,14 +67,14 @@ type naisNamespaceReconciler struct {
 func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, domain, projectID string, azureEnabled bool, pubsubClient *pubsub.Client, legacyMapping []envmap.EnvironmentMapping, log logger.Logger) *naisNamespaceReconciler {
 	return &naisNamespaceReconciler{
 		database:      database,
-		auditLogger:   auditLogger.WithSystemName(sqlc.SystemNameNaisNamespace),
+		auditLogger:   auditLogger.WithComponentName(types.ComponentNameNaisNamespace),
 		clusters:      clusters,
 		domain:        domain,
 		projectID:     projectID,
 		azureEnabled:  azureEnabled,
 		pubsubClient:  pubsubClient,
 		legacyMapping: legacyMapping,
-		log:           log.WithSystem(string(Name)),
+		log:           log.WithComponent(types.ComponentNameNaisNamespace),
 	}
 }
 
@@ -179,7 +181,7 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 				auditlogger.TeamTarget(input.Team.Slug),
 			}
 			fields := auditlogger.Fields{
-				Action:        sqlc.AuditActionNaisNamespaceCreateNamespace,
+				Action:        types.AuditActionNaisNamespaceCreateNamespace,
 				CorrelationID: input.CorrelationID,
 			}
 			r.auditLogger.Logf(ctx, r.database, targets, fields, "Request namespace creation for team %q in environment %q", input.Team.Slug, environment)
@@ -231,7 +233,7 @@ func (r *naisNamespaceReconciler) Delete(ctx context.Context, teamSlug slug.Slug
 		} else {
 			targets := []auditlogger.Target{auditlogger.TeamTarget(teamSlug)}
 			fields := auditlogger.Fields{
-				Action:        sqlc.AuditActionNaisNamespaceDeleteNamespace,
+				Action:        types.AuditActionNaisNamespaceDeleteNamespace,
 				CorrelationID: correlationID,
 			}
 

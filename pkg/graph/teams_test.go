@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nais/teams-backend/pkg/types"
+
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/authz"
@@ -194,7 +196,7 @@ func TestMutationResolver_RequestTeamDeletion(t *testing.T) {
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	log := logger.NewMockLogger(t)
 	log.
-		On("WithSystem", string(sqlc.SystemNameGraphqlApi)).
+		On("WithComponent", types.ComponentNameGraphqlApi).
 		Return(log)
 	userSync := make(chan<- uuid.UUID)
 	gcpEnvironments := []string{"env"}
@@ -322,10 +324,10 @@ func TestMutationResolver_RequestTeamDeletion(t *testing.T) {
 				ctx,
 				database,
 				mock.MatchedBy(func(targets []auditlogger.Target) bool {
-					return targets[0].Identifier == string(teamSlug) && targets[0].Type == sqlc.AuditLogsTargetTypeTeam
+					return targets[0].Identifier == string(teamSlug) && targets[0].Type == types.AuditLogsTargetTypeTeam
 				}),
 				mock.MatchedBy(func(fields auditlogger.Fields) bool {
-					return fields.Action == sqlc.AuditActionGraphqlApiTeamsRequestDelete && fields.Actor.User == user
+					return fields.Action == types.AuditActionGraphqlApiTeamsRequestDelete && fields.Actor.User == user
 				}),
 				mock.AnythingOfType("string"),
 			).

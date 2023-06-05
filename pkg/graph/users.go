@@ -17,6 +17,7 @@ import (
 	"github.com/nais/teams-backend/pkg/graph/model"
 	"github.com/nais/teams-backend/pkg/roles"
 	"github.com/nais/teams-backend/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/types"
 	"github.com/nais/teams-backend/pkg/usersync"
 )
 
@@ -34,10 +35,10 @@ func (r *mutationResolver) SynchronizeUsers(ctx context.Context) (*uuid.UUID, er
 	}
 
 	targets := []auditlogger.Target{
-		auditlogger.SystemTarget(sqlc.SystemNameUsersync),
+		auditlogger.ComponentTarget(types.ComponentNameUsersync),
 	}
 	fields := auditlogger.Fields{
-		Action:        sqlc.AuditActionGraphqlApiUsersSync,
+		Action:        types.AuditActionGraphqlApiUsersSync,
 		Actor:         actor,
 		CorrelationID: correlationID,
 	}

@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/nais/teams-backend/pkg/types"
+
 	"github.com/nais/teams-backend/pkg/roles"
 
 	"github.com/google/uuid"
@@ -98,7 +100,7 @@ type database struct {
 }
 
 type Database interface {
-	CreateAuditLogEntry(ctx context.Context, correlationID uuid.UUID, systemName sqlc.SystemName, actor *string, targetType sqlc.AuditLogsTargetType, targetIdentifier string, action sqlc.AuditAction, message string) error
+	CreateAuditLogEntry(ctx context.Context, correlationID uuid.UUID, componentName types.ComponentName, actor *string, targetType types.AuditLogsTargetType, targetIdentifier string, action types.AuditAction, message string) error
 	CreateUser(ctx context.Context, name, email, externalID string) (*User, error)
 	CreateServiceAccount(ctx context.Context, name string) (*ServiceAccount, error)
 	GetServiceAccountByName(ctx context.Context, name string) (*ServiceAccount, error)

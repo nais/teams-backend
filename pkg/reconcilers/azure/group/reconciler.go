@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/nais/teams-backend/pkg/types"
+
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/azureclient"
@@ -29,10 +31,10 @@ type azureGroupReconciler struct {
 func New(database db.Database, auditLogger auditlogger.AuditLogger, client azureclient.Client, domain string, log logger.Logger) *azureGroupReconciler {
 	return &azureGroupReconciler{
 		database:    database,
-		auditLogger: auditLogger.WithSystemName(sqlc.SystemNameAzureGroup),
+		auditLogger: auditLogger.WithComponentName(types.ComponentNameAzureGroup),
 		client:      client,
 		domain:      domain,
-		log:         log.WithSystem(string(Name)),
+		log:         log.WithComponent(types.ComponentNameAzureGroup),
 	}
 }
 
@@ -99,7 +101,7 @@ func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.
 			auditlogger.TeamTarget(input.Team.Slug),
 		}
 		fields := auditlogger.Fields{
-			Action:        sqlc.AuditActionAzureGroupCreate,
+			Action:        types.AuditActionAzureGroupCreate,
 			CorrelationID: input.CorrelationID,
 		}
 		r.auditLogger.Logf(ctx, r.database, targets, fields, "Created Azure AD group %q with ID %q", grp.MailNickname, grp.ID)
@@ -142,7 +144,7 @@ func (r *azureGroupReconciler) Delete(ctx context.Context, teamSlug slug.Slug, c
 		auditlogger.TeamTarget(teamSlug),
 	}
 	fields := auditlogger.Fields{
-		Action:        sqlc.AuditActionAzureGroupDelete,
+		Action:        types.AuditActionAzureGroupDelete,
 		CorrelationID: correlationID,
 	}
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Delete Azure AD group with ID %q", grpID)
@@ -180,7 +182,7 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 			auditlogger.UserTarget(remoteEmail),
 		}
 		fields := auditlogger.Fields{
-			Action:        sqlc.AuditActionAzureGroupDeleteMember,
+			Action:        types.AuditActionAzureGroupDeleteMember,
 			CorrelationID: input.CorrelationID,
 		}
 		r.auditLogger.Logf(ctx, r.database, targets, fields, "Removed member %q from Azure group %q", remoteEmail, grp.MailNickname)
@@ -204,7 +206,7 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 			auditlogger.UserTarget(teamsBackendUser.Email),
 		}
 		fields := auditlogger.Fields{
-			Action:        sqlc.AuditActionAzureGroupAddMember,
+			Action:        types.AuditActionAzureGroupAddMember,
 			CorrelationID: input.CorrelationID,
 		}
 		r.auditLogger.Logf(ctx, r.database, targets, fields, "Added member %q to Azure group %q", teamsBackendUser.Email, grp.MailNickname)

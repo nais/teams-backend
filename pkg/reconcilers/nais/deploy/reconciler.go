@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/nais/teams-backend/pkg/types"
+
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/config"
@@ -37,10 +39,10 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, client *http
 	return &naisDeployReconciler{
 		database:     database,
 		client:       client,
-		auditLogger:  auditLogger.WithSystemName(sqlc.SystemNameNaisDeploy),
+		auditLogger:  auditLogger.WithComponentName(types.ComponentNameNaisDeploy),
 		endpoint:     endpoint,
 		provisionKey: provisionKey,
-		log:          log.WithSystem(string(Name)),
+		log:          log.WithComponent(types.ComponentNameNaisDeploy),
 	}
 }
 
@@ -85,7 +87,7 @@ func (r *naisDeployReconciler) Reconcile(ctx context.Context, input reconcilers.
 			auditlogger.TeamTarget(input.Team.Slug),
 		}
 		fields := auditlogger.Fields{
-			Action:        sqlc.AuditActionNaisDeployProvisionDeployKey,
+			Action:        types.AuditActionNaisDeployProvisionDeployKey,
 			CorrelationID: input.CorrelationID,
 		}
 		r.auditLogger.Logf(ctx, r.database, targets, fields, "Provisioned NAIS deploy API key for team %q", input.Team.Slug)

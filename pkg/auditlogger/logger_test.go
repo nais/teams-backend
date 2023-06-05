@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/nais/teams-backend/pkg/types"
+
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/authz"
@@ -22,7 +24,7 @@ func Test_Logf(t *testing.T) {
 	ctx := context.Background()
 	database := db.NewMockDatabase(t)
 	msg := "some message"
-	system := sqlc.SystemNameConsole
+	system := types.ComponentNameConsole
 
 	t.Run("missing system name", func(t *testing.T) {
 		log := logger.NewMockLogger(t)
@@ -38,7 +40,7 @@ func Test_Logf(t *testing.T) {
 	t.Run("missing audit action", func(t *testing.T) {
 		log := logger.NewMockLogger(t)
 		log.
-			On("WithSystem", string(system)).
+			On("WithComponent", system).
 			Return(log).
 			Once()
 		log.
@@ -49,22 +51,22 @@ func Test_Logf(t *testing.T) {
 
 		auditLogger := auditlogger.New(log)
 		auditLogger.
-			WithSystemName(system).
+			WithComponentName(system).
 			Logf(ctx, database, []auditlogger.Target{}, auditlogger.Fields{}, msg)
 	})
 
 	t.Run("does not do anything without targets", func(t *testing.T) {
 		log := logger.NewMockLogger(t)
 		log.
-			On("WithSystem", string(system)).
+			On("WithComponent", system).
 			Return(log).
 			Once()
 		auditLogger := auditlogger.New(log)
 		fields := auditlogger.Fields{
-			Action: sqlc.AuditActionAzureGroupAddMember,
+			Action: types.AuditActionAzureGroupAddMember,
 		}
 		auditLogger.
-			WithSystemName(system).
+			WithComponentName(system).
 			Logf(ctx, database, []auditlogger.Target{}, fields, msg)
 	})
 
@@ -75,20 +77,20 @@ func Test_Logf(t *testing.T) {
 		userEmail := "mail@example.com"
 		teamSlug := slug.Slug("team-slug")
 		reconcilerName := sqlc.ReconcilerNameGithubTeam
-		systemName := sqlc.SystemNameGithubTeam
+		componentName := types.ComponentNameGithubTeam
 		actorIdentity := "actor"
-		action := sqlc.AuditActionAzureGroupAddMember
+		action := types.AuditActionAzureGroupAddMember
 
 		correlationID := uuid.New()
 		targets := []auditlogger.Target{
 			auditlogger.UserTarget(userEmail),
 			auditlogger.TeamTarget(teamSlug),
 			auditlogger.ReconcilerTarget(reconcilerName),
-			auditlogger.SystemTarget(systemName),
+			auditlogger.ComponentTarget(componentName),
 		}
 
 		log := logger.NewMockLogger(t)
-		log.On("WithSystem", string(system)).Return(log).Once()
+		log.On("WithComponent", system).Return(log).Once()
 		log.On("WithActor", actorIdentity).Return(log).Times(len(targets))
 		log.On("WithUser", userEmail).Return(log).Once()
 		log.On("WithTeamSlug", string(teamSlug)).Return(log).Once()
@@ -98,7 +100,7 @@ func Test_Logf(t *testing.T) {
 				return f["action"] == action &&
 					f["actor"] == actorIdentity &&
 					f["correlation_id"] == correlationID &&
-					f["target_type"] == sqlc.AuditLogsTargetTypeUser
+					f["target_type"] == types.AuditLogsTargetTypeUser
 			})).
 			Return(&logrus.Entry{Logger: testLogger}).
 			Once()
@@ -107,7 +109,7 @@ func Test_Logf(t *testing.T) {
 				return f["action"] == action &&
 					f["actor"] == actorIdentity &&
 					f["correlation_id"] == correlationID &&
-					f["target_type"] == sqlc.AuditLogsTargetTypeTeam
+					f["target_type"] == types.AuditLogsTargetTypeTeam
 			})).
 			Return(&logrus.Entry{Logger: testLogger}).
 			Once()
@@ -116,7 +118,7 @@ func Test_Logf(t *testing.T) {
 				return f["action"] == action &&
 					f["actor"] == actorIdentity &&
 					f["correlation_id"] == correlationID &&
-					f["target_type"] == sqlc.AuditLogsTargetTypeReconciler
+					f["target_type"] == types.AuditLogsTargetTypeReconciler
 			})).
 			Return(&logrus.Entry{Logger: testLogger}).
 			Once()
@@ -125,7 +127,7 @@ func Test_Logf(t *testing.T) {
 				return f["action"] == action &&
 					f["actor"] == actorIdentity &&
 					f["correlation_id"] == correlationID &&
-					f["target_type"] == sqlc.AuditLogsTargetTypeSystem
+					f["target_type"] == types.AuditLogsTargetTypeSystem
 			})).
 			Return(&logrus.Entry{Logger: testLogger}).
 			Once()
@@ -145,23 +147,23 @@ func Test_Logf(t *testing.T) {
 
 		database := db.NewMockDatabase(t)
 		database.
-			On("CreateAuditLogEntry", ctx, correlationID, system, &actorIdentity, sqlc.AuditLogsTargetTypeUser, userEmail, action, msg).
+			On("CreateAuditLogEntry", ctx, correlationID, system, &actorIdentity, types.AuditLogsTargetTypeUser, userEmail, action, msg).
 			Return(nil).
 			Once()
 		database.
-			On("CreateAuditLogEntry", ctx, correlationID, system, &actorIdentity, sqlc.AuditLogsTargetTypeTeam, string(teamSlug), action, msg).
+			On("CreateAuditLogEntry", ctx, correlationID, system, &actorIdentity, types.AuditLogsTargetTypeTeam, string(teamSlug), action, msg).
 			Return(nil).
 			Once()
 		database.
-			On("CreateAuditLogEntry", ctx, correlationID, system, &actorIdentity, sqlc.AuditLogsTargetTypeReconciler, string(reconcilerName), action, msg).
+			On("CreateAuditLogEntry", ctx, correlationID, system, &actorIdentity, types.AuditLogsTargetTypeReconciler, string(reconcilerName), action, msg).
 			Return(nil).
 			Once()
 		database.
-			On("CreateAuditLogEntry", ctx, correlationID, system, &actorIdentity, sqlc.AuditLogsTargetTypeSystem, string(systemName), action, msg).
+			On("CreateAuditLogEntry", ctx, correlationID, system, &actorIdentity, types.AuditLogsTargetTypeSystem, string(componentName), action, msg).
 			Return(nil).
 			Once()
 		auditLogger.
-			WithSystemName(system).
+			WithComponentName(system).
 			Logf(ctx, database, targets, fields, msg)
 
 		assert.Len(t, hook.Entries, len(targets))

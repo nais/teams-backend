@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nais/teams-backend/pkg/types"
+
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/config"
@@ -42,14 +44,14 @@ const (
 func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, gcpServices *GcpServices, tenantName, domain, cnrmRoleName, billingAccount string, log logger.Logger, legacyMapping []envmap.EnvironmentMapping) *googleGcpReconciler {
 	return &googleGcpReconciler{
 		database:       database,
-		auditLogger:    auditLogger.WithSystemName(sqlc.SystemNameGoogleGcpProject),
+		auditLogger:    auditLogger.WithComponentName(types.ComponentNameGoogleGcpProject),
 		clusters:       clusters,
 		gcpServices:    gcpServices,
 		domain:         domain,
 		cnrmRoleName:   cnrmRoleName,
 		billingAccount: billingAccount,
 		tenantName:     tenantName,
-		log:            log.WithSystem(string(Name)),
+		log:            log.WithComponent(types.ComponentNameGoogleGcpProject),
 		legacyMapping:  legacyMapping,
 	}
 }
@@ -181,7 +183,7 @@ func (r *googleGcpReconciler) Delete(ctx context.Context, teamSlug slug.Slug, co
 			auditlogger.TeamTarget(teamSlug),
 		}
 		fields := auditlogger.Fields{
-			Action:        sqlc.AuditActionGoogleGcpDeleteProject,
+			Action:        types.AuditActionGoogleGcpDeleteProject,
 			CorrelationID: correlationID,
 		}
 		r.auditLogger.Logf(ctx, r.database, targets, fields, auditLogMessage)
@@ -275,7 +277,7 @@ func (r *googleGcpReconciler) ensureProjectHasAccessToGoogleApis(ctx context.Con
 		auditlogger.TeamTarget(input.Team.Slug),
 	}
 	fields := auditlogger.Fields{
-		Action:        sqlc.AuditActionGoogleGcpProjectEnableGoogleApis,
+		Action:        types.AuditActionGoogleGcpProjectEnableGoogleApis,
 		CorrelationID: input.CorrelationID,
 	}
 	for _, enabledApi := range servicesToEnable {
@@ -354,7 +356,7 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, projectID 
 		auditlogger.TeamTarget(input.Team.Slug),
 	}
 	fields := auditlogger.Fields{
-		Action:        sqlc.AuditActionGoogleGcpProjectCreateProject,
+		Action:        types.AuditActionGoogleGcpProjectCreateProject,
 		CorrelationID: input.CorrelationID,
 	}
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Created GCP project %q for team %q in environment %q", createdProject.ProjectId, input.Team.Slug, environment)
@@ -437,7 +439,7 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 		auditlogger.TeamTarget(input.Team.Slug),
 	}
 	fields := auditlogger.Fields{
-		Action:        sqlc.AuditActionGoogleGcpProjectAssignPermissions,
+		Action:        types.AuditActionGoogleGcpProjectAssignPermissions,
 		CorrelationID: input.CorrelationID,
 	}
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Assigned GCP project IAM permissions for %q", project.ProjectId)
@@ -475,7 +477,7 @@ func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.C
 		auditlogger.TeamTarget(input.Team.Slug),
 	}
 	fields := auditlogger.Fields{
-		Action:        sqlc.AuditActionGoogleGcpProjectCreateCnrmServiceAccount,
+		Action:        types.AuditActionGoogleGcpProjectCreateCnrmServiceAccount,
 		CorrelationID: input.CorrelationID,
 	}
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Created CNRM service account for team %q in project %q", input.Team.Slug, teamProjectID)
@@ -508,7 +510,7 @@ func (r *googleGcpReconciler) setTeamProjectBillingInfo(ctx context.Context, pro
 		auditlogger.TeamTarget(input.Team.Slug),
 	}
 	fields := auditlogger.Fields{
-		Action:        sqlc.AuditActionGoogleGcpProjectSetBillingInfo,
+		Action:        types.AuditActionGoogleGcpProjectSetBillingInfo,
 		CorrelationID: input.CorrelationID,
 	}
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Set billing info for %q", project.ProjectId)

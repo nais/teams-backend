@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/nais/teams-backend/pkg/types"
+
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/db"
@@ -63,7 +65,7 @@ func TestReconcile(t *testing.T) {
 		ctx := context.Background()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
-			On("WithSystemName", sqlc.SystemNameGoogleGcpProject).
+			On("WithComponentName", types.ComponentNameGoogleGcpProject).
 			Return(auditLogger).
 			Once()
 
@@ -84,7 +86,7 @@ func TestReconcile(t *testing.T) {
 		ctx := context.Background()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
-			On("WithSystemName", sqlc.SystemNameGoogleGcpProject).
+			On("WithComponentName", types.ComponentNameGoogleGcpProject).
 			Return(auditLogger).
 			Once()
 		database := db.NewMockDatabase(t)
@@ -108,7 +110,7 @@ func TestReconcile(t *testing.T) {
 		ctx := context.Background()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
-			On("WithSystemName", sqlc.SystemNameGoogleGcpProject).
+			On("WithComponentName", types.ComponentNameGoogleGcpProject).
 			Return(auditLogger).
 			Once()
 		database := db.NewMockDatabase(t)
@@ -132,7 +134,7 @@ func TestReconcile(t *testing.T) {
 		ctx := context.Background()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
-			On("WithSystemName", sqlc.SystemNameGoogleGcpProject).
+			On("WithComponentName", types.ComponentNameGoogleGcpProject).
 			Return(auditLogger).
 			Once()
 		database := db.NewMockDatabase(t)
@@ -189,14 +191,14 @@ func TestReconcile(t *testing.T) {
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
-			On("WithSystemName", sqlc.SystemNameGoogleGcpProject).
+			On("WithComponentName", types.ComponentNameGoogleGcpProject).
 			Return(auditLogger).
 			Once()
 		auditLogger.
 			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Identifier == string(teamSlug)
 			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
-				return fields.CorrelationID == correlationID && fields.Action == sqlc.AuditActionGoogleGcpProjectCreateProject
+				return fields.CorrelationID == correlationID && fields.Action == types.AuditActionGoogleGcpProjectCreateProject
 			}), mock.MatchedBy(func(msg string) bool {
 				return strings.HasPrefix(msg, "Created GCP project")
 			}), expectedTeamProjectID, teamSlug, env).
@@ -206,7 +208,7 @@ func TestReconcile(t *testing.T) {
 			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Identifier == string(teamSlug)
 			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
-				return fields.CorrelationID == correlationID && fields.Action == sqlc.AuditActionGoogleGcpProjectSetBillingInfo
+				return fields.CorrelationID == correlationID && fields.Action == types.AuditActionGoogleGcpProjectSetBillingInfo
 			}), mock.MatchedBy(func(msg string) bool {
 				return strings.HasPrefix(msg, "Set billing info")
 			}), expectedTeamProjectID).
@@ -216,7 +218,7 @@ func TestReconcile(t *testing.T) {
 			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Identifier == string(teamSlug)
 			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
-				return fields.CorrelationID == correlationID && fields.Action == sqlc.AuditActionGoogleGcpProjectCreateCnrmServiceAccount
+				return fields.CorrelationID == correlationID && fields.Action == types.AuditActionGoogleGcpProjectCreateCnrmServiceAccount
 			}), mock.MatchedBy(func(msg string) bool {
 				return strings.HasPrefix(msg, "Created CNRM service account")
 			}), teamSlug, expectedTeamProjectID).
@@ -226,7 +228,7 @@ func TestReconcile(t *testing.T) {
 			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Identifier == string(teamSlug)
 			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
-				return fields.CorrelationID == correlationID && fields.Action == sqlc.AuditActionGoogleGcpProjectAssignPermissions
+				return fields.CorrelationID == correlationID && fields.Action == types.AuditActionGoogleGcpProjectAssignPermissions
 			}), mock.MatchedBy(func(msg string) bool {
 				return strings.HasPrefix(msg, "Assigned GCP project IAM permissions")
 			}), expectedTeamProjectID).
@@ -236,7 +238,7 @@ func TestReconcile(t *testing.T) {
 			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Identifier == string(teamSlug)
 			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
-				return fields.CorrelationID == correlationID && fields.Action == sqlc.AuditActionGoogleGcpProjectEnableGoogleApis
+				return fields.CorrelationID == correlationID && fields.Action == types.AuditActionGoogleGcpProjectEnableGoogleApis
 			}), mock.MatchedBy(func(msg string) bool {
 				return strings.HasPrefix(msg, "Enable Google API")
 			}), mock.AnythingOfType("string"), expectedTeamProjectID).
@@ -457,7 +459,7 @@ func TestDelete(t *testing.T) {
 		database := db.NewMockDatabase(t)
 
 		auditLogger.
-			On("WithSystemName", sqlc.SystemNameGoogleGcpProject).
+			On("WithComponentName", types.ComponentNameGoogleGcpProject).
 			Return(auditLogger).
 			Once()
 		database.
@@ -476,7 +478,7 @@ func TestDelete(t *testing.T) {
 		database := db.NewMockDatabase(t)
 
 		auditLogger.
-			On("WithSystemName", sqlc.SystemNameGoogleGcpProject).
+			On("WithComponentName", types.ComponentNameGoogleGcpProject).
 			Return(auditLogger).
 			Once()
 		database.

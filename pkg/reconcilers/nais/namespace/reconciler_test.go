@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/nais/teams-backend/pkg/types"
+
 	"cloud.google.com/go/pubsub"
 	"cloud.google.com/go/pubsub/pstest"
 	"github.com/google/uuid"
@@ -64,12 +66,12 @@ func TestReconcile(t *testing.T) {
 
 		log := logger.NewMockLogger(t)
 		log.
-			On("WithSystem", string(sqlc.ReconcilerNameNaisNamespace)).
+			On("WithComponent", types.ComponentNameNaisNamespace).
 			Return(log).
 			Once()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
-			On("WithSystemName", sqlc.SystemNameNaisNamespace).
+			On("WithComponentName", types.ComponentNameNaisNamespace).
 			Return(auditLogger).
 			Once()
 		database := db.NewMockDatabase(t)
@@ -88,12 +90,12 @@ func TestReconcile(t *testing.T) {
 
 		log := logger.NewMockLogger(t)
 		log.
-			On("WithSystem", string(sqlc.ReconcilerNameNaisNamespace)).
+			On("WithComponent", types.ComponentNameNaisNamespace).
 			Return(log).
 			Once()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
-			On("WithSystemName", sqlc.SystemNameNaisNamespace).
+			On("WithComponentName", types.ComponentNameNaisNamespace).
 			Return(auditLogger).
 			Once()
 		database := db.NewMockDatabase(t)
@@ -116,12 +118,12 @@ func TestReconcile(t *testing.T) {
 
 		log := logger.NewMockLogger(t)
 		log.
-			On("WithSystem", string(sqlc.ReconcilerNameNaisNamespace)).
+			On("WithComponent", types.ComponentNameNaisNamespace).
 			Return(log).
 			Once()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
-			On("WithSystemName", sqlc.SystemNameNaisNamespace).
+			On("WithComponentName", types.ComponentNameNaisNamespace).
 			Return(auditLogger).
 			Once()
 		database := db.NewMockDatabase(t)
@@ -144,12 +146,12 @@ func TestReconcile(t *testing.T) {
 
 		log := logger.NewMockLogger(t)
 		log.
-			On("WithSystem", string(sqlc.ReconcilerNameNaisNamespace)).
+			On("WithComponent", types.ComponentNameNaisNamespace).
 			Return(log).
 			Once()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
-			On("WithSystemName", sqlc.SystemNameNaisNamespace).
+			On("WithComponentName", types.ComponentNameNaisNamespace).
 			Return(auditLogger).
 			Once()
 		database := db.NewMockDatabase(t)
@@ -182,12 +184,12 @@ func TestReconcile(t *testing.T) {
 
 		log := logger.NewMockLogger(t)
 		log.
-			On("WithSystem", string(sqlc.ReconcilerNameNaisNamespace)).
+			On("WithComponent", types.ComponentNameNaisNamespace).
 			Return(log).
 			Once()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
-			On("WithSystemName", sqlc.SystemNameNaisNamespace).
+			On("WithComponentName", types.ComponentNameNaisNamespace).
 			Return(auditLogger).
 			Once()
 		database := db.NewMockDatabase(t)
@@ -228,7 +230,7 @@ func TestReconcile(t *testing.T) {
 
 		log := logger.NewMockLogger(t)
 		log.
-			On("WithSystem", string(sqlc.ReconcilerNameNaisNamespace)).
+			On("WithComponent", types.ComponentNameNaisNamespace).
 			Return(log).
 			Once()
 		log.
@@ -282,14 +284,14 @@ func TestReconcile(t *testing.T) {
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
-			On("WithSystemName", sqlc.SystemNameNaisNamespace).
+			On("WithComponentName", types.ComponentNameNaisNamespace).
 			Return(auditLogger).
 			Once()
 		auditLogger.
 			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Type == "team" && targets[0].Identifier == string(team.Slug)
 			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
-				return fields.CorrelationID == input.CorrelationID && fields.Action == sqlc.AuditActionNaisNamespaceCreateNamespace
+				return fields.CorrelationID == input.CorrelationID && fields.Action == types.AuditActionNaisNamespaceCreateNamespace
 			}), mock.Anything, team.Slug, environment).
 			Return(nil).
 			Once()
@@ -320,7 +322,7 @@ func TestReconcile(t *testing.T) {
 
 		log := logger.NewMockLogger(t)
 		log.
-			On("WithSystem", string(sqlc.ReconcilerNameNaisNamespace)).
+			On("WithComponent", types.ComponentNameNaisNamespace).
 			Return(log).
 			Once()
 		log.
@@ -350,14 +352,14 @@ func TestReconcile(t *testing.T) {
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
-			On("WithSystemName", sqlc.SystemNameNaisNamespace).
+			On("WithComponentName", types.ComponentNameNaisNamespace).
 			Return(auditLogger).
 			Once()
 		auditLogger.
 			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Type == "team" && targets[0].Identifier == string(team.Slug)
 			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
-				return fields.CorrelationID == input.CorrelationID && fields.Action == sqlc.AuditActionNaisNamespaceDeleteNamespace
+				return fields.CorrelationID == input.CorrelationID && fields.Action == types.AuditActionNaisNamespaceDeleteNamespace
 			}), mock.Anything, team.Slug, environment).
 			Return(nil).
 			Once()
@@ -396,7 +398,7 @@ func TestReconcile(t *testing.T) {
 
 		log := logger.NewMockLogger(t)
 		log.
-			On("WithSystem", string(sqlc.ReconcilerNameNaisNamespace)).
+			On("WithComponent", types.ComponentNameNaisNamespace).
 			Return(log).
 			Once()
 		log.
@@ -448,14 +450,14 @@ func TestReconcile(t *testing.T) {
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
-			On("WithSystemName", sqlc.SystemNameNaisNamespace).
+			On("WithComponentName", types.ComponentNameNaisNamespace).
 			Return(auditLogger).
 			Once()
 		auditLogger.
 			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Type == "team" && targets[0].Identifier == string(team.Slug)
 			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
-				return fields.CorrelationID == input.CorrelationID && fields.Action == sqlc.AuditActionNaisNamespaceCreateNamespace
+				return fields.CorrelationID == input.CorrelationID && fields.Action == types.AuditActionNaisNamespaceCreateNamespace
 			}), mock.Anything, team.Slug, environment).
 			Return(nil).
 			Once()
@@ -494,7 +496,7 @@ func TestReconcile(t *testing.T) {
 
 		log := logger.NewMockLogger(t)
 		log.
-			On("WithSystem", string(sqlc.ReconcilerNameNaisNamespace)).
+			On("WithComponent", types.ComponentNameNaisNamespace).
 			Return(log).
 			Once()
 		log.
@@ -546,14 +548,14 @@ func TestReconcile(t *testing.T) {
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
-			On("WithSystemName", sqlc.SystemNameNaisNamespace).
+			On("WithComponentName", types.ComponentNameNaisNamespace).
 			Return(auditLogger).
 			Once()
 		auditLogger.
 			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Type == "team" && targets[0].Identifier == string(team.Slug)
 			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
-				return fields.CorrelationID == input.CorrelationID && fields.Action == sqlc.AuditActionNaisNamespaceCreateNamespace
+				return fields.CorrelationID == input.CorrelationID && fields.Action == types.AuditActionNaisNamespaceCreateNamespace
 			}), mock.Anything, team.Slug, environment).
 			Return(nil).
 			Once()
@@ -562,7 +564,7 @@ func TestReconcile(t *testing.T) {
 			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Type == "team" && targets[0].Identifier == string(team.Slug)
 			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
-				return fields.CorrelationID == input.CorrelationID && fields.Action == sqlc.AuditActionNaisNamespaceCreateNamespace
+				return fields.CorrelationID == input.CorrelationID && fields.Action == types.AuditActionNaisNamespaceCreateNamespace
 			}), mock.Anything, team.Slug, virtualName).
 			Return(nil).
 			Once()
@@ -596,7 +598,7 @@ func TestReconcile(t *testing.T) {
 
 		log := logger.NewMockLogger(t)
 		log.
-			On("WithSystem", string(sqlc.ReconcilerNameNaisNamespace)).
+			On("WithComponent", types.ComponentNameNaisNamespace).
 			Return(log).
 			Once()
 		log.
@@ -612,7 +614,7 @@ func TestReconcile(t *testing.T) {
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		auditLogger.
-			On("WithSystemName", sqlc.SystemNameNaisNamespace).
+			On("WithComponentName", types.ComponentNameNaisNamespace).
 			Return(auditLogger).
 			Once()
 		database := db.NewMockDatabase(t)

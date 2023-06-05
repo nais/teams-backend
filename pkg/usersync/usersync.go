@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/nais/teams-backend/pkg/types"
+
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/config"
@@ -29,7 +31,7 @@ type (
 	}
 
 	auditLogEntry struct {
-		action    sqlc.AuditAction
+		action    types.AuditAction
 		userEmail string
 		message   string
 	}
@@ -67,7 +69,7 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, adminGroupPr
 }
 
 func NewFromConfig(cfg *config.Config, database db.Database, auditLogger auditlogger.AuditLogger, log logger.Logger, syncRuns *RunsHandler) (*UserSynchronizer, error) {
-	log = log.WithSystem(string(sqlc.SystemNameUsersync))
+	log = log.WithComponent(types.ComponentNameUsersync)
 	ctx := context.Background()
 
 	builder, err := google_token_source.NewFromConfig(cfg)
@@ -145,7 +147,7 @@ func (s *UserSynchronizer) Sync(ctx context.Context, correlationID uuid.UUID) er
 
 			if created {
 				auditLogEntries = append(auditLogEntries, auditLogEntry{
-					action:    sqlc.AuditActionUsersyncCreate,
+					action:    types.AuditActionUsersyncCreate,
 					message:   fmt.Sprintf("Local user created: %q, external ID: %q", localUser.Email, localUser.ExternalID),
 					userEmail: localUser.Email,
 				})
@@ -158,7 +160,7 @@ func (s *UserSynchronizer) Sync(ctx context.Context, correlationID uuid.UUID) er
 				}
 
 				auditLogEntries = append(auditLogEntries, auditLogEntry{
-					action:    sqlc.AuditActionUsersyncUpdate,
+					action:    types.AuditActionUsersyncUpdate,
 					message:   fmt.Sprintf("Local user updated: %q, external ID: %q", updatedUser.Email, updatedUser.ExternalID),
 					userEmail: updatedUser.Email,
 				})
@@ -225,7 +227,7 @@ func deleteUnknownUsers(ctx context.Context, dbtx db.Database, unknownUsers user
 			return nil, fmt.Errorf("delete local user %q: %w", user.Email, err)
 		}
 		*auditLogEntries = append(*auditLogEntries, auditLogEntry{
-			action:    sqlc.AuditActionUsersyncDelete,
+			action:    types.AuditActionUsersyncDelete,
 			message:   fmt.Sprintf("Local user deleted: %q, external ID: %q", user.Email, user.ExternalID),
 			userEmail: user.Email,
 		})
@@ -252,7 +254,7 @@ func assignTeamsBackendAdmins(ctx context.Context, dbtx db.Database, membersServ
 			}
 
 			*auditLogEntries = append(*auditLogEntries, auditLogEntry{
-				action:    sqlc.AuditActionUsersyncRevokeAdminRole,
+				action:    types.AuditActionUsersyncRevokeAdminRole,
 				message:   fmt.Sprintf("Revoke global admin role from user: %q", existingAdmin.Email),
 				userEmail: existingAdmin.Email,
 			})
@@ -267,7 +269,7 @@ func assignTeamsBackendAdmins(ctx context.Context, dbtx db.Database, membersServ
 			}
 
 			*auditLogEntries = append(*auditLogEntries, auditLogEntry{
-				action:    sqlc.AuditActionUsersyncAssignAdminRole,
+				action:    types.AuditActionUsersyncAssignAdminRole,
 				message:   fmt.Sprintf("Assign global admin role to user: %q", admin.Email),
 				userEmail: admin.Email,
 			})

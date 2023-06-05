@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/nais/teams-backend/pkg/types"
+
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/auditlogger"
@@ -28,7 +30,7 @@ type Resolver struct {
 	deployProxy     deployproxy.Proxy
 	tenantDomain    string
 	userSync        chan<- uuid.UUID
-	systemName      sqlc.SystemName
+	systemName      types.ComponentName
 	auditLogger     auditlogger.AuditLogger
 	gcpEnvironments []string
 	log             logger.Logger
@@ -41,10 +43,10 @@ func NewResolver(teamSyncHandler teamsync.Handler, database db.Database, deployP
 		database:        database,
 		deployProxy:     deployProxy,
 		tenantDomain:    tenantDomain,
-		systemName:      sqlc.SystemNameGraphqlApi,
+		systemName:      types.ComponentNameGraphqlApi,
 		auditLogger:     auditLogger,
 		gcpEnvironments: gcpEnvironments,
-		log:             log.WithSystem(string(sqlc.SystemNameGraphqlApi)),
+		log:             log.WithComponent(types.ComponentNameGraphqlApi),
 		userSync:        userSync,
 		userSyncRuns:    userSyncRuns,
 	}

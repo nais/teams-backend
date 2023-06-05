@@ -9,6 +9,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/nais/teams-backend/pkg/types"
+
 	"github.com/google/go-github/v50/github"
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/auditlogger"
@@ -34,12 +36,12 @@ var errGitHubUserNotFound = errors.New("GitHub user does not exist")
 func New(database db.Database, auditLogger auditlogger.AuditLogger, org, domain string, teamsService TeamsService, graphClient GraphClient, log logger.Logger) *githubTeamReconciler {
 	return &githubTeamReconciler{
 		database:     database,
-		auditLogger:  auditLogger.WithSystemName(sqlc.SystemNameGithubTeam),
+		auditLogger:  auditLogger.WithComponentName(types.ComponentNameGithubTeam),
 		org:          org,
 		domain:       domain,
 		teamsService: teamsService,
 		graphClient:  graphClient,
-		log:          log.WithSystem(string(Name)),
+		log:          log.WithComponent(types.ComponentNameGithubTeam),
 	}
 }
 
@@ -138,7 +140,7 @@ func (r *githubTeamReconciler) Delete(ctx context.Context, teamSlug slug.Slug, c
 		auditlogger.TeamTarget(teamSlug),
 	}
 	fields := auditlogger.Fields{
-		Action:        sqlc.AuditActionGithubTeamDelete,
+		Action:        types.AuditActionGithubTeamDelete,
 		CorrelationID: correlationID,
 	}
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Delete GitHub team with slug %q", gitHubTeamSlug)
@@ -239,7 +241,7 @@ func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconc
 		auditlogger.TeamTarget(team.Slug),
 	}
 	fields := auditlogger.Fields{
-		Action:        sqlc.AuditActionGithubTeamCreate,
+		Action:        types.AuditActionGithubTeamCreate,
 		CorrelationID: correlationID,
 	}
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Created GitHub team %q", *githubTeam.Slug)
@@ -286,7 +288,7 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 			auditlogger.TeamTarget(input.Team.Slug),
 		}
 		fields := auditlogger.Fields{
-			Action:        sqlc.AuditActionGithubTeamDeleteMember,
+			Action:        types.AuditActionGithubTeamDeleteMember,
 			CorrelationID: input.CorrelationID,
 		}
 		r.auditLogger.Logf(ctx, r.database, targets, fields, "Deleted member %q from GitHub team %q", username, *githubTeam.Slug)
@@ -307,7 +309,7 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 			auditlogger.UserTarget(teamsBackendUser.Email),
 		}
 		fields := auditlogger.Fields{
-			Action:        sqlc.AuditActionGithubTeamAddMember,
+			Action:        types.AuditActionGithubTeamAddMember,
 			CorrelationID: input.CorrelationID,
 		}
 		r.auditLogger.Logf(ctx, r.database, targets, fields, "Added member %q to GitHub team %q", username, *githubTeam.Slug)

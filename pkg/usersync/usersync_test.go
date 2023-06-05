@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/nais/teams-backend/pkg/types"
+
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/db"
@@ -103,11 +105,11 @@ func TestSync(t *testing.T) {
 			Once()
 
 		auditLogger.
-			On("Logf", ctx, database, targetIdentifier(user1.Email), auditAction(sqlc.AuditActionUsersyncDelete), `Local user deleted: "user1@example.com", external ID: "123"`).
+			On("Logf", ctx, database, targetIdentifier(user1.Email), auditAction(types.AuditActionUsersyncDelete), `Local user deleted: "user1@example.com", external ID: "123"`).
 			Return(nil).
 			Once()
 		auditLogger.
-			On("Logf", ctx, database, targetIdentifier(user2.Email), auditAction(sqlc.AuditActionUsersyncDelete), `Local user deleted: "user2@example.com", external ID: "456"`).
+			On("Logf", ctx, database, targetIdentifier(user2.Email), auditAction(types.AuditActionUsersyncDelete), `Local user deleted: "user2@example.com", external ID: "456"`).
 			Return(nil).
 			Once()
 
@@ -261,27 +263,27 @@ func TestSync(t *testing.T) {
 			Once()
 
 		auditLogger.
-			On("Logf", ctx, database, targetIdentifier("user1@example.com"), auditAction(sqlc.AuditActionUsersyncUpdate), `Local user updated: "user1@example.com", external ID: "123"`).
+			On("Logf", ctx, database, targetIdentifier("user1@example.com"), auditAction(types.AuditActionUsersyncUpdate), `Local user updated: "user1@example.com", external ID: "123"`).
 			Return(nil).
 			Once()
 		auditLogger.
-			On("Logf", ctx, database, targetIdentifier("user2@example.com"), auditAction(sqlc.AuditActionUsersyncCreate), `Local user created: "user2@example.com", external ID: "456"`).
+			On("Logf", ctx, database, targetIdentifier("user2@example.com"), auditAction(types.AuditActionUsersyncCreate), `Local user created: "user2@example.com", external ID: "456"`).
 			Return(nil).
 			Once()
 		auditLogger.
-			On("Logf", ctx, database, targetIdentifier("user3@example.com"), auditAction(sqlc.AuditActionUsersyncUpdate), `Local user updated: "user3@example.com", external ID: "789"`).
+			On("Logf", ctx, database, targetIdentifier("user3@example.com"), auditAction(types.AuditActionUsersyncUpdate), `Local user updated: "user3@example.com", external ID: "789"`).
 			Return(nil).
 			Once()
 		auditLogger.
-			On("Logf", ctx, database, targetIdentifier("delete-me@example.com"), auditAction(sqlc.AuditActionUsersyncDelete), `Local user deleted: "delete-me@example.com", external ID: "321"`).
+			On("Logf", ctx, database, targetIdentifier("delete-me@example.com"), auditAction(types.AuditActionUsersyncDelete), `Local user deleted: "delete-me@example.com", external ID: "321"`).
 			Return(nil).
 			Once()
 		auditLogger.
-			On("Logf", ctx, database, targetIdentifier("user2@example.com"), auditAction(sqlc.AuditActionUsersyncAssignAdminRole), `Assign global admin role to user: "user2@example.com"`).
+			On("Logf", ctx, database, targetIdentifier("user2@example.com"), auditAction(types.AuditActionUsersyncAssignAdminRole), `Assign global admin role to user: "user2@example.com"`).
 			Return(nil).
 			Once()
 		auditLogger.
-			On("Logf", ctx, database, targetIdentifier("user1@example.com"), auditAction(sqlc.AuditActionUsersyncRevokeAdminRole), `Revoke global admin role from user: "user1@example.com"`).
+			On("Logf", ctx, database, targetIdentifier("user1@example.com"), auditAction(types.AuditActionUsersyncRevokeAdminRole), `Revoke global admin role from user: "user1@example.com"`).
 			Return(nil).
 			Once()
 
@@ -298,7 +300,7 @@ func targetIdentifier(identifier string) interface{} {
 	})
 }
 
-func auditAction(action sqlc.AuditAction) interface{} {
+func auditAction(action types.AuditAction) interface{} {
 	return mock.MatchedBy(func(f auditlogger.Fields) bool {
 		return f.Action == action
 	})

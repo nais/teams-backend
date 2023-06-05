@@ -62,11 +62,11 @@ models:
 
   AuditAction:
     model:
-      - github.com/nais/teams-backend/pkg/sqlc.AuditAction
+      - github.com/nais/teams-backend/pkg/types.AuditAction
 
   AuditLogsTargetType:
     model:
-      - github.com/nais/teams-backend/pkg/sqlc.AuditLogsTargetType
+      - github.com/nais/teams-backend/pkg/types.AuditLogsTargetType
 
   ReconcilerName:
     model:
@@ -80,9 +80,9 @@ models:
     model:
       - github.com/nais/teams-backend/pkg/slug.Slug
 
-  SystemName:
+  ComponentName:
     model:
-      - github.com/nais/teams-backend/pkg/sqlc.SystemName
+      - github.com/nais/teams-backend/pkg/types.ComponentName
 
   ReconcilerConfigKey:
     model:

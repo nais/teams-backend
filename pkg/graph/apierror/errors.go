@@ -6,11 +6,12 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/nais/teams-backend/pkg/types"
+
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/jackc/pgconn"
 	"github.com/nais/teams-backend/pkg/authz"
 	"github.com/nais/teams-backend/pkg/logger"
-	"github.com/nais/teams-backend/pkg/sqlc"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
@@ -45,7 +46,7 @@ func Errorf(format string, args ...any) Error {
 // GetErrorPresenter returns a GraphQL error presenter that filters out error messages not intended for end users.
 // All filtered errors are logged.
 func GetErrorPresenter(log logger.Logger) graphql.ErrorPresenterFunc {
-	log = log.WithSystem(string(sqlc.SystemNameGraphqlApi))
+	log = log.WithComponent(types.ComponentNameGraphqlApi)
 
 	return func(ctx context.Context, e error) *gqlerror.Error {
 		err := graphql.DefaultErrorPresenter(ctx, e)

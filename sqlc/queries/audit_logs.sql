@@ -1,5 +1,5 @@
 -- name: CreateAuditLog :exec
-INSERT INTO audit_logs (correlation_id, actor, system_name, target_type, target_identifier, action, message)
+INSERT INTO audit_logs (correlation_id, actor, component_name, target_type, target_identifier, action, message)
 VALUES ($1, $2, $3, $4, $5, $6, $7);
 
 -- name: GetAuditLogsForTeam :many

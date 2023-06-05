@@ -7,11 +7,12 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/nais/teams-backend/pkg/types"
+
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/db"
 	"github.com/nais/teams-backend/pkg/logger"
-	"github.com/nais/teams-backend/pkg/sqlc"
 	"golang.org/x/oauth2"
 )
 
@@ -50,7 +51,7 @@ func New(oauth2Config OAuth2, database db.Database, frontendURL url.URL, log log
 		oauth2Config: oauth2Config,
 		frontendURL:  frontendURL,
 		secureCookie: shouldUseSecureCookies(frontendURL),
-		log:          log.WithSystem(string(sqlc.SystemNameAuthn)),
+		log:          log.WithComponent(types.ComponentNameAuthn),
 	}
 }
 

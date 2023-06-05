@@ -17,6 +17,7 @@ import (
 	"github.com/nais/teams-backend/pkg/reconcilers"
 	"github.com/nais/teams-backend/pkg/slug"
 	"github.com/nais/teams-backend/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/types"
 	"github.com/sirupsen/logrus"
 )
 
@@ -34,8 +35,8 @@ const (
 func New(database db.Database, auditLogger auditlogger.AuditLogger, clients map[string]dependencytrack.Client, log logger.Logger) (reconcilers.Reconciler, error) {
 	return &reconciler{
 		database:    database,
-		auditLogger: auditLogger.WithSystemName(sqlc.SystemNameNaisDependencytrack),
-		log:         log.WithSystem(string(Name)),
+		auditLogger: auditLogger.WithComponentName(types.ComponentNameNaisDependencytrack),
+		log:         log.WithComponent(types.ComponentNameNaisDependencytrack),
 		clients:     clients,
 	}, nil
 }
@@ -158,7 +159,7 @@ func (r *reconciler) syncTeamAndUsers(ctx context.Context, input reconcilers.Inp
 					auditlogger.UserTarget(user.Email),
 				}
 				fields := auditlogger.Fields{
-					Action:        sqlc.AuditActionDependencytrackTeamAddMember,
+					Action:        types.AuditActionDependencytrackTeamAddMember,
 					CorrelationID: input.CorrelationID,
 				}
 				r.auditLogger.Logf(ctx, r.database, targets, fields, "Added member %q to Dependencytrack team %q", user.Email, input.Team.Slug)
@@ -177,7 +178,7 @@ func (r *reconciler) syncTeamAndUsers(ctx context.Context, input reconcilers.Inp
 					auditlogger.UserTarget(user),
 				}
 				fields := auditlogger.Fields{
-					Action:        sqlc.AuditActionDependencytrackTeamDeleteMember,
+					Action:        types.AuditActionDependencytrackTeamDeleteMember,
 					CorrelationID: input.CorrelationID,
 				}
 				r.auditLogger.Logf(ctx, r.database, targets, fields, "Deleted member %q from Dependencytrack team %q", user, input.Team.Slug)
@@ -196,7 +197,7 @@ func (r *reconciler) syncTeamAndUsers(ctx context.Context, input reconcilers.Inp
 		auditlogger.TeamTarget(input.Team.Slug),
 	}
 	fields := auditlogger.Fields{
-		Action:        sqlc.AuditActionDependencytrackTeamCreate,
+		Action:        types.AuditActionDependencytrackTeamCreate,
 		CorrelationID: input.CorrelationID,
 	}
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Created dependencytrack team %q with ID %q", team.Name, team.Uuid)
@@ -221,7 +222,7 @@ func (r *reconciler) syncTeamAndUsers(ctx context.Context, input reconcilers.Inp
 			auditlogger.UserTarget(user.Email),
 		}
 		fields := auditlogger.Fields{
-			Action:        sqlc.AuditActionDependencytrackTeamAddMember,
+			Action:        types.AuditActionDependencytrackTeamAddMember,
 			CorrelationID: input.CorrelationID,
 		}
 		r.auditLogger.Logf(ctx, r.database, targets, fields, "Added member %q to Dependencytrack team %q", user.Email, input.Team.Slug)

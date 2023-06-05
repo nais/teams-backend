@@ -19,6 +19,7 @@ import (
 	"github.com/nais/teams-backend/pkg/roles"
 	"github.com/nais/teams-backend/pkg/slug"
 	"github.com/nais/teams-backend/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/types"
 )
 
 // EnableReconciler is the resolver for the enableReconciler field.
@@ -78,7 +79,7 @@ func (r *mutationResolver) EnableReconciler(ctx context.Context, name sqlc.Recon
 		auditlogger.ReconcilerTarget(name),
 	}
 	fields := auditlogger.Fields{
-		Action:        sqlc.AuditActionGraphqlApiReconcilersEnable,
+		Action:        types.AuditActionGraphqlApiReconcilersEnable,
 		Actor:         actor,
 		CorrelationID: correlationID,
 	}
@@ -122,7 +123,7 @@ func (r *mutationResolver) DisableReconciler(ctx context.Context, name sqlc.Reco
 		auditlogger.ReconcilerTarget(name),
 	}
 	fields := auditlogger.Fields{
-		Action: sqlc.AuditActionGraphqlApiReconcilersDisable,
+		Action: types.AuditActionGraphqlApiReconcilersDisable,
 		Actor:  actor,
 	}
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Disable reconciler: %q", name)
@@ -191,7 +192,7 @@ func (r *mutationResolver) ConfigureReconciler(ctx context.Context, name sqlc.Re
 		auditlogger.ReconcilerTarget(name),
 	}
 	fields := auditlogger.Fields{
-		Action: sqlc.AuditActionGraphqlApiReconcilersConfigure,
+		Action: types.AuditActionGraphqlApiReconcilersConfigure,
 		Actor:  actor,
 	}
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Configure reconciler: %q", name)
@@ -233,7 +234,7 @@ func (r *mutationResolver) ResetReconciler(ctx context.Context, name sqlc.Reconc
 		auditlogger.ReconcilerTarget(name),
 	}
 	fields := auditlogger.Fields{
-		Action: sqlc.AuditActionGraphqlApiReconcilersReset,
+		Action: types.AuditActionGraphqlApiReconcilersReset,
 		Actor:  actor,
 	}
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Reset reconciler: %q", name)

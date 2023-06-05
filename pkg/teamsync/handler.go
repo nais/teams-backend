@@ -3,6 +3,7 @@ package teamsync
 import (
 	"context"
 	"fmt"
+	"github.com/nais/teams-backend/pkg/types"
 	"sort"
 	"sync"
 	"time"
@@ -105,7 +106,7 @@ func (h *handler) DeleteTeam(teamSlug slug.Slug, correlationID uuid.UUID) error 
 		}
 		reconcilerImpl := reconcilerWithRunOrder.reconciler
 		name := reconcilerImpl.Name()
-		log := log.WithSystem(string(name))
+		log := log.WithComponent(types.ComponentName(name))
 
 		err := reconcilerImpl.Delete(h.mainContext, teamSlug, correlationID)
 		if err != nil {
@@ -259,7 +260,7 @@ func (h *handler) reconcileTeam(ctx context.Context, input Input) error {
 		}
 		reconcilerImpl := reconcilerWithRunOrder.reconciler
 		name := reconcilerImpl.Name()
-		log := log.WithSystem(string(name))
+		log := log.WithComponent(types.ComponentName(name))
 
 		reconcilerInput, err := reconcilers.CreateReconcilerInput(ctx, h.database, *team, name)
 		if err != nil {

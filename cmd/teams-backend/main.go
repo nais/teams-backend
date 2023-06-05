@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/nais/teams-backend/pkg/types"
+
 	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/playground"
@@ -30,7 +32,6 @@ import (
 	"github.com/nais/teams-backend/pkg/graph/generated"
 	"github.com/nais/teams-backend/pkg/logger"
 	"github.com/nais/teams-backend/pkg/middleware"
-	"github.com/nais/teams-backend/pkg/sqlc"
 	"github.com/nais/teams-backend/pkg/teamsync"
 	"github.com/nais/teams-backend/pkg/usersync"
 	"github.com/nais/teams-backend/pkg/version"
@@ -127,7 +128,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 	userSyncTimer.Stop()
 	userSyncRuns := usersync.NewRunsHandler(cfg.UserSync.RunsToStore)
 	if cfg.UserSync.Enabled {
-		userSyncer, err = usersync.NewFromConfig(cfg, database, auditLogger.WithSystemName(sqlc.SystemNameUsersync), log, userSyncRuns)
+		userSyncer, err = usersync.NewFromConfig(cfg, database, auditLogger.WithComponentName(types.ComponentNameUsersync), log, userSyncRuns)
 		if err != nil {
 			return err
 		}
@@ -145,7 +146,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 		log.Warnf("Deploy proxy is not configured: %v", err)
 	}
 
-	handler := setupGraphAPI(teamSync, database, deployProxy, cfg.TenantDomain, userSync, auditLogger.WithSystemName(sqlc.SystemNameGraphqlApi), cfg.Environments, log, userSyncRuns)
+	handler := setupGraphAPI(teamSync, database, deployProxy, cfg.TenantDomain, userSync, auditLogger.WithComponentName(types.ComponentNameGraphqlApi), cfg.Environments, log, userSyncRuns)
 	srv := setupHTTPServer(cfg, database, handler, authHandler)
 
 	log.Infof("ready to accept requests at %s.", cfg.ListenAddress)

@@ -18,6 +18,7 @@ import (
 	"github.com/nais/teams-backend/pkg/reconcilers"
 	"github.com/nais/teams-backend/pkg/slug"
 	"github.com/nais/teams-backend/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/types"
 )
 
 // SetGitHubTeamSlug is the resolver for the setGitHubTeamSlug field.
@@ -43,7 +44,7 @@ func (r *mutationResolver) SetGitHubTeamSlug(ctx context.Context, teamSlug *slug
 		auditlogger.TeamTarget(team.Slug),
 	}
 	fields := auditlogger.Fields{
-		Action:        sqlc.AuditActionGraphqlApiReconcilersUpdateTeamState,
+		Action:        types.AuditActionGraphqlApiReconcilersUpdateTeamState,
 		Actor:         authz.ActorFromContext(ctx),
 		CorrelationID: correlationID,
 	}
@@ -81,7 +82,7 @@ func (r *mutationResolver) SetGoogleWorkspaceGroupEmail(ctx context.Context, tea
 		auditlogger.TeamTarget(team.Slug),
 	}
 	fields := auditlogger.Fields{
-		Action:        sqlc.AuditActionGraphqlApiReconcilersUpdateTeamState,
+		Action:        types.AuditActionGraphqlApiReconcilersUpdateTeamState,
 		Actor:         authz.ActorFromContext(ctx),
 		CorrelationID: correlationID,
 	}
@@ -115,7 +116,7 @@ func (r *mutationResolver) SetAzureADGroupID(ctx context.Context, teamSlug *slug
 		auditlogger.TeamTarget(team.Slug),
 	}
 	fields := auditlogger.Fields{
-		Action:        sqlc.AuditActionGraphqlApiReconcilersUpdateTeamState,
+		Action:        types.AuditActionGraphqlApiReconcilersUpdateTeamState,
 		Actor:         authz.ActorFromContext(ctx),
 		CorrelationID: correlationID,
 	}
@@ -167,7 +168,7 @@ func (r *mutationResolver) SetGcpProjectID(ctx context.Context, teamSlug *slug.S
 		auditlogger.TeamTarget(team.Slug),
 	}
 	fields := auditlogger.Fields{
-		Action:        sqlc.AuditActionGraphqlApiReconcilersUpdateTeamState,
+		Action:        types.AuditActionGraphqlApiReconcilersUpdateTeamState,
 		Actor:         authz.ActorFromContext(ctx),
 		CorrelationID: correlationID,
 	}
@@ -219,7 +220,7 @@ func (r *mutationResolver) SetNaisNamespace(ctx context.Context, teamSlug *slug.
 		auditlogger.TeamTarget(team.Slug),
 	}
 	fields := auditlogger.Fields{
-		Action:        sqlc.AuditActionGraphqlApiReconcilersUpdateTeamState,
+		Action:        types.AuditActionGraphqlApiReconcilersUpdateTeamState,
 		Actor:         authz.ActorFromContext(ctx),
 		CorrelationID: correlationID,
 	}

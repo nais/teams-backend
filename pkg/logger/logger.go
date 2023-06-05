@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/nais/teams-backend/pkg/types"
+
 	"github.com/google/uuid"
-	"github.com/nais/teams-backend/pkg/sqlc"
 	"github.com/sirupsen/logrus"
 )
 
@@ -15,7 +16,7 @@ type Logger interface {
 	WithActor(actor string) Logger
 	WithCorrelationID(correlationID uuid.UUID) Logger
 	WithReconciler(reconciler string) Logger
-	WithSystem(system string) Logger
+	WithComponent(componentName types.ComponentName) Logger
 	WithTeamSlug(slug string) Logger
 	WithUser(user string) Logger
 }
@@ -48,8 +49,8 @@ func (l *logger) WithReconciler(reconciler string) Logger {
 	return &logger{l.WithField("reconciler", reconciler)}
 }
 
-func (l *logger) WithSystem(system string) Logger {
-	return &logger{l.WithField("system", system)}
+func (l *logger) WithComponent(componentName types.ComponentName) Logger {
+	return &logger{l.WithField("componentName", componentName)}
 }
 
 func GetLogger(format, level string) (Logger, error) {
@@ -75,5 +76,5 @@ func GetLogger(format, level string) (Logger, error) {
 
 	log.SetLevel(lvl)
 
-	return &logger{log.WithField("system", sqlc.SystemNameConsole)}, nil
+	return &logger{log.WithField("componentName", types.ComponentNameConsole)}, nil
 }

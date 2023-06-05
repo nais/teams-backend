@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/nais/teams-backend/pkg/types"
 	"strings"
 	"testing"
 
@@ -95,15 +96,15 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 			Return(nil).
 			Once()
 		log.
-			On("WithSystem", string(azure_group_reconciler.Name)).
+			On("WithComponent", types.ComponentNameAzureGroup).
 			Return(log).
 			Once()
 		log.
-			On("WithSystem", string(github_team_reconciler.Name)).
+			On("WithComponent", types.ComponentNameGithubTeam).
 			Return(log).
 			Once()
 		log.
-			On("WithSystem", string(nais_deploy_reconciler.Name)).
+			On("WithComponent", types.ComponentNameNaisDeploy).
 			Return(log).
 			Once()
 		log.
@@ -301,11 +302,11 @@ func TestHandler_DeleteTeam(t *testing.T) {
 			Return(log).
 			Once()
 		log.
-			On("WithSystem", string(azure_group_reconciler.Name)).
+			On("WithComponent", types.ComponentNameAzureGroup).
 			Return(log).
 			Once()
 		log.
-			On("WithSystem", string(github_team_reconciler.Name)).
+			On("WithComponent", types.ComponentNameGithubTeam).
 			Return(log).
 			Once()
 		log.

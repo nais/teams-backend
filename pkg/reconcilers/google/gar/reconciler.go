@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/nais/teams-backend/pkg/types"
+
 	artifactregistry "cloud.google.com/go/artifactregistry/apiv1"
 	"cloud.google.com/go/artifactregistry/apiv1/artifactregistrypb"
 	"cloud.google.com/go/iam/apiv1/iampb"
@@ -45,8 +47,8 @@ type garReconciler struct {
 func New(auditLogger auditlogger.AuditLogger, database db.Database, managementProjectID, workloadIdentityPoolName string, garClient *artifactregistry.Client, iamService *iam.Service, log logger.Logger) *garReconciler {
 	return &garReconciler{
 		database:                 database,
-		auditLogger:              auditLogger.WithSystemName(sqlc.SystemNameGoogleGcpGar),
-		log:                      log.WithSystem(string(Name)),
+		auditLogger:              auditLogger.WithComponentName(types.ComponentNameGoogleGcpGar),
+		log:                      log.WithComponent(types.ComponentNameGoogleGcpGar),
 		managementProjectID:      managementProjectID,
 		workloadIdentityPoolName: workloadIdentityPoolName,
 		artifactRegistry:         garClient,
@@ -166,7 +168,7 @@ func (r *garReconciler) Delete(ctx context.Context, teamSlug slug.Slug, correlat
 		auditlogger.TeamTarget(teamSlug),
 	}
 	fields := auditlogger.Fields{
-		Action:        sqlc.AuditActionGoogleGarDelete,
+		Action:        types.AuditActionGoogleGarDelete,
 		CorrelationID: correlationID,
 	}
 	r.auditLogger.Logf(ctx, r.database, targets, fields, "Delete GAR repository %q", garRepositoryName)

@@ -6,6 +6,8 @@ import (
 	logrus "github.com/sirupsen/logrus"
 	mock "github.com/stretchr/testify/mock"
 
+	types "github.com/nais/teams-backend/pkg/types"
+
 	uuid "github.com/google/uuid"
 )
 
@@ -222,6 +224,22 @@ func (_m *MockLogger) WithActor(actor string) Logger {
 	return r0
 }
 
+// WithComponent provides a mock function with given fields: componentName
+func (_m *MockLogger) WithComponent(componentName types.ComponentName) Logger {
+	ret := _m.Called(componentName)
+
+	var r0 Logger
+	if rf, ok := ret.Get(0).(func(types.ComponentName) Logger); ok {
+		r0 = rf(componentName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(Logger)
+		}
+	}
+
+	return r0
+}
+
 // WithCorrelationID provides a mock function with given fields: correlationID
 func (_m *MockLogger) WithCorrelationID(correlationID uuid.UUID) Logger {
 	ret := _m.Called(correlationID)
@@ -293,22 +311,6 @@ func (_m *MockLogger) WithReconciler(reconciler string) Logger {
 	var r0 Logger
 	if rf, ok := ret.Get(0).(func(string) Logger); ok {
 		r0 = rf(reconciler)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(Logger)
-		}
-	}
-
-	return r0
-}
-
-// WithSystem provides a mock function with given fields: system
-func (_m *MockLogger) WithSystem(system string) Logger {
-	ret := _m.Called(system)
-
-	var r0 Logger
-	if rf, ok := ret.Get(0).(func(string) Logger); ok {
-		r0 = rf(system)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(Logger)
