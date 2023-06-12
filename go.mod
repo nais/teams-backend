@@ -11,7 +11,7 @@ require (
 	github.com/coreos/go-oidc/v3 v3.1.0
 	github.com/go-chi/chi v1.5.4
 	github.com/go-chi/cors v1.2.0
-	github.com/golang-migrate/migrate/v4 v4.15.2
+	github.com/golang-migrate/migrate/v4 v4.16.2
 	github.com/google/go-github/v50 v50.0.0
 	github.com/google/uuid v1.3.0
 	github.com/graph-gophers/dataloader/v7 v7.1.0
@@ -116,11 +116,11 @@ require (
 	github.com/urfave/cli/v2 v2.25.3 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.uber.org/atomic v1.9.0 // indirect
+	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.1 // indirect
 	golang.org/x/crypto v0.8.0 // indirect
-	golang.org/x/exp v0.0.0-20230206171751-46f607a40771 // indirect
+	golang.org/x/exp v0.0.0-20230315142452-642cacee5cc0 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20230515195305-f3d0a9c9a5cc // indirect
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
