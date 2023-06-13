@@ -50,10 +50,6 @@ func TestReconcile(t *testing.T) {
 		}
 
 		auditLog := auditlogger.NewMockAuditLogger(t)
-		auditLog.
-			On("WithComponentName", types.ComponentNameGoogleWorkspaceAdmin).
-			Return(auditLog).
-			Once()
 
 		log := logger.NewMockLogger(t)
 		log.
@@ -201,49 +197,45 @@ func TestReconcile(t *testing.T) {
 			Once()
 
 		auditLog := auditlogger.NewMockAuditLogger(t)
-		auditLog.
-			On("WithComponentName", types.ComponentNameGoogleWorkspaceAdmin).
-			Return(auditLog).
-			Once()
-		auditLog.
-			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+		auditLog.EXPECT().
+			Logf(ctx, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Identifier == string(teamSlug)
 			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
 				return fields.CorrelationID == correlationID && fields.Action == types.AuditActionGoogleWorkspaceAdminCreate
 			}), mock.MatchedBy(func(msg string) bool {
 				return strings.HasPrefix(msg, "Created Google")
 			}), expectedGoogleGroupEmail).
-			Return(nil).
+			Return().
 			Once()
-		auditLog.
-			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+		auditLog.EXPECT().
+			Logf(ctx, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Identifier == string(teamSlug) && targets[1].Identifier == removeMe.Email
 			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
 				return fields.CorrelationID == correlationID && fields.Action == types.AuditActionGoogleWorkspaceAdminDeleteMember
 			}), mock.MatchedBy(func(msg string) bool {
 				return strings.HasPrefix(msg, "Deleted member")
 			}), removeMe.Email, expectedGoogleGroupEmail).
-			Return(nil).
+			Return().
 			Once()
-		auditLog.
-			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+		auditLog.EXPECT().
+			Logf(ctx, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Identifier == string(teamSlug) && targets[1].Identifier == addMe.Email
 			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
 				return fields.CorrelationID == correlationID && fields.Action == types.AuditActionGoogleWorkspaceAdminAddMember
 			}), mock.MatchedBy(func(msg string) bool {
 				return strings.HasPrefix(msg, "Added member")
 			}), addMe.Email, expectedGoogleGroupEmail).
-			Return(nil).
+			Return().
 			Once()
-		auditLog.
-			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+		auditLog.EXPECT().
+			Logf(ctx, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Identifier == string(teamSlug)
 			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
 				return fields.CorrelationID == correlationID && fields.Action == types.AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup
 			}), mock.MatchedBy(func(msg string) bool {
 				return strings.HasPrefix(msg, "Added group")
 			}), expectedGoogleGroupEmail, gkeSecurityGroup).
-			Return(nil).
+			Return().
 			Once()
 
 		err := google_workspace_admin_reconciler.
@@ -266,11 +258,6 @@ func Test_Delete(t *testing.T) {
 	defer close()
 
 	t.Run("unable to load state", func(t *testing.T) {
-		auditLogger.
-			On("WithComponentName", types.ComponentNameGoogleWorkspaceAdmin).
-			Return(auditLogger).
-			Once()
-
 		log.
 			On("WithComponent", types.ComponentNameGoogleWorkspaceAdmin).
 			Return(log).
@@ -289,11 +276,6 @@ func Test_Delete(t *testing.T) {
 	})
 
 	t.Run("no group email in state", func(t *testing.T) {
-		auditLogger.
-			On("WithComponentName", types.ComponentNameGoogleWorkspaceAdmin).
-			Return(auditLogger).
-			Once()
-
 		log.
 			On("WithComponent", types.ComponentNameGoogleWorkspaceAdmin).
 			Return(log).
@@ -326,11 +308,6 @@ func Test_Delete(t *testing.T) {
 	})
 
 	t.Run("Google API failure", func(t *testing.T) {
-		auditLogger.
-			On("WithComponentName", types.ComponentNameGoogleWorkspaceAdmin).
-			Return(auditLogger).
-			Once()
-
 		log.
 			On("WithComponent", types.ComponentNameGoogleWorkspaceAdmin).
 			Return(log).
@@ -391,15 +368,9 @@ func Test_Delete(t *testing.T) {
 		defer close()
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		auditLogger.
-			On("WithComponentName", types.ComponentNameGoogleWorkspaceAdmin).
-			Return(auditLogger).
-			Once()
-		auditLogger.
-			On(
-				"Logf",
+		auditLogger.EXPECT().
+			Logf(
 				ctx,
-				database,
 				mock.MatchedBy(func(targets []auditlogger.Target) bool {
 					return targets[0].Type == types.AuditLogsTargetTypeTeam && targets[0].Identifier == string(teamSlug)
 				}),
@@ -411,7 +382,7 @@ func Test_Delete(t *testing.T) {
 				}),
 				groupEmail,
 			).
-			Return(nil).
+			Return().
 			Once()
 
 		err := google_workspace_admin_reconciler.

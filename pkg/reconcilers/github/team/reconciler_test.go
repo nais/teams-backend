@@ -150,17 +150,13 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		configureDeleteTeamIDP(teamsService, org, teamSlug)
 
 		slug := slug.Slug(teamSlug)
-		auditLogger.
-			On("WithComponentName", types.ComponentNameGithubTeam).
-			Return(auditLogger).
-			Once()
-		auditLogger.
-			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
+		auditLogger.EXPECT().
+			Logf(ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
 				return t[0].Identifier == string(slug)
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
 				return f.Action == types.AuditActionGithubTeamCreate && f.CorrelationID == correlationID
 			}), mock.Anything, mock.Anything).
-			Return(nil).
+			Return().
 			Once()
 
 		log.
@@ -179,11 +175,6 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		gitHubClient := github_team_reconciler.NewMockGraphClient(t)
-
-		auditLogger.
-			On("WithComponentName", types.ComponentNameGithubTeam).
-			Return(auditLogger).
-			Once()
 
 		database.
 			On("LoadReconcilerStateForTeam", ctx, componentName, team.Slug, mock.Anything).
@@ -220,11 +211,6 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		teamsService := github_team_reconciler.NewMockTeamsService(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		gitHubClient := github_team_reconciler.NewMockGraphClient(t)
-
-		auditLogger.
-			On("WithComponentName", types.ComponentNameGithubTeam).
-			Return(auditLogger).
-			Once()
 
 		database.
 			On("LoadReconcilerStateForTeam", ctx, componentName, team.Slug, mock.Anything).
@@ -385,17 +371,13 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 		configureDeleteTeamIDP(teamsService, org, existingSlug)
 
 		slug := slug.Slug(teamSlug)
-		auditLogger.
-			On("WithComponentName", types.ComponentNameGithubTeam).
-			Return(auditLogger).
-			Once()
-		auditLogger.
-			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
+		auditLogger.EXPECT().
+			Logf(ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
 				return t[0].Identifier == string(slug)
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
 				return f.Action == types.AuditActionGithubTeamCreate && f.CorrelationID == correlationID
 			}), mock.Anything, mock.Anything).
-			Return(nil).
+			Return().
 			Once()
 
 		err := github_team_reconciler.
@@ -495,13 +477,9 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 			Once()
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		auditLogger.
-			On("WithComponentName", types.ComponentNameGithubTeam).
-			Return(auditLogger).
-			Once()
-		auditLogger.
-			On("Logf", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return(nil)
+		auditLogger.EXPECT().
+			Logf(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return()
 
 		log.
 			On("WithComponent", types.ComponentNameGithubTeam).
@@ -520,11 +498,6 @@ func TestGitHubReconciler_Reconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		log = logger.NewMockLogger(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-
-		auditLogger.
-			On("WithComponentName", types.ComponentNameGithubTeam).
-			Return(auditLogger).
-			Once()
 
 		database.
 			On("LoadReconcilerStateForTeam", ctx, componentName, team.Slug, mock.Anything).
@@ -573,11 +546,6 @@ func TestGitHubReconciler_Delete(t *testing.T) {
 	log := logger.NewMockLogger(t)
 
 	t.Run("unable to load state from database", func(t *testing.T) {
-		auditLogger.
-			On("WithComponentName", types.ComponentNameGithubTeam).
-			Return(auditLogger).
-			Once()
-
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, github_team_reconciler.Name, teamSlug, mock.Anything).
@@ -596,11 +564,6 @@ func TestGitHubReconciler_Delete(t *testing.T) {
 	})
 
 	t.Run("state with missing slug", func(t *testing.T) {
-		auditLogger.
-			On("WithComponentName", types.ComponentNameGithubTeam).
-			Return(auditLogger).
-			Once()
-
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, github_team_reconciler.Name, teamSlug, mock.Anything).
@@ -633,11 +596,6 @@ func TestGitHubReconciler_Delete(t *testing.T) {
 	})
 
 	t.Run("GitHub API client fails", func(t *testing.T) {
-		auditLogger.
-			On("WithComponentName", types.ComponentNameGithubTeam).
-			Return(auditLogger).
-			Once()
-
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, github_team_reconciler.Name, teamSlug, mock.Anything).
@@ -666,11 +624,6 @@ func TestGitHubReconciler_Delete(t *testing.T) {
 	})
 
 	t.Run("unexpected response from GitHub API", func(t *testing.T) {
-		auditLogger.
-			On("WithComponentName", types.ComponentNameGithubTeam).
-			Return(auditLogger).
-			Once()
-
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, github_team_reconciler.Name, teamSlug, mock.Anything).
@@ -738,15 +691,9 @@ func TestGitHubReconciler_Delete(t *testing.T) {
 			Once()
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		auditLogger.
-			On("WithComponentName", types.ComponentNameGithubTeam).
-			Return(auditLogger).
-			Once()
-		auditLogger.
-			On(
-				"Logf",
+		auditLogger.EXPECT().
+			Logf(
 				ctx,
-				database,
 				mock.MatchedBy(func(targets []auditlogger.Target) bool {
 					return targets[0].Type == types.AuditLogsTargetTypeTeam && targets[0].Identifier == string(teamSlug)
 				}),
@@ -758,7 +705,7 @@ func TestGitHubReconciler_Delete(t *testing.T) {
 				}),
 				teamSlug,
 			).
-			Return(nil).
+			Return().
 			Once()
 
 		log.

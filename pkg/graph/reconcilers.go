@@ -83,7 +83,7 @@ func (r *mutationResolver) EnableReconciler(ctx context.Context, name sqlc.Recon
 		Actor:         actor,
 		CorrelationID: correlationID,
 	}
-	r.auditLogger.Logf(ctx, r.database, targets, fields, "Enable reconciler: %q", name)
+	r.auditLogger.Logf(ctx, targets, fields, "Enable reconciler: %q", name)
 
 	_, err = r.teamSyncHandler.ScheduleAllTeams(ctx, correlationID)
 	if err != nil {
@@ -126,7 +126,7 @@ func (r *mutationResolver) DisableReconciler(ctx context.Context, name sqlc.Reco
 		Action: types.AuditActionGraphqlApiReconcilersDisable,
 		Actor:  actor,
 	}
-	r.auditLogger.Logf(ctx, r.database, targets, fields, "Disable reconciler: %q", name)
+	r.auditLogger.Logf(ctx, targets, fields, "Disable reconciler: %q", name)
 	r.teamSyncHandler.RemoveReconciler(name)
 
 	return reconciler, nil
@@ -195,7 +195,7 @@ func (r *mutationResolver) ConfigureReconciler(ctx context.Context, name sqlc.Re
 		Action: types.AuditActionGraphqlApiReconcilersConfigure,
 		Actor:  actor,
 	}
-	r.auditLogger.Logf(ctx, r.database, targets, fields, "Configure reconciler: %q", name)
+	r.auditLogger.Logf(ctx, targets, fields, "Configure reconciler: %q", name)
 
 	return reconciler, nil
 }
@@ -237,7 +237,7 @@ func (r *mutationResolver) ResetReconciler(ctx context.Context, name sqlc.Reconc
 		Action: types.AuditActionGraphqlApiReconcilersReset,
 		Actor:  actor,
 	}
-	r.auditLogger.Logf(ctx, r.database, targets, fields, "Reset reconciler: %q", name)
+	r.auditLogger.Logf(ctx, targets, fields, "Reset reconciler: %q", name)
 
 	return reconciler, nil
 }

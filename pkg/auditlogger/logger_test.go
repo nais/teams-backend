@@ -24,23 +24,12 @@ func Test_Logf(t *testing.T) {
 	ctx := context.Background()
 	database := db.NewMockDatabase(t)
 	msg := "some message"
-	system := types.ComponentNameConsole
-
-	t.Run("missing system name", func(t *testing.T) {
-		log := logger.NewMockLogger(t)
-		log.
-			On("Errorf", mock.MatchedBy(func(msg string) bool {
-				return strings.Contains(msg, "missing or invalid system name")
-			})).
-			Once()
-		auditLogger := auditlogger.New(log)
-		auditLogger.Logf(ctx, database, []auditlogger.Target{}, auditlogger.Fields{}, msg)
-	})
+	componentName := types.ComponentNameConsole
 
 	t.Run("missing audit action", func(t *testing.T) {
 		log := logger.NewMockLogger(t)
 		log.
-			On("WithComponent", system).
+			On("WithComponent", componentName).
 			Return(log).
 			Once()
 		log.
@@ -49,25 +38,24 @@ func Test_Logf(t *testing.T) {
 			})).
 			Once()
 
-		auditLogger := auditlogger.New(log)
-		auditLogger.
-			WithComponentName(system).
-			Logf(ctx, database, []auditlogger.Target{}, auditlogger.Fields{}, msg)
+		auditlogger.
+			New(database, componentName, log).
+			Logf(ctx, []auditlogger.Target{}, auditlogger.Fields{}, msg)
 	})
 
 	t.Run("does not do anything without targets", func(t *testing.T) {
 		log := logger.NewMockLogger(t)
 		log.
-			On("WithComponent", system).
+			On("WithComponent", componentName).
 			Return(log).
 			Once()
-		auditLogger := auditlogger.New(log)
+
 		fields := auditlogger.Fields{
 			Action: types.AuditActionAzureGroupAddMember,
 		}
-		auditLogger.
-			WithComponentName(system).
-			Logf(ctx, database, []auditlogger.Target{}, fields, msg)
+		auditlogger.
+			New(database, componentName, log).
+			Logf(ctx, []auditlogger.Target{}, fields, msg)
 	})
 
 	t.Run("log with target and all fields", func(t *testing.T) {
@@ -90,7 +78,7 @@ func Test_Logf(t *testing.T) {
 		}
 
 		log := logger.NewMockLogger(t)
-		log.On("WithComponent", system).Return(log).Once()
+		log.On("WithComponent", componentName).Return(log).Once()
 		log.On("WithActor", actorIdentity).Return(log).Times(len(targets))
 		log.On("WithUser", userEmail).Return(log).Once()
 		log.On("WithTeamSlug", string(teamSlug)).Return(log).Once()
@@ -132,8 +120,6 @@ func Test_Logf(t *testing.T) {
 			Return(&logrus.Entry{Logger: testLogger}).
 			Once()
 
-		auditLogger := auditlogger.New(log)
-
 		authenticatedUser := db.NewMockAuthenticatedUser(t)
 		authenticatedUser.On("Identity").Return(actorIdentity).Once()
 
@@ -147,24 +133,25 @@ func Test_Logf(t *testing.T) {
 
 		database := db.NewMockDatabase(t)
 		database.
-			On("CreateAuditLogEntry", ctx, correlationID, system, &actorIdentity, types.AuditLogsTargetTypeUser, userEmail, action, msg).
+			On("CreateAuditLogEntry", ctx, correlationID, componentName, &actorIdentity, types.AuditLogsTargetTypeUser, userEmail, action, msg).
 			Return(nil).
 			Once()
 		database.
-			On("CreateAuditLogEntry", ctx, correlationID, system, &actorIdentity, types.AuditLogsTargetTypeTeam, string(teamSlug), action, msg).
+			On("CreateAuditLogEntry", ctx, correlationID, componentName, &actorIdentity, types.AuditLogsTargetTypeTeam, string(teamSlug), action, msg).
 			Return(nil).
 			Once()
 		database.
-			On("CreateAuditLogEntry", ctx, correlationID, system, &actorIdentity, types.AuditLogsTargetTypeReconciler, string(reconcilerName), action, msg).
+			On("CreateAuditLogEntry", ctx, correlationID, componentName, &actorIdentity, types.AuditLogsTargetTypeReconciler, string(reconcilerName), action, msg).
 			Return(nil).
 			Once()
 		database.
-			On("CreateAuditLogEntry", ctx, correlationID, system, &actorIdentity, types.AuditLogsTargetTypeSystem, string(componentName), action, msg).
+			On("CreateAuditLogEntry", ctx, correlationID, componentName, &actorIdentity, types.AuditLogsTargetTypeSystem, string(componentName), action, msg).
 			Return(nil).
 			Once()
-		auditLogger.
-			WithComponentName(system).
-			Logf(ctx, database, targets, fields, msg)
+
+		auditlogger.
+			New(database, componentName, log).
+			Logf(ctx, targets, fields, msg)
 
 		assert.Len(t, hook.Entries, len(targets))
 		assert.Equal(t, msg, hook.Entries[0].Message)

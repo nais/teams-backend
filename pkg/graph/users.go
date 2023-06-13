@@ -42,7 +42,7 @@ func (r *mutationResolver) SynchronizeUsers(ctx context.Context) (*uuid.UUID, er
 		Actor:         actor,
 		CorrelationID: correlationID,
 	}
-	r.auditLogger.Logf(ctx, r.database, targets, fields, "Trigger user sync")
+	r.auditLogger.Logf(ctx, targets, fields, "Trigger user sync")
 	r.userSync <- correlationID
 
 	return &correlationID, nil

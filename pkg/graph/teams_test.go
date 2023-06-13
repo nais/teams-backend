@@ -110,13 +110,13 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Return(nil).
 			Once()
 
-		auditLogger.
-			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+		auditLogger.EXPECT().
+			Logf(ctx, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Identifier == string(createdTeam.Slug)
 			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
 				return fields.Actor.User == user
 			}), "Team created").
-			Return(nil).
+			Return().
 			Once()
 
 		teamSyncHandler.
@@ -161,13 +161,13 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Return(nil).
 			Once()
 
-		auditLogger.
-			On("Logf", saCtx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+		auditLogger.EXPECT().
+			Logf(saCtx, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Identifier == string(createdTeam.Slug)
 			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
 				return fields.Actor.User == serviceAccount
 			}), "Team created").
-			Return(nil).
+			Return().
 			Once()
 
 		teamSyncHandler.
@@ -318,11 +318,9 @@ func TestMutationResolver_RequestTeamDeletion(t *testing.T) {
 			Once()
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		auditLogger.
-			On(
-				"Logf",
+		auditLogger.EXPECT().
+			Logf(
 				ctx,
-				database,
 				mock.MatchedBy(func(targets []auditlogger.Target) bool {
 					return targets[0].Identifier == string(teamSlug) && targets[0].Type == types.AuditLogsTargetTypeTeam
 				}),
@@ -331,7 +329,7 @@ func TestMutationResolver_RequestTeamDeletion(t *testing.T) {
 				}),
 				mock.AnythingOfType("string"),
 			).
-			Return(nil).
+			Return().
 			Once()
 
 		resolver := graph.

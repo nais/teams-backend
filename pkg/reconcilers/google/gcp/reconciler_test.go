@@ -65,10 +65,6 @@ func TestReconcile(t *testing.T) {
 	t.Run("fail early when unable to load reconciler state", func(t *testing.T) {
 		ctx := context.Background()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		auditLogger.
-			On("WithComponentName", types.ComponentNameGoogleGcpProject).
-			Return(auditLogger).
-			Once()
 
 		database := db.NewMockDatabase(t)
 		database.
@@ -86,10 +82,6 @@ func TestReconcile(t *testing.T) {
 	t.Run("fail early when unable to load google workspace state", func(t *testing.T) {
 		ctx := context.Background()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		auditLogger.
-			On("WithComponentName", types.ComponentNameGoogleGcpProject).
-			Return(auditLogger).
-			Once()
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.Slug, mock.Anything).
@@ -110,10 +102,6 @@ func TestReconcile(t *testing.T) {
 	t.Run("fail early when google workspace state is missing group email", func(t *testing.T) {
 		ctx := context.Background()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		auditLogger.
-			On("WithComponentName", types.ComponentNameGoogleGcpProject).
-			Return(auditLogger).
-			Once()
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.Slug, mock.Anything).
@@ -134,10 +122,6 @@ func TestReconcile(t *testing.T) {
 	t.Run("no error when we have no clusters", func(t *testing.T) {
 		ctx := context.Background()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		auditLogger.
-			On("WithComponentName", types.ComponentNameGoogleGcpProject).
-			Return(auditLogger).
-			Once()
 		database := db.NewMockDatabase(t)
 		database.
 			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, team.Slug, mock.Anything).
@@ -191,59 +175,55 @@ func TestReconcile(t *testing.T) {
 			Once()
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		auditLogger.
-			On("WithComponentName", types.ComponentNameGoogleGcpProject).
-			Return(auditLogger).
-			Once()
-		auditLogger.
-			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+		auditLogger.EXPECT().
+			Logf(ctx, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Identifier == string(teamSlug)
 			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
 				return fields.CorrelationID == correlationID && fields.Action == types.AuditActionGoogleGcpProjectCreateProject
 			}), mock.MatchedBy(func(msg string) bool {
 				return strings.HasPrefix(msg, "Created GCP project")
 			}), expectedTeamProjectID, teamSlug, env).
-			Return(nil).
+			Return().
 			Once()
-		auditLogger.
-			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+		auditLogger.EXPECT().
+			Logf(ctx, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Identifier == string(teamSlug)
 			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
 				return fields.CorrelationID == correlationID && fields.Action == types.AuditActionGoogleGcpProjectSetBillingInfo
 			}), mock.MatchedBy(func(msg string) bool {
 				return strings.HasPrefix(msg, "Set billing info")
 			}), expectedTeamProjectID).
-			Return(nil).
+			Return().
 			Once()
-		auditLogger.
-			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+		auditLogger.EXPECT().
+			Logf(ctx, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Identifier == string(teamSlug)
 			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
 				return fields.CorrelationID == correlationID && fields.Action == types.AuditActionGoogleGcpProjectCreateCnrmServiceAccount
 			}), mock.MatchedBy(func(msg string) bool {
 				return strings.HasPrefix(msg, "Created CNRM service account")
 			}), teamSlug, expectedTeamProjectID).
-			Return(nil).
+			Return().
 			Once()
-		auditLogger.
-			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+		auditLogger.EXPECT().
+			Logf(ctx, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Identifier == string(teamSlug)
 			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
 				return fields.CorrelationID == correlationID && fields.Action == types.AuditActionGoogleGcpProjectAssignPermissions
 			}), mock.MatchedBy(func(msg string) bool {
 				return strings.HasPrefix(msg, "Assigned GCP project IAM permissions")
 			}), expectedTeamProjectID).
-			Return(nil).
+			Return().
 			Once()
-		auditLogger.
-			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+		auditLogger.EXPECT().
+			Logf(ctx, mock.MatchedBy(func(targets []auditlogger.Target) bool {
 				return targets[0].Identifier == string(teamSlug)
 			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
 				return fields.CorrelationID == correlationID && fields.Action == types.AuditActionGoogleGcpProjectEnableGoogleApis
 			}), mock.MatchedBy(func(msg string) bool {
 				return strings.HasPrefix(msg, "Enable Google API")
 			}), mock.AnythingOfType("string"), expectedTeamProjectID).
-			Return(nil).
+			Return().
 			Times(numberOfAPIs)
 
 		srv := test.HttpServerWithHandlers(t, []http.HandlerFunc{
@@ -500,10 +480,6 @@ func TestDelete(t *testing.T) {
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		database := db.NewMockDatabase(t)
 
-		auditLogger.
-			On("WithComponentName", types.ComponentNameGoogleGcpProject).
-			Return(auditLogger).
-			Once()
 		database.
 			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, teamSlug, mock.Anything).
 			Return(fmt.Errorf("some error")).
@@ -519,10 +495,6 @@ func TestDelete(t *testing.T) {
 		auditLogger := auditlogger.NewMockAuditLogger(t)
 		database := db.NewMockDatabase(t)
 
-		auditLogger.
-			On("WithComponentName", types.ComponentNameGoogleGcpProject).
-			Return(auditLogger).
-			Once()
 		database.
 			On("LoadReconcilerStateForTeam", ctx, google_gcp_reconciler.Name, teamSlug, mock.Anything).
 			Return(nil).
