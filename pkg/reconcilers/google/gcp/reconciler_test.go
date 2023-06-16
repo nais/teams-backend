@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"google.golang.org/api/cloudbilling/v1"
 	"google.golang.org/api/cloudresourcemanager/v3"
+	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/iam/v1"
 	"google.golang.org/api/option"
 	"google.golang.org/api/serviceusage/v1"
@@ -387,6 +388,44 @@ func TestReconcile(t *testing.T) {
 				resp, _ := op.MarshalJSON()
 				w.Write(resp)
 			},
+
+			// list firewall rules for project
+			func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodGet, r.Method)
+				assert.Equal(t, "/projects/"+expectedTeamProjectID+"/global/firewalls", r.URL.Path)
+
+				list := compute.FirewallList{
+					Items: []*compute.Firewall{
+						{
+							Name:     "default-allow-ssh",
+							Priority: 65534,
+						},
+					},
+				}
+
+				resp, _ := list.MarshalJSON()
+				w.Write(resp)
+			},
+
+			// delete default firewall rule
+			func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodDelete, r.Method)
+				assert.Equal(t, "/projects/"+expectedTeamProjectID+"/global/firewalls/default-allow-ssh", r.URL.Path)
+
+				op := compute.Operation{Name: "operation-name", Status: "RUNNING"}
+				resp, _ := op.MarshalJSON()
+				w.Write(resp)
+			},
+
+			// wait for operation to complete
+			func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodPost, r.Method)
+				assert.Equal(t, "/projects/"+expectedTeamProjectID+"/global/operations/operation-name/wait", r.URL.Path)
+
+				op := compute.Operation{Name: "operation-name", Status: "DONE"}
+				resp, _ := op.MarshalJSON()
+				w.Write(resp)
+			},
 		})
 		defer srv.Close()
 
@@ -394,6 +433,7 @@ func TestReconcile(t *testing.T) {
 		cloudResourceManagerService, _ := cloudresourcemanager.NewService(ctx, option.WithoutAuthentication(), option.WithEndpoint(srv.URL))
 		iamService, _ := iam.NewService(ctx, option.WithoutAuthentication(), option.WithEndpoint(srv.URL))
 		serviceUsageService, _ := serviceusage.NewService(ctx, option.WithoutAuthentication(), option.WithEndpoint(srv.URL))
+		computeService, _ := compute.NewService(ctx, option.WithoutAuthentication(), option.WithEndpoint(srv.URL))
 
 		gcpServices := &google_gcp_reconciler.GcpServices{
 			CloudBillingProjectsService:           cloudBillingService.Projects,
@@ -402,6 +442,8 @@ func TestReconcile(t *testing.T) {
 			IamProjectsServiceAccountsService:     iamService.Projects.ServiceAccounts,
 			ServiceUsageService:                   serviceUsageService.Services,
 			ServiceUsageOperationsService:         serviceUsageService.Operations,
+			FirewallService:                       computeService.Firewalls,
+			ComputeGlobalOperationsService:        computeService.GlobalOperations,
 		}
 
 		err = google_gcp_reconciler.

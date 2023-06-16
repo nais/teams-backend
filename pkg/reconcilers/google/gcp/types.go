@@ -8,6 +8,7 @@ import (
 	"github.com/nais/teams-backend/pkg/logger"
 	"google.golang.org/api/cloudbilling/v1"
 	"google.golang.org/api/cloudresourcemanager/v3"
+	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/iam/v1"
 	"google.golang.org/api/serviceusage/v1"
 )
@@ -19,6 +20,8 @@ type GcpServices struct {
 	IamProjectsServiceAccountsService     *iam.ProjectsServiceAccountsService
 	ServiceUsageService                   *serviceusage.ServicesService
 	ServiceUsageOperationsService         *serviceusage.OperationsService
+	FirewallService                       *compute.FirewallsService
+	ComputeGlobalOperationsService        *compute.GlobalOperationsService
 }
 
 type googleGcpReconciler struct {

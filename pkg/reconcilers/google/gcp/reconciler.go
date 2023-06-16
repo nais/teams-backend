@@ -29,6 +29,7 @@ import (
 	"github.com/nais/teams-backend/pkg/sqlc"
 	"google.golang.org/api/cloudbilling/v1"
 	"google.golang.org/api/cloudresourcemanager/v3"
+	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iam/v1"
 	"google.golang.org/api/option"
@@ -137,6 +138,11 @@ func (r *googleGcpReconciler) Reconcile(ctx context.Context, input reconcilers.I
 		err = r.ensureProjectHasAccessToGoogleApis(ctx, teamProject, input)
 		if err != nil {
 			return fmt.Errorf("enable Google APIs access in project %q for team %q in environment %q: %w", teamProject.ProjectId, input.Team.Slug, environment, err)
+		}
+
+		err = r.deleteDefaultVPCNetworkRules(ctx, teamProject)
+		if err != nil {
+			return fmt.Errorf("delete default vpc firewall rules in project %q for team %q in environment %q: %w", teamProject.ProjectId, input.Team.Slug, environment, err)
 		}
 	}
 
@@ -583,6 +589,11 @@ func createGcpServices(ctx context.Context, cfg *config.Config) (*GcpServices, e
 		return nil, fmt.Errorf("retrieve service usage service: %w", err)
 	}
 
+	computeService, err := compute.NewService(ctx, option.WithTokenSource(ts))
+	if err != nil {
+		return nil, fmt.Errorf("retrieve compute service: %w", err)
+	}
+
 	return &GcpServices{
 		CloudBillingProjectsService:           cloudBillingService.Projects,
 		CloudResourceManagerProjectsService:   cloudResourceManagerService.Projects,
@@ -590,7 +601,52 @@ func createGcpServices(ctx context.Context, cfg *config.Config) (*GcpServices, e
 		IamProjectsServiceAccountsService:     iamService.Projects.ServiceAccounts,
 		ServiceUsageService:                   serviceUsageService.Services,
 		ServiceUsageOperationsService:         serviceUsageService.Operations,
+		FirewallService:                       computeService.Firewalls,
+		ComputeGlobalOperationsService:        computeService.GlobalOperations,
 	}, nil
+}
+
+func (r *googleGcpReconciler) deleteDefaultVPCNetworkRules(ctx context.Context, project *cloudresourcemanager.Project) error {
+	rulesToDelete := []struct {
+		name     string
+		priority int64
+	}{
+		{name: "default-allow-icmp", priority: 65534},
+		{name: "default-allow-rdp", priority: 65534},
+		{name: "default-allow-ssh", priority: 65534},
+	}
+
+	rules, err := r.gcpServices.FirewallService.List(project.ProjectId).Context(ctx).Do()
+	if err != nil {
+		metrics.IncExternalCallsByError(metricsSystemName, err)
+		return err
+	}
+	metrics.IncExternalCalls(metricsSystemName, rules.HTTPStatusCode)
+
+	for _, rule := range rules.Items {
+		for _, deleteTemplate := range rulesToDelete {
+			if rule.Name == deleteTemplate.name && rule.Priority == deleteTemplate.priority {
+				operation, err := r.gcpServices.FirewallService.Delete(project.ProjectId, rule.Name).Context(ctx).Do()
+				if err != nil {
+					metrics.IncExternalCallsByError(metricsSystemName, err)
+					return err
+				}
+				metrics.IncExternalCalls(metricsSystemName, operation.HTTPStatusCode)
+
+				for operation.Status != "DONE" {
+					operation, err = r.gcpServices.ComputeGlobalOperationsService.Wait(project.ProjectId, operation.Name).Context(ctx).Do()
+					if err != nil {
+						metrics.IncExternalCallsByError(metricsSystemName, err)
+						return err
+					}
+					metrics.IncExternalCalls(metricsSystemName, operation.HTTPStatusCode)
+				}
+				r.log.Infof("deleted default firewall rule %q in project %q", rule.Name, project.ProjectId)
+			}
+		}
+	}
+
+	return nil
 }
 
 // GenerateProjectID Generate a unique project ID for the team in a given environment in a deterministic fashion
