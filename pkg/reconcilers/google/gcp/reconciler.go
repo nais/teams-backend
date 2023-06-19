@@ -45,7 +45,7 @@ const (
 func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, gcpServices *GcpServices, tenantName, domain, cnrmRoleName, billingAccount string, log logger.Logger, legacyMapping []envmap.EnvironmentMapping) *googleGcpReconciler {
 	return &googleGcpReconciler{
 		database:       database,
-		auditLogger:    auditLogger.WithComponentName(types.ComponentNameGoogleGcpProject),
+		auditLogger:    auditLogger,
 		clusters:       clusters,
 		gcpServices:    gcpServices,
 		domain:         domain,
@@ -57,13 +57,13 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp
 	}
 }
 
-func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
+func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, log logger.Logger) (reconcilers.Reconciler, error) {
 	gcpServices, err := createGcpServices(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	return New(database, auditLogger, cfg.GCP.Clusters, gcpServices, cfg.TenantName, cfg.TenantDomain, cfg.GCP.CnrmRole, cfg.GCP.BillingAccount, log, cfg.LegacyNaisNamespaces), nil
+	return New(database, auditlogger.New(database, types.ComponentNameGoogleGcpProject, log), cfg.GCP.Clusters, gcpServices, cfg.TenantName, cfg.TenantDomain, cfg.GCP.CnrmRole, cfg.GCP.BillingAccount, log, cfg.LegacyNaisNamespaces), nil
 }
 
 func (r *googleGcpReconciler) Name() sqlc.ReconcilerName {
@@ -192,7 +192,7 @@ func (r *googleGcpReconciler) Delete(ctx context.Context, teamSlug slug.Slug, co
 			Action:        types.AuditActionGoogleGcpDeleteProject,
 			CorrelationID: correlationID,
 		}
-		r.auditLogger.Logf(ctx, r.database, targets, fields, auditLogMessage)
+		r.auditLogger.Logf(ctx, targets, fields, auditLogMessage)
 		delete(state.Projects, environment)
 	}
 
@@ -287,7 +287,7 @@ func (r *googleGcpReconciler) ensureProjectHasAccessToGoogleApis(ctx context.Con
 		CorrelationID: input.CorrelationID,
 	}
 	for _, enabledApi := range servicesToEnable {
-		r.auditLogger.Logf(ctx, r.database, targets, fields, "Enable Google API %q for %q", enabledApi, project.ProjectId)
+		r.auditLogger.Logf(ctx, targets, fields, "Enable Google API %q for %q", enabledApi, project.ProjectId)
 	}
 
 	return nil
@@ -365,7 +365,7 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, projectID 
 		Action:        types.AuditActionGoogleGcpProjectCreateProject,
 		CorrelationID: input.CorrelationID,
 	}
-	r.auditLogger.Logf(ctx, r.database, targets, fields, "Created GCP project %q for team %q in environment %q", createdProject.ProjectId, input.Team.Slug, environment)
+	r.auditLogger.Logf(ctx, targets, fields, "Created GCP project %q for team %q in environment %q", createdProject.ProjectId, input.Team.Slug, environment)
 
 	return createdProject, nil
 }
@@ -448,7 +448,7 @@ func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project
 		Action:        types.AuditActionGoogleGcpProjectAssignPermissions,
 		CorrelationID: input.CorrelationID,
 	}
-	r.auditLogger.Logf(ctx, r.database, targets, fields, "Assigned GCP project IAM permissions for %q", project.ProjectId)
+	r.auditLogger.Logf(ctx, targets, fields, "Assigned GCP project IAM permissions for %q", project.ProjectId)
 
 	return nil
 }
@@ -486,7 +486,7 @@ func (r *googleGcpReconciler) getOrCreateProjectCnrmServiceAccount(ctx context.C
 		Action:        types.AuditActionGoogleGcpProjectCreateCnrmServiceAccount,
 		CorrelationID: input.CorrelationID,
 	}
-	r.auditLogger.Logf(ctx, r.database, targets, fields, "Created CNRM service account for team %q in project %q", input.Team.Slug, teamProjectID)
+	r.auditLogger.Logf(ctx, targets, fields, "Created CNRM service account for team %q in project %q", input.Team.Slug, teamProjectID)
 
 	return serviceAccount, nil
 }
@@ -519,7 +519,7 @@ func (r *googleGcpReconciler) setTeamProjectBillingInfo(ctx context.Context, pro
 		Action:        types.AuditActionGoogleGcpProjectSetBillingInfo,
 		CorrelationID: input.CorrelationID,
 	}
-	r.auditLogger.Logf(ctx, r.database, targets, fields, "Set billing info for %q", project.ProjectId)
+	r.auditLogger.Logf(ctx, targets, fields, "Set billing info for %q", project.ProjectId)
 
 	return nil
 }

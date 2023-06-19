@@ -67,7 +67,7 @@ type naisNamespaceReconciler struct {
 func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, domain, projectID string, azureEnabled bool, pubsubClient *pubsub.Client, legacyMapping []envmap.EnvironmentMapping, log logger.Logger) *naisNamespaceReconciler {
 	return &naisNamespaceReconciler{
 		database:      database,
-		auditLogger:   auditLogger.WithComponentName(types.ComponentNameNaisNamespace),
+		auditLogger:   auditLogger,
 		clusters:      clusters,
 		domain:        domain,
 		projectID:     projectID,
@@ -78,7 +78,7 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp
 	}
 }
 
-func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
+func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, log logger.Logger) (reconcilers.Reconciler, error) {
 	builder, err := google_token_source.NewFromConfig(cfg)
 	if err != nil {
 		return nil, err
@@ -94,7 +94,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		return nil, fmt.Errorf("retrieve pubsub client: %w", err)
 	}
 
-	return New(database, auditLogger, cfg.GCP.Clusters, cfg.TenantDomain, cfg.GoogleManagementProjectID, cfg.NaisNamespace.AzureEnabled, pubsubClient, cfg.LegacyNaisNamespaces, log), nil
+	return New(database, auditlogger.New(database, types.ComponentNameNaisNamespace, log), cfg.GCP.Clusters, cfg.TenantDomain, cfg.GoogleManagementProjectID, cfg.NaisNamespace.AzureEnabled, pubsubClient, cfg.LegacyNaisNamespaces, log), nil
 }
 
 func (r *naisNamespaceReconciler) Name() sqlc.ReconcilerName {
@@ -184,7 +184,7 @@ func (r *naisNamespaceReconciler) Reconcile(ctx context.Context, input reconcile
 				Action:        types.AuditActionNaisNamespaceCreateNamespace,
 				CorrelationID: input.CorrelationID,
 			}
-			r.auditLogger.Logf(ctx, r.database, targets, fields, "Request namespace creation for team %q in environment %q", input.Team.Slug, environment)
+			r.auditLogger.Logf(ctx, targets, fields, "Request namespace creation for team %q in environment %q", input.Team.Slug, environment)
 			namespaceState.Namespaces[environment] = input.Team.Slug
 		}
 	}
@@ -237,7 +237,7 @@ func (r *naisNamespaceReconciler) Delete(ctx context.Context, teamSlug slug.Slug
 				CorrelationID: correlationID,
 			}
 
-			r.auditLogger.Logf(ctx, r.database, targets, fields, "Request namespace deletion for team %q in environment %q", teamSlug, environment)
+			r.auditLogger.Logf(ctx, targets, fields, "Request namespace deletion for team %q in environment %q", teamSlug, environment)
 			delete(namespaceState.Namespaces, environment)
 		}
 	}

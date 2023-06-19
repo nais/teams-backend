@@ -40,14 +40,14 @@ const (
 func New(database db.Database, auditLogger auditlogger.AuditLogger, domain string, adminService *admin_directory_v1.Service, log logger.Logger) *googleWorkspaceAdminReconciler {
 	return &googleWorkspaceAdminReconciler{
 		database:     database,
-		auditLogger:  auditLogger.WithComponentName(types.ComponentNameGoogleWorkspaceAdmin),
+		auditLogger:  auditLogger,
 		domain:       domain,
 		adminService: adminService,
 		log:          log.WithComponent(types.ComponentNameGoogleWorkspaceAdmin),
 	}
 }
 
-func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
+func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, log logger.Logger) (reconcilers.Reconciler, error) {
 	builder, err := google_token_source.NewFromConfig(cfg)
 	if err != nil {
 		return nil, err
@@ -63,7 +63,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		return nil, fmt.Errorf("retrieve directory client: %w", err)
 	}
 
-	return New(database, auditLogger, cfg.TenantDomain, srv, log), nil
+	return New(database, auditlogger.New(database, types.ComponentNameGoogleWorkspaceAdmin, log), cfg.TenantDomain, srv, log), nil
 }
 
 func (r *googleWorkspaceAdminReconciler) Name() sqlc.ReconcilerName {
@@ -126,7 +126,7 @@ func (r *googleWorkspaceAdminReconciler) Delete(ctx context.Context, teamSlug sl
 		Action:        types.AuditActionGoogleWorkspaceAdminDelete,
 		CorrelationID: correlationID,
 	}
-	r.auditLogger.Logf(ctx, r.database, targets, fields, "Delete Google directory group with email %q", grpEmail)
+	r.auditLogger.Logf(ctx, targets, fields, "Delete Google directory group with email %q", grpEmail)
 
 	return r.database.RemoveReconcilerStateForTeam(ctx, r.Name(), teamSlug)
 }
@@ -163,7 +163,7 @@ func (r *googleWorkspaceAdminReconciler) getOrCreateGroup(ctx context.Context, s
 		Action:        types.AuditActionGoogleWorkspaceAdminCreate,
 		CorrelationID: input.CorrelationID,
 	}
-	r.auditLogger.Logf(ctx, r.database, targets, fields, "Created Google Directory group %q", group.Email)
+	r.auditLogger.Logf(ctx, targets, fields, "Created Google Directory group %q", group.Email)
 
 	return group, nil
 }
@@ -223,7 +223,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 			Action:        types.AuditActionGoogleWorkspaceAdminDeleteMember,
 			CorrelationID: input.CorrelationID,
 		}
-		r.auditLogger.Logf(ctx, r.database, targets, fields, "Deleted member %q from Google Directory group %q", member.Email, grp.Email)
+		r.auditLogger.Logf(ctx, targets, fields, "Deleted member %q from Google Directory group %q", member.Email, grp.Email)
 	}
 
 	membersToAdd := localOnlyMembers(membersAccordingToGoogle, input.TeamMembers)
@@ -249,7 +249,7 @@ func (r *googleWorkspaceAdminReconciler) connectUsers(ctx context.Context, grp *
 			Action:        types.AuditActionGoogleWorkspaceAdminAddMember,
 			CorrelationID: input.CorrelationID,
 		}
-		r.auditLogger.Logf(ctx, r.database, targets, fields, "Added member %q to Google Directory group %q", member.Email, grp.Email)
+		r.auditLogger.Logf(ctx, targets, fields, "Added member %q to Google Directory group %q", member.Email, grp.Email)
 	}
 
 	return nil
@@ -280,7 +280,7 @@ func (r *googleWorkspaceAdminReconciler) addToGKESecurityGroup(ctx context.Conte
 		Action:        types.AuditActionGoogleWorkspaceAdminAddToGkeSecurityGroup,
 		CorrelationID: input.CorrelationID,
 	}
-	r.auditLogger.Logf(ctx, r.database, targets, fields, "Added group %q to GKE security group %q", member.Email, groupKey)
+	r.auditLogger.Logf(ctx, targets, fields, "Added group %q to GKE security group %q", member.Email, groupKey)
 
 	return nil
 }

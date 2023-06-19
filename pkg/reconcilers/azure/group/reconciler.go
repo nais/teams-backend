@@ -31,7 +31,7 @@ type azureGroupReconciler struct {
 func New(database db.Database, auditLogger auditlogger.AuditLogger, client azureclient.Client, domain string, log logger.Logger) *azureGroupReconciler {
 	return &azureGroupReconciler{
 		database:    database,
-		auditLogger: auditLogger.WithComponentName(types.ComponentNameAzureGroup),
+		auditLogger: auditLogger,
 		client:      client,
 		domain:      domain,
 		log:         log.WithComponent(types.ComponentNameAzureGroup),
@@ -59,7 +59,7 @@ func convertDatabaseConfig(ctx context.Context, database db.Database) (*reconcil
 	}, nil
 }
 
-func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
+func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, log logger.Logger) (reconcilers.Reconciler, error) {
 	config, err := convertDatabaseConfig(ctx, database)
 	if err != nil {
 		return nil, err
@@ -76,7 +76,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		},
 	}
 
-	return New(database, auditLogger, azureclient.New(conf.Client(context.Background())), cfg.TenantDomain, log), nil
+	return New(database, auditlogger.New(database, types.ComponentNameAzureGroup, log), azureclient.New(conf.Client(context.Background())), cfg.TenantDomain, log), nil
 }
 
 func (r *azureGroupReconciler) Name() sqlc.ReconcilerName {
@@ -104,7 +104,7 @@ func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.
 			Action:        types.AuditActionAzureGroupCreate,
 			CorrelationID: input.CorrelationID,
 		}
-		r.auditLogger.Logf(ctx, r.database, targets, fields, "Created Azure AD group %q with ID %q", grp.MailNickname, grp.ID)
+		r.auditLogger.Logf(ctx, targets, fields, "Created Azure AD group %q with ID %q", grp.MailNickname, grp.ID)
 
 		id, _ := uuid.Parse(grp.ID)
 		err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, reconcilers.AzureState{GroupID: &id})
@@ -147,7 +147,7 @@ func (r *azureGroupReconciler) Delete(ctx context.Context, teamSlug slug.Slug, c
 		Action:        types.AuditActionAzureGroupDelete,
 		CorrelationID: correlationID,
 	}
-	r.auditLogger.Logf(ctx, r.database, targets, fields, "Delete Azure AD group with ID %q", grpID)
+	r.auditLogger.Logf(ctx, targets, fields, "Delete Azure AD group with ID %q", grpID)
 
 	return r.database.RemoveReconcilerStateForTeam(ctx, Name, teamSlug)
 }
@@ -185,7 +185,7 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 			Action:        types.AuditActionAzureGroupDeleteMember,
 			CorrelationID: input.CorrelationID,
 		}
-		r.auditLogger.Logf(ctx, r.database, targets, fields, "Removed member %q from Azure group %q", remoteEmail, grp.MailNickname)
+		r.auditLogger.Logf(ctx, targets, fields, "Removed member %q from Azure group %q", remoteEmail, grp.MailNickname)
 	}
 
 	membersToAdd := localOnlyMembers(members, input.TeamMembers)
@@ -209,7 +209,7 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 			Action:        types.AuditActionAzureGroupAddMember,
 			CorrelationID: input.CorrelationID,
 		}
-		r.auditLogger.Logf(ctx, r.database, targets, fields, "Added member %q to Azure group %q", teamsBackendUser.Email, grp.MailNickname)
+		r.auditLogger.Logf(ctx, targets, fields, "Added member %q to Azure group %q", teamsBackendUser.Email, grp.MailNickname)
 	}
 
 	return nil

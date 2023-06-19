@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/config"
 	"github.com/nais/teams-backend/pkg/db"
 	"github.com/nais/teams-backend/pkg/logger"
@@ -29,4 +28,4 @@ type Reconciler interface {
 }
 
 // ReconcilerFactory The constructor function for all reconcilers
-type ReconcilerFactory func(context.Context, db.Database, *config.Config, auditlogger.AuditLogger, logger.Logger) (Reconciler, error)
+type ReconcilerFactory func(context.Context, db.Database, *config.Config, logger.Logger) (Reconciler, error)
