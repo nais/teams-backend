@@ -35,13 +35,13 @@ const (
 func New(database db.Database, auditLogger auditlogger.AuditLogger, clients map[string]dependencytrack.Client, log logger.Logger) (reconcilers.Reconciler, error) {
 	return &reconciler{
 		database:    database,
-		auditLogger: auditLogger.WithComponentName(types.ComponentNameNaisDependencytrack),
+		auditLogger: auditLogger,
 		log:         log.WithComponent(types.ComponentNameNaisDependencytrack),
 		clients:     clients,
 	}, nil
 }
 
-func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, audit auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
+func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, log logger.Logger) (reconcilers.Reconciler, error) {
 	clients := make(map[string]dependencytrack.Client, 0)
 	if len(cfg.DependencyTrack.Instances) == 0 {
 		return nil, fmt.Errorf("no dependencytrack instances configured")
@@ -54,7 +54,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 			log.Infof("dependencytrack instance %q added to reconciler", instance.Endpoint)
 		}
 	}
-	return New(database, audit, clients, log)
+	return New(database, auditlogger.New(database, types.ComponentNameNaisDependencytrack, log), clients, log)
 }
 
 func (r *reconciler) Name() sqlc.ReconcilerName {
@@ -162,7 +162,7 @@ func (r *reconciler) syncTeamAndUsers(ctx context.Context, input reconcilers.Inp
 					Action:        types.AuditActionDependencytrackTeamAddMember,
 					CorrelationID: input.CorrelationID,
 				}
-				r.auditLogger.Logf(ctx, r.database, targets, fields, "Added member %q to Dependencytrack team %q", user.Email, input.Team.Slug)
+				r.auditLogger.Logf(ctx, targets, fields, "Added member %q to Dependencytrack team %q", user.Email, input.Team.Slug)
 			}
 		}
 
@@ -181,7 +181,7 @@ func (r *reconciler) syncTeamAndUsers(ctx context.Context, input reconcilers.Inp
 					Action:        types.AuditActionDependencytrackTeamDeleteMember,
 					CorrelationID: input.CorrelationID,
 				}
-				r.auditLogger.Logf(ctx, r.database, targets, fields, "Deleted member %q from Dependencytrack team %q", user, input.Team.Slug)
+				r.auditLogger.Logf(ctx, targets, fields, "Deleted member %q from Dependencytrack team %q", user, input.Team.Slug)
 			}
 		}
 		return instanceState.TeamID, nil
@@ -200,7 +200,7 @@ func (r *reconciler) syncTeamAndUsers(ctx context.Context, input reconcilers.Inp
 		Action:        types.AuditActionDependencytrackTeamCreate,
 		CorrelationID: input.CorrelationID,
 	}
-	r.auditLogger.Logf(ctx, r.database, targets, fields, "Created dependencytrack team %q with ID %q", team.Name, team.Uuid)
+	r.auditLogger.Logf(ctx, targets, fields, "Created dependencytrack team %q with ID %q", team.Name, team.Uuid)
 
 	r.log.Debugf("created team %q in dependencytrack.", input.Team.Slug)
 	for _, user := range input.TeamMembers {
@@ -225,7 +225,7 @@ func (r *reconciler) syncTeamAndUsers(ctx context.Context, input reconcilers.Inp
 			Action:        types.AuditActionDependencytrackTeamAddMember,
 			CorrelationID: input.CorrelationID,
 		}
-		r.auditLogger.Logf(ctx, r.database, targets, fields, "Added member %q to Dependencytrack team %q", user.Email, input.Team.Slug)
+		r.auditLogger.Logf(ctx, targets, fields, "Added member %q to Dependencytrack team %q", user.Email, input.Team.Slug)
 	}
 
 	return team.Uuid, nil

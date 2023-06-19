@@ -36,7 +36,7 @@ var errGitHubUserNotFound = errors.New("GitHub user does not exist")
 func New(database db.Database, auditLogger auditlogger.AuditLogger, org, domain string, teamsService TeamsService, graphClient GraphClient, log logger.Logger) *githubTeamReconciler {
 	return &githubTeamReconciler{
 		database:     database,
-		auditLogger:  auditLogger.WithComponentName(types.ComponentNameGithubTeam),
+		auditLogger:  auditLogger,
 		org:          org,
 		domain:       domain,
 		teamsService: teamsService,
@@ -45,7 +45,7 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, org, domain 
 	}
 }
 
-func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
+func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, log logger.Logger) (reconcilers.Reconciler, error) {
 	if cfg.GitHub.AuthEndpoint == "" {
 		return nil, fmt.Errorf("missing required configuration: TEAMS_BACKEND_GITHUB_AUTH_ENDPOINT")
 	}
@@ -63,7 +63,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 	}
 
 	httpClient := NewGitHubAuthClient(ctx, cfg.GitHub.AuthEndpoint, ts)
-	return New(database, auditLogger, cfg.GitHub.Organization, cfg.TenantDomain, github.NewClient(httpClient).Teams, githubv4.NewClient(httpClient), log), nil
+	return New(database, auditlogger.New(database, types.ComponentNameGithubTeam, log), cfg.GitHub.Organization, cfg.TenantDomain, github.NewClient(httpClient).Teams, githubv4.NewClient(httpClient), log), nil
 }
 
 func (r *githubTeamReconciler) Name() sqlc.ReconcilerName {
@@ -143,7 +143,7 @@ func (r *githubTeamReconciler) Delete(ctx context.Context, teamSlug slug.Slug, c
 		Action:        types.AuditActionGithubTeamDelete,
 		CorrelationID: correlationID,
 	}
-	r.auditLogger.Logf(ctx, r.database, targets, fields, "Delete GitHub team with slug %q", gitHubTeamSlug)
+	r.auditLogger.Logf(ctx, targets, fields, "Delete GitHub team with slug %q", gitHubTeamSlug)
 
 	return r.database.RemoveReconcilerStateForTeam(ctx, r.Name(), teamSlug)
 }
@@ -244,7 +244,7 @@ func (r *githubTeamReconciler) getOrCreateTeam(ctx context.Context, state reconc
 		Action:        types.AuditActionGithubTeamCreate,
 		CorrelationID: correlationID,
 	}
-	r.auditLogger.Logf(ctx, r.database, targets, fields, "Created GitHub team %q", *githubTeam.Slug)
+	r.auditLogger.Logf(ctx, targets, fields, "Created GitHub team %q", *githubTeam.Slug)
 
 	return githubTeam, nil
 }
@@ -291,7 +291,7 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 			Action:        types.AuditActionGithubTeamDeleteMember,
 			CorrelationID: input.CorrelationID,
 		}
-		r.auditLogger.Logf(ctx, r.database, targets, fields, "Deleted member %q from GitHub team %q", username, *githubTeam.Slug)
+		r.auditLogger.Logf(ctx, targets, fields, "Deleted member %q from GitHub team %q", username, *githubTeam.Slug)
 	}
 
 	membersToAdd := localOnlyMembers(teamsBackendUserWithGitHubUser, membersAccordingToGitHub)
@@ -312,7 +312,7 @@ func (r *githubTeamReconciler) connectUsers(ctx context.Context, githubTeam *git
 			Action:        types.AuditActionGithubTeamAddMember,
 			CorrelationID: input.CorrelationID,
 		}
-		r.auditLogger.Logf(ctx, r.database, targets, fields, "Added member %q to GitHub team %q", username, *githubTeam.Slug)
+		r.auditLogger.Logf(ctx, targets, fields, "Added member %q to GitHub team %q", username, *githubTeam.Slug)
 	}
 
 	return nil

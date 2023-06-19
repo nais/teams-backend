@@ -68,7 +68,7 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, adminGroupPr
 	}
 }
 
-func NewFromConfig(cfg *config.Config, database db.Database, auditLogger auditlogger.AuditLogger, log logger.Logger, syncRuns *RunsHandler) (*UserSynchronizer, error) {
+func NewFromConfig(cfg *config.Config, database db.Database, log logger.Logger, syncRuns *RunsHandler) (*UserSynchronizer, error) {
 	log = log.WithComponent(types.ComponentNameUsersync)
 	ctx := context.Background()
 
@@ -87,7 +87,7 @@ func NewFromConfig(cfg *config.Config, database db.Database, auditLogger auditlo
 		return nil, fmt.Errorf("retrieve directory client: %w", err)
 	}
 
-	return New(database, auditLogger, cfg.UserSync.AdminGroupPrefix, cfg.TenantDomain, srv, log, syncRuns), nil
+	return New(database, auditlogger.New(database, types.ComponentNameUsersync, log), cfg.UserSync.AdminGroupPrefix, cfg.TenantDomain, srv, log, syncRuns), nil
 }
 
 // Sync Fetch all users from the tenant and add them as local users in teams-backend. If a user already exists in
@@ -212,7 +212,7 @@ func (s *UserSynchronizer) Sync(ctx context.Context, correlationID uuid.UUID) er
 			Action:        entry.action,
 			CorrelationID: correlationID,
 		}
-		s.auditLogger.Logf(ctx, s.database, targets, fields, entry.message)
+		s.auditLogger.Logf(ctx, targets, fields, entry.message)
 	}
 
 	return nil
