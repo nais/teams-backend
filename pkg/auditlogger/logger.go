@@ -26,6 +26,10 @@ type auditLogger struct {
 	log           logger.Logger
 }
 
+type auditLoggerForTesting struct {
+	entries []Entry
+}
+
 type Target struct {
 	Type       types.AuditLogsTargetType
 	Identifier string
@@ -38,6 +42,7 @@ type Fields struct {
 }
 
 type Entry struct {
+	Context context.Context
 	Targets []Target
 	Fields  Fields
 	Message string
@@ -49,6 +54,25 @@ func New(db db.Database, componentName types.ComponentName, log logger.Logger) A
 		db:            db,
 		log:           log.WithComponent(componentName),
 	}
+}
+
+func NewAuditLoggerForTesting() *auditLoggerForTesting {
+	return &auditLoggerForTesting{
+		entries: make([]Entry, 0),
+	}
+}
+
+func (l *auditLoggerForTesting) Logf(ctx context.Context, targets []Target, fields Fields, message string, messageArgs ...interface{}) {
+	l.entries = append(l.entries, Entry{
+		Context: ctx,
+		Targets: targets,
+		Fields:  fields,
+		Message: fmt.Sprintf(message, messageArgs...),
+	})
+}
+
+func (l *auditLoggerForTesting) Entries() []Entry {
+	return l.entries
 }
 
 // Logf Write the audit log entry to the database, and generate a system log entry. Do not call this function inside of
