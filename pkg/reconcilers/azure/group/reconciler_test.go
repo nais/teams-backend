@@ -110,31 +110,35 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Return(nil).
 			Once()
 
-		auditLogger.EXPECT().
-			Logf(ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
+		auditLogger.
+			On("WithComponentName", types.ComponentNameAzureGroup).
+			Return(auditLogger).
+			Once()
+		auditLogger.
+			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
 				return len(t) == 1 && t[0].Identifier == string(teamSlug)
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
 				return f.Action == types.AuditActionAzureGroupCreate && f.CorrelationID == correlationID
 			}), mock.Anything, group.MailNickname, group.ID).
-			Return().
+			Return(nil).
 			Once()
 
-		auditLogger.EXPECT().
-			Logf(ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
+		auditLogger.
+			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
 				return len(t) == 2 && t[0].Identifier == string(teamSlug) && t[1].Identifier == removeMember.Mail
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
 				return f.Action == types.AuditActionAzureGroupDeleteMember && f.CorrelationID == correlationID
 			}), mock.Anything, removeMember.Mail, group.MailNickname).
-			Return().
+			Return(nil).
 			Once()
 
-		auditLogger.EXPECT().
-			Logf(ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
+		auditLogger.
+			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
 				return len(t) == 2 && t[0].Identifier == string(teamSlug) && t[1].Identifier == addUser.Email
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
 				return f.Action == types.AuditActionAzureGroupAddMember && f.CorrelationID == correlationID
 			}), mock.Anything, addUser.Email, group.MailNickname).
-			Return().
+			Return(nil).
 			Once()
 
 		err := azure_group_reconciler.
@@ -145,9 +149,14 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 	})
 
 	t.Run("GetOrCreateGroup fail", func(t *testing.T) {
+		database := db.NewMockDatabase(t)
 		mockClient := azureclient.NewMockClient(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		database := db.NewMockDatabase(t)
+		auditLogger.
+			On("WithComponentName", types.ComponentNameAzureGroup).
+			Return(auditLogger).
+			Once()
+
 		database.
 			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.Slug, mock.Anything).
 			Return(nil).
@@ -165,9 +174,14 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 	})
 
 	t.Run("ListGroupMembers fail", func(t *testing.T) {
+		database := db.NewMockDatabase(t)
 		mockClient := azureclient.NewMockClient(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		database := db.NewMockDatabase(t)
+		auditLogger.
+			On("WithComponentName", types.ComponentNameAzureGroup).
+			Return(auditLogger).
+			Once()
+
 		database.
 			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.Slug, mock.Anything).
 			Return(nil).
@@ -192,6 +206,11 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		mockClient := azureclient.NewMockClient(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("WithComponentName", types.ComponentNameAzureGroup).
+			Return(auditLogger).
+			Once()
+
 		removeMemberFromGroupErr := errors.New("RemoveMemberFromGroup failed")
 		mockLogger := logger.NewMockLogger(t)
 		mockLogger.On("WithComponent", types.ComponentNameAzureGroup).Return(mockLogger).Once()
@@ -236,6 +255,11 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		mockClient := azureclient.NewMockClient(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("WithComponentName", types.ComponentNameAzureGroup).
+			Return(auditLogger).
+			Once()
+
 		getUserError := errors.New("GetUser failed")
 		mockLogger := logger.NewMockLogger(t)
 		mockLogger.On("WithComponent", types.ComponentNameAzureGroup).Return(mockLogger).Once()
@@ -267,13 +291,13 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 			Return(nil, getUserError).
 			Once()
 
-		auditLogger.EXPECT().
-			Logf(ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
+		auditLogger.
+			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
 				return t[0].Identifier == string(teamSlug) && t[1].Identifier == removeMember.Mail
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
 				return f.Action == types.AuditActionAzureGroupDeleteMember && f.CorrelationID == correlationID
 			}), mock.Anything, removeMember.Mail, group.MailNickname).
-			Return().
+			Return(nil).
 			Once()
 
 		err := azure_group_reconciler.
@@ -286,6 +310,11 @@ func TestAzureReconciler_Reconcile(t *testing.T) {
 		database := db.NewMockDatabase(t)
 		mockClient := azureclient.NewMockClient(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("WithComponentName", types.ComponentNameAzureGroup).
+			Return(auditLogger).
+			Once()
+
 		addMemberToGroupError := errors.New("AddMemberToGroup failed")
 		mockLogger := logger.NewMockLogger(t)
 		mockLogger.On("WithComponent", types.ComponentNameAzureGroup).Return(mockLogger).Once()
@@ -337,6 +366,11 @@ func TestAzureReconciler_Delete(t *testing.T) {
 			Return(fmt.Errorf("some error")).
 			Once()
 
+		auditLogger.
+			On("WithComponentName", types.ComponentNameAzureGroup).
+			Return(auditLogger).
+			Once()
+
 		log.
 			On("WithComponent", types.ComponentNameAzureGroup).
 			Return(log).
@@ -360,6 +394,11 @@ func TestAzureReconciler_Delete(t *testing.T) {
 			azure_group_reconciler.Name,
 			teamSlug).
 			Return(nil).
+			Once()
+
+		auditLogger.
+			On("WithComponentName", types.ComponentNameAzureGroup).
+			Return(auditLogger).
 			Once()
 
 		log.
@@ -399,6 +438,11 @@ func TestAzureReconciler_Delete(t *testing.T) {
 			Return(fmt.Errorf("some error")).
 			Once()
 
+		auditLogger.
+			On("WithComponentName", types.ComponentNameAzureGroup).
+			Return(auditLogger).
+			Once()
+
 		log.
 			On("WithComponent", types.ComponentNameAzureGroup).
 			Return(log).
@@ -428,9 +472,15 @@ func TestAzureReconciler_Delete(t *testing.T) {
 			Once()
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		auditLogger.EXPECT().
-			Logf(
+		auditLogger.
+			On("WithComponentName", types.ComponentNameAzureGroup).
+			Return(auditLogger).
+			Once()
+		auditLogger.
+			On(
+				"Logf",
 				ctx,
+				database,
 				mock.MatchedBy(func(targets []auditlogger.Target) bool {
 					return targets[0].Type == types.AuditLogsTargetTypeTeam && targets[0].Identifier == string(teamSlug)
 				}),
@@ -442,7 +492,7 @@ func TestAzureReconciler_Delete(t *testing.T) {
 				}),
 				grpID,
 			).
-			Return().
+			Return(nil).
 			Once()
 
 		azureClient := azureclient.NewMockClient(t)

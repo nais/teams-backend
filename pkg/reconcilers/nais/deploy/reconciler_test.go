@@ -50,14 +50,21 @@ func TestNaisDeployReconciler_Reconcile(t *testing.T) {
 		defer srv.Close()
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("WithComponentName", types.ComponentNameNaisDeploy).
+			Return(auditLogger).
+			Once()
 
 		database := db.NewMockDatabase(t)
 
-		auditLogger.EXPECT().Logf(ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
-			return t[0].Identifier == string(teamSlug)
-		}), mock.MatchedBy(func(f auditlogger.Fields) bool {
-			return f.Action == types.AuditActionNaisDeployProvisionDeployKey && f.CorrelationID == correlationID
-		}), mock.Anything, mock.Anything).Return().Once()
+		auditLogger.
+			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
+				return t[0].Identifier == string(teamSlug)
+			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
+				return f.Action == types.AuditActionNaisDeployProvisionDeployKey && f.CorrelationID == correlationID
+			}), mock.Anything, mock.Anything).
+			Return(nil).
+			Once()
 
 		database.
 			On("SetReconcilerStateForTeam", ctx, sqlc.ReconcilerNameNaisDeploy, teamSlug, mock.Anything).
@@ -73,6 +80,11 @@ func TestNaisDeployReconciler_Reconcile(t *testing.T) {
 
 	t.Run("internal server error when provisioning key", func(t *testing.T) {
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("WithComponentName", types.ComponentNameNaisDeploy).
+			Return(auditLogger).
+			Once()
+
 		database := db.NewMockDatabase(t)
 
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -88,6 +100,11 @@ func TestNaisDeployReconciler_Reconcile(t *testing.T) {
 
 	t.Run("team key does not change", func(t *testing.T) {
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On("WithComponentName", types.ComponentNameNaisDeploy).
+			Return(auditLogger).
+			Once()
+
 		database := db.NewMockDatabase(t)
 
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

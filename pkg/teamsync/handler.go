@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/config"
 	"github.com/nais/teams-backend/pkg/db"
 	"github.com/nais/teams-backend/pkg/logger"
@@ -44,6 +45,7 @@ type handler struct {
 	database          db.Database
 	syncQueue         Queue
 	syncQueueChan     <-chan Input
+	auditLogger       auditlogger.AuditLogger
 	log               logger.Logger
 	lock              sync.Mutex
 	cfg               *config.Config
@@ -74,7 +76,7 @@ var factories = ReconcilerFactories{
 
 const reconcilerTimeout = time.Minute * 15
 
-func NewHandler(ctx context.Context, database db.Database, cfg *config.Config, log logger.Logger) Handler {
+func NewHandler(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) Handler {
 	queue, channel := NewQueue()
 	return &handler{
 		activeReconcilers: make(map[sqlc.ReconcilerName]ReconcilerWithRunOrder),
@@ -83,6 +85,7 @@ func NewHandler(ctx context.Context, database db.Database, cfg *config.Config, l
 		syncQueueChan:     channel,
 		teamsInFlight:     make(map[slug.Slug]struct{}),
 		cfg:               cfg,
+		auditLogger:       auditLogger,
 		log:               log,
 		factories:         factories,
 		mainContext:       ctx,
@@ -169,7 +172,7 @@ func (h *handler) UseReconciler(reconciler db.Reconciler) error {
 		return err
 	}
 
-	reconcilerImplementation, err := factory(h.mainContext, h.database, h.cfg, h.log)
+	reconcilerImplementation, err := factory(h.mainContext, h.database, h.cfg, h.auditLogger, h.log)
 	if err != nil {
 		return err
 	}

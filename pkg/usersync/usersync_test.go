@@ -104,13 +104,13 @@ func TestSync(t *testing.T) {
 			Return(nil).
 			Once()
 
-		auditLogger.EXPECT().
-			Logf(ctx, targetIdentifier(user1.Email), auditAction(types.AuditActionUsersyncDelete), `Local user deleted: "user1@example.com", external ID: "123"`).
-			Return().
+		auditLogger.
+			On("Logf", ctx, database, targetIdentifier(user1.Email), auditAction(types.AuditActionUsersyncDelete), `Local user deleted: "user1@example.com", external ID: "123"`).
+			Return(nil).
 			Once()
-		auditLogger.EXPECT().
-			Logf(ctx, targetIdentifier(user2.Email), auditAction(types.AuditActionUsersyncDelete), `Local user deleted: "user2@example.com", external ID: "456"`).
-			Return().
+		auditLogger.
+			On("Logf", ctx, database, targetIdentifier(user2.Email), auditAction(types.AuditActionUsersyncDelete), `Local user deleted: "user2@example.com", external ID: "456"`).
+			Return(nil).
 			Once()
 
 		httpClient := test.NewTestHttpClient(
@@ -262,29 +262,29 @@ func TestSync(t *testing.T) {
 			Return(nil).
 			Once()
 
-		auditLogger.EXPECT().
-			Logf(ctx, targetIdentifier("user1@example.com"), auditAction(types.AuditActionUsersyncUpdate), `Local user updated: "user1@example.com", external ID: "123"`).
-			Return().
+		auditLogger.
+			On("Logf", ctx, database, targetIdentifier("user1@example.com"), auditAction(types.AuditActionUsersyncUpdate), `Local user updated: "user1@example.com", external ID: "123"`).
+			Return(nil).
 			Once()
-		auditLogger.EXPECT().
-			Logf(ctx, targetIdentifier("user2@example.com"), auditAction(types.AuditActionUsersyncCreate), `Local user created: "user2@example.com", external ID: "456"`).
-			Return().
+		auditLogger.
+			On("Logf", ctx, database, targetIdentifier("user2@example.com"), auditAction(types.AuditActionUsersyncCreate), `Local user created: "user2@example.com", external ID: "456"`).
+			Return(nil).
 			Once()
-		auditLogger.EXPECT().
-			Logf(ctx, targetIdentifier("user3@example.com"), auditAction(types.AuditActionUsersyncUpdate), `Local user updated: "user3@example.com", external ID: "789"`).
-			Return().
+		auditLogger.
+			On("Logf", ctx, database, targetIdentifier("user3@example.com"), auditAction(types.AuditActionUsersyncUpdate), `Local user updated: "user3@example.com", external ID: "789"`).
+			Return(nil).
 			Once()
-		auditLogger.EXPECT().
-			Logf(ctx, targetIdentifier("delete-me@example.com"), auditAction(types.AuditActionUsersyncDelete), `Local user deleted: "delete-me@example.com", external ID: "321"`).
-			Return().
+		auditLogger.
+			On("Logf", ctx, database, targetIdentifier("delete-me@example.com"), auditAction(types.AuditActionUsersyncDelete), `Local user deleted: "delete-me@example.com", external ID: "321"`).
+			Return(nil).
 			Once()
-		auditLogger.EXPECT().
-			Logf(ctx, targetIdentifier("user2@example.com"), auditAction(types.AuditActionUsersyncAssignAdminRole), `Assign global admin role to user: "user2@example.com"`).
-			Return().
+		auditLogger.
+			On("Logf", ctx, database, targetIdentifier("user2@example.com"), auditAction(types.AuditActionUsersyncAssignAdminRole), `Assign global admin role to user: "user2@example.com"`).
+			Return(nil).
 			Once()
-		auditLogger.EXPECT().
-			Logf(ctx, targetIdentifier("user1@example.com"), auditAction(types.AuditActionUsersyncRevokeAdminRole), `Revoke global admin role from user: "user1@example.com"`).
-			Return().
+		auditLogger.
+			On("Logf", ctx, database, targetIdentifier("user1@example.com"), auditAction(types.AuditActionUsersyncRevokeAdminRole), `Revoke global admin role from user: "user1@example.com"`).
+			Return(nil).
 			Once()
 
 		err = usersync.

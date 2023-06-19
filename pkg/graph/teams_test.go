@@ -63,6 +63,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 	userSyncRuns := usersync.NewRunsHandler(5)
 	database := db.NewMockDatabase(t)
 	teamSyncHandler := teamsync.NewMockHandler(t)
+	auditLogger := auditlogger.NewMockAuditLogger(t)
 
 	deployProxy := deployproxy.NewMockProxy(t)
 	gcpEnvironments := []string{"env"}
@@ -71,17 +72,16 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 	userSync := make(chan<- uuid.UUID)
 	teamSlug := slug.Slug("some-slug")
 	slackChannel := "#my-slack-channel"
-	const tenantDomain = "example.com"
+	resolver := graph.
+		NewResolver(teamSyncHandler, database, deployProxy, "example.com", userSync, auditLogger, gcpEnvironments, log, userSyncRuns).
+		Mutation()
 
 	t.Run("create team with empty purpose", func(t *testing.T) {
-		_, err := graph.
-			NewResolver(teamSyncHandler, database, deployProxy, tenantDomain, userSync, auditlogger.NewAuditLoggerForTesting(), gcpEnvironments, log, userSyncRuns).
-			Mutation().
-			CreateTeam(ctx, model.CreateTeamInput{
-				Slug:         &teamSlug,
-				Purpose:      "  ",
-				SlackChannel: slackChannel,
-			})
+		_, err := resolver.CreateTeam(ctx, model.CreateTeamInput{
+			Slug:         &teamSlug,
+			Purpose:      "  ",
+			SlackChannel: slackChannel,
+		})
 		assert.ErrorContains(t, err, "You must specify the purpose for your team")
 	})
 
@@ -110,6 +110,15 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Return(nil).
 			Once()
 
+		auditLogger.
+			On("Logf", ctx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+				return targets[0].Identifier == string(createdTeam.Slug)
+			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
+				return fields.Actor.User == user
+			}), "Team created").
+			Return(nil).
+			Once()
+
 		teamSyncHandler.
 			On("Schedule", mock.MatchedBy(func(input teamsync.Input) bool {
 				return input.TeamSlug == createdTeam.Slug
@@ -117,23 +126,13 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Return(nil).
 			Once()
 
-		auditLogger := auditlogger.NewAuditLoggerForTesting()
-		returnedTeam, err := graph.
-			NewResolver(teamSyncHandler, database, deployProxy, tenantDomain, userSync, auditLogger, gcpEnvironments, log, userSyncRuns).
-			Mutation().
-			CreateTeam(ctx, model.CreateTeamInput{
-				Slug:         &teamSlug,
-				Purpose:      " some purpose ",
-				SlackChannel: slackChannel,
-			})
+		returnedTeam, err := resolver.CreateTeam(ctx, model.CreateTeamInput{
+			Slug:         &teamSlug,
+			Purpose:      " some purpose ",
+			SlackChannel: slackChannel,
+		})
 		assert.NoError(t, err)
 		assert.Equal(t, createdTeam.Slug, returnedTeam.Slug)
-		assert.Len(t, auditLogger.Entries(), 1)
-		entry := auditLogger.Entries()[0]
-		assert.Equal(t, ctx, entry.Context)
-		assert.Equal(t, string(createdTeam.Slug), entry.Targets[0].Identifier)
-		assert.Equal(t, user, entry.Fields.Actor.User)
-		assert.Equal(t, "Team created", entry.Message)
 	})
 
 	t.Run("calling with SA, adds sa as team owner", func(t *testing.T) {
@@ -162,6 +161,15 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Return(nil).
 			Once()
 
+		auditLogger.
+			On("Logf", saCtx, database, mock.MatchedBy(func(targets []auditlogger.Target) bool {
+				return targets[0].Identifier == string(createdTeam.Slug)
+			}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
+				return fields.Actor.User == serviceAccount
+			}), "Team created").
+			Return(nil).
+			Once()
+
 		teamSyncHandler.
 			On("Schedule", mock.MatchedBy(func(input teamsync.Input) bool {
 				return input.TeamSlug == createdTeam.Slug
@@ -169,10 +177,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			Return(nil).
 			Once()
 
-		auditLogger := auditlogger.NewAuditLoggerForTesting()
-		returnedTeam, err := graph.
-			NewResolver(teamSyncHandler, database, deployProxy, tenantDomain, userSync, auditLogger, gcpEnvironments, log, userSyncRuns).
-			Mutation().CreateTeam(saCtx, model.CreateTeamInput{
+		returnedTeam, err := resolver.CreateTeam(saCtx, model.CreateTeamInput{
 			Slug:         &teamSlug,
 			Purpose:      " some purpose ",
 			SlackChannel: slackChannel,
@@ -180,12 +185,6 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, createdTeam.Slug, returnedTeam.Slug)
-		assert.Len(t, auditLogger.Entries(), 1)
-		entry := auditLogger.Entries()[0]
-		assert.Equal(t, saCtx, entry.Context)
-		assert.Equal(t, string(createdTeam.Slug), entry.Targets[0].Identifier)
-		assert.Equal(t, serviceAccount, entry.Fields.Actor.User)
-		assert.Equal(t, "Team created", entry.Message)
 	})
 }
 
@@ -194,6 +193,7 @@ func TestMutationResolver_RequestTeamDeletion(t *testing.T) {
 	teamSyncHandler := teamsync.NewMockHandler(t)
 	database := db.NewMockDatabase(t)
 	deployProxy := deployproxy.NewMockProxy(t)
+	auditLogger := auditlogger.NewMockAuditLogger(t)
 	log := logger.NewMockLogger(t)
 	log.
 		On("WithComponent", types.ComponentNameGraphqlApi).
@@ -206,7 +206,7 @@ func TestMutationResolver_RequestTeamDeletion(t *testing.T) {
 
 	t.Run("service accounts can not create delete keys", func(t *testing.T) {
 		resolver := graph.
-			NewResolver(teamSyncHandler, database, deployProxy, tenantDomain, userSync, auditlogger.NewAuditLoggerForTesting(), gcpEnvironments, log, userSyncRuns).
+			NewResolver(teamSyncHandler, database, deployProxy, tenantDomain, userSync, auditLogger, gcpEnvironments, log, userSyncRuns).
 			Mutation()
 
 		serviceAccount := db.ServiceAccount{
@@ -224,7 +224,7 @@ func TestMutationResolver_RequestTeamDeletion(t *testing.T) {
 
 	t.Run("missing authz", func(t *testing.T) {
 		resolver := graph.
-			NewResolver(teamSyncHandler, database, deployProxy, tenantDomain, userSync, auditlogger.NewAuditLoggerForTesting(), gcpEnvironments, log, userSyncRuns).
+			NewResolver(teamSyncHandler, database, deployProxy, tenantDomain, userSync, auditLogger, gcpEnvironments, log, userSyncRuns).
 			Mutation()
 
 		user := db.User{
@@ -265,7 +265,7 @@ func TestMutationResolver_RequestTeamDeletion(t *testing.T) {
 			Once()
 
 		resolver := graph.
-			NewResolver(teamSyncHandler, database, deployProxy, tenantDomain, userSync, auditlogger.NewAuditLoggerForTesting(), gcpEnvironments, log, userSyncRuns).
+			NewResolver(teamSyncHandler, database, deployProxy, tenantDomain, userSync, auditLogger, gcpEnvironments, log, userSyncRuns).
 			Mutation()
 
 		key, err := resolver.RequestTeamDeletion(ctx, &teamSlug)
@@ -317,7 +317,23 @@ func TestMutationResolver_RequestTeamDeletion(t *testing.T) {
 			Return(key, nil).
 			Once()
 
-		auditLogger := auditlogger.NewAuditLoggerForTesting()
+		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.
+			On(
+				"Logf",
+				ctx,
+				database,
+				mock.MatchedBy(func(targets []auditlogger.Target) bool {
+					return targets[0].Identifier == string(teamSlug) && targets[0].Type == types.AuditLogsTargetTypeTeam
+				}),
+				mock.MatchedBy(func(fields auditlogger.Fields) bool {
+					return fields.Action == types.AuditActionGraphqlApiTeamsRequestDelete && fields.Actor.User == user
+				}),
+				mock.AnythingOfType("string"),
+			).
+			Return(nil).
+			Once()
+
 		resolver := graph.
 			NewResolver(teamSyncHandler, database, deployProxy, tenantDomain, userSync, auditLogger, gcpEnvironments, log, userSyncRuns).
 			Mutation()
@@ -325,14 +341,5 @@ func TestMutationResolver_RequestTeamDeletion(t *testing.T) {
 		returnedKey, err := resolver.RequestTeamDeletion(ctx, &teamSlug)
 		assert.Equal(t, key, returnedKey)
 		assert.NoError(t, err)
-
-		assert.Len(t, auditLogger.Entries(), 1)
-		entry := auditLogger.Entries()[0]
-		assert.Equal(t, ctx, entry.Context)
-		assert.Equal(t, string(teamSlug), entry.Targets[0].Identifier)
-		assert.Equal(t, types.AuditLogsTargetTypeTeam, entry.Targets[0].Type)
-		assert.Equal(t, types.AuditActionGraphqlApiTeamsRequestDelete, entry.Fields.Action)
-		assert.Equal(t, user, entry.Fields.Actor.User)
-		assert.Equal(t, "Request team deletion", entry.Message)
 	})
 }

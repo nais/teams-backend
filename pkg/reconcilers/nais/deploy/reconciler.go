@@ -39,20 +39,20 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, client *http
 	return &naisDeployReconciler{
 		database:     database,
 		client:       client,
-		auditLogger:  auditLogger,
+		auditLogger:  auditLogger.WithComponentName(types.ComponentNameNaisDeploy),
 		endpoint:     endpoint,
 		provisionKey: provisionKey,
 		log:          log.WithComponent(types.ComponentNameNaisDeploy),
 	}
 }
 
-func NewFromConfig(_ context.Context, database db.Database, cfg *config.Config, log logger.Logger) (reconcilers.Reconciler, error) {
+func NewFromConfig(_ context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
 	provisionKey, err := hex.DecodeString(cfg.NaisDeploy.ProvisionKey)
 	if err != nil {
 		return nil, err
 	}
 
-	return New(database, auditlogger.New(database, types.ComponentNameNaisDeploy, log), http.DefaultClient, cfg.NaisDeploy.Endpoint, provisionKey, log), nil
+	return New(database, auditLogger, http.DefaultClient, cfg.NaisDeploy.Endpoint, provisionKey, log), nil
 }
 
 func (r *naisDeployReconciler) Name() sqlc.ReconcilerName {
@@ -90,7 +90,7 @@ func (r *naisDeployReconciler) Reconcile(ctx context.Context, input reconcilers.
 			Action:        types.AuditActionNaisDeployProvisionDeployKey,
 			CorrelationID: input.CorrelationID,
 		}
-		r.auditLogger.Logf(ctx, targets, fields, "Provisioned NAIS deploy API key for team %q", input.Team.Slug)
+		r.auditLogger.Logf(ctx, r.database, targets, fields, "Provisioned NAIS deploy API key for team %q", input.Team.Slug)
 
 		now := time.Now()
 		err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, &reconcilers.NaisDeployKeyState{

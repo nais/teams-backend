@@ -27,6 +27,10 @@ import (
 func TestNewFromConfig(t *testing.T) {
 	log, err := logger.GetLogger("text", "info")
 	assert.NoError(t, err)
+	audit := auditlogger.NewMockAuditLogger(t)
+	audit.
+		On("WithComponentName", types.ComponentNameNaisDependencytrack).
+		Return(audit)
 	database := db.NewMockDatabase(t)
 
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
@@ -51,7 +55,7 @@ func TestNewFromConfig(t *testing.T) {
 			},
 		},
 	}
-	_, err = dependencytrack_reconciler.NewFromConfig(context.Background(), database, cfg, log)
+	_, err = dependencytrack_reconciler.NewFromConfig(context.Background(), database, cfg, audit, log)
 	assert.NoError(t, err)
 }
 
@@ -67,6 +71,7 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 	assert.NoError(t, err)
 
 	audit := auditlogger.NewMockAuditLogger(t)
+	audit.On("WithComponentName", types.ComponentNameNaisDependencytrack).Return(audit)
 	database := db.NewMockDatabase(t)
 	mockClient := dependencytrack_reconciler.NewMockClient(t)
 
@@ -86,22 +91,22 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 			OidcUsers: nil,
 		}, nil).Once()
 
-		audit.EXPECT().
-			Logf(ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
+		audit.
+			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
 				return len(t) == 1 && t[0].Identifier == string(input.Team.Slug)
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
 				return f.Action == types.AuditActionDependencytrackTeamCreate && f.CorrelationID == correlationID
 			}), mock.Anything, teamName, teamUuid).
-			Return().
+			Return(nil).
 			Once()
 
-		audit.EXPECT().
-			Logf(ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
+		audit.
+			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
 				return len(t) == 2 && t[0].Identifier == string(input.Team.Slug) && t[1].Identifier == "user1@nais.io"
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
 				return f.Action == types.AuditActionDependencytrackTeamAddMember && f.CorrelationID == correlationID
 			}), mock.Anything, "user1@nais.io", input.Team.Slug).
-			Return().
+			Return(nil).
 			Once()
 
 		mockClient.On("CreateOidcUser", mock.Anything, username).Return(&client.User{
@@ -120,13 +125,13 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 	})
 
 	t.Run("team exists, new members added", func(t *testing.T) {
-		audit.EXPECT().
-			Logf(ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
+		audit.
+			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
 				return len(t) == 2 && t[0].Identifier == string(input.Team.Slug) && t[1].Identifier == "user1@nais.io"
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
 				return f.Action == types.AuditActionDependencytrackTeamAddMember && f.CorrelationID == correlationID
 			}), mock.Anything, "user1@nais.io", input.Team.Slug).
-			Return().
+			Return(nil).
 			Once()
 
 		database.On("LoadReconcilerStateForTeam", ctx, dependencytrack_reconciler.Name, input.Team.Slug, mock.Anything).Run(func(args mock.Arguments) {
@@ -177,22 +182,22 @@ func TestDependencytrackReconciler_Reconcile(t *testing.T) {
 	t.Run("usermembership removed from existing team", func(t *testing.T) {
 		usernameNotInInput := "userNotInTeamsBackend@nais.io"
 
-		audit.EXPECT().
-			Logf(ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
+		audit.
+			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
 				return len(t) == 2 && t[0].Identifier == string(input.Team.Slug) && t[1].Identifier == "user1@nais.io"
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
 				return f.Action == types.AuditActionDependencytrackTeamAddMember && f.CorrelationID == correlationID
 			}), mock.Anything, "user1@nais.io", input.Team.Slug).
-			Return().
+			Return(nil).
 			Once()
 
-		audit.EXPECT().
-			Logf(ctx, mock.MatchedBy(func(t []auditlogger.Target) bool {
+		audit.
+			On("Logf", ctx, database, mock.MatchedBy(func(t []auditlogger.Target) bool {
 				return len(t) == 2 && t[0].Identifier == string(input.Team.Slug) && t[1].Identifier == usernameNotInInput
 			}), mock.MatchedBy(func(f auditlogger.Fields) bool {
 				return f.Action == types.AuditActionDependencytrackTeamDeleteMember && f.CorrelationID == correlationID
 			}), mock.Anything, usernameNotInInput, input.Team.Slug).
-			Return().
+			Return(nil).
 			Once()
 
 		database.On("LoadReconcilerStateForTeam", ctx, dependencytrack_reconciler.Name, input.Team.Slug, mock.Anything).Run(func(args mock.Arguments) {
@@ -233,6 +238,7 @@ func TestDependencytrackReconciler_Delete(t *testing.T) {
 	mockClient := dependencytrack_reconciler.NewMockClient(t)
 	database := db.NewMockDatabase(t)
 	auditLogger := auditlogger.NewMockAuditLogger(t)
+	auditLogger.On("WithComponentName", types.ComponentNameNaisDependencytrack).Return(auditLogger)
 
 	t.Run("team exists, delete team from teams-backend should remove team from dependencytrack", func(t *testing.T) {
 		teamUuid := uuid.New().String()

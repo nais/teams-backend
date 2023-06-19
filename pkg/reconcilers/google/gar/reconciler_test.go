@@ -205,6 +205,7 @@ func TestReconcile(t *testing.T) {
 		_, iamService := mocks.start(t, ctx)
 		database := db.NewMockDatabase(t)
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.On("WithComponentName", types.ComponentNameGoogleGcpGar).Return(auditLogger).Once()
 
 		err = google_gar.
 			New(auditLogger, database, managementProjectID, workloadIdentityPoolName, nil, iamService, log).
@@ -265,6 +266,7 @@ func TestReconcile(t *testing.T) {
 			Return(nil).
 			Once()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.On("WithComponentName", types.ComponentNameGoogleGcpGar).Return(auditLogger).Once()
 
 		err = google_gar.
 			New(auditLogger, database, managementProjectID, workloadIdentityPoolName, nil, iamService, log).
@@ -314,6 +316,7 @@ func TestReconcile(t *testing.T) {
 			Return(nil).
 			Once()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.On("WithComponentName", types.ComponentNameGoogleGcpGar).Return(auditLogger).Once()
 
 		err = google_gar.
 			New(auditLogger, database, managementProjectID, workloadIdentityPoolName, artifactregistryClient, iamService, log).
@@ -376,6 +379,7 @@ func TestReconcile(t *testing.T) {
 			Once()
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.On("WithComponentName", types.ComponentNameGoogleGcpGar).Return(auditLogger).Once()
 
 		err := google_gar.
 			New(auditLogger, database, managementProjectID, workloadIdentityPoolName, artifactregistryClient, iamService, log).
@@ -423,6 +427,7 @@ func TestReconcile(t *testing.T) {
 			Return(nil).
 			Once()
 		auditLogger := auditlogger.NewMockAuditLogger(t)
+		auditLogger.On("WithComponentName", types.ComponentNameGoogleGcpGar).Return(auditLogger).Once()
 
 		err = google_gar.
 			New(auditLogger, database, managementProjectID, workloadIdentityPoolName, artifactregistryClient, iamService, log).
@@ -450,6 +455,11 @@ func TestDelete(t *testing.T) {
 	garClient, iamService := mockedClients.start(t, ctx)
 
 	t.Run("unable to load state", func(t *testing.T) {
+		auditLogger.
+			On("WithComponentName", types.ComponentNameGoogleGcpGar).
+			Return(auditLogger).
+			Once()
+
 		log.
 			On("WithComponent", types.ComponentNameGoogleGcpGar).
 			Return(log).
@@ -468,6 +478,11 @@ func TestDelete(t *testing.T) {
 	})
 
 	t.Run("state is missing repository name", func(t *testing.T) {
+		auditLogger.
+			On("WithComponentName", types.ComponentNameGoogleGcpGar).
+			Return(auditLogger).
+			Once()
+
 		log.
 			On("WithComponent", types.ComponentNameGoogleGcpGar).
 			Return(log).
@@ -499,6 +514,11 @@ func TestDelete(t *testing.T) {
 	})
 
 	t.Run("delete service account fails with unexpected error", func(t *testing.T) {
+		auditLogger.
+			On("WithComponentName", types.ComponentNameGoogleGcpGar).
+			Return(auditLogger).
+			Once()
+
 		log.
 			On("WithComponent", types.ComponentNameGoogleGcpGar).
 			Return(log).
@@ -556,6 +576,10 @@ func TestDelete(t *testing.T) {
 		garClient, iamService := mockedClients.start(t, ctx)
 
 		testLogger, logs := logrustest.NewNullLogger()
+		auditLogger.
+			On("WithComponentName", types.ComponentNameGoogleGcpGar).
+			Return(auditLogger).
+			Once()
 
 		log := logger.NewMockLogger(t)
 		log.
@@ -579,6 +603,11 @@ func TestDelete(t *testing.T) {
 	})
 
 	t.Run("delete repo operation fails", func(t *testing.T) {
+		auditLogger.
+			On("WithComponentName", types.ComponentNameGoogleGcpGar).
+			Return(auditLogger).
+			Once()
+
 		log.
 			On("WithComponent", types.ComponentNameGoogleGcpGar).
 			Return(log).
@@ -638,9 +667,15 @@ func TestDelete(t *testing.T) {
 			Once()
 
 		auditLogger := auditlogger.NewMockAuditLogger(t)
-		auditLogger.EXPECT().
-			Logf(
+		auditLogger.
+			On("WithComponentName", types.ComponentNameGoogleGcpGar).
+			Return(auditLogger).
+			Once()
+		auditLogger.
+			On(
+				"Logf",
 				ctx,
+				database,
 				mock.MatchedBy(func(targets []auditlogger.Target) bool {
 					return targets[0].Identifier == string(teamSlug)
 				}), mock.MatchedBy(func(fields auditlogger.Fields) bool {
@@ -651,7 +686,7 @@ func TestDelete(t *testing.T) {
 				}),
 				repositoryName,
 			).
-			Return().
+			Return(nil).
 			Once()
 
 		log.

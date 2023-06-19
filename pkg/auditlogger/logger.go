@@ -17,17 +17,13 @@ import (
 )
 
 type AuditLogger interface {
-	Logf(ctx context.Context, targets []Target, fields Fields, message string, messageArgs ...interface{})
+	Logf(ctx context.Context, dbtx db.Database, targets []Target, entry Fields, message string, messageArgs ...interface{})
+	WithComponentName(componentName types.ComponentName) AuditLogger
 }
 
 type auditLogger struct {
 	componentName types.ComponentName
-	db            db.Database
 	log           logger.Logger
-}
-
-type auditLoggerForTesting struct {
-	entries []Entry
 }
 
 type Target struct {
@@ -41,43 +37,25 @@ type Fields struct {
 	CorrelationID uuid.UUID
 }
 
-type Entry struct {
-	Context context.Context
-	Targets []Target
-	Fields  Fields
-	Message string
+func New(log logger.Logger) AuditLogger {
+	return &auditLogger{
+		log: log,
+	}
 }
 
-func New(db db.Database, componentName types.ComponentName, log logger.Logger) AuditLogger {
+func (l *auditLogger) WithComponentName(componentName types.ComponentName) AuditLogger {
 	return &auditLogger{
 		componentName: componentName,
-		db:            db,
-		log:           log.WithComponent(componentName),
+		log:           l.log.WithComponent(componentName),
 	}
 }
 
-func NewAuditLoggerForTesting() *auditLoggerForTesting {
-	return &auditLoggerForTesting{
-		entries: make([]Entry, 0),
+func (l *auditLogger) Logf(ctx context.Context, dbtx db.Database, targets []Target, fields Fields, message string, messageArgs ...interface{}) {
+	if l.componentName == "" {
+		l.log.Errorf("unable to create auditlog entry: missing or invalid system name")
+		return
 	}
-}
 
-func (l *auditLoggerForTesting) Logf(ctx context.Context, targets []Target, fields Fields, message string, messageArgs ...interface{}) {
-	l.entries = append(l.entries, Entry{
-		Context: ctx,
-		Targets: targets,
-		Fields:  fields,
-		Message: fmt.Sprintf(message, messageArgs...),
-	})
-}
-
-func (l *auditLoggerForTesting) Entries() []Entry {
-	return l.entries
-}
-
-// Logf Write the audit log entry to the database, and generate a system log entry. Do not call this function inside of
-// a database transaction as it will generate a system log entry.
-func (l *auditLogger) Logf(ctx context.Context, targets []Target, fields Fields, message string, messageArgs ...interface{}) {
 	if fields.Action == "" {
 		l.log.Errorf("unable to create auditlog entry: missing or invalid audit action")
 		return
@@ -100,7 +78,7 @@ func (l *auditLogger) Logf(ctx context.Context, targets []Target, fields Fields,
 	}
 
 	for _, target := range targets {
-		err := l.db.CreateAuditLogEntry(
+		err := dbtx.CreateAuditLogEntry(
 			ctx,
 			fields.CorrelationID,
 			l.componentName,

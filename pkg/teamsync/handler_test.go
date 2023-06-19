@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/config"
 	"github.com/nais/teams-backend/pkg/db"
 	"github.com/nais/teams-backend/pkg/logger"
@@ -31,6 +32,7 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 	ctx := context.Background()
 	database := db.NewMockDatabase(t)
 	cfg, _ := config.New()
+	auditLogger := auditlogger.NewMockAuditLogger(t)
 	log := logger.NewMockLogger(t)
 
 	t.Run("no reconcilers", func(t *testing.T) {
@@ -59,14 +61,14 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 		}
 		database.On("GetActiveTeamBySlug", mock.Anything, teamSlug).Return(team, nil).Once()
 
-		handler := teamsync.NewHandler(ctx, database, cfg, log)
+		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
 		handler.Schedule(input)
 		handler.Close()
 		handler.SyncTeams(ctx)
 	})
 
 	t.Run("use reconciler with missing factory", func(t *testing.T) {
-		handler := teamsync.NewHandler(ctx, database, cfg, log)
+		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
 		handler.SetReconcilerFactories(teamsync.ReconcilerFactories{})
 		reconciler := db.Reconciler{Reconciler: &sqlc.Reconciler{Name: nais_deploy_reconciler.Name}}
 		assert.ErrorContains(t, handler.UseReconciler(reconciler), "missing reconciler factory")
@@ -74,9 +76,9 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 
 	t.Run("use reconciler with failing factory", func(t *testing.T) {
 		err := errors.New("some error")
-		handler := teamsync.NewHandler(ctx, database, cfg, log)
+		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
 		handler.SetReconcilerFactories(teamsync.ReconcilerFactories{
-			nais_deploy_reconciler.Name: func(context.Context, db.Database, *config.Config, logger.Logger) (reconcilers.Reconciler, error) {
+			nais_deploy_reconciler.Name: func(context.Context, db.Database, *config.Config, auditlogger.AuditLogger, logger.Logger) (reconcilers.Reconciler, error) {
 				return nil, err
 			},
 		})
@@ -178,7 +180,7 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 
 		runOrder := 1
 
-		createAzureReconciler := func(context.Context, db.Database, *config.Config, logger.Logger) (reconcilers.Reconciler, error) {
+		createAzureReconciler := func(context.Context, db.Database, *config.Config, auditlogger.AuditLogger, logger.Logger) (reconcilers.Reconciler, error) {
 			reconciler := reconcilers.NewMockReconciler(t)
 			reconciler.
 				On("Name").
@@ -196,7 +198,7 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 				Once()
 			return reconciler, nil
 		}
-		createGitHubReconciler := func(context.Context, db.Database, *config.Config, logger.Logger) (reconcilers.Reconciler, error) {
+		createGitHubReconciler := func(context.Context, db.Database, *config.Config, auditlogger.AuditLogger, logger.Logger) (reconcilers.Reconciler, error) {
 			reconciler := reconcilers.NewMockReconciler(t)
 			reconciler.
 				On("Name").
@@ -214,7 +216,7 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 				Once()
 			return reconciler, nil
 		}
-		createNaisDeployReconciler := func(context.Context, db.Database, *config.Config, logger.Logger) (reconcilers.Reconciler, error) {
+		createNaisDeployReconciler := func(context.Context, db.Database, *config.Config, auditlogger.AuditLogger, logger.Logger) (reconcilers.Reconciler, error) {
 			rec := reconcilers.NewMockReconciler(t)
 			rec.
 				On("Name").
@@ -232,7 +234,7 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 			return rec, nil
 		}
 
-		handler := teamsync.NewHandler(ctx, database, cfg, log)
+		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
 		handler.SetReconcilerFactories(teamsync.ReconcilerFactories{
 			azure_group_reconciler.Name: createAzureReconciler,
 			github_team_reconciler.Name: createGitHubReconciler,
@@ -272,7 +274,7 @@ func TestHandler_ReconcileTeam(t *testing.T) {
 			Return(nil).
 			Twice()
 
-		handler := teamsync.NewHandler(ctx, database, cfg, log)
+		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
 		handler.Schedule(input)
 		handler.Schedule(input)
 		handler.Close()
@@ -285,6 +287,7 @@ func TestHandler_DeleteTeam(t *testing.T) {
 
 	ctx := context.Background()
 	cfg, _ := config.New()
+	auditLogger := auditlogger.NewMockAuditLogger(t)
 	correlationID := uuid.New()
 
 	t.Run("reconcile errors", func(t *testing.T) {
@@ -311,9 +314,9 @@ func TestHandler_DeleteTeam(t *testing.T) {
 			Return(&logrus.Entry{Logger: testLogger}).
 			Once()
 
-		handler := teamsync.NewHandler(ctx, database, cfg, log)
+		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
 
-		reconciler1 := func(context.Context, db.Database, *config.Config, logger.Logger) (reconcilers.Reconciler, error) {
+		reconciler1 := func(context.Context, db.Database, *config.Config, auditlogger.AuditLogger, logger.Logger) (reconcilers.Reconciler, error) {
 			reconciler := reconcilers.NewMockReconciler(t)
 			reconciler.
 				On("Name").
@@ -326,7 +329,7 @@ func TestHandler_DeleteTeam(t *testing.T) {
 			return reconciler, nil
 		}
 
-		reconciler2 := func(context.Context, db.Database, *config.Config, logger.Logger) (reconcilers.Reconciler, error) {
+		reconciler2 := func(context.Context, db.Database, *config.Config, auditlogger.AuditLogger, logger.Logger) (reconcilers.Reconciler, error) {
 			reconciler := reconcilers.NewMockReconciler(t)
 			reconciler.
 				On("Name").
@@ -364,7 +367,7 @@ func TestHandler_DeleteTeam(t *testing.T) {
 			On("WithTeamSlug", string(teamSlug)).
 			Return(log)
 
-		handler := teamsync.NewHandler(ctx, database, cfg, log)
+		handler := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
 		assert.NoError(t, handler.DeleteTeam(teamSlug, correlationID))
 	})
 }

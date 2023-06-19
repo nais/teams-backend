@@ -47,7 +47,7 @@ type garReconciler struct {
 func New(auditLogger auditlogger.AuditLogger, database db.Database, managementProjectID, workloadIdentityPoolName string, garClient *artifactregistry.Client, iamService *iam.Service, log logger.Logger) *garReconciler {
 	return &garReconciler{
 		database:                 database,
-		auditLogger:              auditLogger,
+		auditLogger:              auditLogger.WithComponentName(types.ComponentNameGoogleGcpGar),
 		log:                      log.WithComponent(types.ComponentNameGoogleGcpGar),
 		managementProjectID:      managementProjectID,
 		workloadIdentityPoolName: workloadIdentityPoolName,
@@ -56,7 +56,7 @@ func New(auditLogger auditlogger.AuditLogger, database db.Database, managementPr
 	}
 }
 
-func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, log logger.Logger) (reconcilers.Reconciler, error) {
+func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, auditLogger auditlogger.AuditLogger, log logger.Logger) (reconcilers.Reconciler, error) {
 	builder, err := google_token_source.NewFromConfig(cfg)
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		return nil, err
 	}
 
-	return New(auditlogger.New(database, types.ComponentNameGoogleGcpGar, log), database, cfg.GoogleManagementProjectID, cfg.GCP.WorkloadIdentityPoolName, garClient, iamService, log), nil
+	return New(auditLogger, database, cfg.GoogleManagementProjectID, cfg.GCP.WorkloadIdentityPoolName, garClient, iamService, log), nil
 }
 
 func (r *garReconciler) Name() sqlc.ReconcilerName {
@@ -171,7 +171,7 @@ func (r *garReconciler) Delete(ctx context.Context, teamSlug slug.Slug, correlat
 		Action:        types.AuditActionGoogleGarDelete,
 		CorrelationID: correlationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Delete GAR repository %q", garRepositoryName)
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Delete GAR repository %q", garRepositoryName)
 
 	return r.database.RemoveReconcilerStateForTeam(ctx, r.Name(), teamSlug)
 }

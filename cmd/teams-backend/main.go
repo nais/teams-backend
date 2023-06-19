@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/nais/teams-backend/pkg/types"
+
 	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/playground"
@@ -31,7 +33,6 @@ import (
 	"github.com/nais/teams-backend/pkg/logger"
 	"github.com/nais/teams-backend/pkg/middleware"
 	"github.com/nais/teams-backend/pkg/teamsync"
-	"github.com/nais/teams-backend/pkg/types"
 	"github.com/nais/teams-backend/pkg/usersync"
 	"github.com/nais/teams-backend/pkg/version"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -97,8 +98,10 @@ func run(cfg *config.Config, log logger.Logger) error {
 		return err
 	}
 
+	auditLogger := auditlogger.New(log)
+
 	wg := sync.WaitGroup{}
-	teamSync := teamsync.NewHandler(ctx, database, cfg, log)
+	teamSync := teamsync.NewHandler(ctx, database, cfg, auditLogger, log)
 	defer func() {
 		teamSync.Close()
 		wg.Wait()
@@ -125,7 +128,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 	userSyncTimer.Stop()
 	userSyncRuns := usersync.NewRunsHandler(cfg.UserSync.RunsToStore)
 	if cfg.UserSync.Enabled {
-		userSyncer, err = usersync.NewFromConfig(cfg, database, log, userSyncRuns)
+		userSyncer, err = usersync.NewFromConfig(cfg, database, auditLogger.WithComponentName(types.ComponentNameUsersync), log, userSyncRuns)
 		if err != nil {
 			return err
 		}
@@ -143,7 +146,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 		log.Warnf("Deploy proxy is not configured: %v", err)
 	}
 
-	handler := setupGraphAPI(teamSync, database, deployProxy, cfg.TenantDomain, userSync, cfg.Environments, log, userSyncRuns)
+	handler := setupGraphAPI(teamSync, database, deployProxy, cfg.TenantDomain, userSync, auditLogger.WithComponentName(types.ComponentNameGraphqlApi), cfg.Environments, log, userSyncRuns)
 	srv := setupHTTPServer(cfg, database, handler, authHandler)
 
 	log.Infof("ready to accept requests at %s.", cfg.ListenAddress)
@@ -237,8 +240,8 @@ func setupAuthHandler(cfg *config.Config, database db.Database, log logger.Logge
 	return handler, nil
 }
 
-func setupGraphAPI(teamSync teamsync.Handler, database db.Database, deployProxy deployproxy.Proxy, domain string, userSync chan<- uuid.UUID, gcpEnvironments []string, log logger.Logger, userSyncRuns *usersync.RunsHandler) *graphql_handler.Server {
-	resolver := graph.NewResolver(teamSync, database, deployProxy, domain, userSync, auditlogger.New(database, types.ComponentNameGraphqlApi, log), gcpEnvironments, log, userSyncRuns)
+func setupGraphAPI(teamSync teamsync.Handler, database db.Database, deployProxy deployproxy.Proxy, domain string, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger, userSyncRuns *usersync.RunsHandler) *graphql_handler.Server {
+	resolver := graph.NewResolver(teamSync, database, deployProxy, domain, userSync, auditLogger, gcpEnvironments, log, userSyncRuns)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
 	gc.Directives.Admin = directives.Admin()

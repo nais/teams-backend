@@ -70,7 +70,7 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 		CorrelationID: correlationID,
 		Actor:         actor,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Team created")
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Team created")
 
 	r.reconcileTeam(ctx, correlationID, team.Slug)
 
@@ -101,7 +101,6 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, slug *slug.Slug, inpu
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	auditLogEntries := make([]auditlogger.Entry, 0)
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
 		team, err = dbtx.UpdateTeam(ctx, team.Slug, input.Purpose, input.SlackChannel)
 		if err != nil {
@@ -130,19 +129,12 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, slug *slug.Slug, inpu
 			CorrelationID: correlationID,
 			Actor:         actor,
 		}
-		auditLogEntries = append(auditLogEntries, auditlogger.Entry{
-			Targets: targets,
-			Fields:  fields,
-			Message: "Team configuration saved",
-		})
+
+		r.auditLogger.Logf(ctx, dbtx, targets, fields, "Team configuration saved")
 		return nil
 	})
 	if err != nil {
 		return nil, err
-	}
-
-	for _, entry := range auditLogEntries {
-		r.auditLogger.Logf(ctx, entry.Targets, entry.Fields, entry.Message)
 	}
 
 	r.reconcileTeam(ctx, correlationID, team.Slug)
@@ -168,7 +160,6 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, slug *slug.S
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	auditLogEntries := make([]auditlogger.Entry, 0)
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
 		members, err := dbtx.GetTeamMembers(ctx, team.Slug)
 		if err != nil {
@@ -204,20 +195,13 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, slug *slug.S
 				CorrelationID: correlationID,
 				Actor:         actor,
 			}
-			auditLogEntries = append(auditLogEntries, auditlogger.Entry{
-				Targets: targets,
-				Fields:  fields,
-				Message: fmt.Sprintf("Removed user: %q", member.Email),
-			})
+			r.auditLogger.Logf(ctx, dbtx, targets, fields, "Removed user: %q", member.Email)
 		}
 		return nil
 	})
+
 	if err != nil {
 		return nil, err
-	}
-
-	for _, entry := range auditLogEntries {
-		r.auditLogger.Logf(ctx, entry.Targets, entry.Fields, entry.Message)
 	}
 
 	r.reconcileTeam(ctx, correlationID, team.Slug)
@@ -243,7 +227,6 @@ func (r *mutationResolver) RemoveUserFromTeam(ctx context.Context, slug *slug.Sl
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	auditLogEntries := make([]auditlogger.Entry, 0)
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
 		members, err := dbtx.GetTeamMembers(ctx, team.Slug)
 		if err != nil {
@@ -278,19 +261,12 @@ func (r *mutationResolver) RemoveUserFromTeam(ctx context.Context, slug *slug.Sl
 			CorrelationID: correlationID,
 			Actor:         actor,
 		}
-		auditLogEntries = append(auditLogEntries, auditlogger.Entry{
-			Targets: targets,
-			Fields:  fields,
-			Message: fmt.Sprintf("Removed user: %q", member.Email),
-		})
+		r.auditLogger.Logf(ctx, dbtx, targets, fields, "Removed user: %q", member.Email)
 		return nil
 	})
+
 	if err != nil {
 		return nil, err
-	}
-
-	for _, entry := range auditLogEntries {
-		r.auditLogger.Logf(ctx, entry.Targets, entry.Fields, entry.Message)
 	}
 
 	r.reconcileTeam(ctx, correlationID, team.Slug)
@@ -324,7 +300,7 @@ func (r *mutationResolver) SynchronizeTeam(ctx context.Context, slug *slug.Slug)
 		CorrelationID: correlationID,
 		Actor:         actor,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Manually scheduled for synchronization")
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Manually scheduled for synchronization")
 
 	r.reconcileTeam(ctx, correlationID, team.Slug)
 
@@ -360,7 +336,7 @@ func (r *mutationResolver) SynchronizeAllTeams(ctx context.Context) (*model.Team
 		Actor:         actor,
 		CorrelationID: correlationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Manually scheduled for synchronization")
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Manually scheduled for synchronization")
 
 	return &model.TeamSync{
 		CorrelationID: &correlationID,
@@ -385,7 +361,6 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, slug *slug.Slug, 
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	auditLogEntries := make([]auditlogger.Entry, 0)
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
 		for _, userID := range userIds {
 			user, err := dbtx.GetUserByID(ctx, *userID)
@@ -407,20 +382,12 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, slug *slug.Slug, 
 				CorrelationID: correlationID,
 				Actor:         actor,
 			}
-			auditLogEntries = append(auditLogEntries, auditlogger.Entry{
-				Targets: targets,
-				Fields:  fields,
-				Message: fmt.Sprintf("Add team member: %q", user.Email),
-			})
+			r.auditLogger.Logf(ctx, dbtx, targets, fields, "Add team member: %q", user.Email)
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
-	}
-
-	for _, entry := range auditLogEntries {
-		r.auditLogger.Logf(ctx, entry.Targets, entry.Fields, entry.Message)
 	}
 
 	r.reconcileTeam(ctx, correlationID, team.Slug)
@@ -446,7 +413,6 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, slug *slug.Slug, u
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	auditLogEntries := make([]auditlogger.Entry, 0)
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
 		for _, userID := range userIds {
 			user, err := dbtx.GetUserByID(ctx, *userID)
@@ -468,20 +434,12 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, slug *slug.Slug, u
 				CorrelationID: correlationID,
 				Actor:         actor,
 			}
-			auditLogEntries = append(auditLogEntries, auditlogger.Entry{
-				Targets: targets,
-				Fields:  fields,
-				Message: fmt.Sprintf("Add team owner: %q", user.Email),
-			})
+			r.auditLogger.Logf(ctx, dbtx, targets, fields, "Add team owner: %q", user.Email)
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
-	}
-
-	for _, entry := range auditLogEntries {
-		r.auditLogger.Logf(ctx, entry.Targets, entry.Fields, entry.Message)
 	}
 
 	r.reconcileTeam(ctx, correlationID, team.Slug)
@@ -512,7 +470,6 @@ func (r *mutationResolver) AddTeamMember(ctx context.Context, slug *slug.Slug, m
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	auditLogEntries := make([]auditlogger.Entry, 0)
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
 		teamMember, _ := dbtx.GetTeamMember(ctx, *slug, *member.UserID)
 		if teamMember != nil {
@@ -546,10 +503,10 @@ func (r *mutationResolver) AddTeamMember(ctx context.Context, slug *slug.Slug, m
 
 		if role == sqlc.RoleNameTeamowner {
 			action = types.AuditActionGraphqlApiTeamAddOwner
-			msg = fmt.Sprintf("Add team owner: %q", user.Email)
+			msg = "Add team owner: %q"
 		} else if role == sqlc.RoleNameTeammember {
 			action = types.AuditActionGraphqlApiTeamAddMember
-			msg = fmt.Sprintf("Add team member: %q", user.Email)
+			msg = "Add team member: %q"
 		} else {
 			return fmt.Errorf("unknown role: %q", role)
 		}
@@ -559,19 +516,11 @@ func (r *mutationResolver) AddTeamMember(ctx context.Context, slug *slug.Slug, m
 			CorrelationID: correlationID,
 			Actor:         actor,
 		}
-		auditLogEntries = append(auditLogEntries, auditlogger.Entry{
-			Targets: targets,
-			Fields:  fields,
-			Message: msg,
-		})
+		r.auditLogger.Logf(ctx, dbtx, targets, fields, msg, user.Email)
 		return nil
 	})
 	if err != nil {
 		return nil, err
-	}
-
-	for _, entry := range auditLogEntries {
-		r.auditLogger.Logf(ctx, entry.Targets, entry.Fields, entry.Message)
 	}
 
 	r.reconcileTeam(ctx, correlationID, team.Slug)
@@ -626,9 +575,6 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, slug *slug.Slu
 
 		return dbtx.SetTeamMemberRole(ctx, *userID, team.Slug, desiredRole)
 	})
-	if err != nil {
-		return nil, err
-	}
 
 	targets := []auditlogger.Target{
 		auditlogger.TeamTarget(team.Slug),
@@ -640,7 +586,7 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, slug *slug.Slu
 		Actor:         actor,
 	}
 
-	r.auditLogger.Logf(ctx, targets, fields, "Assign %q to %s", desiredRole, member.Email)
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Assign %q to %s", desiredRole, member.Email)
 
 	r.reconcileTeam(ctx, correlationID, team.Slug)
 
@@ -682,7 +628,7 @@ func (r *mutationResolver) RequestTeamDeletion(ctx context.Context, slug *slug.S
 		Actor:         actor,
 		CorrelationID: correlationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Request team deletion")
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Request team deletion")
 
 	return deleteKey, nil
 }
@@ -735,7 +681,7 @@ func (r *mutationResolver) ConfirmTeamDeletion(ctx context.Context, key *uuid.UU
 		Actor:         actor,
 		CorrelationID: correlationID,
 	}
-	r.auditLogger.Logf(ctx, targets, fields, "Delete team")
+	r.auditLogger.Logf(ctx, r.database, targets, fields, "Delete team")
 
 	return &correlationID, nil
 }
