@@ -11,8 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nais/teams-backend/pkg/types"
-
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/config"
@@ -20,13 +18,13 @@ import (
 	"github.com/nais/teams-backend/pkg/gcp"
 	"github.com/nais/teams-backend/pkg/google_token_source"
 	"github.com/nais/teams-backend/pkg/helpers"
-	"github.com/nais/teams-backend/pkg/legacy/envmap"
 	"github.com/nais/teams-backend/pkg/logger"
 	"github.com/nais/teams-backend/pkg/metrics"
 	"github.com/nais/teams-backend/pkg/reconcilers"
 	google_workspace_admin_reconciler "github.com/nais/teams-backend/pkg/reconcilers/google/workspace_admin"
 	"github.com/nais/teams-backend/pkg/slug"
 	"github.com/nais/teams-backend/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/types"
 	"google.golang.org/api/cloudbilling/v1"
 	"google.golang.org/api/cloudresourcemanager/v3"
 	"google.golang.org/api/compute/v1"
@@ -42,7 +40,7 @@ const (
 	metricsSystemName                 = "gcp"
 )
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, gcpServices *GcpServices, tenantName, domain, cnrmRoleName, billingAccount string, log logger.Logger, legacyMapping []envmap.EnvironmentMapping) *googleGcpReconciler {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp.Clusters, gcpServices *GcpServices, tenantName, domain, cnrmRoleName, billingAccount string, log logger.Logger) *googleGcpReconciler {
 	return &googleGcpReconciler{
 		database:       database,
 		auditLogger:    auditLogger,
@@ -53,7 +51,6 @@ func New(database db.Database, auditLogger auditlogger.AuditLogger, clusters gcp
 		billingAccount: billingAccount,
 		tenantName:     tenantName,
 		log:            log.WithComponent(types.ComponentNameGoogleGcpProject),
-		legacyMapping:  legacyMapping,
 	}
 }
 
@@ -63,7 +60,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		return nil, err
 	}
 
-	return New(database, auditlogger.New(database, types.ComponentNameGoogleGcpProject, log), cfg.GCP.Clusters, gcpServices, cfg.TenantName, cfg.TenantDomain, cfg.GCP.CnrmRole, cfg.GCP.BillingAccount, log, cfg.LegacyNaisNamespaces), nil
+	return New(database, auditlogger.New(database, types.ComponentNameGoogleGcpProject, log), cfg.GCP.Clusters, gcpServices, cfg.TenantName, cfg.TenantDomain, cfg.GCP.CnrmRole, cfg.GCP.BillingAccount, log), nil
 }
 
 func (r *googleGcpReconciler) Name() sqlc.ReconcilerName {
@@ -370,40 +367,15 @@ func (r *googleGcpReconciler) getOrCreateProject(ctx context.Context, projectID 
 	return createdProject, nil
 }
 
-func (r *googleGcpReconciler) getLegacyMember(teamSlug slug.Slug, env string) string {
-	if r.tenantName != "nav" {
-		return ""
-	}
-	legacyClusters := map[string]string{
-		"dev-gcp":  "nais-dev-2e7b",
-		"prod-gcp": "nais-prod-020f",
-		"ci-gcp":   "nais-ci-e17f",
-	}
-	for _, m := range r.legacyMapping {
-		if m.Platinum == env && legacyClusters[m.Legacy] != "" {
-			return fmt.Sprintf("serviceAccount:%s.svc.id.goog[cnrm-system/cnrm-controller-manager-%s]", legacyClusters[m.Legacy], teamSlug)
-		}
-	}
-	return ""
-}
-
 // setProjectPermissions Make sure that the project has the necessary permissions, and don't remove permissions we don't
 // control
 func (r *googleGcpReconciler) setProjectPermissions(ctx context.Context, project *cloudresourcemanager.Project, input reconcilers.Input, groupEmail, clusterProjectID string, cnrmServiceAccount *iam.ServiceAccount, environment string) error {
 	// Set workload identity role to the CNRM service account
-	member := fmt.Sprintf("serviceAccount:%s.svc.id.goog[cnrm-system/cnrm-controller-manager-%s]", clusterProjectID, input.Team.Slug)
-	members := []string{member}
-
-	member = r.getLegacyMember(input.Team.Slug, environment)
-	if member != "" {
-		members = append(members, member)
-	}
-
 	operation, err := r.gcpServices.IamProjectsServiceAccountsService.SetIamPolicy(cnrmServiceAccount.Name, &iam.SetIamPolicyRequest{
 		Policy: &iam.Policy{
 			Bindings: []*iam.Binding{
 				{
-					Members: members,
+					Members: []string{fmt.Sprintf("serviceAccount:%s.svc.id.goog[cnrm-system/cnrm-controller-manager-%s]", clusterProjectID, input.Team.Slug)},
 					Role:    "roles/iam.workloadIdentityUser",
 				},
 			},

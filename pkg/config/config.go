@@ -1,13 +1,10 @@
 package config
 
 import (
-	"strings"
-
 	"github.com/kelseyhightower/envconfig"
 	"github.com/nais/teams-backend/pkg/dependencytrack"
 	"github.com/nais/teams-backend/pkg/fixtures"
 	"github.com/nais/teams-backend/pkg/gcp"
-	"github.com/nais/teams-backend/pkg/legacy/envmap"
 )
 
 type DependencyTrack struct {
@@ -120,9 +117,9 @@ type Config struct {
 	// GoogleManagementProjectID The ID of the NAIS management project in the tenant organization in GCP.
 	GoogleManagementProjectID string `envconfig:"TEAMS_BACKEND_GOOGLE_MANAGEMENT_PROJECT_ID"`
 
-	// Maps an external Kubernetes cluster namespace onto permissions in a specific GCP project
-	// Example: "dev-fss:dev prod-fss:prod dev-gcp:dev prod-gcp:prod"
-	LegacyNaisNamespaces []envmap.EnvironmentMapping `envconfig:"TEAMS_BACKEND_LEGACY_NAIS_NAMESPACES"`
+	// OnpremClusters a list of onprem clusters (NAV only)
+	// Example: "dev-fss,prod-fss,ci-fss"
+	OnpremClusters []string `envconfig:"TEAMS_BACKEND_ONPREM_CLUSTERS"`
 
 	// StaticServiceAccounts A JSON-encoded value describing a set of service accounts to be created when the
 	// application starts. Refer to the README for the format.
@@ -143,18 +140,10 @@ func New() (*Config, error) {
 		return nil, err
 	}
 
-	environments := make([]string, 0)
-	if strings.ToLower(cfg.TenantName) == "nav" {
-		for _, mapping := range cfg.LegacyNaisNamespaces {
-			environments = append(environments, mapping.Legacy)
-		}
-	} else {
-		for environment := range cfg.GCP.Clusters {
-			environments = append(environments, environment)
-		}
+	for environment := range cfg.GCP.Clusters {
+		cfg.Environments = append(cfg.Environments, environment)
 	}
-
-	cfg.Environments = environments
+	cfg.Environments = append(cfg.Environments, cfg.OnpremClusters...)
 
 	return cfg, nil
 }

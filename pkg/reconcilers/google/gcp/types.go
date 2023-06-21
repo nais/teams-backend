@@ -4,7 +4,6 @@ import (
 	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/db"
 	"github.com/nais/teams-backend/pkg/gcp"
-	"github.com/nais/teams-backend/pkg/legacy/envmap"
 	"github.com/nais/teams-backend/pkg/logger"
 	"google.golang.org/api/cloudbilling/v1"
 	"google.golang.org/api/cloudresourcemanager/v3"
@@ -34,5 +33,4 @@ type googleGcpReconciler struct {
 	cnrmRoleName   string
 	billingAccount string
 	log            logger.Logger
-	legacyMapping  []envmap.EnvironmentMapping
 }

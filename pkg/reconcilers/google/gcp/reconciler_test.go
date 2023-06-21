@@ -74,7 +74,7 @@ func TestReconcile(t *testing.T) {
 		gcpServices := &google_gcp_reconciler.GcpServices{}
 
 		err := google_gcp_reconciler.
-			New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log, nil).
+			New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log).
 			Reconcile(ctx, input)
 		assert.ErrorContains(t, err, "load system state")
 	})
@@ -94,7 +94,7 @@ func TestReconcile(t *testing.T) {
 		gcpServices := &google_gcp_reconciler.GcpServices{}
 
 		err := google_gcp_reconciler.
-			New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log, nil).
+			New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log).
 			Reconcile(ctx, input)
 		assert.ErrorContains(t, err, "load system state")
 	})
@@ -114,7 +114,7 @@ func TestReconcile(t *testing.T) {
 		gcpServices := &google_gcp_reconciler.GcpServices{}
 
 		err := google_gcp_reconciler.
-			New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log, nil).
+			New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log).
 			Reconcile(ctx, input)
 		assert.ErrorContains(t, err, "no Google Workspace group exists")
 	})
@@ -139,7 +139,7 @@ func TestReconcile(t *testing.T) {
 		gcpServices := &google_gcp_reconciler.GcpServices{}
 
 		err := google_gcp_reconciler.
-			New(database, auditLogger, gcp.Clusters{}, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log, nil).
+			New(database, auditLogger, gcp.Clusters{}, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log).
 			Reconcile(ctx, input)
 		assert.NoError(t, err)
 	})
@@ -427,7 +427,7 @@ func TestReconcile(t *testing.T) {
 		}
 
 		err = google_gcp_reconciler.
-			New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log, nil).
+			New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log).
 			Reconcile(ctx, input)
 		assert.NoError(t, err)
 	})
@@ -486,7 +486,7 @@ func TestDelete(t *testing.T) {
 			Once()
 
 		err = google_gcp_reconciler.
-			New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log, nil).
+			New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log).
 			Delete(ctx, teamSlug, correlationID)
 		assert.ErrorContains(t, err, "load reconciler state")
 	})
@@ -505,7 +505,7 @@ func TestDelete(t *testing.T) {
 			Once()
 
 		err = google_gcp_reconciler.
-			New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log, nil).
+			New(database, auditLogger, clusters, gcpServices, tenantName, tenantDomain, cnrmRoleName, billingAccount, log).
 			Delete(ctx, teamSlug, correlationID)
 		assert.NoError(t, err)
 	})
