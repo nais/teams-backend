@@ -1,0 +1,48 @@
+database: # mapped in fasit
+  instance:
+  name:
+  user:
+image:
+  repository: europe-north1-docker.pkg.dev/nais-io/nais/images/teams-backend
+  pullPolicy: Always
+  tag: main
+resources:
+  requests:
+    cpu: 400m
+    memory: 256Mi
+logLevel: info
+logFormat: json
+googleManagementProjectID: # mapped in fasit
+tenantDomain: # mapped in fasit
+tenantName: # mapped in fasit
+legacyNaisNamespaceMapping: # mapped in fasit
+onpremClusters: # mapped in fasit
+usersync:
+  enabled: true
+oauth:
+  clientSecret:
+  clientId:
+gitHub:
+  authEndpoint:
+  organization:
+naisNamespace:
+  azureEnabled: false
+naisDeploy:
+  endpoint: # mapped in fasit
+  deployKeyEndpoint: # mapped in fasit
+  provisionKey: # mapped in fasit
+google:
+  serviceAccountEmail: # mapped in fasit
+gcp:
+  clusters: # mapped in fasit
+  cnrmRole: # mapped in fasit
+  billingAccount: # mapped in fasit
+  workloadIdentityPoolName: # mapped in fasit
+dependencytrack:
+  instances: [] # mapped in fasit, example format: [{ endpoint: "https://service", username: "username", password: "password" }]
+
+firstRunEnableReconcilers: "google:gcp:project,google:workspace-admin,nais:namespace,nais:deploy,google:gcp:gar"
+
+ingress:
+  className: nais-ingress
+  host: # mapped in fasit

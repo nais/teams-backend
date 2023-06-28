@@ -1,0 +1,7 @@
+apiVersion: v2
+name: teams-backend
+description: Backend for managing teams on the platform
+type: application
+version: 0.0.1
+sources:
+  - https://github.com/nais/helm-charts/tree/main/charts/teams-backend

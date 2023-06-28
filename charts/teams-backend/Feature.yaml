@@ -1,0 +1,123 @@
+dependencies:
+  - allOf:
+      - loadbalancer
+      - certificates
+      - monitoring
+environmentKinds:
+  - management
+values:
+  database.instance:
+    displayName: Database instance
+    computed:
+      template: '"{{.Management.teams_database_instance}}"'
+  database.name:
+    displayName: Database name
+    computed:
+      template: '"{{.Management.teams_database_name}}"'
+  database.user:
+    displayName: Database user
+    computed:
+      template: '"{{.Management.teams_database_user}}"'
+  dependencytrack.instances:
+    displayName: DependencyTrack instances
+    computed:
+      template: |
+        [
+          {{ $tenant_name := .Tenant.Name }}
+          {{ range .Envs }}
+          {
+            "endpoint": "https://dependencytrack-{{ .name }}.{{ $tenant_name }}.cloud.nais.io",
+            "username": "console",
+            "password": "{{ .console_dependencytrack_password }}"
+          },
+          {{ end }}
+        ]
+  firstRunEnableReconcilers:
+    description: Comma separated list of reconcilers to enable on first run (empty database). Changing this after teams-backend has been deployed does nothing.
+    config:
+      type: string
+  gcp.billingAccount:
+    displayName: Billing account
+    computed:
+      template: '"{{ .Management.billing_account }}"'
+  gcp.clusters:
+    displayName: Cluster information
+    computed:
+      template: |
+        {{ if (eq .Tenant.Name "nav") }}
+        {{ filter "kind" "legacy" .Envs | environmentsAsMap "teams_folder_id,project_id" | toJSON | quote }}
+        {{ else }}
+        {{ filter "kind" "tenant" .Envs | environmentsAsMap "teams_folder_id,project_id" | toJSON | quote }}
+        {{ end }}
+  gcp.cnrmRole:
+    displayName: CNRM role string
+    computed:
+      template: '"organizations/{{ .Management.org_id }}/roles/{{ .Management.cnrm_role }}"'
+  gcp.workloadIdentityPoolName:
+    displayName: Google workload identity pool name
+    computed:
+      template: '"{{ .Management.nais_identity_pool_name }}"'
+  gitHub.authEndpoint:
+    description: The endpoint for the token service that provisions teams-backend with GitHub installation tokens for the correct tenant organization.
+    computed:
+      template: '"{{.Management.teams_github_auth_endpoint}}"'
+  gitHub.organization:
+    description: The organization slug where the github reconciler will manage teams.
+    computed:
+      template: '"{{.Management.teams_github_org}}"'
+  google.serviceAccountEmail:
+    displayName: Google service account
+    computed:
+      template: '"{{.Management.teams_google_service_account_email}}"'
+  googleManagementProjectID:
+    displayName: Google management project ID
+    computed:
+      template: '"{{.Management.project_id}}"'
+  image.tag:
+    config:
+      type: string
+  legacyNaisNamespaceMapping:
+    config:
+      type: string
+  naisDeploy.deployKeyEndpoint:
+    computed:
+      template: http://hookd/internal/api/v1/apikey
+  naisDeploy.endpoint:
+    computed:
+      template: https://deploy.{{.Tenant.Name}}.cloud.nais.io/api/v1/provision
+  naisDeploy.provisionKey:
+    computed:
+      template: '"{{.Management.hookd_provision_key}}"'
+  naisNamespace.azureEnabled:
+    displayName: Enable use of Azure groups for Kubernetes team namespaces
+    config:
+      type: bool
+  oauth.clientId:
+    displayName: Google OAuth 2.0 Client ID
+    config:
+      type: string
+  oauth.clientSecret:
+    displayName: Google OAuth 2.0 Client Secret
+    config:
+      type: string
+      secret: true
+  onpremClusters:
+    description: Comma separated list of clusters that only exists onprem
+    config:
+      type: string
+  staticServiceAccounts:
+    displayName: JSON-encoded list of static service accounts
+    computed:
+      template: '{{.Management.teams_static_service_accounts | quote}}'
+  tenantDomain:
+    displayName: Tenant domain
+    computed:
+      template: '"{{.Management.tenant_domain}}"'
+  tenantName:
+    displayName: Tenant name
+    computed:
+      template: '"{{.Tenant.Name}}"'
+  ingress.host:
+    displayName: Ingress URL
+    computed:
+      template: '"{{ subdomain . "teams" }}"'

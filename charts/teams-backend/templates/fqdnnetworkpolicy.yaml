@@ -1,0 +1,33 @@
+{{- if or .Values.gitHub.authEndpoint (gt (len .Values.dependencytrack.instances) 0) }}
+apiVersion: networking.gke.io/v1alpha3
+kind: FQDNNetworkPolicy
+metadata:
+  name: {{ include "teams-backend.fullname" . }}
+  labels:
+    {{- include "teams-backend.labels" . | nindent 4 }}
+spec:
+  egress:
+    {{- if  .Values.gitHub.authEndpoint }}
+    - ports:
+        - port: 443
+          protocol: TCP
+      to:
+        - fqdns:
+            - {{ get (urlParse .Values.gitHub.authEndpoint) "host" }}
+    {{- end }}
+    {{- with .Values.dependencytrack.instances }}
+    - ports:
+        - port: 443
+          protocol: TCP
+      to:
+        - fqdns:
+            {{- range . }}
+            - {{ get (urlParse .) "host" }}
+            {{- end }}
+    {{- end }}
+  podSelector:
+    matchLabels:
+      {{- include "teams-backend.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Egress
+{{- end }}

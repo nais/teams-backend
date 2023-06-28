@@ -1,0 +1,188 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "teams-backend.fullname" . }}
+  labels:
+    {{- include "teams-backend.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "teams-backend.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "teams-backend.selectorLabels" . | nindent 8 }}
+      annotations:
+        kubectl.kubernetes.io/default-container: {{ .Chart.Name }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "teams-backend.fullname" . }}
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: cloud-sql-proxy
+          image: gcr.io/cloudsql-docker/gce-proxy:1.28.0 # make sure the use the latest version
+          command:
+            - "/cloud_sql_proxy"
+            - "-log_debug_stdout"
+            - "-instances={{ .Values.database.instance }}=tcp:5432"
+            - "-enable_iam_login"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "0.22"
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            - secretRef:
+                name: {{ include "teams-backend.fullname" . }}
+                optional: true
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          env:
+            # Top level
+            - name: TEAMS_BACKEND_TENANT_NAME
+              value: "{{ .Values.tenantName }}"
+            - name: TEAMS_BACKEND_TENANT_DOMAIN
+              value: "{{ .Values.tenantDomain }}"
+            - name: TEAMS_BACKEND_FRONTEND_URL
+              value: "https://{{ .Values.ingress.host }}"
+            - name: TEAMS_BACKEND_DATABASE_URL
+              value: "postgres://{{ .Values.database.user }}@127.0.0.1:5432/{{ .Values.database.name }}?sslmode=disable"
+            - name: TEAMS_BACKEND_LISTEN_ADDRESS
+              value: "0.0.0.0:3000"
+            - name: TEAMS_BACKEND_LOG_LEVEL
+              value: "{{ .Values.logLevel }}"
+            - name: TEAMS_BACKEND_LOG_FORMAT
+              value: "{{ .Values.logFormat }}"
+            - name: TEAMS_BACKEND_USERSYNC_ENABLED
+              value: "{{ .Values.usersync.enabled }}"
+            # GitHub reconciler
+            - name: TEAMS_BACKEND_GITHUB_AUTH_ENDPOINT
+              value: "{{ .Values.gitHub.authEndpoint }}"
+            - name: TEAMS_BACKEND_GITHUB_ORG
+              value: "{{ .Values.gitHub.organization }}"
+            # OAuth
+            - name: TEAMS_BACKEND_OAUTH_CLIENT_ID
+              value: "{{ .Values.oauth.clientId }}"
+            - name: TEAMS_BACKEND_OAUTH_REDIRECT_URL
+              value: "https://{{ .Values.ingress.host }}/oauth2/callback"
+            # GCP
+            - name: TEAMS_BACKEND_GCP_CLUSTERS
+              value: {{ .Values.gcp.clusters | quote }}
+            - name: TEAMS_BACKEND_GCP_CNRM_ROLE
+              value: "{{ .Values.gcp.cnrmRole }}"
+            - name: TEAMS_BACKEND_GCP_BILLING_ACCOUNT
+              value: "{{ .Values.gcp.billingAccount }}"
+            - name: TEAMS_BACKEND_GCP_WORKLOAD_IDENTITY_POOL_NAME
+              value: {{ .Values.gcp.workloadIdentityPoolName | quote }}
+            # Nais Namespaces
+            - name: TEAMS_BACKEND_LEGACY_NAIS_NAMESPACES
+              value: {{ .Values.legacyNaisNamespaceMapping | quote }}
+            - name: TEAMS_BACKEND_ONPREM_CLUSTERS
+              value: {{ .Values.onpremClusters | quote }}
+            - name: TEAMS_BACKEND_NAIS_NAMESPACE_AZURE_ENABLED
+              value: "{{ .Values.naisNamespace.azureEnabled }}"
+            - name: TEAMS_BACKEND_GOOGLE_MANAGEMENT_PROJECT_ID
+              value: "{{ .Values.googleManagementProjectID }}"
+            - name: TEAMS_BACKEND_NAIS_DEPLOY_ENDPOINT
+              value: {{ .Values.naisDeploy.endpoint | quote }}
+            - name: TEAMS_BACKEND_NAIS_DEPLOY_DEPLOY_KEY_ENDPOINT
+              value: {{ .Values.naisDeploy.deployKeyEndpoint | quote }}
+            - name: TEAMS_BACKEND_RECONCILE_RETRY_INTERVAL
+              value: {{ .Values.reconcileRetryInterval | quote }}
+            - name: TEAMS_BACKEND_FIRST_RUN_ENABLE_RECONCILERS
+              value: {{ .Values.firstRunEnableReconcilers | quote }}
+            # Top level
+            - name: CONSOLE_TENANT_NAME
+              value: "{{ .Values.tenantName }}"
+            - name: CONSOLE_TENANT_DOMAIN
+              value: "{{ .Values.tenantDomain }}"
+            - name: CONSOLE_FRONTEND_URL
+              value: "https://{{ .Values.ingress.host }}"
+            - name: CONSOLE_DATABASE_URL
+              value: "postgres://{{ .Values.database.user }}@127.0.0.1:5432/{{ .Values.database.name }}?sslmode=disable"
+            - name: CONSOLE_LISTEN_ADDRESS
+              value: "0.0.0.0:3000"
+            - name: CONSOLE_LOG_LEVEL
+              value: "{{ .Values.logLevel }}"
+            - name: CONSOLE_LOG_FORMAT
+              value: "{{ .Values.logFormat }}"
+            - name: CONSOLE_USERSYNC_ENABLED
+              value: "{{ .Values.usersync.enabled }}"
+            # GitHub reconciler
+            - name: CONSOLE_GITHUB_AUTH_ENDPOINT
+              value: "{{ .Values.gitHub.authEndpoint }}"
+            - name: CONSOLE_GITHUB_ORG
+              value: "{{ .Values.gitHub.organization }}"
+            # OAuth
+            - name: CONSOLE_OAUTH_CLIENT_ID
+              value: "{{ .Values.oauth.clientId }}"
+            - name: CONSOLE_OAUTH_REDIRECT_URL
+              value: "https://{{ .Values.ingress.host }}/oauth2/callback"
+            # GCP
+            - name: CONSOLE_GCP_CLUSTERS
+              value: {{ .Values.gcp.clusters | quote }}
+            - name: CONSOLE_GCP_CNRM_ROLE
+              value: "{{ .Values.gcp.cnrmRole }}"
+            - name: CONSOLE_GCP_BILLING_ACCOUNT
+              value: "{{ .Values.gcp.billingAccount }}"
+            - name: CONSOLE_GCP_WORKLOAD_IDENTITY_POOL_NAME
+              value: {{ .Values.gcp.workloadIdentityPoolName | quote }}
+            # Nais Namespaces
+            - name: CONSOLE_LEGACY_NAIS_NAMESPACES
+              value: {{ .Values.legacyNaisNamespaceMapping | quote }}
+            - name: CONSOLE_NAIS_NAMESPACE_AZURE_ENABLED
+              value: "{{ .Values.naisNamespace.azureEnabled }}"
+            - name: CONSOLE_GOOGLE_MANAGEMENT_PROJECT_ID
+              value: "{{ .Values.googleManagementProjectID }}"
+            - name: CONSOLE_NAIS_DEPLOY_ENDPOINT
+              value: {{ .Values.naisDeploy.endpoint | quote }}
+            - name: CONSOLE_NAIS_DEPLOY_DEPLOY_KEY_ENDPOINT
+              value: {{ .Values.naisDeploy.deployKeyEndpoint | quote }}
+            - name: CONSOLE_RECONCILE_RETRY_INTERVAL
+              value: {{ .Values.reconcileRetryInterval | quote }}
+            - name: CONSOLE_FIRST_RUN_ENABLE_RECONCILERS
+              value: {{ .Values.firstRunEnableReconcilers | quote }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          volumeMounts:
+            - mountPath: /tmp
+              name: writable-tmp
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: writable-tmp
+          emptyDir: {}

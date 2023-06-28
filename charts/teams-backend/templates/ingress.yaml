@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "teams-backend.fullname" . }}
+  labels:
+    {{- include "teams-backend.labels" . | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: /oauth2
+            backend:
+              service:
+                name: {{ include "teams-backend.fullname" . }}
+                port:
+                  number: 8080
+            pathType: ImplementationSpecific
+          - path: /query
+            backend:
+              service:
+                name: {{ include "teams-backend.fullname" . }}
+                port:
+                  number: 8080
+            pathType: ImplementationSpecific
