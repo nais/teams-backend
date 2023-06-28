@@ -5,7 +5,6 @@ on:
       - main
     paths-ignore:
       - "*.md"
-
 env:
   GOOGLE_REGISTRY: "europe-north1-docker.pkg.dev"
   FEATURE_NAME: "teams-backend"
@@ -13,7 +12,6 @@ env:
   RUNNER_IMG: "cgr.dev/chainguard/static"
   BASEIMG_IDENTITY: "https://github.com/chainguard-images/images/.github/workflows/release.yaml@refs/heads/main"
   BASEIMG_ISSUER: "https://token.actions.githubusercontent.com"
-
 jobs:
   build_and_push:
     runs-on: ubuntu-22.04
@@ -22,19 +20,16 @@ jobs:
       id-token: "write"
     steps:
       - uses: actions/checkout@v3 # ratchet:exclude
-      - uses: azure/setup-helm@v3
+      - uses: azure/setup-helm@5119fcb9089d432beecbf79bb2c7915207344b78 # ratchet:azure/setup-helm@v3
         with:
           version: "v3.11.1"
       - uses: sigstore/cosign-installer@9e9de2292db7abb3f51b7f4808d98f0d347a8919 # ratchet:sigstore/cosign-installer@main
         with:
           cosign-release: 'v2.0.0'
-
       - name: Verify builder image
         run: cosign verify --certificate-identity ${{ env.BASEIMG_IDENTITY }} --certificate-oidc-issuer ${{ env.BASEIMG_ISSUER }} ${{ env.BUILDER_IMG }}
-
       - name: Verify runner image
         run: cosign verify --certificate-identity ${{ env.BASEIMG_IDENTITY }} --certificate-oidc-issuer ${{ env.BASEIMG_ISSUER }} ${{ env.RUNNER_IMG }}
-
       - uses: nais/platform-build-push-sign@main # ratchet:exclude
         id: build_push_sign
         with:
@@ -42,7 +37,6 @@ jobs:
           google_service_account: gh-${{ env.FEATURE_NAME }}
           push: ${{ github.actor != 'dependabot[bot]' && github.ref == 'refs/heads/main' }}
           workload_identity_provider: ${{ secrets.NAIS_IO_WORKLOAD_IDENTITY_PROVIDER }}
-
       - name: Package chart
         id: package_chart
         env:
@@ -65,7 +59,6 @@ jobs:
           echo "name=$name" >> $GITHUB_OUTPUT
           echo "version=$chart_version" >> $GITHUB_OUTPUT
           echo "archive=$name-$chart_version.tgz" >> $GITHUB_OUTPUT
-
       - id: "auth"
         if: github.ref == 'refs/heads/main'
         name: "Authenticate to Google Cloud"
@@ -74,25 +67,20 @@ jobs:
           workload_identity_provider: ${{ secrets.NAIS_IO_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: "gh-${{ env.FEATURE_NAME }}@nais-io.iam.gserviceaccount.com"
           token_format: "access_token"
-
       - name: "Log in to Google Artifact Registry"
         if: github.ref == 'refs/heads/main'
         run: |-
           echo '${{ steps.auth.outputs.access_token }}' | docker login -u oauth2accesstoken --password-stdin https://${{ env.GOOGLE_REGISTRY }}
-
       - name: Push Chart
         if: github.ref == 'refs/heads/main'
         run: |-
           chart="${{ steps.package_chart.outputs.archive }}"
           echo "Pushing: $chart"
           helm push "$chart" oci://${{ env.GOOGLE_REGISTRY }}/nais-io/nais/feature
-
     outputs:
       chart_name: ${{ steps.package_chart.outputs.name }}
       chart_version: ${{ steps.package_chart.outputs.version }}
       chart_archive: ${{ steps.package_chart.outputs.archive }}
-
-
   rollout:
     runs-on: fasit-deploy
     permissions:
