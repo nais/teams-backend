@@ -22,7 +22,7 @@ spec:
       to:
         - fqdns:
             {{- range . }}
-            - {{ get (urlParse .) "host" }}
+            - {{ get (urlParse .endpoint) "host" }}
             {{- end }}
     {{- end }}
   podSelector:
