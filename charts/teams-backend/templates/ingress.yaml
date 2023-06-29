@@ -15,12 +15,12 @@ spec:
               service:
                 name: {{ include "teams-backend.fullname" . }}
                 port:
-                  number: 8080
+                  name: http
             pathType: ImplementationSpecific
           - path: /query
             backend:
               service:
                 name: {{ include "teams-backend.fullname" . }}
                 port:
-                  number: 8080
+                  name: http
             pathType: ImplementationSpecific
