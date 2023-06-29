@@ -19,6 +19,15 @@ extend type Query {
         "The key to get."
         key: UUID!
     ): TeamDeleteKey! @auth
+
+    "Who posesses permission X in a repo?"
+    teamsWithPermissionInRepo(
+        "Name of the repository, with the org prefix."
+        reponame: String
+
+        "Name of permission"
+        permissionName: String
+    ): [Team]! @auth
 }
 
 extend type Mutation {

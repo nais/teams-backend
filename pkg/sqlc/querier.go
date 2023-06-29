@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgtype"
 	"github.com/nais/teams-backend/pkg/slug"
 )
 
@@ -60,6 +61,7 @@ type Querier interface {
 	GetTeamMembersForReconciler(ctx context.Context, arg GetTeamMembersForReconcilerParams) ([]*User, error)
 	GetTeamReconcilerErrors(ctx context.Context, teamSlug slug.Slug) ([]*ReconcilerError, error)
 	GetTeams(ctx context.Context) ([]*Team, error)
+	GetTeamsWithPermissionInRepo(ctx context.Context, state pgtype.JSONB) ([]*Team, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
 	GetUserByExternalID(ctx context.Context, externalID string) (*User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (*User, error)
