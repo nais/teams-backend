@@ -29,15 +29,17 @@ func (q *Queries) GetReconcilerStateForTeam(ctx context.Context, arg GetReconcil
 	return &i, err
 }
 
-const getTeamsWithPermissionInRepo = `-- name: GetTeamsWithPermissionInRepo :many
-select t.slug, t.purpose, t.last_successful_sync, t.slack_channel from teams t
-LEFT JOIN reconciler_states rs ON rs.team_slug = t.slug
-    WHERE rs.reconciler = 'github:team'
+const getTeamsWithPermissionInGitHubRepo = `-- name: GetTeamsWithPermissionInGitHubRepo :many
+SELECT t.slug, t.purpose, t.last_successful_sync, t.slack_channel from teams t
+JOIN reconciler_states rs ON rs.team_slug = t.slug
+WHERE
+    rs.reconciler = 'github:team'
     AND rs.state @> $1
+ORDER BY t.slug ASC
 `
 
-func (q *Queries) GetTeamsWithPermissionInRepo(ctx context.Context, state pgtype.JSONB) ([]*Team, error) {
-	rows, err := q.db.Query(ctx, getTeamsWithPermissionInRepo, state)
+func (q *Queries) GetTeamsWithPermissionInGitHubRepo(ctx context.Context, state pgtype.JSONB) ([]*Team, error) {
+	rows, err := q.db.Query(ctx, getTeamsWithPermissionInGitHubRepo, state)
 	if err != nil {
 		return nil, err
 	}

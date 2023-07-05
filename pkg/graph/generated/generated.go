@@ -124,18 +124,18 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		DeployKey                 func(childComplexity int, slug *slug.Slug) int
-		Me                        func(childComplexity int) int
-		Reconcilers               func(childComplexity int) int
-		Roles                     func(childComplexity int) int
-		Team                      func(childComplexity int, slug *slug.Slug) int
-		TeamDeleteKey             func(childComplexity int, key *uuid.UUID) int
-		Teams                     func(childComplexity int) int
-		TeamsWithPermissionInRepo func(childComplexity int, reponame *string, permissionName *string) int
-		User                      func(childComplexity int, id *uuid.UUID) int
-		UserByEmail               func(childComplexity int, email string) int
-		UserSync                  func(childComplexity int) int
-		Users                     func(childComplexity int) int
+		DeployKey                       func(childComplexity int, slug *slug.Slug) int
+		Me                              func(childComplexity int) int
+		Reconcilers                     func(childComplexity int) int
+		Roles                           func(childComplexity int) int
+		Team                            func(childComplexity int, slug *slug.Slug) int
+		TeamDeleteKey                   func(childComplexity int, key *uuid.UUID) int
+		Teams                           func(childComplexity int) int
+		TeamsWithPermissionInGitHubRepo func(childComplexity int, repoName *string, permissionName *string) int
+		User                            func(childComplexity int, id *uuid.UUID) int
+		UserByEmail                     func(childComplexity int, email string) int
+		UserSync                        func(childComplexity int) int
+		Users                           func(childComplexity int) int
 	}
 
 	Reconciler struct {
@@ -290,7 +290,7 @@ type QueryResolver interface {
 	Team(ctx context.Context, slug *slug.Slug) (*db.Team, error)
 	DeployKey(ctx context.Context, slug *slug.Slug) (string, error)
 	TeamDeleteKey(ctx context.Context, key *uuid.UUID) (*db.TeamDeleteKey, error)
-	TeamsWithPermissionInRepo(ctx context.Context, reponame *string, permissionName *string) ([]*db.Team, error)
+	TeamsWithPermissionInGitHubRepo(ctx context.Context, repoName *string, permissionName *string) ([]*db.Team, error)
 	Users(ctx context.Context) ([]*db.User, error)
 	User(ctx context.Context, id *uuid.UUID) (*db.User, error)
 	UserByEmail(ctx context.Context, email string) (*db.User, error)
@@ -820,17 +820,17 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Teams(childComplexity), true
 
-	case "Query.teamsWithPermissionInRepo":
-		if e.complexity.Query.TeamsWithPermissionInRepo == nil {
+	case "Query.teamsWithPermissionInGitHubRepo":
+		if e.complexity.Query.TeamsWithPermissionInGitHubRepo == nil {
 			break
 		}
 
-		args, err := ec.field_Query_teamsWithPermissionInRepo_args(context.TODO(), rawArgs)
+		args, err := ec.field_Query_teamsWithPermissionInGitHubRepo_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Query.TeamsWithPermissionInRepo(childComplexity, args["reponame"].(*string), args["permissionName"].(*string)), true
+		return e.complexity.Query.TeamsWithPermissionInGitHubRepo(childComplexity, args["repoName"].(*string), args["permissionName"].(*string)), true
 
 	case "Query.user":
 		if e.complexity.Query.User == nil {
@@ -1745,12 +1745,12 @@ type ServiceAccount {
         key: UUID!
     ): TeamDeleteKey! @auth
 
-    "Who posesses permission X in a repo?"
-    teamsWithPermissionInRepo(
-        "Name of the repository, with the org prefix."
-        reponame: String
+    "Get a list of teams with a specific permission in a GitHub repository."
+    teamsWithPermissionInGitHubRepo(
+        "Name of the repository, with the org prefix, for instance 'org/repo'."
+        repoName: String
 
-        "Name of permission"
+        "Name of the permission, for instance 'push'."
         permissionName: String
     ): [Team]! @auth
 }
@@ -2808,18 +2808,18 @@ func (ec *executionContext) field_Query_team_args(ctx context.Context, rawArgs m
 	return args, nil
 }
 
-func (ec *executionContext) field_Query_teamsWithPermissionInRepo_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Query_teamsWithPermissionInGitHubRepo_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 *string
-	if tmp, ok := rawArgs["reponame"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("reponame"))
+	if tmp, ok := rawArgs["repoName"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("repoName"))
 		arg0, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["reponame"] = arg0
+	args["repoName"] = arg0
 	var arg1 *string
 	if tmp, ok := rawArgs["permissionName"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("permissionName"))
@@ -6406,8 +6406,8 @@ func (ec *executionContext) fieldContext_Query_teamDeleteKey(ctx context.Context
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_teamsWithPermissionInRepo(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_teamsWithPermissionInRepo(ctx, field)
+func (ec *executionContext) _Query_teamsWithPermissionInGitHubRepo(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_teamsWithPermissionInGitHubRepo(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -6421,7 +6421,7 @@ func (ec *executionContext) _Query_teamsWithPermissionInRepo(ctx context.Context
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().TeamsWithPermissionInRepo(rctx, fc.Args["reponame"].(*string), fc.Args["permissionName"].(*string))
+			return ec.resolvers.Query().TeamsWithPermissionInGitHubRepo(rctx, fc.Args["repoName"].(*string), fc.Args["permissionName"].(*string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -6457,7 +6457,7 @@ func (ec *executionContext) _Query_teamsWithPermissionInRepo(ctx context.Context
 	return ec.marshalNTeam2ᚕᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋdbᚐTeam(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Query_teamsWithPermissionInRepo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_teamsWithPermissionInGitHubRepo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -6498,7 +6498,7 @@ func (ec *executionContext) fieldContext_Query_teamsWithPermissionInRepo(ctx con
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_teamsWithPermissionInRepo_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Query_teamsWithPermissionInGitHubRepo_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -13011,7 +13011,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			out.Concurrently(i, func() graphql.Marshaler {
 				return rrm(innerCtx)
 			})
-		case "teamsWithPermissionInRepo":
+		case "teamsWithPermissionInGitHubRepo":
 			field := field
 
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
@@ -13020,7 +13020,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query_teamsWithPermissionInRepo(ctx, field)
+				res = ec._Query_teamsWithPermissionInGitHubRepo(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}

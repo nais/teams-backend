@@ -806,17 +806,19 @@ func (r *queryResolver) TeamDeleteKey(ctx context.Context, key *uuid.UUID) (*db.
 	return deleteKey, nil
 }
 
-// TeamsWithPermissionInRepo is the resolver for the teamsWithPermissionInRepo field.
-func (r *queryResolver) TeamsWithPermissionInRepo(ctx context.Context, reponame *string, permissionName *string) ([]*db.Team, error) {
+// TeamsWithPermissionInGitHubRepo is the resolver for the teamsWithPermissionInGitHubRepo field.
+func (r *queryResolver) TeamsWithPermissionInGitHubRepo(ctx context.Context, repoName *string, permissionName *string) ([]*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationTeamsList)
 	if err != nil {
 		return nil, err
 	}
-	teams, err := r.database.GetTeamsWithPermissionInRepo(ctx, *reponame, *permissionName)
+
+	teams, err := r.database.GetTeamsWithPermissionInGitHubRepo(ctx, *repoName, *permissionName)
 	if err != nil {
 		return nil, err
 	}
+
 	return teams, nil
 }
 
@@ -1074,13 +1076,3 @@ type (
 	teamDeleteKeyResolver        struct{ *Resolver }
 	teamMemberReconcilerResolver struct{ *Resolver }
 )
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//     it when you're done.
-//   - You have helper methods in this file. Move them out to keep these resolver files clean.
-func (r *queryResolver) TeamsWithAdminInRepo(ctx context.Context, reponame *string) ([]*db.Team, error) {
-	panic(fmt.Errorf("xlemented: TeamsWithAdminInRepo - teamsWithAdminInRepo"))
-}

@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgtype"
@@ -213,21 +212,33 @@ func (d *database) GetTeamMemberOptOuts(ctx context.Context, userID uuid.UUID, t
 	})
 }
 
-func (d *database) GetTeamsWithPermissionInRepo(ctx context.Context, reponame string, permission string) ([]*Team, error) {
+func (d *database) GetTeamsWithPermissionInGitHubRepo(ctx context.Context, repoName, permission string) ([]*Team, error) {
 	var state pgtype.JSONB
-	jsonString := fmt.Sprintf("{\"repositories\":[{\"name\":\"%s\", \"permissions\": [{\"name\": \"%s\", \"granted\": true}]}]}", reponame, permission)
-	err := state.UnmarshalJSON([]byte(jsonString))
-	if err != nil {
-		return nil, err
-	}
-	dbTeams, err := d.querier.GetTeamsWithPermissionInRepo(ctx, state)
+	err := state.Set(map[string]interface{}{
+		"repositories": []map[string]interface{}{
+			{
+				"name": repoName,
+				"permissions": []map[string]interface{}{
+					{
+						"name":    permission,
+						"granted": true,
+					},
+				},
+			},
+		},
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	var teams []*Team
-	for _, dbTeam := range dbTeams {
-		teams = append(teams, &Team{dbTeam})
+	rows, err := d.querier.GetTeamsWithPermissionInGitHubRepo(ctx, state)
+	if err != nil {
+		return nil, err
+	}
+
+	teams := make([]*Team, 0)
+	for _, row := range rows {
+		teams = append(teams, &Team{row})
 	}
 
 	return teams, nil

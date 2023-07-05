@@ -20,12 +20,12 @@ extend type Query {
         key: UUID!
     ): TeamDeleteKey! @auth
 
-    "Who posesses permission X in a repo?"
-    teamsWithPermissionInRepo(
-        "Name of the repository, with the org prefix."
-        reponame: String
+    "Get a list of teams with a specific permission in a GitHub repository."
+    teamsWithPermissionInGitHubRepo(
+        "Name of the repository, with the org prefix, for instance 'org/repo'."
+        repoName: String
 
-        "Name of permission"
+        "Name of the permission, for instance 'push'."
         permissionName: String
     ): [Team]! @auth
 }
