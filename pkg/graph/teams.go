@@ -806,6 +806,22 @@ func (r *queryResolver) TeamDeleteKey(ctx context.Context, key *uuid.UUID) (*db.
 	return deleteKey, nil
 }
 
+// TeamsWithPermissionInGitHubRepo is the resolver for the teamsWithPermissionInGitHubRepo field.
+func (r *queryResolver) TeamsWithPermissionInGitHubRepo(ctx context.Context, repoName *string, permissionName *string) ([]*db.Team, error) {
+	actor := authz.ActorFromContext(ctx)
+	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationTeamsList)
+	if err != nil {
+		return nil, err
+	}
+
+	teams, err := r.database.GetTeamsWithPermissionInGitHubRepo(ctx, *repoName, *permissionName)
+	if err != nil {
+		return nil, err
+	}
+
+	return teams, nil
+}
+
 // AuditLogs is the resolver for the auditLogs field.
 func (r *teamResolver) AuditLogs(ctx context.Context, obj *db.Team) ([]*db.AuditLog, error) {
 	actor := authz.ActorFromContext(ctx)

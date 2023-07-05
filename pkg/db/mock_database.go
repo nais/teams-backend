@@ -975,6 +975,29 @@ func (_m *MockDatabase) GetTeams(ctx context.Context) ([]*Team, error) {
 	return r0, r1
 }
 
+// GetTeamsWithPermissionInGitHubRepo provides a mock function with given fields: ctx, repoName, permission
+func (_m *MockDatabase) GetTeamsWithPermissionInGitHubRepo(ctx context.Context, repoName string, permission string) ([]*Team, error) {
+	ret := _m.Called(ctx, repoName, permission)
+
+	var r0 []*Team
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) []*Team); ok {
+		r0 = rf(ctx, repoName, permission)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*Team)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, repoName, permission)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetUserByEmail provides a mock function with given fields: ctx, email
 func (_m *MockDatabase) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	ret := _m.Called(ctx, email)

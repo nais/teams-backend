@@ -173,6 +173,7 @@ type Database interface {
 	RemoveReconcilerOptOut(ctx context.Context, userID *uuid.UUID, teamSlug *slug.Slug, reconcilerName sqlc.ReconcilerName) error
 	GetTeamMembersForReconciler(ctx context.Context, teamSlug slug.Slug, reconcilerName sqlc.ReconcilerName) ([]*User, error)
 	GetTeamMemberOptOuts(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug) ([]*sqlc.GetTeamMemberOptOutsRow, error)
+	GetTeamsWithPermissionInGitHubRepo(ctx context.Context, repoName, permission string) ([]*Team, error)
 }
 
 func (u User) GetID() uuid.UUID {

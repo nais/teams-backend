@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/nais/teams-backend/pkg/types"
-
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/auditlogger"
@@ -17,6 +15,7 @@ import (
 	"github.com/nais/teams-backend/pkg/slug"
 	"github.com/nais/teams-backend/pkg/sqlc"
 	"github.com/nais/teams-backend/pkg/teamsync"
+	"github.com/nais/teams-backend/pkg/types"
 	"github.com/nais/teams-backend/pkg/usersync"
 )
 

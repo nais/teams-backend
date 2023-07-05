@@ -29,6 +29,40 @@ func (q *Queries) GetReconcilerStateForTeam(ctx context.Context, arg GetReconcil
 	return &i, err
 }
 
+const getTeamsWithPermissionInGitHubRepo = `-- name: GetTeamsWithPermissionInGitHubRepo :many
+SELECT t.slug, t.purpose, t.last_successful_sync, t.slack_channel FROM teams t
+JOIN reconciler_states rs ON rs.team_slug = t.slug
+WHERE
+    rs.reconciler = 'github:team'
+    AND rs.state @> $1
+ORDER BY t.slug ASC
+`
+
+func (q *Queries) GetTeamsWithPermissionInGitHubRepo(ctx context.Context, state pgtype.JSONB) ([]*Team, error) {
+	rows, err := q.db.Query(ctx, getTeamsWithPermissionInGitHubRepo, state)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*Team
+	for rows.Next() {
+		var i Team
+		if err := rows.Scan(
+			&i.Slug,
+			&i.Purpose,
+			&i.LastSuccessfulSync,
+			&i.SlackChannel,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const removeReconcilerStateForTeam = `-- name: RemoveReconcilerStateForTeam :exec
 DELETE FROM reconciler_states
 WHERE reconciler = $1 AND team_slug = $2

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgtype"
 	"github.com/nais/teams-backend/pkg/slug"
 	"github.com/nais/teams-backend/pkg/sqlc"
 )
@@ -209,4 +210,36 @@ func (d *database) GetTeamMemberOptOuts(ctx context.Context, userID uuid.UUID, t
 		UserID:   userID,
 		TeamSlug: teamSlug,
 	})
+}
+
+func (d *database) GetTeamsWithPermissionInGitHubRepo(ctx context.Context, repoName, permission string) ([]*Team, error) {
+	var state pgtype.JSONB
+	err := state.Set(map[string]interface{}{
+		"repositories": []map[string]interface{}{
+			{
+				"name": repoName,
+				"permissions": []map[string]interface{}{
+					{
+						"name":    permission,
+						"granted": true,
+					},
+				},
+			},
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := d.querier.GetTeamsWithPermissionInGitHubRepo(ctx, state)
+	if err != nil {
+		return nil, err
+	}
+
+	teams := make([]*Team, 0)
+	for _, row := range rows {
+		teams = append(teams, &Team{row})
+	}
+
+	return teams, nil
 }
