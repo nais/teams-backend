@@ -30,7 +30,7 @@ func (q *Queries) GetReconcilerStateForTeam(ctx context.Context, arg GetReconcil
 }
 
 const getTeamsWithPermissionInGitHubRepo = `-- name: GetTeamsWithPermissionInGitHubRepo :many
-SELECT t.slug, t.purpose, t.last_successful_sync, t.slack_channel from teams t
+SELECT t.slug, t.purpose, t.last_successful_sync, t.slack_channel FROM teams t
 JOIN reconciler_states rs ON rs.team_slug = t.slug
 WHERE
     rs.reconciler = 'github:team'

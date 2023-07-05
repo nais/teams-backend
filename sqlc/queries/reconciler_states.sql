@@ -3,7 +3,7 @@ SELECT * FROM reconciler_states
 WHERE reconciler = $1 AND team_slug = $2;
 
 -- name: GetTeamsWithPermissionInGitHubRepo :many
-SELECT t.* from teams t
+SELECT t.* FROM teams t
 JOIN reconciler_states rs ON rs.team_slug = t.slug
 WHERE
     rs.reconciler = 'github:team'
