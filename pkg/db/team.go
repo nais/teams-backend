@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgtype"
 	"github.com/nais/teams-backend/pkg/slug"
