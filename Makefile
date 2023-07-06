@@ -2,6 +2,8 @@ BUILDTIME = $(shell date "+%s")
 DATE = $(shell date "+%Y-%m-%d")
 LAST_COMMIT = $(shell git rev-parse --short HEAD)
 LDFLAGS := -X github.com/nais/teams-backend/pkg/version.Revision=$(LAST_COMMIT) -X github.com/nais/teams-backend/pkg/version.Date=$(DATE) -X github.com/nais/teams-backend/pkg/version.BuildUnixTime=$(BUILDTIME)
+TEST_POSTGRES_CONTAINER_NAME = teams-backend-postgres-integration-test
+TEST_POSTGRES_CONTAINER_PORT = 5666
 
 .PHONY: static teams-backend test generate
 
@@ -15,6 +17,15 @@ local:
 
 test:
 	go test ./...
+
+stop-integration-test-db:
+	docker stop $(TEST_POSTGRES_CONTAINER_NAME) || true && docker rm $(TEST_POSTGRES_CONTAINER_NAME) || true
+
+start-integration-test-db: stop-integration-test-db
+	docker run -d -e POSTGRES_PASSWORD=postgres --name $(TEST_POSTGRES_CONTAINER_NAME) -p $(TEST_POSTGRES_CONTAINER_PORT):5432 postgres:14-alpine
+
+integration-test: start-integration-test-db
+	go test ./... -tags=db_integration_test
 
 fmt:
 	go run mvdan.cc/gofumpt -w ./
