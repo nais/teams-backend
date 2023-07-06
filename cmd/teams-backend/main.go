@@ -71,7 +71,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 	bt, _ := version.BuildTime()
 	log.Infof("teams-backend version %s built on %s", version.Version(), bt)
 
-	database, err := db.New(ctx, cfg.DatabaseURL, log)
+	database, err := db.New(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return err
 	}

@@ -10,7 +10,6 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/nais/teams-backend/pkg/logger"
 	"github.com/nais/teams-backend/pkg/metrics"
 	"github.com/nais/teams-backend/pkg/sqlc"
 	"github.com/nais/teams-backend/sqlc/schemas"
@@ -18,7 +17,7 @@ import (
 
 const databaseConnectRetries = 5
 
-func New(ctx context.Context, dbUrl string, log logger.Logger) (Database, error) {
+func New(ctx context.Context, dbUrl string) (Database, error) {
 	config, err := pgxpool.ParseConfig(dbUrl)
 	if err != nil {
 		return nil, err
@@ -31,7 +30,6 @@ func New(ctx context.Context, dbUrl string, log logger.Logger) (Database, error)
 			break
 		}
 
-		log.Warnf("unable to connect to the database: %s", err)
 		time.Sleep(time.Second * time.Duration(i+1))
 	}
 

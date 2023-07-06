@@ -84,7 +84,7 @@ func run(cfg *seedConfig, log logger.Logger) error {
 	}
 	numLastNames := len(lastNames)
 
-	database, err := db.New(ctx, cfg.DatabaseURL, log)
+	database, err := db.New(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return err
 	}
