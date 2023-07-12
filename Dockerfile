@@ -1,4 +1,4 @@
-FROM go:1.20 as builder
+FROM golang:1.20 as builder
 
 ENV GOOS=linux
 WORKDIR /src
