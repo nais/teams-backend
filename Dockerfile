@@ -1,4 +1,4 @@
-FROM cgr.dev/chainguard/go:1.20 as builder
+FROM go:1.20 as builder
 
 ENV GOOS=linux
 WORKDIR /src
