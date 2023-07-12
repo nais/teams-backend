@@ -67,6 +67,7 @@ var roles = map[sqlc.RoleName][]Authorization{
 		AuthorizationAuditLogsRead,
 		AuthorizationTeamsRead,
 		AuthorizationDeployKeyView,
+		AuthorizationTeamsSynchronize,
 	},
 	sqlc.RoleNameTeamowner: {
 		AuthorizationAuditLogsRead,
