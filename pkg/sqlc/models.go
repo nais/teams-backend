@@ -86,6 +86,7 @@ const (
 	ReconcilerNameNaisDependencytrack  ReconcilerName = "nais:dependencytrack"
 	ReconcilerNameNaisDeploy           ReconcilerName = "nais:deploy"
 	ReconcilerNameNaisNamespace        ReconcilerName = "nais:namespace"
+	ReconcilerNameGoogleGcpCdn         ReconcilerName = "google:gcp:cdn"
 )
 
 func (e *ReconcilerName) Scan(src interface{}) error {
@@ -132,7 +133,8 @@ func (e ReconcilerName) Valid() bool {
 		ReconcilerNameGoogleWorkspaceAdmin,
 		ReconcilerNameNaisDependencytrack,
 		ReconcilerNameNaisDeploy,
-		ReconcilerNameNaisNamespace:
+		ReconcilerNameNaisNamespace,
+		ReconcilerNameGoogleGcpCdn:
 		return true
 	}
 	return false
@@ -148,6 +150,7 @@ func AllReconcilerNameValues() []ReconcilerName {
 		ReconcilerNameNaisDependencytrack,
 		ReconcilerNameNaisDeploy,
 		ReconcilerNameNaisNamespace,
+		ReconcilerNameGoogleGcpCdn,
 	}
 }
 
