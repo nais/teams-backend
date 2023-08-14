@@ -9,6 +9,6 @@ RUN make test
 RUN make check
 RUN make static
 
-FROM cgr.dev/chainguard/static
+FROM gcr.io/distroless/static-debian11:nonroot
 COPY --from=builder /src/bin/teams-backend /app/teams-backend
 CMD ["/app/teams-backend"]

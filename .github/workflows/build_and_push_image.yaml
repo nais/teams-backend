@@ -8,9 +8,9 @@ on:
 env:
   GOOGLE_REGISTRY: "europe-north1-docker.pkg.dev"
   FEATURE_NAME: "teams-backend"
-  RUNNER_IMG: "cgr.dev/chainguard/static"
-  BASEIMG_IDENTITY: "https://github.com/chainguard-images/images/.github/workflows/release.yaml@refs/heads/main"
-  BASEIMG_ISSUER: "https://token.actions.githubusercontent.com"
+  RUNNER_IMG: "gcr.io/distroless/static-debian11:nonroot"
+  BASEIMG_IDENTITY: "keyless@distroless.iam.gserviceaccount.com"
+  BASEIMG_ISSUER: "https://accounts.google.com"
 jobs:
   build_and_push:
     runs-on: ubuntu-22.04
