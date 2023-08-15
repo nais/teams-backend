@@ -7,7 +7,7 @@ TEST_POSTGRES_CONTAINER_PORT = 5666
 
 .PHONY: static teams-backend test generate
 
-all: generate teams-backend
+all: generate test check fmt teams-backend
 
 teams-backend:
 	go build -o bin/teams-backend -ldflags "-s $(LDFLAGS)" cmd/teams-backend/*.go
