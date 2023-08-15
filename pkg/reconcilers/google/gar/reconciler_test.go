@@ -227,6 +227,7 @@ func TestReconcile(t *testing.T) {
 					assert.Contains(t, req.Policy.Bindings[0].Members, prefix+"/test/admin-repository")
 					assert.NotContains(t, req.Policy.Bindings[0].Members, prefix+"/test/ro-repository")
 					assert.NotContains(t, req.Policy.Bindings[0].Members, prefix+"/test/no-permissions-repository")
+					assert.NotContains(t, req.Policy.Bindings[0].Members, prefix+"/test/archived-repository")
 					w.WriteHeader(abortReconcilerCode)
 				},
 			}),
@@ -256,6 +257,14 @@ func TestReconcile(t *testing.T) {
 							{Name: "push", Granted: true},
 							{Name: "admin", Granted: true},
 						},
+					},
+					{
+						Name: "test/archived-repository",
+						Permissions: []*reconcilers.GitHubRepositoryPermission{
+							{Name: "push", Granted: true},
+							{Name: "admin", Granted: true},
+						},
+						Archived: true,
 					},
 					{
 						Name: "test/no-permissions-repository",

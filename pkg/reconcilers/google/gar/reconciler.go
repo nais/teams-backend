@@ -268,6 +268,9 @@ func (r *garReconciler) getServiceAccountPolicyMembers(ctx context.Context, team
 
 	members := make([]string, 0)
 	for _, githubRepo := range state.Repositories {
+		if githubRepo.Archived {
+			continue
+		}
 		for _, perm := range githubRepo.Permissions {
 			if perm.Name == "push" && perm.Granted {
 				member := fmt.Sprintf("principalSet://iam.googleapis.com/%s/attribute.repository/%s", r.workloadIdentityPoolName, githubRepo.Name)
