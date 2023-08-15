@@ -267,6 +267,9 @@ type GitHubRepository {
 
     "A list of permissions given to the team for this repository."
     permissions: [GitHubRepositoryPermission!]!
+
+    "Whether or not the repository is archived."
+    archived: Boolean!
 }
 
 "GitHub repository permission type."

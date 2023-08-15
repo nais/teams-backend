@@ -475,6 +475,7 @@ func (r *githubTeamReconciler) getTeamRepositories(ctx context.Context, teamSlug
 			allRepos = append(allRepos, &reconcilers.GitHubRepository{
 				Name:        repo.GetFullName(),
 				Permissions: permissions,
+				Archived:    repo.GetArchived(),
 			})
 		}
 		if resp.NextPage == 0 {

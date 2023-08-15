@@ -29,6 +29,7 @@ type GitHubState struct {
 type GitHubRepository struct {
 	Name        string                        `json:"name"`
 	Permissions []*GitHubRepositoryPermission `json:"permissions"`
+	Archived    bool                          `json:"archived"`
 }
 
 type GitHubRepositoryPermission struct {

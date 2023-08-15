@@ -82,6 +82,7 @@ type ComplexityRoot struct {
 	}
 
 	GitHubRepository struct {
+		Archived    func(childComplexity int) int
 		Name        func(childComplexity int) int
 		Permissions func(childComplexity int) int
 	}
@@ -435,6 +436,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.GcpProject.ProjectName(childComplexity), true
+
+	case "GitHubRepository.archived":
+		if e.complexity.GitHubRepository.Archived == nil {
+			break
+		}
+
+		return e.complexity.GitHubRepository.Archived(childComplexity), true
 
 	case "GitHubRepository.name":
 		if e.complexity.GitHubRepository.Name == nil {
@@ -1992,6 +2000,9 @@ type GitHubRepository {
 
     "A list of permissions given to the team for this repository."
     permissions: [GitHubRepositoryPermission!]!
+
+    "Whether or not the repository is archived."
+    archived: Boolean!
 }
 
 "GitHub repository permission type."
@@ -3514,6 +3525,50 @@ func (ec *executionContext) fieldContext_GitHubRepository_permissions(ctx contex
 				return ec.fieldContext_GitHubRepositoryPermission_granted(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type GitHubRepositoryPermission", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GitHubRepository_archived(ctx context.Context, field graphql.CollectedField, obj *reconcilers.GitHubRepository) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GitHubRepository_archived(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Archived, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GitHubRepository_archived(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GitHubRepository",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
 		},
 	}
 	return fc, nil
@@ -9054,6 +9109,8 @@ func (ec *executionContext) fieldContext_Team_gitHubRepositories(ctx context.Con
 				return ec.fieldContext_GitHubRepository_name(ctx, field)
 			case "permissions":
 				return ec.fieldContext_GitHubRepository_permissions(ctx, field)
+			case "archived":
+				return ec.fieldContext_GitHubRepository_archived(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type GitHubRepository", field.Name)
 		},
@@ -12500,6 +12557,13 @@ func (ec *executionContext) _GitHubRepository(ctx context.Context, sel ast.Selec
 		case "permissions":
 
 			out.Values[i] = ec._GitHubRepository_permissions(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "archived":
+
+			out.Values[i] = ec._GitHubRepository_archived(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++

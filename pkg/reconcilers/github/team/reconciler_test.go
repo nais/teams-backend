@@ -60,6 +60,8 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 			On("SetReconcilerStateForTeam", ctx, componentName, team.Slug, mock.MatchedBy(func(state reconcilers.GitHubState) bool {
 				return state.Repositories[0].Name == "org/some-repo-a" &&
 					state.Repositories[1].Name == "org/some-repo-b" &&
+					state.Repositories[0].Archived == false &&
+					state.Repositories[1].Archived == true &&
 					state.Repositories[0].Permissions[0].Name == "admin" &&
 					state.Repositories[0].Permissions[1].Name == "pull" &&
 					state.Repositories[0].Permissions[2].Name == "push" &&
@@ -114,6 +116,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 							"pull":  false,
 							"admin": true,
 						},
+						Archived: helpers.Boolp(true),
 					},
 				},
 				&github.Response{Response: &http.Response{StatusCode: http.StatusOK}, NextPage: 1},
@@ -139,6 +142,7 @@ func TestGitHubReconciler_getOrCreateTeam(t *testing.T) {
 							"pull":  false,
 							"admin": true,
 						},
+						Archived: helpers.Boolp(false),
 					},
 				},
 				&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
