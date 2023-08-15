@@ -164,14 +164,14 @@ func (r *azureGroupReconciler) connectUsers(ctx context.Context, grp *azureclien
 		remoteEmail := strings.ToLower(member.Mail)
 		err = r.client.RemoveMemberFromGroup(ctx, grp, member)
 		if err != nil {
-			r.log.WithError(err).Error("remove member %q from group %q in Azure", remoteEmail, grp.MailNickname)
+			r.log.WithError(err).Errorf("remove member %q from group %q in Azure", remoteEmail, grp.MailNickname)
 			continue
 		}
 
 		if _, exists := teamsBackendUserMap[remoteEmail]; !exists {
 			user, err := r.database.GetUserByEmail(ctx, remoteEmail)
 			if err != nil {
-				r.log.WithError(err).Warnf("lookup local user with email %q: %s", remoteEmail)
+				r.log.WithError(err).Warnf("lookup local user with email %q", remoteEmail)
 				continue
 			}
 			teamsBackendUserMap[remoteEmail] = user
