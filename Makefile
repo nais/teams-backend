@@ -45,20 +45,8 @@ generate-sqlc:
 	go run mvdan.cc/gofumpt -w ./pkg/sqlc/
 
 generate-mocks:
-	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/azureclient --name Client
-	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/reconcilers/dependencytrack --name Client
-	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/reconcilers/github/team --name TeamsService
-	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/reconcilers/github/team --name GraphClient
-	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/teamsync --name Queue
-	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/teamsync --name Handler
-	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/auditlogger --name AuditLogger --with-expecter
-	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/db --name AuthenticatedUser
-	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/db --name Database
-	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/authn --name Handler
-	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/logger --name Logger
-	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/deployproxy --name Proxy
-	go run github.com/vektra/mockery/v2 --inpackage --case snake --srcpkg ./pkg/reconcilers --name Reconciler
-	go run mvdan.cc/gofumpt -w ./pkg/graph/
+	go run github.com/vektra/mockery/v2
+	find pkg -type f -name "mock_*.go" -exec go run mvdan.cc/gofumpt -w {} \;
 
 static:
 	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/teams-backend -ldflags "-s $(LDFLAGS)" cmd/teams-backend/main.go
