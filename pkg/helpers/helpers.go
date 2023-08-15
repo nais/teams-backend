@@ -12,6 +12,10 @@ func Strp(s string) *string {
 	return &s
 }
 
+func Boolp(b bool) *bool {
+	return &b
+}
+
 func StringWithFallback(strp *string, fallback string) string {
 	if strp == nil || *strp == "" {
 		return fallback

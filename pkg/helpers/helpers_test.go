@@ -22,6 +22,11 @@ func TestStrp(t *testing.T) {
 	assert.Equal(t, &s, helpers.Strp(s))
 }
 
+func TestBoolp(t *testing.T) {
+	b := true
+	assert.Equal(t, &b, helpers.Boolp(b))
+}
+
 func TestTruncate(t *testing.T) {
 	t.Run("Empty string", func(t *testing.T) {
 		assert.Equal(t, "", helpers.Truncate("", 5))
