@@ -41,7 +41,7 @@ generate-gql:
 	go run mvdan.cc/gofumpt -w ./pkg/graph/
 
 generate-sqlc:
-	go run github.com/kyleconroy/sqlc/cmd/sqlc generate
+	go run github.com/sqlc-dev/sqlc/cmd/sqlc generate
 	go run mvdan.cc/gofumpt -w ./pkg/sqlc/
 
 generate-mocks:
