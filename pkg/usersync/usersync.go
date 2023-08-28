@@ -307,6 +307,7 @@ func getAdminUsers(ctx context.Context, membersService *admin_directory_v1.Membe
 	admins := make(map[uuid.UUID]*db.User)
 	err := membersService.
 		List(adminGroupKey).
+		IncludeDerivedMembership(true).
 		Context(ctx).
 		Pages(ctx, callback)
 	if err != nil {
