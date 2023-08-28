@@ -1196,6 +1196,65 @@ func (_c *MockClient_RemoveAdminUsers_Call) RunAndReturn(run func(context.Contex
 	return _c
 }
 
+// UpdateProject provides a mock function with given fields: ctx, uuid, name, version, group, tags
+func (_m *MockClient) UpdateProject(ctx context.Context, uuid string, name string, version string, group string, tags []string) (*client.Project, error) {
+	ret := _m.Called(ctx, uuid, name, version, group, tags)
+
+	var r0 *client.Project
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, string, []string) (*client.Project, error)); ok {
+		return rf(ctx, uuid, name, version, group, tags)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, string, []string) *client.Project); ok {
+		r0 = rf(ctx, uuid, name, version, group, tags)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*client.Project)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, string, string, []string) error); ok {
+		r1 = rf(ctx, uuid, name, version, group, tags)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockClient_UpdateProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateProject'
+type MockClient_UpdateProject_Call struct {
+	*mock.Call
+}
+
+// UpdateProject is a helper method to define mock.On call
+//   - ctx context.Context
+//   - uuid string
+//   - name string
+//   - version string
+//   - group string
+//   - tags []string
+func (_e *MockClient_Expecter) UpdateProject(ctx interface{}, uuid interface{}, name interface{}, version interface{}, group interface{}, tags interface{}) *MockClient_UpdateProject_Call {
+	return &MockClient_UpdateProject_Call{Call: _e.mock.On("UpdateProject", ctx, uuid, name, version, group, tags)}
+}
+
+func (_c *MockClient_UpdateProject_Call) Run(run func(ctx context.Context, uuid string, name string, version string, group string, tags []string)) *MockClient_UpdateProject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string), args[4].(string), args[5].([]string))
+	})
+	return _c
+}
+
+func (_c *MockClient_UpdateProject_Call) Return(_a0 *client.Project, _a1 error) *MockClient_UpdateProject_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockClient_UpdateProject_Call) RunAndReturn(run func(context.Context, string, string, string, string, []string) (*client.Project, error)) *MockClient_UpdateProject_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpdateProjectInfo provides a mock function with given fields: ctx, uuid, version, group, tags
 func (_m *MockClient) UpdateProjectInfo(ctx context.Context, uuid string, version string, group string, tags []string) error {
 	ret := _m.Called(ctx, uuid, version, group, tags)
