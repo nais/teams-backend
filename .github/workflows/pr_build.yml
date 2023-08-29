@@ -1,6 +1,6 @@
 name: Test build
 on:
-  pull-request:
+  pull_request:
 jobs:
   build:
     runs-on: ubuntu-22.04
