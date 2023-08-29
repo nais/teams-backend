@@ -20,3 +20,4 @@
 .vscode
 .env
 /local/
+.envrc
