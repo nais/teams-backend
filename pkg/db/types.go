@@ -14,7 +14,7 @@ import (
 	"github.com/nais/teams-backend/pkg/sqlc"
 )
 
-const teamDeleteKeyLifetime = time.Minute * 5
+const teamDeleteKeyLifetime = time.Hour * 1
 
 type (
 	QuerierTransactionFunc  func(ctx context.Context, querier Querier) error
