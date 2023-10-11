@@ -2,14 +2,17 @@ package config
 
 import (
 	"github.com/kelseyhightower/envconfig"
-	"github.com/nais/teams-backend/pkg/dependencytrack"
 	"github.com/nais/teams-backend/pkg/fixtures"
 	"github.com/nais/teams-backend/pkg/gcp"
 )
 
 type DependencyTrack struct {
-	// Instances A list of dependency track instances (one per cluster).
-	Instances dependencytrack.Instances `envconfig:"TEAMS_BACKEND_DEPENDENCYTRACK_INSTANCES"`
+	// Endpoint URL to the DependencyTrack API.
+	Endpoint string `envconfig:"TEAMS_BACKEND_DEPENDENCYTRACK_ENDPOINT"`
+	// Username The username to use when authenticating with DependencyTrack.
+	Username string `envconfig:"TEAMS_BACKEND_DEPENDENCYTRACK_USERNAME"`
+	// Password The password to use when authenticating with DependencyTrack.
+	Password string `envconfig:"TEAMS_BACKEND_DEPENDENCYTRACK_PASSWORD"`
 }
 
 type GitHub struct {

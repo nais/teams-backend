@@ -1,4 +1,4 @@
-{{- if or .Values.gitHub.authEndpoint (gt (len .Values.dependencytrack.instances) 0) }}
+{{- if or .Values.gitHub.authEndpoint (gt (len .Values.dependencytrack.instance) 0) }}
 apiVersion: networking.gke.io/v1alpha3
 kind: FQDNNetworkPolicy
 metadata:
@@ -15,7 +15,7 @@ spec:
         - fqdns:
             - {{ get (urlParse .Values.gitHub.authEndpoint) "host" }}
     {{- end }}
-    {{- with .Values.dependencytrack.instances }}
+    {{- with .Values.dependencytrack.instance }}
     - ports:
         - port: 443
           protocol: TCP

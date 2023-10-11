@@ -39,7 +39,7 @@ gcp:
   billingAccount: # mapped in fasit
   workloadIdentityPoolName: # mapped in fasit
 dependencytrack:
-  instances: [] # mapped in fasit, example format: [{ endpoint: "https://service", username: "username", password: "password" }]
+  instance: # mapped in fasit, example format: { endpoint: "https://service", username: "username", password: "password" }
 
 firstRunEnableReconcilers: "google:gcp:project,google:workspace-admin,nais:namespace,nais:deploy,google:gcp:gar"
 
