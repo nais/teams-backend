@@ -15,7 +15,7 @@ spec:
         - fqdns:
             - {{ get (urlParse .Values.gitHub.authEndpoint) "host" }}
     {{- end }}
-    {{- with .Values.dependencytrack.instance }}
+    {{- with .Values.dependencytrack.endpoint }}
     - ports:
         - port: 443
           protocol: TCP
