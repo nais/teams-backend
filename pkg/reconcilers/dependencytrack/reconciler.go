@@ -115,12 +115,9 @@ func (r *reconciler) Delete(ctx context.Context, teamSlug slug.Slug, _ uuid.UUID
 		return fmt.Errorf("load reconciler state for team %q in reconciler %q: %w", teamSlug, r.Name(), err)
 	}
 
-	instanceState := state
-	if instanceState != nil {
-		err = r.DpTrack.Client.DeleteTeam(ctx, instanceState.TeamID)
-		if err != nil {
-			return err
-		}
+	err = r.DpTrack.Client.DeleteTeam(ctx, state.TeamID)
+	if err != nil {
+		return err
 	}
 	return r.database.RemoveReconcilerStateForTeam(ctx, r.Name(), teamSlug)
 }
