@@ -5,9 +5,13 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3 # ratchet:exclude
+      - name: Get go version
+        id: go_version
+        run: |
+          echo "GO_VERSION=$(grep golang .tool-versions | awk '{print $2}')" >> $GITHUB_OUTPUT
       - uses: actions/setup-go@v4 # ratchet:exclude
         with:
-          go-version: "1.21.x"
+          go-version: ${{ steps.go_version.outputs.GO_VERSION }}
       - name: make check
         run: make check
       - name: make test
