@@ -19,6 +19,10 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v3 # ratchet:exclude
+      - name: Get go version
+        id: go_version
+        run: |
+          echo "GO_VERSION=$(grep golang .tool-versions | awk '{print $2}')" >> $GITHUB_OUTPUT
       - uses: azure/setup-helm@5119fcb9089d432beecbf79bb2c7915207344b78 # ratchet:azure/setup-helm@v3
         with:
           version: "v3.11.1"
@@ -31,6 +35,8 @@ jobs:
         id: build_push_sign
         with:
           name: ${{ env.FEATURE_NAME }}
+          build_args: |
+            GO_VERSION=${{ steps.go_version.outputs.GO_VERSION }}
           google_service_account: gh-${{ env.FEATURE_NAME }}
           push: ${{ github.actor != 'dependabot[bot]' && github.ref == 'refs/heads/main' }}
           workload_identity_provider: ${{ secrets.NAIS_IO_WORKLOAD_IDENTITY_PROVIDER }}
