@@ -25,7 +25,7 @@ values:
   dependencytrack.password:
     displayName: DependencyTrack password
     computed:
-      template: "{{ .Management.console_dependencytrack_password }}"
+      template: "{{ .Management.teams_dependencytrack_password }}"
   firstRunEnableReconcilers:
     description: Comma separated list of reconcilers to enable on first run (empty database). Changing this after teams-backend has been deployed does nothing.
     config:
