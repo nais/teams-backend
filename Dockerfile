@@ -1,4 +1,6 @@
-FROM golang:1.21 as builder
+ARG GO_VERSION=1.21
+
+FROM golang:${GO_VERSION} as builder
 
 ENV GOOS=linux
 WORKDIR /src
