@@ -3,7 +3,6 @@ package dependencytrack_reconciler
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,12 +11,10 @@ import (
 	"github.com/nais/teams-backend/pkg/config"
 	"github.com/nais/teams-backend/pkg/db"
 	"github.com/nais/teams-backend/pkg/logger"
-	"github.com/nais/teams-backend/pkg/metrics"
 	"github.com/nais/teams-backend/pkg/reconcilers"
 	"github.com/nais/teams-backend/pkg/slug"
 	"github.com/nais/teams-backend/pkg/sqlc"
 	"github.com/nais/teams-backend/pkg/types"
-	"github.com/sirupsen/logrus"
 )
 
 type reconciler struct {
@@ -25,11 +22,6 @@ type reconciler struct {
 	auditLogger auditlogger.AuditLogger
 	log         logger.Logger
 	DpTrack     DpTrack
-}
-
-type DpTrack struct {
-	Endpoint string
-	Client   dependencytrack.Client
 }
 
 const (
@@ -50,18 +42,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		return nil, fmt.Errorf("no dependencytrack instances configured")
 	}
 
-	dp := DpTrack{
-		Endpoint: cfg.DependencyTrack.Endpoint,
-		Client: dependencytrack.New(
-			cfg.DependencyTrack.Endpoint,
-			cfg.DependencyTrack.Username,
-			cfg.DependencyTrack.Password,
-			dependencytrack.WithLogger(log.WithFields(logrus.Fields{
-				"instance": cfg.DependencyTrack.Endpoint,
-			})),
-			dependencytrack.WithResponseCallback(incExternalHttpCalls),
-		),
-	}
+	dp := newDpTrack(cfg.DependencyTrack.Endpoint, cfg.DependencyTrack.Username, cfg.DependencyTrack.Password, log)
 	pingCtx, cancel := context.WithTimeout(ctx, time.Second*1)
 	defer cancel()
 
@@ -238,10 +219,6 @@ func createTeam(ctx context.Context, input reconcilers.Input, client dependencyt
 	}
 
 	return team, err
-}
-
-func incExternalHttpCalls(resp *http.Response, err error) {
-	metrics.IncExternalHTTPCalls(string(Name), resp, err)
 }
 
 func inputMembersContains(inputMembers []*db.User, user string) bool {

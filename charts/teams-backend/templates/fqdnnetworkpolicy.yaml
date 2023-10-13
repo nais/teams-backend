@@ -1,4 +1,4 @@
-{{- if or .Values.gitHub.authEndpoint (gt (len .Values.dependencytrack.instance) 0) }}
+{{- if or .Values.gitHub.authEndpoint (gt (len .Values.dependencytrack.endpoint) 0) }}
 apiVersion: networking.gke.io/v1alpha3
 kind: FQDNNetworkPolicy
 metadata:
