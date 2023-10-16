@@ -21,6 +21,14 @@ spec:
         matchLabels:
           app.kubernetes.io/instance: hookd
           app.kubernetes.io/name: hookd
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: nais-system
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/instance: dependencytrack-backend
+          app.kubernetes.io/name: dependencytrack
   podSelector:
     matchLabels:
       app.kubernetes.io/instance: {{ .Release.Name }}

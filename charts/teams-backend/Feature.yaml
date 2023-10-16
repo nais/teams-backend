@@ -21,7 +21,7 @@ values:
   dependencytrack.endpoint:
     displayName: DependencyTrack endpoint
     computed:
-      template: "https://dependencytrack.{{ .Tenant.Name }}.cloud.nais.io",
+      template: "http://dependencytrack-backend:8080"
   dependencytrack.password:
     displayName: DependencyTrack password
     computed:
