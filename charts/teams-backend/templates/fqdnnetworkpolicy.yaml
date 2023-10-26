@@ -15,14 +15,6 @@ spec:
         - fqdns:
             - {{ get (urlParse .Values.gitHub.authEndpoint) "host" }}
     {{- end }}
-    - ports:
-        - port: 443
-          protocol: TCP
-      to:
-        - fqdns:
-            {{- range . }}
-            - {{ get (urlParse .endpoint) "host" }}
-            {{- end }}
   podSelector:
     matchLabels:
       {{- include "teams-backend.selectorLabels" . | nindent 6 }}
