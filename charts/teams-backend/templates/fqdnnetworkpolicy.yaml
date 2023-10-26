@@ -23,7 +23,6 @@ spec:
             {{- range . }}
             - {{ get (urlParse .endpoint) "host" }}
             {{- end }}
-    {{- end }}
   podSelector:
     matchLabels:
       {{- include "teams-backend.selectorLabels" . | nindent 6 }}
