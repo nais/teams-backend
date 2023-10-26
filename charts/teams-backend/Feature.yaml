@@ -18,20 +18,14 @@ values:
     displayName: Database user
     computed:
       template: '"{{.Management.teams_database_user}}"'
-  dependencytrack.instances:
-    displayName: DependencyTrack instances
+  dependencytrack.endpoint:
+    displayName: DependencyTrack endpoint
     computed:
-      template: |
-        [
-          {{ $tenant_name := .Tenant.Name }}
-          {{ range .Envs }}
-          {
-            "endpoint": "https://dependencytrack-{{ .name }}.{{ $tenant_name }}.cloud.nais.io",
-            "username": "console",
-            "password": "{{ .console_dependencytrack_password }}"
-          },
-          {{ end }}
-        ]
+      template: "http://dependencytrack-backend:8080"
+  dependencytrack.password:
+    displayName: DependencyTrack password
+    computed:
+      template: "{{ .Management.teams_dependencytrack_password }}"
   firstRunEnableReconcilers:
     description: Comma separated list of reconcilers to enable on first run (empty database). Changing this after teams-backend has been deployed does nothing.
     config:

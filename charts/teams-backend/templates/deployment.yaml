@@ -166,6 +166,10 @@ spec:
               value: {{ .Values.reconcileRetryInterval | quote }}
             - name: CONSOLE_FIRST_RUN_ENABLE_RECONCILERS
               value: {{ .Values.firstRunEnableReconcilers | quote }}
+            - name: TEAMS_BACKEND_DEPENDENCYTRACK_ENDPOINT
+              value: "{{ .Values.dependencytrack.endpoint }}"
+            - name: TEAMS_BACKEND_DEPENDENCYTRACK_USERNAME
+              value: "{{ .Values.dependencytrack.username }}"
           ports:
             - name: http
               containerPort: 3000

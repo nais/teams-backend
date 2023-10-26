@@ -3,7 +3,6 @@ package dependencytrack_reconciler
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,50 +10,48 @@ import (
 	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/config"
 	"github.com/nais/teams-backend/pkg/db"
-	dtrack "github.com/nais/teams-backend/pkg/dependencytrack"
 	"github.com/nais/teams-backend/pkg/logger"
-	"github.com/nais/teams-backend/pkg/metrics"
 	"github.com/nais/teams-backend/pkg/reconcilers"
 	"github.com/nais/teams-backend/pkg/slug"
 	"github.com/nais/teams-backend/pkg/sqlc"
 	"github.com/nais/teams-backend/pkg/types"
-	"github.com/sirupsen/logrus"
 )
 
 type reconciler struct {
 	database    db.Database
 	auditLogger auditlogger.AuditLogger
 	log         logger.Logger
-	clients     map[string]dependencytrack.Client
+	DpTrack     DpTrack
 }
 
 const (
 	Name = sqlc.ReconcilerNameNaisDependencytrack
 )
 
-func New(database db.Database, auditLogger auditlogger.AuditLogger, clients map[string]dependencytrack.Client, log logger.Logger) (reconcilers.Reconciler, error) {
+func New(database db.Database, auditLogger auditlogger.AuditLogger, dp DpTrack, log logger.Logger) (reconcilers.Reconciler, error) {
 	return &reconciler{
 		database:    database,
 		auditLogger: auditLogger,
 		log:         log.WithComponent(types.ComponentNameNaisDependencytrack),
-		clients:     clients,
+		DpTrack:     dp,
 	}, nil
 }
 
 func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config, log logger.Logger) (reconcilers.Reconciler, error) {
-	clients := make(map[string]dependencytrack.Client, 0)
-	if len(cfg.DependencyTrack.Instances) == 0 {
+	if cfg.DependencyTrack.Endpoint == "" || cfg.DependencyTrack.Username == "" || cfg.DependencyTrack.Password == "" {
 		return nil, fmt.Errorf("no dependencytrack instances configured")
 	}
 
-	for _, instance := range cfg.DependencyTrack.Instances {
-		c := createClient(ctx, instance, log)
-		if c != nil {
-			clients[instance.Endpoint] = *c
-			log.Infof("dependencytrack instance %q added to reconciler", instance.Endpoint)
-		}
+	dp := newDpTrack(cfg.DependencyTrack.Endpoint, cfg.DependencyTrack.Username, cfg.DependencyTrack.Password, log)
+	pingCtx, cancel := context.WithTimeout(ctx, time.Second*1)
+	defer cancel()
+
+	if _, err := dp.Client.Version(pingCtx); err != nil {
+		log.Warnf("dependencytrack instance %q is not available, skipping", cfg.DependencyTrack.Endpoint)
+		return nil, nil
 	}
-	return New(database, auditlogger.New(database, types.ComponentNameNaisDependencytrack, log), clients, log)
+	log.Infof("dependencytrack instance %q added to reconciler", dp.Client)
+	return New(database, auditlogger.New(database, types.ComponentNameNaisDependencytrack, log), dp, log)
 }
 
 func (r *reconciler) Name() sqlc.ReconcilerName {
@@ -68,31 +65,23 @@ func (r *reconciler) Reconcile(ctx context.Context, input reconcilers.Input) err
 		return fmt.Errorf("unable to load reconciler state for team %q in reconciler %q: %w", input.Team.Slug, r.Name(), err)
 	}
 
-	updatedInstances := make([]*reconcilers.DependencyTrackInstanceState, 0)
 	stateMembers := make([]string, 0)
 	for _, member := range input.TeamMembers {
 		stateMembers = append(stateMembers, member.Email)
 	}
 
-	for endpoint, client := range r.clients {
-		r.log.Debugf("reconciling team %q in dependencytrack instance %q", input.Team.Slug, endpoint)
-		instance := instanceByEndpoint(state.Instances, endpoint)
-		teamId, err := r.syncTeamAndUsers(ctx, input, client, instance)
-		if err != nil {
-			return err
-		}
-		updatedInstances = append(updatedInstances, &reconcilers.DependencyTrackInstanceState{
-			Endpoint: endpoint,
-			TeamID:   teamId,
-			Members:  stateMembers,
-		})
+	r.log.Debugf("reconciling team %q in dependencytrack instance %q", input.Team.Slug, r.DpTrack.Client)
+	instance := state
+	teamId, err := r.syncTeamAndUsers(ctx, input, r.DpTrack.Client, instance)
+	if err != nil {
+		return err
+	}
+	updatedInstance := &reconcilers.DependencyTrackState{
+		TeamID:  teamId,
+		Members: stateMembers,
 	}
 
-	updateState := &reconcilers.DependencyTrackState{
-		Instances: updatedInstances,
-	}
-
-	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, updateState)
+	err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, updatedInstance)
 	if err != nil {
 		r.log.WithError(err).Error("persist reconciler state")
 	}
@@ -107,38 +96,14 @@ func (r *reconciler) Delete(ctx context.Context, teamSlug slug.Slug, _ uuid.UUID
 		return fmt.Errorf("load reconciler state for team %q in reconciler %q: %w", teamSlug, r.Name(), err)
 	}
 
-	for endpoint, client := range r.clients {
-		instanceState := instanceByEndpoint(state.Instances, endpoint)
-		if instanceState != nil {
-			err = client.DeleteTeam(ctx, instanceState.TeamID)
-			if err != nil {
-				return err
-			}
-		}
+	err = r.DpTrack.Client.DeleteTeam(ctx, state.TeamID)
+	if err != nil {
+		return err
 	}
 	return r.database.RemoveReconcilerStateForTeam(ctx, r.Name(), teamSlug)
 }
 
-func createClient(ctx context.Context, instance dtrack.DependencyTrackInstance, log logger.Logger) *dependencytrack.Client {
-	client := dependencytrack.New(
-		instance.Endpoint,
-		instance.Username,
-		instance.Password,
-		dependencytrack.WithLogger(log.WithFields(logrus.Fields{
-			"instance": instance.Endpoint,
-		})),
-		dependencytrack.WithResponseCallback(incExternalHttpCalls),
-	)
-	pingCtx, cancel := context.WithTimeout(ctx, time.Second*1)
-	defer cancel()
-	if _, err := client.Version(pingCtx); err != nil {
-		log.Warnf("dependencytrack instance %q is not available, skipping", instance.Endpoint)
-		return nil
-	}
-	return &client
-}
-
-func (r *reconciler) syncTeamAndUsers(ctx context.Context, input reconcilers.Input, client dependencytrack.Client, instanceState *reconcilers.DependencyTrackInstanceState) (string, error) {
+func (r *reconciler) syncTeamAndUsers(ctx context.Context, input reconcilers.Input, client dependencytrack.Client, instanceState *reconcilers.DependencyTrackState) (string, error) {
 	if instanceState != nil && instanceState.TeamID != "" {
 		r.log.Debugf("team %q already exists in dependencytrack instance state.", input.Team.Slug)
 		for _, user := range input.TeamMembers {
@@ -254,19 +219,6 @@ func createTeam(ctx context.Context, input reconcilers.Input, client dependencyt
 	}
 
 	return team, err
-}
-
-func incExternalHttpCalls(resp *http.Response, err error) {
-	metrics.IncExternalHTTPCalls(string(Name), resp, err)
-}
-
-func instanceByEndpoint(instances []*reconcilers.DependencyTrackInstanceState, endpoint string) *reconcilers.DependencyTrackInstanceState {
-	for _, i := range instances {
-		if i.Endpoint == endpoint {
-			return i
-		}
-	}
-	return nil
 }
 
 func inputMembersContains(inputMembers []*db.User, user string) bool {

@@ -12,13 +12,8 @@ type AzureState struct {
 }
 
 type DependencyTrackState struct {
-	Instances []*DependencyTrackInstanceState `json:"instances"`
-}
-
-type DependencyTrackInstanceState struct {
-	Endpoint string   `json:"endpoint"`
-	TeamID   string   `json:"teamId"`
-	Members  []string `json:"members"`
+	TeamID  string   `json:"teamId"`
+	Members []string `json:"members"`
 }
 
 type GitHubState struct {
