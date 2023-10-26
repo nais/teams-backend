@@ -1,12 +1,13 @@
 package dependencytrack_reconciler
 
 import (
+	"net/http"
+
 	dependencytrack "github.com/nais/dependencytrack/pkg/client"
 	"github.com/nais/teams-backend/pkg/logger"
 	"github.com/nais/teams-backend/pkg/metrics"
 	"github.com/nais/teams-backend/pkg/sqlc"
 	"github.com/sirupsen/logrus"
-	"net/http"
 )
 
 type DpTrack struct {
