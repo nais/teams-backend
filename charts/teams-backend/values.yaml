@@ -40,7 +40,7 @@ gcp:
   workloadIdentityPoolName: # mapped in fasit
 dependencytrack:
   endpoint: # mapped in fasit
-  username: console
+  username: teams
   password: # mapped in fasit
 
 firstRunEnableReconcilers: "google:gcp:project,google:workspace-admin,nais:namespace,nais:deploy,google:gcp:gar"
