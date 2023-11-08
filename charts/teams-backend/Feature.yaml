@@ -78,7 +78,7 @@ values:
       template: http://hookd/internal/api/v1/apikey
   naisDeploy.endpoint:
     computed:
-      template: https://deploy.{{.Tenant.Name}}.cloud.nais.io/api/v1/provision
+      template: http://hookd/internal/api/v1/provision
   naisDeploy.provisionKey:
     computed:
       template: '"{{.Management.hookd_provision_key}}"'
