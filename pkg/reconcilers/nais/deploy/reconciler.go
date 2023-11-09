@@ -102,6 +102,8 @@ func (r *naisDeployReconciler) Reconcile(ctx context.Context, input reconcilers.
 		return nil
 	case http.StatusNoContent:
 		return nil
+	case http.StatusOK:
+		return nil
 	default:
 		return fmt.Errorf("provision NAIS deploy API key for team %q: %s", input.Team.Slug, response.Status)
 	}
