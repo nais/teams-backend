@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/nais/teams-backend/pkg/types"
@@ -224,5 +225,5 @@ func (h *handler) DeleteCookie(w http.ResponseWriter, name string) {
 }
 
 func shouldUseSecureCookies(frontendURL url.URL) bool {
-	return frontendURL.Host != "teams.local.nais.io"
+	return frontendURL.Host != "teams.local.nais.io" && !strings.HasPrefix(frontendURL.Host, "localhost:")
 }
