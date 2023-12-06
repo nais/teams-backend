@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	pgx "github.com/jackc/pgx/v4"
@@ -24,6 +25,27 @@ import (
 	"github.com/nais/teams-backend/pkg/sqlc"
 	"github.com/nais/teams-backend/pkg/types"
 )
+
+// Authorizations is the resolver for the authorizations field.
+func (r *gitHubRepositoryResolver) Authorizations(ctx context.Context, obj *reconcilers.GitHubRepository) ([]model.RepositoryAuthorization, error) {
+	if obj.TeamSlug == nil {
+		return nil, fmt.Errorf("repository is missing team slug")
+	}
+
+	authorizations, err := r.database.GetRepositoryAuthorizations(ctx, *obj.TeamSlug, obj.Name)
+	if err != nil {
+		return nil, err
+	}
+	resp := make([]model.RepositoryAuthorization, 0, len(authorizations))
+	for _, authorization := range authorizations {
+		repoAuth := model.RepositoryAuthorization(strings.ToUpper(string(authorization)))
+		if !repoAuth.IsValid() {
+			return nil, fmt.Errorf("invalid authorization: %q", authorization)
+		}
+		resp = append(resp, repoAuth)
+	}
+	return resp, nil
+}
 
 // CreateTeam is the resolver for the createTeam field.
 func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*db.Team, error) {
@@ -740,6 +762,64 @@ func (r *mutationResolver) ConfirmTeamDeletion(ctx context.Context, key *uuid.UU
 	return &correlationID, nil
 }
 
+// AuthorizeRepository is the resolver for the authorizeRepository field.
+func (r *mutationResolver) AuthorizeRepository(ctx context.Context, authorization model.RepositoryAuthorization, teamSlug *slug.Slug, repoName string) (*db.Team, error) {
+	team, err := r.database.GetTeamBySlug(ctx, *teamSlug)
+	if err != nil {
+		return nil, apierror.ErrTeamNotExist
+	}
+
+	actor := authz.ActorFromContext(ctx)
+	if _, err = r.database.GetTeamMember(ctx, *teamSlug, actor.User.GetID()); errors.Is(err, pgx.ErrNoRows) {
+		return nil, apierror.ErrUserIsNotTeamMember
+	} else if err != nil {
+		return nil, err
+	}
+
+	var repoAuthorization sqlc.RepositoryAuthorizationEnum
+	switch authorization {
+	default:
+		return nil, fmt.Errorf("invalid authorization: %q", string(authorization))
+	case model.RepositoryAuthorizationDeploy:
+		repoAuthorization = sqlc.RepositoryAuthorizationEnumDeploy
+	}
+
+	if err := r.database.CreateRepositoryAuthorization(ctx, *teamSlug, repoName, repoAuthorization); err != nil {
+		return nil, err
+	}
+
+	return team, nil
+}
+
+// DeauthorizeRepository is the resolver for the deauthorizeRepository field.
+func (r *mutationResolver) DeauthorizeRepository(ctx context.Context, authorization model.RepositoryAuthorization, teamSlug *slug.Slug, repoName string) (*db.Team, error) {
+	team, err := r.database.GetTeamBySlug(ctx, *teamSlug)
+	if err != nil {
+		return nil, apierror.ErrTeamNotExist
+	}
+
+	actor := authz.ActorFromContext(ctx)
+	if _, err = r.database.GetTeamMember(ctx, *teamSlug, actor.User.GetID()); errors.Is(err, pgx.ErrNoRows) {
+		return nil, apierror.ErrUserIsNotTeamMember
+	} else if err != nil {
+		return nil, err
+	}
+
+	var repoAuthorization sqlc.RepositoryAuthorizationEnum
+	switch authorization {
+	default:
+		return nil, fmt.Errorf("invalid authorization: %q", string(authorization))
+	case model.RepositoryAuthorizationDeploy:
+		repoAuthorization = sqlc.RepositoryAuthorizationEnumDeploy
+	}
+
+	if err := r.database.RemoveRepositoryAuthorization(ctx, *teamSlug, repoName, repoAuthorization); err != nil {
+		return nil, err
+	}
+
+	return team, nil
+}
+
 // Teams is the resolver for the teams field.
 func (r *queryResolver) Teams(ctx context.Context) ([]*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
@@ -1027,6 +1107,9 @@ func (r *teamResolver) GitHubRepositories(ctx context.Context, obj *db.Team) ([]
 	if err != nil {
 		return nil, apierror.Errorf("Unable to load the GitHub state for the team.")
 	}
+	for i := range state.Repositories {
+		state.Repositories[i].TeamSlug = &obj.Slug
+	}
 	return state.Repositories, nil
 }
 
@@ -1060,6 +1143,11 @@ func (r *teamMemberReconcilerResolver) Reconciler(ctx context.Context, obj *sqlc
 	return reconciler, nil
 }
 
+// GitHubRepository returns generated.GitHubRepositoryResolver implementation.
+func (r *Resolver) GitHubRepository() generated.GitHubRepositoryResolver {
+	return &gitHubRepositoryResolver{r}
+}
+
 // Team returns generated.TeamResolver implementation.
 func (r *Resolver) Team() generated.TeamResolver { return &teamResolver{r} }
 
@@ -1072,6 +1160,7 @@ func (r *Resolver) TeamMemberReconciler() generated.TeamMemberReconcilerResolver
 }
 
 type (
+	gitHubRepositoryResolver     struct{ *Resolver }
 	teamResolver                 struct{ *Resolver }
 	teamDeleteKeyResolver        struct{ *Resolver }
 	teamMemberReconcilerResolver struct{ *Resolver }
