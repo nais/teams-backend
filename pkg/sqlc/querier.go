@@ -14,6 +14,7 @@ import (
 
 type Querier interface {
 	AddReconcilerOptOut(ctx context.Context, arg AddReconcilerOptOutParams) error
+	AddRepositoryAuthorization(ctx context.Context, arg AddRepositoryAuthorizationParams) (*RepositoryAuthorization, error)
 	AssignGlobalRoleToServiceAccount(ctx context.Context, arg AssignGlobalRoleToServiceAccountParams) error
 	AssignGlobalRoleToUser(ctx context.Context, arg AssignGlobalRoleToUserParams) error
 	AssignTeamRoleToServiceAccount(ctx context.Context, arg AssignTeamRoleToServiceAccountParams) error
