@@ -278,10 +278,16 @@ func setupHTTPServer(cfg *config.Config, database db.Database, graphApi *graphql
 
 	r.Get("/", playground.Handler("GraphQL playground", "/query"))
 
+	iapIssuer := middleware.IAPAuthentication(database, cfg.IAP.Audience)
+	if cfg.IAP.Insecure {
+		iapIssuer = middleware.IAPInsecureAuthentication(database)
+	}
+
 	dataLoaders := dataloader.NewLoaders(database)
 	middlewares := []func(http.Handler) http.Handler{
 		cors.New(corsConfig(cfg.FrontendURL)).Handler,
 		middleware.ApiKeyAuthentication(database),
+		iapIssuer,
 		middleware.Oauth2Authentication(database, authHandler),
 		dataloader.Middleware(dataLoaders),
 	}
