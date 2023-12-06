@@ -100,6 +100,8 @@ type database struct {
 }
 
 type Database interface {
+	CreateRepositoryAuthorization(ctx context.Context, teamSlug slug.Slug, repoName string, authorization sqlc.RepositoryAuthorizationEnum) error
+	RemoveRepositoryAuthorization(ctx context.Context, teamSlug slug.Slug, repoName string, authorization sqlc.RepositoryAuthorizationEnum) error
 	CreateAuditLogEntry(ctx context.Context, correlationID uuid.UUID, componentName types.ComponentName, actor *string, targetType types.AuditLogsTargetType, targetIdentifier string, action types.AuditAction, message string) error
 	CreateUser(ctx context.Context, name, email, externalID string) (*User, error)
 	CreateServiceAccount(ctx context.Context, name string) (*ServiceAccount, error)

@@ -740,6 +740,64 @@ func (r *mutationResolver) ConfirmTeamDeletion(ctx context.Context, key *uuid.UU
 	return &correlationID, nil
 }
 
+// AuthorizeRepository is the resolver for the authorizeRepository field.
+func (r *mutationResolver) AuthorizeRepository(ctx context.Context, authorization model.RepoAuthorization, teamSlug *slug.Slug, repoName string) (*db.Team, error) {
+	team, err := r.database.GetTeamBySlug(ctx, *teamSlug)
+	if err != nil {
+		return nil, apierror.ErrTeamNotExist
+	}
+
+	actor := authz.ActorFromContext(ctx)
+	if _, err = r.database.GetTeamMember(ctx, *teamSlug, actor.User.GetID()); errors.Is(err, pgx.ErrNoRows) {
+		return nil, apierror.ErrUserIsNotTeamMember
+	} else if err != nil {
+		return nil, err
+	}
+
+	var repoAuthorization sqlc.RepositoryAuthorizationEnum
+	switch authorization {
+	default:
+		return nil, fmt.Errorf("invalid authorization: %q", string(authorization))
+	case model.RepoAuthorizationDeploy:
+		repoAuthorization = sqlc.RepositoryAuthorizationEnumDeploy
+	}
+
+	if err := r.database.CreateRepositoryAuthorization(ctx, *teamSlug, repoName, repoAuthorization); err != nil {
+		return nil, err
+	}
+
+	return team, nil
+}
+
+// DeauthorizeRepository is the resolver for the deauthorizeRepository field.
+func (r *mutationResolver) DeauthorizeRepository(ctx context.Context, authorization model.RepoAuthorization, teamSlug *slug.Slug, repoName string) (*db.Team, error) {
+	team, err := r.database.GetTeamBySlug(ctx, *teamSlug)
+	if err != nil {
+		return nil, apierror.ErrTeamNotExist
+	}
+
+	actor := authz.ActorFromContext(ctx)
+	if _, err = r.database.GetTeamMember(ctx, *teamSlug, actor.User.GetID()); errors.Is(err, pgx.ErrNoRows) {
+		return nil, apierror.ErrUserIsNotTeamMember
+	} else if err != nil {
+		return nil, err
+	}
+
+	var repoAuthorization sqlc.RepositoryAuthorizationEnum
+	switch authorization {
+	default:
+		return nil, fmt.Errorf("invalid authorization: %q", string(authorization))
+	case model.RepoAuthorizationDeploy:
+		repoAuthorization = sqlc.RepositoryAuthorizationEnumDeploy
+	}
+
+	if err := r.database.RemoveRepositoryAuthorization(ctx, *teamSlug, repoName, repoAuthorization); err != nil {
+		return nil, err
+	}
+
+	return team, nil
+}
+
 // Teams is the resolver for the teams field.
 func (r *queryResolver) Teams(ctx context.Context) ([]*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
@@ -1076,3 +1134,13 @@ type (
 	teamDeleteKeyResolver        struct{ *Resolver }
 	teamMemberReconcilerResolver struct{ *Resolver }
 )
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//     it when you're done.
+//   - You have helper methods in this file. Move them out to keep these resolver files clean.
+func (r *queryResolver) AuthorizeRepository(ctx context.Context, authorization model.RepoAuthorization, teamSlug *slug.Slug, repoName string) (string, error) {
+	panic(fmt.Errorf("not implemented: AuthorizeRepository - authorizeRepository"))
+}

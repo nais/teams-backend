@@ -198,6 +198,30 @@ extend type Mutation {
         "Deletion key, acquired using the requestTeamDeletion mutation."
         key: UUID!
     ): UUID! @auth
+
+    "Authorize a team to perform an action from a GitHub repository."
+    authorizeRepository(
+        "The action to authorize."
+        authorization: RepoAuthorization!
+
+        "The slug of the team to authorize the action for."
+        teamSlug: Slug!
+
+        "Name of the repository, with the org prefix, for instance 'org/repo'."
+        repoName: String!
+    ): Team! @auth
+
+    "Deauthorize an action from a team."
+    deauthorizeRepository(
+        "The action to deauthorize."
+        authorization: RepoAuthorization!
+
+        "The slug of the team to deauthorize the action for."
+        teamSlug: Slug!
+
+        "Name of the repository, with the org prefix, for instance 'org/repo'."
+        repoName: String!
+    ): Team! @auth
 }
 
 "Team deletion key type."
@@ -423,4 +447,10 @@ enum TeamRole {
 
     "Team owner, full access to the team."
     OWNER
+}
+
+"Repo authorizations."
+enum RepoAuthorization {
+    "Authorize for NAIS deployment."
+    DEPLOY
 }

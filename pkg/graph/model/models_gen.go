@@ -132,6 +132,47 @@ type UpdateTeamInput struct {
 	SlackAlertsChannels []*SlackAlertsChannelInput `json:"slackAlertsChannels,omitempty"`
 }
 
+// Repo authorizations.
+type RepoAuthorization string
+
+const (
+	// Authorize for NAIS deployment.
+	RepoAuthorizationDeploy RepoAuthorization = "DEPLOY"
+)
+
+var AllRepoAuthorization = []RepoAuthorization{
+	RepoAuthorizationDeploy,
+}
+
+func (e RepoAuthorization) IsValid() bool {
+	switch e {
+	case RepoAuthorizationDeploy:
+		return true
+	}
+	return false
+}
+
+func (e RepoAuthorization) String() string {
+	return string(e)
+}
+
+func (e *RepoAuthorization) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = RepoAuthorization(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid RepoAuthorization", str)
+	}
+	return nil
+}
+
+func (e RepoAuthorization) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
 // Available team roles.
 type TeamRole string
 
