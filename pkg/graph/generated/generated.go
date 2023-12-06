@@ -99,11 +99,11 @@ type ComplexityRoot struct {
 		AddTeamMember                func(childComplexity int, slug *slug.Slug, member model.TeamMemberInput) int
 		AddTeamMembers               func(childComplexity int, slug *slug.Slug, userIds []*uuid.UUID) int
 		AddTeamOwners                func(childComplexity int, slug *slug.Slug, userIds []*uuid.UUID) int
-		AuthorizeRepository          func(childComplexity int, authorization model.RepoAuthorization, teamSlug *slug.Slug, repoName string) int
+		AuthorizeRepository          func(childComplexity int, authorization model.RepositoryAuthorization, teamSlug *slug.Slug, repoName string) int
 		ConfigureReconciler          func(childComplexity int, name sqlc.ReconcilerName, config []*model.ReconcilerConfigInput) int
 		ConfirmTeamDeletion          func(childComplexity int, key *uuid.UUID) int
 		CreateTeam                   func(childComplexity int, input model.CreateTeamInput) int
-		DeauthorizeRepository        func(childComplexity int, authorization model.RepoAuthorization, teamSlug *slug.Slug, repoName string) int
+		DeauthorizeRepository        func(childComplexity int, authorization model.RepositoryAuthorization, teamSlug *slug.Slug, repoName string) int
 		DisableReconciler            func(childComplexity int, name sqlc.ReconcilerName) int
 		EnableReconciler             func(childComplexity int, name sqlc.ReconcilerName) int
 		RemoveReconcilerOptOut       func(childComplexity int, teamSlug *slug.Slug, userID *uuid.UUID, reconciler sqlc.ReconcilerName) int
@@ -262,7 +262,7 @@ type AuditLogResolver interface {
 	TargetType(ctx context.Context, obj *db.AuditLog) (types.AuditLogsTargetType, error)
 }
 type GitHubRepositoryResolver interface {
-	Authorizations(ctx context.Context, obj *reconcilers.GitHubRepository) ([]model.RepoAuthorization, error)
+	Authorizations(ctx context.Context, obj *reconcilers.GitHubRepository) ([]model.RepositoryAuthorization, error)
 }
 type MutationResolver interface {
 	SetGitHubTeamSlug(ctx context.Context, teamSlug *slug.Slug, gitHubTeamSlug *slug.Slug) (*db.Team, error)
@@ -288,8 +288,8 @@ type MutationResolver interface {
 	SetTeamMemberRole(ctx context.Context, slug *slug.Slug, userID *uuid.UUID, role model.TeamRole) (*db.Team, error)
 	RequestTeamDeletion(ctx context.Context, slug *slug.Slug) (*db.TeamDeleteKey, error)
 	ConfirmTeamDeletion(ctx context.Context, key *uuid.UUID) (*uuid.UUID, error)
-	AuthorizeRepository(ctx context.Context, authorization model.RepoAuthorization, teamSlug *slug.Slug, repoName string) (*db.Team, error)
-	DeauthorizeRepository(ctx context.Context, authorization model.RepoAuthorization, teamSlug *slug.Slug, repoName string) (*db.Team, error)
+	AuthorizeRepository(ctx context.Context, authorization model.RepositoryAuthorization, teamSlug *slug.Slug, repoName string) (*db.Team, error)
+	DeauthorizeRepository(ctx context.Context, authorization model.RepositoryAuthorization, teamSlug *slug.Slug, repoName string) (*db.Team, error)
 	SynchronizeUsers(ctx context.Context) (*uuid.UUID, error)
 }
 type QueryResolver interface {
@@ -546,7 +546,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.AuthorizeRepository(childComplexity, args["authorization"].(model.RepoAuthorization), args["teamSlug"].(*slug.Slug), args["repoName"].(string)), true
+		return e.complexity.Mutation.AuthorizeRepository(childComplexity, args["authorization"].(model.RepositoryAuthorization), args["teamSlug"].(*slug.Slug), args["repoName"].(string)), true
 
 	case "Mutation.configureReconciler":
 		if e.complexity.Mutation.ConfigureReconciler == nil {
@@ -594,7 +594,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.DeauthorizeRepository(childComplexity, args["authorization"].(model.RepoAuthorization), args["teamSlug"].(*slug.Slug), args["repoName"].(string)), true
+		return e.complexity.Mutation.DeauthorizeRepository(childComplexity, args["authorization"].(model.RepositoryAuthorization), args["teamSlug"].(*slug.Slug), args["repoName"].(string)), true
 
 	case "Mutation.disableReconciler":
 		if e.complexity.Mutation.DisableReconciler == nil {
@@ -2012,7 +2012,7 @@ extend type Mutation {
     "Authorize a team to perform an action from a GitHub repository."
     authorizeRepository(
         "The action to authorize."
-        authorization: RepoAuthorization!
+        authorization: RepositoryAuthorization!
 
         "The slug of the team to authorize the action for."
         teamSlug: Slug!
@@ -2024,7 +2024,7 @@ extend type Mutation {
     "Deauthorize an action from a team."
     deauthorizeRepository(
         "The action to deauthorize."
-        authorization: RepoAuthorization!
+        authorization: RepositoryAuthorization!
 
         "The slug of the team to deauthorize the action for."
         teamSlug: Slug!
@@ -2106,7 +2106,7 @@ type GitHubRepository {
     archived: Boolean!
 
     "A list of authorizations granted to the repository by the team."
-    authorizations: [RepoAuthorization!]!
+    authorizations: [RepositoryAuthorization!]!
 }
 
 "GitHub repository permission type."
@@ -2262,8 +2262,8 @@ enum TeamRole {
     OWNER
 }
 
-"Repo authorizations."
-enum RepoAuthorization {
+"Repository authorizations."
+enum RepositoryAuthorization {
     "Authorize for NAIS deployment."
     DEPLOY
 }`, BuiltIn: false},
@@ -2466,10 +2466,10 @@ func (ec *executionContext) field_Mutation_addTeamOwners_args(ctx context.Contex
 func (ec *executionContext) field_Mutation_authorizeRepository_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.RepoAuthorization
+	var arg0 model.RepositoryAuthorization
 	if tmp, ok := rawArgs["authorization"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("authorization"))
-		arg0, err = ec.unmarshalNRepoAuthorization2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepoAuthorization(ctx, tmp)
+		arg0, err = ec.unmarshalNRepositoryAuthorization2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepositoryAuthorization(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2553,10 +2553,10 @@ func (ec *executionContext) field_Mutation_createTeam_args(ctx context.Context, 
 func (ec *executionContext) field_Mutation_deauthorizeRepository_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.RepoAuthorization
+	var arg0 model.RepositoryAuthorization
 	if tmp, ok := rawArgs["authorization"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("authorization"))
-		arg0, err = ec.unmarshalNRepoAuthorization2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepoAuthorization(ctx, tmp)
+		arg0, err = ec.unmarshalNRepositoryAuthorization2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepositoryAuthorization(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -3775,9 +3775,9 @@ func (ec *executionContext) _GitHubRepository_authorizations(ctx context.Context
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]model.RepoAuthorization)
+	res := resTmp.([]model.RepositoryAuthorization)
 	fc.Result = res
-	return ec.marshalNRepoAuthorization2ᚕgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepoAuthorizationᚄ(ctx, field.Selections, res)
+	return ec.marshalNRepositoryAuthorization2ᚕgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepositoryAuthorizationᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_GitHubRepository_authorizations(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3787,7 +3787,7 @@ func (ec *executionContext) fieldContext_GitHubRepository_authorizations(ctx con
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type RepoAuthorization does not have child fields")
+			return nil, errors.New("field of type RepositoryAuthorization does not have child fields")
 		},
 	}
 	return fc, nil
@@ -6002,7 +6002,7 @@ func (ec *executionContext) _Mutation_authorizeRepository(ctx context.Context, f
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().AuthorizeRepository(rctx, fc.Args["authorization"].(model.RepoAuthorization), fc.Args["teamSlug"].(*slug.Slug), fc.Args["repoName"].(string))
+			return ec.resolvers.Mutation().AuthorizeRepository(rctx, fc.Args["authorization"].(model.RepositoryAuthorization), fc.Args["teamSlug"].(*slug.Slug), fc.Args["repoName"].(string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -6101,7 +6101,7 @@ func (ec *executionContext) _Mutation_deauthorizeRepository(ctx context.Context,
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().DeauthorizeRepository(rctx, fc.Args["authorization"].(model.RepoAuthorization), fc.Args["teamSlug"].(*slug.Slug), fc.Args["repoName"].(string))
+			return ec.resolvers.Mutation().DeauthorizeRepository(rctx, fc.Args["authorization"].(model.RepositoryAuthorization), fc.Args["teamSlug"].(*slug.Slug), fc.Args["repoName"].(string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -16046,26 +16046,26 @@ func (ec *executionContext) marshalNReconcilerState2ᚖgithubᚗcomᚋnaisᚋtea
 	return ec._ReconcilerState(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNRepoAuthorization2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepoAuthorization(ctx context.Context, v interface{}) (model.RepoAuthorization, error) {
-	var res model.RepoAuthorization
+func (ec *executionContext) unmarshalNRepositoryAuthorization2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepositoryAuthorization(ctx context.Context, v interface{}) (model.RepositoryAuthorization, error) {
+	var res model.RepositoryAuthorization
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNRepoAuthorization2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepoAuthorization(ctx context.Context, sel ast.SelectionSet, v model.RepoAuthorization) graphql.Marshaler {
+func (ec *executionContext) marshalNRepositoryAuthorization2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepositoryAuthorization(ctx context.Context, sel ast.SelectionSet, v model.RepositoryAuthorization) graphql.Marshaler {
 	return v
 }
 
-func (ec *executionContext) unmarshalNRepoAuthorization2ᚕgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepoAuthorizationᚄ(ctx context.Context, v interface{}) ([]model.RepoAuthorization, error) {
+func (ec *executionContext) unmarshalNRepositoryAuthorization2ᚕgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepositoryAuthorizationᚄ(ctx context.Context, v interface{}) ([]model.RepositoryAuthorization, error) {
 	var vSlice []interface{}
 	if v != nil {
 		vSlice = graphql.CoerceList(v)
 	}
 	var err error
-	res := make([]model.RepoAuthorization, len(vSlice))
+	res := make([]model.RepositoryAuthorization, len(vSlice))
 	for i := range vSlice {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNRepoAuthorization2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepoAuthorization(ctx, vSlice[i])
+		res[i], err = ec.unmarshalNRepositoryAuthorization2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepositoryAuthorization(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -16073,7 +16073,7 @@ func (ec *executionContext) unmarshalNRepoAuthorization2ᚕgithubᚗcomᚋnais�
 	return res, nil
 }
 
-func (ec *executionContext) marshalNRepoAuthorization2ᚕgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepoAuthorizationᚄ(ctx context.Context, sel ast.SelectionSet, v []model.RepoAuthorization) graphql.Marshaler {
+func (ec *executionContext) marshalNRepositoryAuthorization2ᚕgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepositoryAuthorizationᚄ(ctx context.Context, sel ast.SelectionSet, v []model.RepositoryAuthorization) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -16097,7 +16097,7 @@ func (ec *executionContext) marshalNRepoAuthorization2ᚕgithubᚗcomᚋnaisᚋt
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNRepoAuthorization2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepoAuthorization(ctx, sel, v[i])
+			ret[i] = ec.marshalNRepositoryAuthorization2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepositoryAuthorization(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)

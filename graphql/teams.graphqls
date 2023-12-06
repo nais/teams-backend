@@ -202,7 +202,7 @@ extend type Mutation {
     "Authorize a team to perform an action from a GitHub repository."
     authorizeRepository(
         "The action to authorize."
-        authorization: RepoAuthorization!
+        authorization: RepositoryAuthorization!
 
         "The slug of the team to authorize the action for."
         teamSlug: Slug!
@@ -214,7 +214,7 @@ extend type Mutation {
     "Deauthorize an action from a team."
     deauthorizeRepository(
         "The action to deauthorize."
-        authorization: RepoAuthorization!
+        authorization: RepositoryAuthorization!
 
         "The slug of the team to deauthorize the action for."
         teamSlug: Slug!
@@ -296,7 +296,7 @@ type GitHubRepository {
     archived: Boolean!
 
     "A list of authorizations granted to the repository by the team."
-    authorizations: [RepoAuthorization!]!
+    authorizations: [RepositoryAuthorization!]!
 }
 
 "GitHub repository permission type."
@@ -452,8 +452,8 @@ enum TeamRole {
     OWNER
 }
 
-"Repo authorizations."
-enum RepoAuthorization {
+"Repository authorizations."
+enum RepositoryAuthorization {
     "Authorize for NAIS deployment."
     DEPLOY
 }

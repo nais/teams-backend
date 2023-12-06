@@ -27,7 +27,7 @@ import (
 )
 
 // Authorizations is the resolver for the authorizations field.
-func (r *gitHubRepositoryResolver) Authorizations(ctx context.Context, obj *reconcilers.GitHubRepository) ([]model.RepoAuthorization, error) {
+func (r *gitHubRepositoryResolver) Authorizations(ctx context.Context, obj *reconcilers.GitHubRepository) ([]model.RepositoryAuthorization, error) {
 	if obj.TeamSlug == nil {
 		return nil, fmt.Errorf("repository is missing team slug")
 	}
@@ -36,9 +36,9 @@ func (r *gitHubRepositoryResolver) Authorizations(ctx context.Context, obj *reco
 	if err != nil {
 		return nil, err
 	}
-	resp := make([]model.RepoAuthorization, 0, len(authorizations))
+	resp := make([]model.RepositoryAuthorization, 0, len(authorizations))
 	for _, authorization := range authorizations {
-		repoAuth := model.RepoAuthorization(strings.ToUpper(string(authorization)))
+		repoAuth := model.RepositoryAuthorization(strings.ToUpper(string(authorization)))
 		if !repoAuth.IsValid() {
 			return nil, fmt.Errorf("invalid authorization: %q", authorization)
 		}
@@ -763,7 +763,7 @@ func (r *mutationResolver) ConfirmTeamDeletion(ctx context.Context, key *uuid.UU
 }
 
 // AuthorizeRepository is the resolver for the authorizeRepository field.
-func (r *mutationResolver) AuthorizeRepository(ctx context.Context, authorization model.RepoAuthorization, teamSlug *slug.Slug, repoName string) (*db.Team, error) {
+func (r *mutationResolver) AuthorizeRepository(ctx context.Context, authorization model.RepositoryAuthorization, teamSlug *slug.Slug, repoName string) (*db.Team, error) {
 	team, err := r.database.GetTeamBySlug(ctx, *teamSlug)
 	if err != nil {
 		return nil, apierror.ErrTeamNotExist
@@ -780,7 +780,7 @@ func (r *mutationResolver) AuthorizeRepository(ctx context.Context, authorizatio
 	switch authorization {
 	default:
 		return nil, fmt.Errorf("invalid authorization: %q", string(authorization))
-	case model.RepoAuthorizationDeploy:
+	case model.RepositoryAuthorizationDeploy:
 		repoAuthorization = sqlc.RepositoryAuthorizationEnumDeploy
 	}
 
@@ -792,7 +792,7 @@ func (r *mutationResolver) AuthorizeRepository(ctx context.Context, authorizatio
 }
 
 // DeauthorizeRepository is the resolver for the deauthorizeRepository field.
-func (r *mutationResolver) DeauthorizeRepository(ctx context.Context, authorization model.RepoAuthorization, teamSlug *slug.Slug, repoName string) (*db.Team, error) {
+func (r *mutationResolver) DeauthorizeRepository(ctx context.Context, authorization model.RepositoryAuthorization, teamSlug *slug.Slug, repoName string) (*db.Team, error) {
 	team, err := r.database.GetTeamBySlug(ctx, *teamSlug)
 	if err != nil {
 		return nil, apierror.ErrTeamNotExist
@@ -809,7 +809,7 @@ func (r *mutationResolver) DeauthorizeRepository(ctx context.Context, authorizat
 	switch authorization {
 	default:
 		return nil, fmt.Errorf("invalid authorization: %q", string(authorization))
-	case model.RepoAuthorizationDeploy:
+	case model.RepositoryAuthorizationDeploy:
 		repoAuthorization = sqlc.RepositoryAuthorizationEnumDeploy
 	}
 

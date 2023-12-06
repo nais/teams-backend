@@ -132,44 +132,44 @@ type UpdateTeamInput struct {
 	SlackAlertsChannels []*SlackAlertsChannelInput `json:"slackAlertsChannels,omitempty"`
 }
 
-// Repo authorizations.
-type RepoAuthorization string
+// Repository authorizations.
+type RepositoryAuthorization string
 
 const (
 	// Authorize for NAIS deployment.
-	RepoAuthorizationDeploy RepoAuthorization = "DEPLOY"
+	RepositoryAuthorizationDeploy RepositoryAuthorization = "DEPLOY"
 )
 
-var AllRepoAuthorization = []RepoAuthorization{
-	RepoAuthorizationDeploy,
+var AllRepositoryAuthorization = []RepositoryAuthorization{
+	RepositoryAuthorizationDeploy,
 }
 
-func (e RepoAuthorization) IsValid() bool {
+func (e RepositoryAuthorization) IsValid() bool {
 	switch e {
-	case RepoAuthorizationDeploy:
+	case RepositoryAuthorizationDeploy:
 		return true
 	}
 	return false
 }
 
-func (e RepoAuthorization) String() string {
+func (e RepositoryAuthorization) String() string {
 	return string(e)
 }
 
-func (e *RepoAuthorization) UnmarshalGQL(v interface{}) error {
+func (e *RepositoryAuthorization) UnmarshalGQL(v interface{}) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
 	}
 
-	*e = RepoAuthorization(str)
+	*e = RepositoryAuthorization(str)
 	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid RepoAuthorization", str)
+		return fmt.Errorf("%s is not a valid RepositoryAuthorization", str)
 	}
 	return nil
 }
 
-func (e RepoAuthorization) MarshalGQL(w io.Writer) {
+func (e RepositoryAuthorization) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
