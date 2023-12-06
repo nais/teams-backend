@@ -48,6 +48,7 @@ type Querier interface {
 	GetReconcilerConfig(ctx context.Context, reconciler ReconcilerName) ([]*GetReconcilerConfigRow, error)
 	GetReconcilerStateForTeam(ctx context.Context, arg GetReconcilerStateForTeamParams) (*ReconcilerState, error)
 	GetReconcilers(ctx context.Context) ([]*Reconciler, error)
+	GetRepositoryAuthorizations(ctx context.Context, arg GetRepositoryAuthorizationsParams) ([]RepositoryAuthorizationEnum, error)
 	GetServiceAccountByApiKey(ctx context.Context, apiKey string) (*ServiceAccount, error)
 	GetServiceAccountByName(ctx context.Context, name string) (*ServiceAccount, error)
 	GetServiceAccountRoles(ctx context.Context, serviceAccountID uuid.UUID) ([]*ServiceAccountRole, error)

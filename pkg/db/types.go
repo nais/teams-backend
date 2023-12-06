@@ -176,6 +176,7 @@ type Database interface {
 	GetTeamMembersForReconciler(ctx context.Context, teamSlug slug.Slug, reconcilerName sqlc.ReconcilerName) ([]*User, error)
 	GetTeamMemberOptOuts(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug) ([]*sqlc.GetTeamMemberOptOutsRow, error)
 	GetTeamsWithPermissionInGitHubRepo(ctx context.Context, repoName, permission string) ([]*Team, error)
+	GetRepositoryAuthorizations(ctx context.Context, teamSlug slug.Slug, repo string) ([]sqlc.RepositoryAuthorizationEnum, error)
 }
 
 func (u User) GetID() uuid.UUID {

@@ -1736,6 +1736,62 @@ func (_c *MockDatabase_GetReconcilers_Call) RunAndReturn(run func(context.Contex
 	return _c
 }
 
+// GetRepositoryAuthorizations provides a mock function with given fields: ctx, teamSlug, repo
+func (_m *MockDatabase) GetRepositoryAuthorizations(ctx context.Context, teamSlug slug.Slug, repo string) ([]sqlc.RepositoryAuthorizationEnum, error) {
+	ret := _m.Called(ctx, teamSlug, repo)
+
+	var r0 []sqlc.RepositoryAuthorizationEnum
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug, string) ([]sqlc.RepositoryAuthorizationEnum, error)); ok {
+		return rf(ctx, teamSlug, repo)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug, string) []sqlc.RepositoryAuthorizationEnum); ok {
+		r0 = rf(ctx, teamSlug, repo)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]sqlc.RepositoryAuthorizationEnum)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug, string) error); ok {
+		r1 = rf(ctx, teamSlug, repo)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockDatabase_GetRepositoryAuthorizations_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetRepositoryAuthorizations'
+type MockDatabase_GetRepositoryAuthorizations_Call struct {
+	*mock.Call
+}
+
+// GetRepositoryAuthorizations is a helper method to define mock.On call
+//   - ctx context.Context
+//   - teamSlug slug.Slug
+//   - repo string
+func (_e *MockDatabase_Expecter) GetRepositoryAuthorizations(ctx interface{}, teamSlug interface{}, repo interface{}) *MockDatabase_GetRepositoryAuthorizations_Call {
+	return &MockDatabase_GetRepositoryAuthorizations_Call{Call: _e.mock.On("GetRepositoryAuthorizations", ctx, teamSlug, repo)}
+}
+
+func (_c *MockDatabase_GetRepositoryAuthorizations_Call) Run(run func(ctx context.Context, teamSlug slug.Slug, repo string)) *MockDatabase_GetRepositoryAuthorizations_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(slug.Slug), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *MockDatabase_GetRepositoryAuthorizations_Call) Return(_a0 []sqlc.RepositoryAuthorizationEnum, _a1 error) *MockDatabase_GetRepositoryAuthorizations_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockDatabase_GetRepositoryAuthorizations_Call) RunAndReturn(run func(context.Context, slug.Slug, string) ([]sqlc.RepositoryAuthorizationEnum, error)) *MockDatabase_GetRepositoryAuthorizations_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetServiceAccountByApiKey provides a mock function with given fields: ctx, APIKey
 func (_m *MockDatabase) GetServiceAccountByApiKey(ctx context.Context, APIKey string) (*ServiceAccount, error) {
 	ret := _m.Called(ctx, APIKey)

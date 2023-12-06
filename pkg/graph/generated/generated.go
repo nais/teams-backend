@@ -45,6 +45,7 @@ type Config struct {
 
 type ResolverRoot interface {
 	AuditLog() AuditLogResolver
+	GitHubRepository() GitHubRepositoryResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
 	Reconciler() ReconcilerResolver
@@ -82,9 +83,10 @@ type ComplexityRoot struct {
 	}
 
 	GitHubRepository struct {
-		Archived    func(childComplexity int) int
-		Name        func(childComplexity int) int
-		Permissions func(childComplexity int) int
+		Archived       func(childComplexity int) int
+		Authorizations func(childComplexity int) int
+		Name           func(childComplexity int) int
+		Permissions    func(childComplexity int) int
 	}
 
 	GitHubRepositoryPermission struct {
@@ -258,6 +260,9 @@ type AuditLogResolver interface {
 	ComponentName(ctx context.Context, obj *db.AuditLog) (types.ComponentName, error)
 
 	TargetType(ctx context.Context, obj *db.AuditLog) (types.AuditLogsTargetType, error)
+}
+type GitHubRepositoryResolver interface {
+	Authorizations(ctx context.Context, obj *reconcilers.GitHubRepository) ([]model.RepoAuthorization, error)
 }
 type MutationResolver interface {
 	SetGitHubTeamSlug(ctx context.Context, teamSlug *slug.Slug, gitHubTeamSlug *slug.Slug) (*db.Team, error)
@@ -447,6 +452,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.GitHubRepository.Archived(childComplexity), true
+
+	case "GitHubRepository.authorizations":
+		if e.complexity.GitHubRepository.Authorizations == nil {
+			break
+		}
+
+		return e.complexity.GitHubRepository.Authorizations(childComplexity), true
 
 	case "GitHubRepository.name":
 		if e.complexity.GitHubRepository.Name == nil {
@@ -2092,6 +2104,9 @@ type GitHubRepository {
 
     "Whether or not the repository is archived."
     archived: Boolean!
+
+    "A list of authorizations granted to the repository by the team."
+    authorizations: [RepoAuthorization!]!
 }
 
 "GitHub repository permission type."
@@ -3729,6 +3744,50 @@ func (ec *executionContext) fieldContext_GitHubRepository_archived(ctx context.C
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GitHubRepository_authorizations(ctx context.Context, field graphql.CollectedField, obj *reconcilers.GitHubRepository) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GitHubRepository_authorizations(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.GitHubRepository().Authorizations(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]model.RepoAuthorization)
+	fc.Result = res
+	return ec.marshalNRepoAuthorization2ᚕgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepoAuthorizationᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GitHubRepository_authorizations(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GitHubRepository",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type RepoAuthorization does not have child fields")
 		},
 	}
 	return fc, nil
@@ -9469,6 +9528,8 @@ func (ec *executionContext) fieldContext_Team_gitHubRepositories(ctx context.Con
 				return ec.fieldContext_GitHubRepository_permissions(ctx, field)
 			case "archived":
 				return ec.fieldContext_GitHubRepository_archived(ctx, field)
+			case "authorizations":
+				return ec.fieldContext_GitHubRepository_authorizations(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type GitHubRepository", field.Name)
 		},
@@ -12965,18 +13026,54 @@ func (ec *executionContext) _GitHubRepository(ctx context.Context, sel ast.Selec
 		case "name":
 			out.Values[i] = ec._GitHubRepository_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "permissions":
 			out.Values[i] = ec._GitHubRepository_permissions(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "archived":
 			out.Values[i] = ec._GitHubRepository_archived(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "authorizations":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._GitHubRepository_authorizations(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -15957,6 +16054,67 @@ func (ec *executionContext) unmarshalNRepoAuthorization2githubᚗcomᚋnaisᚋte
 
 func (ec *executionContext) marshalNRepoAuthorization2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepoAuthorization(ctx context.Context, sel ast.SelectionSet, v model.RepoAuthorization) graphql.Marshaler {
 	return v
+}
+
+func (ec *executionContext) unmarshalNRepoAuthorization2ᚕgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepoAuthorizationᚄ(ctx context.Context, v interface{}) ([]model.RepoAuthorization, error) {
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]model.RepoAuthorization, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNRepoAuthorization2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepoAuthorization(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNRepoAuthorization2ᚕgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepoAuthorizationᚄ(ctx context.Context, sel ast.SelectionSet, v []model.RepoAuthorization) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNRepoAuthorization2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepoAuthorization(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) marshalNRole2ᚕᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋdbᚐRoleᚄ(ctx context.Context, sel ast.SelectionSet, v []*db.Role) graphql.Marshaler {

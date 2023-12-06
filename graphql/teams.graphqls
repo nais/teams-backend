@@ -294,6 +294,9 @@ type GitHubRepository {
 
     "Whether or not the repository is archived."
     archived: Boolean!
+
+    "A list of authorizations granted to the repository by the team."
+    authorizations: [RepoAuthorization!]!
 }
 
 "GitHub repository permission type."

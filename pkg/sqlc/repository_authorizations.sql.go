@@ -25,6 +25,43 @@ func (q *Queries) CreateRepositoryAuthorization(ctx context.Context, arg CreateR
 	return err
 }
 
+const getRepositoryAuthorizations = `-- name: GetRepositoryAuthorizations :many
+SELECT
+    repository_authorization
+FROM
+    repository_authorizations
+WHERE
+    team_slug = $1
+    AND github_repository = $2
+ORDER BY
+    repository_authorization
+`
+
+type GetRepositoryAuthorizationsParams struct {
+	TeamSlug         string
+	GithubRepository string
+}
+
+func (q *Queries) GetRepositoryAuthorizations(ctx context.Context, arg GetRepositoryAuthorizationsParams) ([]RepositoryAuthorizationEnum, error) {
+	rows, err := q.db.Query(ctx, getRepositoryAuthorizations, arg.TeamSlug, arg.GithubRepository)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RepositoryAuthorizationEnum
+	for rows.Next() {
+		var repository_authorization RepositoryAuthorizationEnum
+		if err := rows.Scan(&repository_authorization); err != nil {
+			return nil, err
+		}
+		items = append(items, repository_authorization)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const removeRepositoryAuthorization = `-- name: RemoveRepositoryAuthorization :exec
 DELETE FROM repository_authorizations
 WHERE

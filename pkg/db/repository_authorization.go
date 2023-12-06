@@ -22,3 +22,10 @@ func (d *database) RemoveRepositoryAuthorization(ctx context.Context, teamSlug s
 		RepositoryAuthorization: authorization,
 	})
 }
+
+func (d *database) GetRepositoryAuthorizations(ctx context.Context, teamSlug slug.Slug, repo string) ([]sqlc.RepositoryAuthorizationEnum, error) {
+	return d.querier.GetRepositoryAuthorizations(ctx, sqlc.GetRepositoryAuthorizationsParams{
+		TeamSlug:         string(teamSlug),
+		GithubRepository: repo,
+	})
+}

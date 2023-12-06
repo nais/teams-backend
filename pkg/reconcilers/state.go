@@ -25,6 +25,7 @@ type GitHubRepository struct {
 	Name        string                        `json:"name"`
 	Permissions []*GitHubRepositoryPermission `json:"permissions"`
 	Archived    bool                          `json:"archived"`
+	TeamSlug    *slug.Slug                    `json:"-"`
 }
 
 type GitHubRepositoryPermission struct {

@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	pgx "github.com/jackc/pgx/v4"
@@ -24,6 +25,27 @@ import (
 	"github.com/nais/teams-backend/pkg/sqlc"
 	"github.com/nais/teams-backend/pkg/types"
 )
+
+// Authorizations is the resolver for the authorizations field.
+func (r *gitHubRepositoryResolver) Authorizations(ctx context.Context, obj *reconcilers.GitHubRepository) ([]model.RepoAuthorization, error) {
+	if obj.TeamSlug == nil {
+		return nil, fmt.Errorf("repository is missing team slug")
+	}
+
+	authorizations, err := r.database.GetRepositoryAuthorizations(ctx, *obj.TeamSlug, obj.Name)
+	if err != nil {
+		return nil, err
+	}
+	resp := make([]model.RepoAuthorization, 0, len(authorizations))
+	for _, authorization := range authorizations {
+		repoAuth := model.RepoAuthorization(strings.ToUpper(string(authorization)))
+		if !repoAuth.IsValid() {
+			return nil, fmt.Errorf("invalid authorization: %q", authorization)
+		}
+		resp = append(resp, repoAuth)
+	}
+	return resp, nil
+}
 
 // CreateTeam is the resolver for the createTeam field.
 func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTeamInput) (*db.Team, error) {
@@ -1085,6 +1107,9 @@ func (r *teamResolver) GitHubRepositories(ctx context.Context, obj *db.Team) ([]
 	if err != nil {
 		return nil, apierror.Errorf("Unable to load the GitHub state for the team.")
 	}
+	for i := range state.Repositories {
+		state.Repositories[i].TeamSlug = &obj.Slug
+	}
 	return state.Repositories, nil
 }
 
@@ -1118,6 +1143,11 @@ func (r *teamMemberReconcilerResolver) Reconciler(ctx context.Context, obj *sqlc
 	return reconciler, nil
 }
 
+// GitHubRepository returns generated.GitHubRepositoryResolver implementation.
+func (r *Resolver) GitHubRepository() generated.GitHubRepositoryResolver {
+	return &gitHubRepositoryResolver{r}
+}
+
 // Team returns generated.TeamResolver implementation.
 func (r *Resolver) Team() generated.TeamResolver { return &teamResolver{r} }
 
@@ -1130,17 +1160,8 @@ func (r *Resolver) TeamMemberReconciler() generated.TeamMemberReconcilerResolver
 }
 
 type (
+	gitHubRepositoryResolver     struct{ *Resolver }
 	teamResolver                 struct{ *Resolver }
 	teamDeleteKeyResolver        struct{ *Resolver }
 	teamMemberReconcilerResolver struct{ *Resolver }
 )
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//     it when you're done.
-//   - You have helper methods in this file. Move them out to keep these resolver files clean.
-func (r *queryResolver) AuthorizeRepository(ctx context.Context, authorization model.RepoAuthorization, teamSlug *slug.Slug, repoName string) (string, error) {
-	panic(fmt.Errorf("not implemented: AuthorizeRepository - authorizeRepository"))
-}
