@@ -102,7 +102,7 @@ values:
   staticServiceAccounts:
     displayName: JSON-encoded list of static service accounts
     computed:
-      template: '{{.Management.teams_static_service_accounts | quote}}'
+      template: "{{.Management.teams_static_service_accounts | quote}}"
   tenantDomain:
     displayName: Tenant domain
     computed:
@@ -115,3 +115,9 @@ values:
     displayName: Ingress URL
     computed:
       template: '"{{ subdomain . "teams" }}"'
+  iap.audience:
+    displayName: IAP audience
+    description: IAP audience
+    required: true
+    config:
+      type: string

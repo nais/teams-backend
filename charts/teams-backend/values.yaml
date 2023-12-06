@@ -42,6 +42,8 @@ dependencytrack:
   endpoint: # mapped in fasit
   username: teams
   password: # mapped in fasit
+iap:
+  audience: # mapped in fasit
 
 firstRunEnableReconcilers: "google:gcp:project,google:workspace-admin,nais:namespace,nais:deploy,google:gcp:gar"
 
