@@ -84,6 +84,13 @@ type NaisDeploy struct {
 	DeployKeyEndpoint string `envconfig:"TEAMS_BACKEND_NAIS_DEPLOY_DEPLOY_KEY_ENDPOINT" default:"http://localhost:8080/internal/api/v1/apikey"`
 }
 
+type IAP struct {
+	// IAP audience for validating IAP tokens
+	Audience string `envconfig:"TEAMS_BACKEND_IAP_AUDIENCE"`
+	// Insecure bypasses IAP authentication, just using the email header
+	Insecure bool `envconfig:"TEAMS_BACKEND_IAP_INSECURE"`
+}
+
 type Config struct {
 	DependencyTrack DependencyTrack
 	GitHub          GitHub
@@ -92,6 +99,7 @@ type Config struct {
 	NaisDeploy      NaisDeploy
 	NaisNamespace   NaisNamespace
 	OAuth           OAuth
+	IAP             IAP
 
 	// Environments A list of environment names used for instance in GCP
 	Environments []string

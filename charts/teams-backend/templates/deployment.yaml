@@ -170,6 +170,9 @@ spec:
               value: "{{ .Values.dependencytrack.endpoint }}"
             - name: TEAMS_BACKEND_DEPENDENCYTRACK_USERNAME
               value: "{{ .Values.dependencytrack.username }}"
+            # IAP
+            - name: TEAMS_BACKEND_IAP_AUDIENCE
+              value: "{{ .Values.iap.audience }}"
           ports:
             - name: http
               containerPort: 3000
