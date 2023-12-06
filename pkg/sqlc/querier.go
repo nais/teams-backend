@@ -14,7 +14,6 @@ import (
 
 type Querier interface {
 	AddReconcilerOptOut(ctx context.Context, arg AddReconcilerOptOutParams) error
-	AddRepositoryAuthorization(ctx context.Context, arg AddRepositoryAuthorizationParams) (*RepositoryAuthorization, error)
 	AssignGlobalRoleToServiceAccount(ctx context.Context, arg AssignGlobalRoleToServiceAccountParams) error
 	AssignGlobalRoleToUser(ctx context.Context, arg AssignGlobalRoleToUserParams) error
 	AssignTeamRoleToServiceAccount(ctx context.Context, arg AssignTeamRoleToServiceAccountParams) error
@@ -24,6 +23,7 @@ type Querier interface {
 	ConfirmTeamDeleteKey(ctx context.Context, key uuid.UUID) error
 	CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) error
 	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) error
+	CreateRepositoryAuthorization(ctx context.Context, arg CreateRepositoryAuthorizationParams) error
 	CreateServiceAccount(ctx context.Context, name string) (*ServiceAccount, error)
 	CreateSession(ctx context.Context, arg CreateSessionParams) (*Session, error)
 	CreateTeam(ctx context.Context, arg CreateTeamParams) (*Team, error)
@@ -75,6 +75,7 @@ type Querier interface {
 	RemoveApiKeysFromServiceAccount(ctx context.Context, serviceAccountID uuid.UUID) error
 	RemoveReconcilerOptOut(ctx context.Context, arg RemoveReconcilerOptOutParams) error
 	RemoveReconcilerStateForTeam(ctx context.Context, arg RemoveReconcilerStateForTeamParams) error
+	RemoveRepositoryAuthorization(ctx context.Context, arg RemoveRepositoryAuthorizationParams) error
 	RemoveSlackAlertsChannel(ctx context.Context, arg RemoveSlackAlertsChannelParams) error
 	RemoveUserFromTeam(ctx context.Context, arg RemoveUserFromTeamParams) error
 	ResetReconcilerConfig(ctx context.Context, reconciler ReconcilerName) error

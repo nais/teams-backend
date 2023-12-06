@@ -9,21 +9,37 @@ import (
 	"context"
 )
 
-const addRepositoryAuthorization = `-- name: AddRepositoryAuthorization :one
+const createRepositoryAuthorization = `-- name: CreateRepositoryAuthorization :exec
 INSERT INTO repository_authorizations (team_slug, github_repository, repository_authorization)
 VALUES ($1, $2, $3)
-RETURNING team_slug, github_repository, repository_authorization
 `
 
-type AddRepositoryAuthorizationParams struct {
+type CreateRepositoryAuthorizationParams struct {
 	TeamSlug                string
 	GithubRepository        string
 	RepositoryAuthorization RepositoryAuthorizationEnum
 }
 
-func (q *Queries) AddRepositoryAuthorization(ctx context.Context, arg AddRepositoryAuthorizationParams) (*RepositoryAuthorization, error) {
-	row := q.db.QueryRow(ctx, addRepositoryAuthorization, arg.TeamSlug, arg.GithubRepository, arg.RepositoryAuthorization)
-	var i RepositoryAuthorization
-	err := row.Scan(&i.TeamSlug, &i.GithubRepository, &i.RepositoryAuthorization)
-	return &i, err
+func (q *Queries) CreateRepositoryAuthorization(ctx context.Context, arg CreateRepositoryAuthorizationParams) error {
+	_, err := q.db.Exec(ctx, createRepositoryAuthorization, arg.TeamSlug, arg.GithubRepository, arg.RepositoryAuthorization)
+	return err
+}
+
+const removeRepositoryAuthorization = `-- name: RemoveRepositoryAuthorization :exec
+DELETE FROM repository_authorizations
+WHERE
+    team_slug = $1
+    AND github_repository = $2
+    AND repository_authorization = $3
+`
+
+type RemoveRepositoryAuthorizationParams struct {
+	TeamSlug                string
+	GithubRepository        string
+	RepositoryAuthorization RepositoryAuthorizationEnum
+}
+
+func (q *Queries) RemoveRepositoryAuthorization(ctx context.Context, arg RemoveRepositoryAuthorizationParams) error {
+	_, err := q.db.Exec(ctx, removeRepositoryAuthorization, arg.TeamSlug, arg.GithubRepository, arg.RepositoryAuthorization)
+	return err
 }

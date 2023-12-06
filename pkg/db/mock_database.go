@@ -431,6 +431,51 @@ func (_c *MockDatabase_CreateAuditLogEntry_Call) RunAndReturn(run func(context.C
 	return _c
 }
 
+// CreateRepositoryAuthorization provides a mock function with given fields: ctx, teamSlug, repoName, authorization
+func (_m *MockDatabase) CreateRepositoryAuthorization(ctx context.Context, teamSlug slug.Slug, repoName string, authorization sqlc.RepositoryAuthorizationEnum) error {
+	ret := _m.Called(ctx, teamSlug, repoName, authorization)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug, string, sqlc.RepositoryAuthorizationEnum) error); ok {
+		r0 = rf(ctx, teamSlug, repoName, authorization)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockDatabase_CreateRepositoryAuthorization_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateRepositoryAuthorization'
+type MockDatabase_CreateRepositoryAuthorization_Call struct {
+	*mock.Call
+}
+
+// CreateRepositoryAuthorization is a helper method to define mock.On call
+//   - ctx context.Context
+//   - teamSlug slug.Slug
+//   - repoName string
+//   - authorization sqlc.RepositoryAuthorizationEnum
+func (_e *MockDatabase_Expecter) CreateRepositoryAuthorization(ctx interface{}, teamSlug interface{}, repoName interface{}, authorization interface{}) *MockDatabase_CreateRepositoryAuthorization_Call {
+	return &MockDatabase_CreateRepositoryAuthorization_Call{Call: _e.mock.On("CreateRepositoryAuthorization", ctx, teamSlug, repoName, authorization)}
+}
+
+func (_c *MockDatabase_CreateRepositoryAuthorization_Call) Run(run func(ctx context.Context, teamSlug slug.Slug, repoName string, authorization sqlc.RepositoryAuthorizationEnum)) *MockDatabase_CreateRepositoryAuthorization_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(slug.Slug), args[2].(string), args[3].(sqlc.RepositoryAuthorizationEnum))
+	})
+	return _c
+}
+
+func (_c *MockDatabase_CreateRepositoryAuthorization_Call) Return(_a0 error) *MockDatabase_CreateRepositoryAuthorization_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockDatabase_CreateRepositoryAuthorization_Call) RunAndReturn(run func(context.Context, slug.Slug, string, sqlc.RepositoryAuthorizationEnum) error) *MockDatabase_CreateRepositoryAuthorization_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateServiceAccount provides a mock function with given fields: ctx, name
 func (_m *MockDatabase) CreateServiceAccount(ctx context.Context, name string) (*ServiceAccount, error) {
 	ret := _m.Called(ctx, name)
@@ -3170,6 +3215,51 @@ func (_c *MockDatabase_RemoveReconcilerStateForTeam_Call) Return(_a0 error) *Moc
 }
 
 func (_c *MockDatabase_RemoveReconcilerStateForTeam_Call) RunAndReturn(run func(context.Context, sqlc.ReconcilerName, slug.Slug) error) *MockDatabase_RemoveReconcilerStateForTeam_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RemoveRepositoryAuthorization provides a mock function with given fields: ctx, teamSlug, repoName, authorization
+func (_m *MockDatabase) RemoveRepositoryAuthorization(ctx context.Context, teamSlug slug.Slug, repoName string, authorization sqlc.RepositoryAuthorizationEnum) error {
+	ret := _m.Called(ctx, teamSlug, repoName, authorization)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug, string, sqlc.RepositoryAuthorizationEnum) error); ok {
+		r0 = rf(ctx, teamSlug, repoName, authorization)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockDatabase_RemoveRepositoryAuthorization_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveRepositoryAuthorization'
+type MockDatabase_RemoveRepositoryAuthorization_Call struct {
+	*mock.Call
+}
+
+// RemoveRepositoryAuthorization is a helper method to define mock.On call
+//   - ctx context.Context
+//   - teamSlug slug.Slug
+//   - repoName string
+//   - authorization sqlc.RepositoryAuthorizationEnum
+func (_e *MockDatabase_Expecter) RemoveRepositoryAuthorization(ctx interface{}, teamSlug interface{}, repoName interface{}, authorization interface{}) *MockDatabase_RemoveRepositoryAuthorization_Call {
+	return &MockDatabase_RemoveRepositoryAuthorization_Call{Call: _e.mock.On("RemoveRepositoryAuthorization", ctx, teamSlug, repoName, authorization)}
+}
+
+func (_c *MockDatabase_RemoveRepositoryAuthorization_Call) Run(run func(ctx context.Context, teamSlug slug.Slug, repoName string, authorization sqlc.RepositoryAuthorizationEnum)) *MockDatabase_RemoveRepositoryAuthorization_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(slug.Slug), args[2].(string), args[3].(sqlc.RepositoryAuthorizationEnum))
+	})
+	return _c
+}
+
+func (_c *MockDatabase_RemoveRepositoryAuthorization_Call) Return(_a0 error) *MockDatabase_RemoveRepositoryAuthorization_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockDatabase_RemoveRepositoryAuthorization_Call) RunAndReturn(run func(context.Context, slug.Slug, string, sqlc.RepositoryAuthorizationEnum) error) *MockDatabase_RemoveRepositoryAuthorization_Call {
 	_c.Call.Return(run)
 	return _c
 }
