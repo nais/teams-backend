@@ -740,6 +740,11 @@ func (r *mutationResolver) ConfirmTeamDeletion(ctx context.Context, key *uuid.UU
 	return &correlationID, nil
 }
 
+// AuthorizeRepository is the resolver for the authorizeRepository field.
+func (r *mutationResolver) AuthorizeRepository(ctx context.Context, authorization model.RepoAuthorization, teamSlug *slug.Slug, repoName string) (string, error) {
+	panic(fmt.Errorf("not implemented: AuthorizeRepository - authorizeRepository"))
+}
+
 // Teams is the resolver for the teams field.
 func (r *queryResolver) Teams(ctx context.Context) ([]*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
@@ -1076,3 +1081,13 @@ type (
 	teamDeleteKeyResolver        struct{ *Resolver }
 	teamMemberReconcilerResolver struct{ *Resolver }
 )
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//     it when you're done.
+//   - You have helper methods in this file. Move them out to keep these resolver files clean.
+func (r *queryResolver) AuthorizeRepository(ctx context.Context, authorization model.RepoAuthorization, teamSlug *slug.Slug, repoName string) (string, error) {
+	panic(fmt.Errorf("not implemented: AuthorizeRepository - authorizeRepository"))
+}
