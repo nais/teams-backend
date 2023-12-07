@@ -87,6 +87,7 @@ type ComplexityRoot struct {
 		Authorizations func(childComplexity int) int
 		Name           func(childComplexity int) int
 		Permissions    func(childComplexity int) int
+		RoleName       func(childComplexity int) int
 	}
 
 	GitHubRepositoryPermission struct {
@@ -473,6 +474,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.GitHubRepository.Permissions(childComplexity), true
+
+	case "GitHubRepository.roleName":
+		if e.complexity.GitHubRepository.RoleName == nil {
+			break
+		}
+
+		return e.complexity.GitHubRepository.RoleName(childComplexity), true
 
 	case "GitHubRepositoryPermission.granted":
 		if e.complexity.GitHubRepositoryPermission.Granted == nil {
@@ -2102,6 +2110,9 @@ type GitHubRepository {
     "A list of permissions given to the team for this repository."
     permissions: [GitHubRepositoryPermission!]!
 
+    "The name of the role the team has been granted in the repository."
+    roleName: String!
+
     "Whether or not the repository is archived."
     archived: Boolean!
 
@@ -3700,6 +3711,50 @@ func (ec *executionContext) fieldContext_GitHubRepository_permissions(ctx contex
 				return ec.fieldContext_GitHubRepositoryPermission_granted(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type GitHubRepositoryPermission", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GitHubRepository_roleName(ctx context.Context, field graphql.CollectedField, obj *reconcilers.GitHubRepository) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GitHubRepository_roleName(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.RoleName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GitHubRepository_roleName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GitHubRepository",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -9526,6 +9581,8 @@ func (ec *executionContext) fieldContext_Team_gitHubRepositories(ctx context.Con
 				return ec.fieldContext_GitHubRepository_name(ctx, field)
 			case "permissions":
 				return ec.fieldContext_GitHubRepository_permissions(ctx, field)
+			case "roleName":
+				return ec.fieldContext_GitHubRepository_roleName(ctx, field)
 			case "archived":
 				return ec.fieldContext_GitHubRepository_archived(ctx, field)
 			case "authorizations":
@@ -13030,6 +13087,11 @@ func (ec *executionContext) _GitHubRepository(ctx context.Context, sel ast.Selec
 			}
 		case "permissions":
 			out.Values[i] = ec._GitHubRepository_permissions(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "roleName":
+			out.Values[i] = ec._GitHubRepository_roleName(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}

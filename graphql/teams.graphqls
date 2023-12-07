@@ -292,6 +292,9 @@ type GitHubRepository {
     "A list of permissions given to the team for this repository."
     permissions: [GitHubRepositoryPermission!]!
 
+    "The name of the role the team has been granted in the repository."
+    roleName: String!
+
     "Whether or not the repository is archived."
     archived: Boolean!
 
