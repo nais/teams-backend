@@ -13,7 +13,9 @@ teams-backend:
 	go build -o bin/teams-backend -ldflags "-s $(LDFLAGS)" cmd/teams-backend/*.go
 
 local:
-	TEAMS_BACKEND_IAP_INSECURE=true go run ./cmd/teams-backend/main.go
+	TEAMS_BACKEND_IAP_INSECURE=true \
+	TEAMS_BACKEND_ONPREM_CLUSTERS=ci,dev,prod \
+	 go run ./cmd/teams-backend/main.go
 
 test:
 	go test ./...
