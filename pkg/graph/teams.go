@@ -1103,14 +1103,19 @@ func (r *teamResolver) SlackAlertsChannels(ctx context.Context, obj *db.Team) ([
 // GitHubRepositories is the resolver for the gitHubRepositories field.
 func (r *teamResolver) GitHubRepositories(ctx context.Context, obj *db.Team) ([]*reconcilers.GitHubRepository, error) {
 	state := &reconcilers.GitHubState{}
+	repositories := make([]*reconcilers.GitHubRepository, 0)
 	err := r.database.LoadReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGithubTeam, obj.Slug, state)
 	if err != nil {
 		return nil, apierror.Errorf("Unable to load the GitHub state for the team.")
 	}
-	for i := range state.Repositories {
-		state.Repositories[i].TeamSlug = &obj.Slug
+	for _, repo := range state.Repositories {
+		if repo.Archived {
+			continue
+		}
+		repo.TeamSlug = &obj.Slug
+		repositories = append(repositories, repo)
 	}
-	return state.Repositories, nil
+	return repositories, nil
 }
 
 // DeletionInProgress is the resolver for the deletionInProgress field.

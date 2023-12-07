@@ -6,8 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nais/teams-backend/pkg/types"
-
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/authz"
@@ -21,6 +19,7 @@ import (
 	"github.com/nais/teams-backend/pkg/slug"
 	"github.com/nais/teams-backend/pkg/sqlc"
 	"github.com/nais/teams-backend/pkg/teamsync"
+	"github.com/nais/teams-backend/pkg/types"
 	"github.com/nais/teams-backend/pkg/usersync"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
