@@ -16,6 +16,7 @@ import (
 	"github.com/nais/teams-backend/pkg/logger"
 	"github.com/nais/teams-backend/pkg/slug"
 	"github.com/nais/teams-backend/pkg/sqlc"
+	"github.com/nais/teams-backend/pkg/usersync"
 	"golang.org/x/text/runes"
 	"golang.org/x/text/transform"
 	"golang.org/x/text/unicode/norm"
@@ -119,7 +120,24 @@ func run(cfg *seedConfig, log logger.Logger) error {
 	}
 
 	err = database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
-		users := make([]*db.User, 0)
+		devUser, err := dbtx.CreateUser(ctx, "dev usersen", "dev.usersen@nais.io", uuid.New().String())
+		if err != nil {
+			return err
+		}
+		adminUser, err := dbtx.CreateUser(ctx, "admin usersen", "admin.usersen@nais.io", uuid.New().String())
+		if err != nil {
+			return err
+		}
+		if err = dbtx.AssignGlobalRoleToUser(ctx, adminUser.ID, sqlc.RoleNameAdmin); err != nil {
+			return err
+		}
+		for _, roleName := range usersync.DefaultRoleNames {
+			err = dbtx.AssignGlobalRoleToUser(ctx, devUser.ID, roleName)
+			if err != nil {
+				return fmt.Errorf("attach default role %q to user %q: %w", roleName, devUser.Email, err)
+			}
+		}
+		users := []*db.User{devUser}
 		for i := 1; i <= *cfg.NumUsers; i++ {
 			firstName := firstNames[rand.Intn(numFirstNames)]
 			lastName := lastNames[rand.Intn(numLastNames)]
@@ -139,6 +157,15 @@ func run(cfg *seedConfig, log logger.Logger) error {
 			emails[email] = struct{}{}
 		}
 		usersCreated := len(users)
+
+		devteam, err := dbtx.CreateTeam(ctx, slug.Slug("devteam"), "dev-purpose", "#devteam")
+		if err != nil {
+			return err
+		}
+		err = dbtx.SetTeamMemberRole(ctx, devUser.ID, devteam.Slug, sqlc.RoleNameTeamowner)
+		if err != nil {
+			return err
+		}
 
 		for i := 1; i <= *cfg.NumTeams; i++ {
 			name := teamName()

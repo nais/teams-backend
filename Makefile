@@ -13,7 +13,7 @@ teams-backend:
 	go build -o bin/teams-backend -ldflags "-s $(LDFLAGS)" cmd/teams-backend/*.go
 
 local:
-	go run ./cmd/teams-backend/main.go
+	TEAMS_BACKEND_IAP_INSECURE=true go run ./cmd/teams-backend/main.go
 
 test:
 	go test ./...

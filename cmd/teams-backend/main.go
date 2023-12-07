@@ -144,7 +144,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 	}
 
 	handler := setupGraphAPI(teamSync, database, deployProxy, cfg.TenantDomain, userSync, cfg.Environments, log, userSyncRuns)
-	srv := setupHTTPServer(cfg, database, handler, authHandler)
+	srv := setupHTTPServer(cfg, database, handler, authHandler, log)
 
 	log.Infof("ready to accept requests at %s.", cfg.ListenAddress)
 
@@ -270,7 +270,7 @@ func corsConfig(frontendUrl string) cors.Options {
 	}
 }
 
-func setupHTTPServer(cfg *config.Config, database db.Database, graphApi *graphql_handler.Server, authHandler authn.Handler) *http.Server {
+func setupHTTPServer(cfg *config.Config, database db.Database, graphApi *graphql_handler.Server, authHandler authn.Handler, log logger.Logger) *http.Server {
 	r := chi.NewRouter()
 
 	r.Handle("/metrics", promhttp.Handler())
@@ -280,6 +280,7 @@ func setupHTTPServer(cfg *config.Config, database db.Database, graphApi *graphql
 
 	iapIssuer := middleware.IAPAuthentication(database, cfg.IAP.Audience)
 	if cfg.IAP.Insecure {
+		log.Warn("IAP authentication is disabled")
 		iapIssuer = middleware.IAPInsecureAuthentication(database)
 	}
 
