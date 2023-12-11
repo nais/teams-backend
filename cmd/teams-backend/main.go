@@ -246,7 +246,7 @@ func setupGraphAPI(teamSync teamsync.Handler, database db.Database, deployProxy 
 	gc.Complexity.User.Teams = func(childComplexity int) int {
 		return 10 * childComplexity
 	}
-	gc.Complexity.Team.Members = func(childComplexity int) int {
+	gc.Complexity.Team.Members = func(childComplexity int, offset, limit *int) int {
 		return 10 * childComplexity
 	}
 

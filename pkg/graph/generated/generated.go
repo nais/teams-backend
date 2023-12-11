@@ -204,7 +204,7 @@ type ComplexityRoot struct {
 		DeletionInProgress  func(childComplexity int) int
 		GitHubRepositories  func(childComplexity int) int
 		LastSuccessfulSync  func(childComplexity int) int
-		Members             func(childComplexity int) int
+		Members             func(childComplexity int, offset *int, limit *int) int
 		Purpose             func(childComplexity int) int
 		ReconcilerState     func(childComplexity int) int
 		SlackAlertsChannels func(childComplexity int) int
@@ -322,7 +322,7 @@ type ServiceAccountResolver interface {
 }
 type TeamResolver interface {
 	AuditLogs(ctx context.Context, obj *db.Team) ([]*db.AuditLog, error)
-	Members(ctx context.Context, obj *db.Team) ([]*model.TeamMember, error)
+	Members(ctx context.Context, obj *db.Team, offset *int, limit *int) ([]*model.TeamMember, error)
 	SyncErrors(ctx context.Context, obj *db.Team) ([]*model.SyncError, error)
 
 	ReconcilerState(ctx context.Context, obj *db.Team) (*model.ReconcilerState, error)
@@ -1207,7 +1207,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.Team.Members(childComplexity), true
+		args, err := ec.field_Team_members_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Team.Members(childComplexity, args["offset"].(*int), args["limit"].(*int)), true
 
 	case "Team.purpose":
 		if e.complexity.Team.Purpose == nil {
@@ -2088,7 +2093,7 @@ type Team {
     auditLogs: [AuditLog!]!
 
     "Team members."
-    members: [TeamMember!]!
+    members(offset: Int, limit: Int): [TeamMember!]!
 
     "Possible issues related to synchronization of the team to configured external systems. If there are no entries the team can be considered fully synchronized."
     syncErrors: [SyncError!]!
@@ -3095,6 +3100,30 @@ func (ec *executionContext) field_Query_user_args(ctx context.Context, rawArgs m
 }
 
 func (ec *executionContext) field_Query_users_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *int
+	if tmp, ok := rawArgs["offset"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("offset"))
+		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["offset"] = arg0
+	var arg1 *int
+	if tmp, ok := rawArgs["limit"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
+		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["limit"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Team_members_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 *int
@@ -9332,7 +9361,7 @@ func (ec *executionContext) _Team_members(ctx context.Context, field graphql.Col
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Team().Members(rctx, obj)
+		return ec.resolvers.Team().Members(rctx, obj, fc.Args["offset"].(*int), fc.Args["limit"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -9368,6 +9397,17 @@ func (ec *executionContext) fieldContext_Team_members(ctx context.Context, field
 			}
 			return nil, fmt.Errorf("no field named %q was found under type TeamMember", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Team_members_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }

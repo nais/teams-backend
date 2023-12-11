@@ -260,7 +260,7 @@ type Team {
     auditLogs: [AuditLog!]!
 
     "Team members."
-    members: [TeamMember!]!
+    members(offset: Int, limit: Int): [TeamMember!]!
 
     "Possible issues related to synchronization of the team to configured external systems. If there are no entries the team can be considered fully synchronized."
     syncErrors: [SyncError!]!

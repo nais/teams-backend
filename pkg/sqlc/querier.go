@@ -61,6 +61,7 @@ type Querier interface {
 	GetTeamMemberOptOuts(ctx context.Context, arg GetTeamMemberOptOutsParams) ([]*GetTeamMemberOptOutsRow, error)
 	GetTeamMembers(ctx context.Context, targetTeamSlug *slug.Slug) ([]*User, error)
 	GetTeamMembersForReconciler(ctx context.Context, arg GetTeamMembersForReconcilerParams) ([]*User, error)
+	GetTeamMembersPaginated(ctx context.Context, arg GetTeamMembersPaginatedParams) ([]*User, error)
 	GetTeamReconcilerErrors(ctx context.Context, teamSlug slug.Slug) ([]*ReconcilerError, error)
 	GetTeams(ctx context.Context) ([]*Team, error)
 	GetTeamsPaginated(ctx context.Context, arg GetTeamsPaginatedParams) ([]*Team, error)

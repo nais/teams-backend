@@ -351,6 +351,45 @@ func (q *Queries) GetTeamMembersForReconciler(ctx context.Context, arg GetTeamMe
 	return items, nil
 }
 
+const getTeamMembersPaginated = `-- name: GetTeamMembersPaginated :many
+SELECT users.id, users.email, users.name, users.external_id FROM user_roles
+JOIN teams ON teams.slug = user_roles.target_team_slug
+JOIN users ON users.id = user_roles.user_id
+WHERE user_roles.target_team_slug = $1
+ORDER BY users.name ASC LIMIT $2 OFFSET $3
+`
+
+type GetTeamMembersPaginatedParams struct {
+	TargetTeamSlug *slug.Slug
+	Limit          int32
+	Offset         int32
+}
+
+func (q *Queries) GetTeamMembersPaginated(ctx context.Context, arg GetTeamMembersPaginatedParams) ([]*User, error) {
+	rows, err := q.db.Query(ctx, getTeamMembersPaginated, arg.TargetTeamSlug, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.Name,
+			&i.ExternalID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTeams = `-- name: GetTeams :many
 SELECT teams.slug, teams.purpose, teams.last_successful_sync, teams.slack_channel FROM teams
 ORDER BY teams.slug ASC

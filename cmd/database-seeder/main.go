@@ -94,7 +94,7 @@ func run(cfg *seedConfig, log logger.Logger) error {
 	slugs := map[string]struct{}{}
 
 	if !*cfg.ForceSeed {
-		if existingUsers, err := database.GetUsers(ctx); len(existingUsers) != 0 || err != nil {
+		if existingUsers, err := database.GetUsers(ctx, nil, nil); len(existingUsers) != 0 || err != nil {
 			return fmt.Errorf("database already has users, abort")
 		}
 
@@ -102,7 +102,7 @@ func run(cfg *seedConfig, log logger.Logger) error {
 			return fmt.Errorf("database already has teams, abort")
 		}
 	} else {
-		users, err := database.GetUsers(ctx)
+		users, err := database.GetUsers(ctx, nil, nil)
 		if err != nil {
 			return err
 		}

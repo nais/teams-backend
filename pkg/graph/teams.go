@@ -192,7 +192,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, slug *slug.S
 
 	auditLogEntries := make([]auditlogger.Entry, 0)
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
-		members, err := dbtx.GetTeamMembers(ctx, team.Slug)
+		members, err := dbtx.GetTeamMembers(ctx, team.Slug, nil, nil)
 		if err != nil {
 			return fmt.Errorf("get team members of %q: %w", *slug, err)
 		}
@@ -267,7 +267,7 @@ func (r *mutationResolver) RemoveUserFromTeam(ctx context.Context, slug *slug.Sl
 
 	auditLogEntries := make([]auditlogger.Entry, 0)
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
-		members, err := dbtx.GetTeamMembers(ctx, team.Slug)
+		members, err := dbtx.GetTeamMembers(ctx, team.Slug, nil, nil)
 		if err != nil {
 			return fmt.Errorf("get team members of %q: %w", *slug, err)
 		}
@@ -619,7 +619,7 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, slug *slug.Slu
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	members, err := r.database.GetTeamMembers(ctx, team.Slug)
+	members, err := r.database.GetTeamMembers(ctx, team.Slug, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("get team members: %w", err)
 	}
@@ -914,14 +914,14 @@ func (r *teamResolver) AuditLogs(ctx context.Context, obj *db.Team) ([]*db.Audit
 }
 
 // Members is the resolver for the members field.
-func (r *teamResolver) Members(ctx context.Context, obj *db.Team) ([]*model.TeamMember, error) {
+func (r *teamResolver) Members(ctx context.Context, obj *db.Team, offset *int, limit *int) ([]*model.TeamMember, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
 	if err != nil {
 		return nil, err
 	}
 
-	users, err := r.database.GetTeamMembers(ctx, obj.Slug)
+	users, err := r.database.GetTeamMembers(ctx, obj.Slug, offset, limit)
 	if err != nil {
 		return nil, err
 	}

@@ -45,6 +45,13 @@ JOIN users ON users.id = user_roles.user_id
 WHERE user_roles.target_team_slug = $1
 ORDER BY users.name ASC;
 
+-- name: GetTeamMembersPaginated :many
+SELECT users.* FROM user_roles
+JOIN teams ON teams.slug = user_roles.target_team_slug
+JOIN users ON users.id = user_roles.user_id
+WHERE user_roles.target_team_slug = $1
+ORDER BY users.name ASC LIMIT $2 OFFSET $3;
+
 -- name: GetTeamMember :one
 SELECT users.* FROM user_roles
 JOIN teams ON teams.slug = user_roles.target_team_slug

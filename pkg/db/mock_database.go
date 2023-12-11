@@ -2343,25 +2343,25 @@ func (_c *MockDatabase_GetTeamMemberOptOuts_Call) RunAndReturn(run func(context.
 	return _c
 }
 
-// GetTeamMembers provides a mock function with given fields: ctx, teamSlug
-func (_m *MockDatabase) GetTeamMembers(ctx context.Context, teamSlug slug.Slug) ([]*User, error) {
-	ret := _m.Called(ctx, teamSlug)
+// GetTeamMembers provides a mock function with given fields: ctx, teamSlug, offset, limit
+func (_m *MockDatabase) GetTeamMembers(ctx context.Context, teamSlug slug.Slug, offset *int, limit *int) ([]*User, error) {
+	ret := _m.Called(ctx, teamSlug, offset, limit)
 
 	var r0 []*User
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug) ([]*User, error)); ok {
-		return rf(ctx, teamSlug)
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug, *int, *int) ([]*User, error)); ok {
+		return rf(ctx, teamSlug, offset, limit)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug) []*User); ok {
-		r0 = rf(ctx, teamSlug)
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug, *int, *int) []*User); ok {
+		r0 = rf(ctx, teamSlug, offset, limit)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*User)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug) error); ok {
-		r1 = rf(ctx, teamSlug)
+	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug, *int, *int) error); ok {
+		r1 = rf(ctx, teamSlug, offset, limit)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -2377,13 +2377,15 @@ type MockDatabase_GetTeamMembers_Call struct {
 // GetTeamMembers is a helper method to define mock.On call
 //   - ctx context.Context
 //   - teamSlug slug.Slug
-func (_e *MockDatabase_Expecter) GetTeamMembers(ctx interface{}, teamSlug interface{}) *MockDatabase_GetTeamMembers_Call {
-	return &MockDatabase_GetTeamMembers_Call{Call: _e.mock.On("GetTeamMembers", ctx, teamSlug)}
+//   - offset *int
+//   - limit *int
+func (_e *MockDatabase_Expecter) GetTeamMembers(ctx interface{}, teamSlug interface{}, offset interface{}, limit interface{}) *MockDatabase_GetTeamMembers_Call {
+	return &MockDatabase_GetTeamMembers_Call{Call: _e.mock.On("GetTeamMembers", ctx, teamSlug, offset, limit)}
 }
 
-func (_c *MockDatabase_GetTeamMembers_Call) Run(run func(ctx context.Context, teamSlug slug.Slug)) *MockDatabase_GetTeamMembers_Call {
+func (_c *MockDatabase_GetTeamMembers_Call) Run(run func(ctx context.Context, teamSlug slug.Slug, offset *int, limit *int)) *MockDatabase_GetTeamMembers_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(slug.Slug))
+		run(args[0].(context.Context), args[1].(slug.Slug), args[2].(*int), args[3].(*int))
 	})
 	return _c
 }
@@ -2393,7 +2395,7 @@ func (_c *MockDatabase_GetTeamMembers_Call) Return(_a0 []*User, _a1 error) *Mock
 	return _c
 }
 
-func (_c *MockDatabase_GetTeamMembers_Call) RunAndReturn(run func(context.Context, slug.Slug) ([]*User, error)) *MockDatabase_GetTeamMembers_Call {
+func (_c *MockDatabase_GetTeamMembers_Call) RunAndReturn(run func(context.Context, slug.Slug, *int, *int) ([]*User, error)) *MockDatabase_GetTeamMembers_Call {
 	_c.Call.Return(run)
 	return _c
 }

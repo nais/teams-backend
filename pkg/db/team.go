@@ -115,8 +115,22 @@ func (d *database) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team,
 	return teams, nil
 }
 
-func (d *database) GetTeamMembers(ctx context.Context, teamSlug slug.Slug) ([]*User, error) {
-	rows, err := d.querier.GetTeamMembers(ctx, &teamSlug)
+func (d *database) GetTeamMembers(ctx context.Context, teamSlug slug.Slug, offset, limit *int) ([]*User, error) {
+	var rows []*sqlc.User
+	var err error
+	if limit != nil {
+		if offset == nil {
+			o := 0
+			offset = &o
+		}
+		rows, err = d.querier.GetTeamMembersPaginated(ctx, sqlc.GetTeamMembersPaginatedParams{
+			TargetTeamSlug: &teamSlug,
+			Limit:          int32(*limit),
+			Offset:         int32(*offset),
+		})
+	} else {
+		rows, err = d.querier.GetTeamMembers(ctx, &teamSlug)
+	}
 	if err != nil {
 		return nil, err
 	}
