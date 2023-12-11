@@ -32,7 +32,7 @@ func TestQueryResolver_Users(t *testing.T) {
 		Query()
 
 	t.Run("unauthenticated user", func(t *testing.T) {
-		users, err := resolver.Users(ctx)
+		users, err := resolver.Users(ctx, nil, nil)
 		assert.Nil(t, users)
 		assert.ErrorIs(t, err, authz.ErrNotAuthenticated)
 	})
@@ -55,7 +55,7 @@ func TestQueryResolver_Users(t *testing.T) {
 			{User: &sqlc.User{Email: "user2@example.com"}},
 		}, nil)
 
-		users, err := resolver.Users(ctx)
+		users, err := resolver.Users(ctx, nil, nil)
 		assert.NoError(t, err)
 		assert.Len(t, users, 2)
 	})

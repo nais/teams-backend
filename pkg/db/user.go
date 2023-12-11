@@ -65,8 +65,22 @@ func (d *database) UpdateUser(ctx context.Context, userID uuid.UUID, name, email
 	return wrapUser(user), nil
 }
 
-func (d *database) GetUsers(ctx context.Context) ([]*User, error) {
-	users, err := d.querier.GetUsers(ctx)
+func (d *database) GetUsers(ctx context.Context, offset, limit *int) ([]*User, error) {
+	var users []*sqlc.User
+	var err error
+	if limit != nil {
+		if offset == nil {
+			o := 0
+			offset = &o
+		}
+		users, err = d.querier.GetUsersPaginated(ctx, sqlc.GetUsersPaginatedParams{
+			Limit:  int32(*limit),
+			Offset: int32(*offset),
+		})
+	} else {
+		users, err = d.querier.GetUsers(ctx)
+	}
+
 	if err != nil {
 		return nil, err
 	}

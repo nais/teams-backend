@@ -1,6 +1,6 @@
 extend type Query {
     "Get a collection of teams."
-    teams: [Team!]! @auth
+    teams(offset: Int, limit: Int): [Team!]! @auth
 
     "Get a specific team."
     team(

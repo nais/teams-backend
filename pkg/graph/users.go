@@ -49,14 +49,14 @@ func (r *mutationResolver) SynchronizeUsers(ctx context.Context) (*uuid.UUID, er
 }
 
 // Users is the resolver for the users field.
-func (r *queryResolver) Users(ctx context.Context) ([]*db.User, error) {
+func (r *queryResolver) Users(ctx context.Context, offset *int, limit *int) ([]*db.User, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
 	if err != nil {
 		return nil, err
 	}
 
-	return r.database.GetUsers(ctx)
+	return r.database.GetUsers(ctx, offset, limit)
 }
 
 // User is the resolver for the user field.

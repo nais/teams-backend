@@ -18,6 +18,10 @@ ORDER BY teams.slug ASC;
 SELECT teams.* FROM teams
 ORDER BY teams.slug ASC;
 
+-- name: GetTeamsPaginated :many
+SELECT teams.* FROM teams 
+ORDER BY teams.slug ASC LIMIT $1 OFFSET $2;
+
 -- name: GetActiveTeamBySlug :one
 SELECT teams.* FROM teams
 WHERE

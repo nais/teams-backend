@@ -18,7 +18,7 @@ const LoaderNameUsers = "users"
 
 func (r *UserReader) load(ctx context.Context, keys []string) []*dataloader.Result[*db.User] {
 	// TODO (only fetch users requested by keys var)
-	users, err := r.db.GetUsers(ctx)
+	users, err := r.db.GetUsers(ctx, nil, nil)
 	if err != nil {
 		panic(err)
 	}

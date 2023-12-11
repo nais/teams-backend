@@ -821,14 +821,14 @@ func (r *mutationResolver) DeauthorizeRepository(ctx context.Context, authorizat
 }
 
 // Teams is the resolver for the teams field.
-func (r *queryResolver) Teams(ctx context.Context) ([]*db.Team, error) {
+func (r *queryResolver) Teams(ctx context.Context, offset *int, limit *int) ([]*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationTeamsList)
 	if err != nil {
 		return nil, err
 	}
 
-	return r.database.GetTeams(ctx)
+	return r.database.GetTeams(ctx, offset, limit)
 }
 
 // Team is the resolver for the team field.

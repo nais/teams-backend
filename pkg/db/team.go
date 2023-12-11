@@ -60,8 +60,21 @@ func (d *database) GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, er
 	return &Team{Team: team}, nil
 }
 
-func (d *database) GetTeams(ctx context.Context) ([]*Team, error) {
-	teams, err := d.querier.GetTeams(ctx)
+func (d *database) GetTeams(ctx context.Context, offset, limit *int) ([]*Team, error) {
+	var teams []*sqlc.Team
+	var err error
+	if limit != nil {
+		if offset == nil {
+			o := 0
+			offset = &o
+		}
+		teams, err = d.querier.GetTeamsPaginated(ctx, sqlc.GetTeamsPaginatedParams{
+			Limit:  int32(*limit),
+			Offset: int32(*offset),
+		})
+	} else {
+		teams, err = d.querier.GetTeams(ctx)
+	}
 	if err != nil {
 		return nil, err
 	}

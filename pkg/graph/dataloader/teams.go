@@ -18,7 +18,7 @@ const LoaderNameTeams = "teams"
 
 func (r *TeamReader) load(ctx context.Context, keys []string) []*dataloader.Result[*db.Team] {
 	// TODO (only fetch teams requested by keys var)
-	teams, err := r.db.GetTeams(ctx)
+	teams, err := r.db.GetTeams(ctx, nil, nil)
 	if err != nil {
 		panic(err)
 	}

@@ -136,12 +136,12 @@ type ComplexityRoot struct {
 		Roles                           func(childComplexity int) int
 		Team                            func(childComplexity int, slug *slug.Slug) int
 		TeamDeleteKey                   func(childComplexity int, key *uuid.UUID) int
-		Teams                           func(childComplexity int) int
+		Teams                           func(childComplexity int, offset *int, limit *int) int
 		TeamsWithPermissionInGitHubRepo func(childComplexity int, repoName *string, permissionName *string) int
 		User                            func(childComplexity int, id *uuid.UUID) int
 		UserByEmail                     func(childComplexity int, email string) int
 		UserSync                        func(childComplexity int) int
-		Users                           func(childComplexity int) int
+		Users                           func(childComplexity int, offset *int, limit *int) int
 	}
 
 	Reconciler struct {
@@ -297,12 +297,12 @@ type QueryResolver interface {
 	Me(ctx context.Context) (db.AuthenticatedUser, error)
 	Reconcilers(ctx context.Context) ([]*db.Reconciler, error)
 	Roles(ctx context.Context) ([]sqlc.RoleName, error)
-	Teams(ctx context.Context) ([]*db.Team, error)
+	Teams(ctx context.Context, offset *int, limit *int) ([]*db.Team, error)
 	Team(ctx context.Context, slug *slug.Slug) (*db.Team, error)
 	DeployKey(ctx context.Context, slug *slug.Slug) (string, error)
 	TeamDeleteKey(ctx context.Context, key *uuid.UUID) (*db.TeamDeleteKey, error)
 	TeamsWithPermissionInGitHubRepo(ctx context.Context, repoName *string, permissionName *string) ([]*db.Team, error)
-	Users(ctx context.Context) ([]*db.User, error)
+	Users(ctx context.Context, offset *int, limit *int) ([]*db.User, error)
 	User(ctx context.Context, id *uuid.UUID) (*db.User, error)
 	UserByEmail(ctx context.Context, email string) (*db.User, error)
 	UserSync(ctx context.Context) ([]*usersync.Run, error)
@@ -874,7 +874,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.Query.Teams(childComplexity), true
+		args, err := ec.field_Query_teams_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Teams(childComplexity, args["offset"].(*int), args["limit"].(*int)), true
 
 	case "Query.teamsWithPermissionInGitHubRepo":
 		if e.complexity.Query.TeamsWithPermissionInGitHubRepo == nil {
@@ -924,7 +929,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.Query.Users(childComplexity), true
+		args, err := ec.field_Query_users_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Users(childComplexity, args["offset"].(*int), args["limit"].(*int)), true
 
 	case "Reconciler.auditLogs":
 		if e.complexity.Reconciler.AuditLogs == nil {
@@ -1818,7 +1828,7 @@ type ServiceAccount {
 }`, BuiltIn: false},
 	{Name: "../../../graphql/teams.graphqls", Input: `extend type Query {
     "Get a collection of teams."
-    teams: [Team!]! @auth
+    teams(offset: Int, limit: Int): [Team!]! @auth
 
     "Get a specific team."
     team(
@@ -2277,10 +2287,11 @@ enum TeamRole {
 enum RepositoryAuthorization {
     "Authorize for NAIS deployment."
     DEPLOY
-}`, BuiltIn: false},
+}
+`, BuiltIn: false},
 	{Name: "../../../graphql/users.graphqls", Input: `extend type Query {
     "Get a collection of users, sorted by name."
-    users: [User!]! @auth
+    users(offset: Int, limit: Int): [User!]! @auth
 
     "Get a specific user."
     user(
@@ -3029,6 +3040,30 @@ func (ec *executionContext) field_Query_teamsWithPermissionInGitHubRepo_args(ctx
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_teams_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *int
+	if tmp, ok := rawArgs["offset"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("offset"))
+		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["offset"] = arg0
+	var arg1 *int
+	if tmp, ok := rawArgs["limit"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
+		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["limit"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_userByEmail_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -3056,6 +3091,30 @@ func (ec *executionContext) field_Query_user_args(ctx context.Context, rawArgs m
 		}
 	}
 	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_users_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *int
+	if tmp, ok := rawArgs["offset"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("offset"))
+		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["offset"] = arg0
+	var arg1 *int
+	if tmp, ok := rawArgs["limit"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
+		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["limit"] = arg1
 	return args, nil
 }
 
@@ -6599,7 +6658,7 @@ func (ec *executionContext) _Query_teams(ctx context.Context, field graphql.Coll
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Teams(rctx)
+			return ec.resolvers.Query().Teams(rctx, fc.Args["offset"].(*int), fc.Args["limit"].(*int))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -6668,6 +6727,17 @@ func (ec *executionContext) fieldContext_Query_teams(ctx context.Context, field 
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_teams_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -7047,7 +7117,7 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Users(rctx)
+			return ec.resolvers.Query().Users(rctx, fc.Args["offset"].(*int), fc.Args["limit"].(*int))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -7106,6 +7176,17 @@ func (ec *executionContext) fieldContext_Query_users(ctx context.Context, field 
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_users_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -17182,6 +17263,22 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 		return graphql.Null
 	}
 	res := graphql.MarshalBoolean(*v)
+	return res
+}
+
+func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v interface{}) (*int, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalInt(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.SelectionSet, v *int) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	res := graphql.MarshalInt(*v)
 	return res
 }
 

@@ -2509,25 +2509,25 @@ func (_c *MockDatabase_GetTeamReconcilerErrors_Call) RunAndReturn(run func(conte
 	return _c
 }
 
-// GetTeams provides a mock function with given fields: ctx
-func (_m *MockDatabase) GetTeams(ctx context.Context) ([]*Team, error) {
-	ret := _m.Called(ctx)
+// GetTeams provides a mock function with given fields: ctx, offset, limit
+func (_m *MockDatabase) GetTeams(ctx context.Context, offset *int, limit *int) ([]*Team, error) {
+	ret := _m.Called(ctx, offset, limit)
 
 	var r0 []*Team
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]*Team, error)); ok {
-		return rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, *int, *int) ([]*Team, error)); ok {
+		return rf(ctx, offset, limit)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []*Team); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, *int, *int) []*Team); ok {
+		r0 = rf(ctx, offset, limit)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*Team)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, *int, *int) error); ok {
+		r1 = rf(ctx, offset, limit)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -2542,13 +2542,15 @@ type MockDatabase_GetTeams_Call struct {
 
 // GetTeams is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockDatabase_Expecter) GetTeams(ctx interface{}) *MockDatabase_GetTeams_Call {
-	return &MockDatabase_GetTeams_Call{Call: _e.mock.On("GetTeams", ctx)}
+//   - offset *int
+//   - limit *int
+func (_e *MockDatabase_Expecter) GetTeams(ctx interface{}, offset interface{}, limit interface{}) *MockDatabase_GetTeams_Call {
+	return &MockDatabase_GetTeams_Call{Call: _e.mock.On("GetTeams", ctx, offset, limit)}
 }
 
-func (_c *MockDatabase_GetTeams_Call) Run(run func(ctx context.Context)) *MockDatabase_GetTeams_Call {
+func (_c *MockDatabase_GetTeams_Call) Run(run func(ctx context.Context, offset *int, limit *int)) *MockDatabase_GetTeams_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(*int), args[2].(*int))
 	})
 	return _c
 }
@@ -2558,7 +2560,7 @@ func (_c *MockDatabase_GetTeams_Call) Return(_a0 []*Team, _a1 error) *MockDataba
 	return _c
 }
 
-func (_c *MockDatabase_GetTeams_Call) RunAndReturn(run func(context.Context) ([]*Team, error)) *MockDatabase_GetTeams_Call {
+func (_c *MockDatabase_GetTeams_Call) RunAndReturn(run func(context.Context, *int, *int) ([]*Team, error)) *MockDatabase_GetTeams_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -2894,25 +2896,25 @@ func (_c *MockDatabase_GetUserTeams_Call) RunAndReturn(run func(context.Context,
 	return _c
 }
 
-// GetUsers provides a mock function with given fields: ctx
-func (_m *MockDatabase) GetUsers(ctx context.Context) ([]*User, error) {
-	ret := _m.Called(ctx)
+// GetUsers provides a mock function with given fields: ctx, offset, limit
+func (_m *MockDatabase) GetUsers(ctx context.Context, offset *int, limit *int) ([]*User, error) {
+	ret := _m.Called(ctx, offset, limit)
 
 	var r0 []*User
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]*User, error)); ok {
-		return rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, *int, *int) ([]*User, error)); ok {
+		return rf(ctx, offset, limit)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []*User); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, *int, *int) []*User); ok {
+		r0 = rf(ctx, offset, limit)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*User)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, *int, *int) error); ok {
+		r1 = rf(ctx, offset, limit)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -2927,13 +2929,15 @@ type MockDatabase_GetUsers_Call struct {
 
 // GetUsers is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockDatabase_Expecter) GetUsers(ctx interface{}) *MockDatabase_GetUsers_Call {
-	return &MockDatabase_GetUsers_Call{Call: _e.mock.On("GetUsers", ctx)}
+//   - offset *int
+//   - limit *int
+func (_e *MockDatabase_Expecter) GetUsers(ctx interface{}, offset interface{}, limit interface{}) *MockDatabase_GetUsers_Call {
+	return &MockDatabase_GetUsers_Call{Call: _e.mock.On("GetUsers", ctx, offset, limit)}
 }
 
-func (_c *MockDatabase_GetUsers_Call) Run(run func(ctx context.Context)) *MockDatabase_GetUsers_Call {
+func (_c *MockDatabase_GetUsers_Call) Run(run func(ctx context.Context, offset *int, limit *int)) *MockDatabase_GetUsers_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(*int), args[2].(*int))
 	})
 	return _c
 }
@@ -2943,7 +2947,7 @@ func (_c *MockDatabase_GetUsers_Call) Return(_a0 []*User, _a1 error) *MockDataba
 	return _c
 }
 
-func (_c *MockDatabase_GetUsers_Call) RunAndReturn(run func(context.Context) ([]*User, error)) *MockDatabase_GetUsers_Call {
+func (_c *MockDatabase_GetUsers_Call) RunAndReturn(run func(context.Context, *int, *int) ([]*User, error)) *MockDatabase_GetUsers_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -381,6 +381,41 @@ func (q *Queries) GetTeams(ctx context.Context) ([]*Team, error) {
 	return items, nil
 }
 
+const getTeamsPaginated = `-- name: GetTeamsPaginated :many
+SELECT teams.slug, teams.purpose, teams.last_successful_sync, teams.slack_channel FROM teams 
+ORDER BY teams.slug ASC LIMIT $1 OFFSET $2
+`
+
+type GetTeamsPaginatedParams struct {
+	Limit  int32
+	Offset int32
+}
+
+func (q *Queries) GetTeamsPaginated(ctx context.Context, arg GetTeamsPaginatedParams) ([]*Team, error) {
+	rows, err := q.db.Query(ctx, getTeamsPaginated, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*Team
+	for rows.Next() {
+		var i Team
+		if err := rows.Scan(
+			&i.Slug,
+			&i.Purpose,
+			&i.LastSuccessfulSync,
+			&i.SlackChannel,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const removeSlackAlertsChannel = `-- name: RemoveSlackAlertsChannel :exec
 DELETE FROM slack_alerts_channels
 WHERE team_slug = $1 AND environment = $2

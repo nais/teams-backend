@@ -107,7 +107,7 @@ func (s *UserSynchronizer) Sync(ctx context.Context, correlationID uuid.UUID) er
 
 	auditLogEntries := make([]auditLogEntry, 0)
 	err = s.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
-		allUsersRows, err := dbtx.GetUsers(ctx)
+		allUsersRows, err := dbtx.GetUsers(ctx, nil, nil)
 		if err != nil {
 			return fmt.Errorf("get existing users: %w", err)
 		}

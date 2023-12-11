@@ -63,6 +63,7 @@ type Querier interface {
 	GetTeamMembersForReconciler(ctx context.Context, arg GetTeamMembersForReconcilerParams) ([]*User, error)
 	GetTeamReconcilerErrors(ctx context.Context, teamSlug slug.Slug) ([]*ReconcilerError, error)
 	GetTeams(ctx context.Context) ([]*Team, error)
+	GetTeamsPaginated(ctx context.Context, arg GetTeamsPaginatedParams) ([]*Team, error)
 	GetTeamsWithPermissionInGitHubRepo(ctx context.Context, state pgtype.JSONB) ([]*Team, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
 	GetUserByExternalID(ctx context.Context, externalID string) (*User, error)
@@ -70,6 +71,7 @@ type Querier interface {
 	GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*UserRole, error)
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error)
 	GetUsers(ctx context.Context) ([]*User, error)
+	GetUsersPaginated(ctx context.Context, arg GetUsersPaginatedParams) ([]*User, error)
 	GetUsersWithGloballyAssignedRole(ctx context.Context, roleName RoleName) ([]*User, error)
 	IsFirstRun(ctx context.Context) (bool, error)
 	RemoveAllServiceAccountRoles(ctx context.Context, serviceAccountID uuid.UUID) error

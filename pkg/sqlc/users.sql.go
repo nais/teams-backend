@@ -159,6 +159,41 @@ func (q *Queries) GetUsers(ctx context.Context) ([]*User, error) {
 	return items, nil
 }
 
+const getUsersPaginated = `-- name: GetUsersPaginated :many
+SELECT id, email, name, external_id FROM users
+ORDER BY name ASC LIMIT $1 OFFSET $2
+`
+
+type GetUsersPaginatedParams struct {
+	Limit  int32
+	Offset int32
+}
+
+func (q *Queries) GetUsersPaginated(ctx context.Context, arg GetUsersPaginatedParams) ([]*User, error) {
+	rows, err := q.db.Query(ctx, getUsersPaginated, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.Name,
+			&i.ExternalID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
 SET name = $1, email = LOWER($4), external_id = $2

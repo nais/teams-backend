@@ -1,6 +1,6 @@
 extend type Query {
     "Get a collection of users, sorted by name."
-    users: [User!]! @auth
+    users(offset: Int, limit: Int): [User!]! @auth
 
     "Get a specific user."
     user(
