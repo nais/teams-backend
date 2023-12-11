@@ -15,6 +15,7 @@ import (
 	"github.com/nais/teams-backend/pkg/sqlc"
 	"github.com/nais/teams-backend/pkg/usersync"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestQueryResolver_Users(t *testing.T) {
@@ -50,7 +51,7 @@ func TestQueryResolver_Users(t *testing.T) {
 			},
 		})
 
-		database.On("GetUsers", ctx).Return([]*db.User{
+		database.On("GetUsers", ctx, mock.Anything, mock.Anything).Return([]*db.User{
 			{User: &sqlc.User{Email: "user1@example.com"}},
 			{User: &sqlc.User{Email: "user2@example.com"}},
 		}, nil)
