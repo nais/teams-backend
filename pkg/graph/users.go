@@ -22,16 +22,16 @@ import (
 )
 
 // SynchronizeUsers is the resolver for the synchronizeUsers field.
-func (r *mutationResolver) SynchronizeUsers(ctx context.Context) (*uuid.UUID, error) {
+func (r *mutationResolver) SynchronizeUsers(ctx context.Context) (uuid.UUID, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationUsersyncSynchronize)
 	if err != nil {
-		return nil, err
+		return uuid.Nil, err
 	}
 
 	correlationID, err := uuid.NewUUID()
 	if err != nil {
-		return nil, fmt.Errorf("create log correlation ID: %w", err)
+		return uuid.Nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
 	targets := []auditlogger.Target{
@@ -45,7 +45,7 @@ func (r *mutationResolver) SynchronizeUsers(ctx context.Context) (*uuid.UUID, er
 	r.auditLogger.Logf(ctx, targets, fields, "Trigger user sync")
 	r.userSync <- correlationID
 
-	return &correlationID, nil
+	return correlationID, nil
 }
 
 // Users is the resolver for the users field.
@@ -60,14 +60,14 @@ func (r *queryResolver) Users(ctx context.Context) ([]*db.User, error) {
 }
 
 // User is the resolver for the user field.
-func (r *queryResolver) User(ctx context.Context, id *uuid.UUID) (*db.User, error) {
+func (r *queryResolver) User(ctx context.Context, id uuid.UUID) (*db.User, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
 	if err != nil {
 		return nil, err
 	}
 
-	return dataloader.GetUser(ctx, id)
+	return dataloader.GetUser(ctx, &id)
 }
 
 // UserByEmail is the resolver for the userByEmail field.

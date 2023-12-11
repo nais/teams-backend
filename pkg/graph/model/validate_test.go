@@ -16,7 +16,7 @@ func ptr[T any](value T) *T {
 
 func TestCreateTeamInput_Validate_SlackChannel(t *testing.T) {
 	tpl := model.CreateTeamInput{
-		Slug:    ptr(slug.Slug("valid-slug")),
+		Slug:    slug.Slug("valid-slug"),
 		Purpose: "valid purpose",
 	}
 
@@ -48,7 +48,7 @@ func TestCreateTeamInput_Validate_SlackChannel(t *testing.T) {
 
 func TestCreateTeamInput_Validate_Slug(t *testing.T) {
 	tpl := model.CreateTeamInput{
-		Slug:         nil,
+		Slug:         "",
 		Purpose:      "valid purpose",
 		SlackChannel: "#channel",
 	}
@@ -88,12 +88,12 @@ func TestCreateTeamInput_Validate_Slug(t *testing.T) {
 	}
 
 	for _, s := range validSlugs {
-		tpl.Slug = ptr(slug.Slug(s))
+		tpl.Slug = slug.Slug(s)
 		assert.NoError(t, tpl.Validate(), "Slug %q should pass validation, but didn't", tpl.Slug)
 	}
 
 	for _, s := range invalidSlugs {
-		tpl.Slug = ptr(slug.Slug(s))
+		tpl.Slug = slug.Slug(s)
 		assert.Error(t, tpl.Validate(), "Slug %q passed validation even if it should not", tpl.Slug)
 	}
 }

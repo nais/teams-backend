@@ -17,7 +17,7 @@ import (
 // Input for creating a new team.
 type CreateTeamInput struct {
 	// Team slug. After creation, this value can not be changed.
-	Slug *slug.Slug `json:"slug"`
+	Slug slug.Slug `json:"slug"`
 	// Team purpose.
 	Purpose string `json:"purpose"`
 	// Specify the Slack channel for the team.
@@ -34,12 +34,14 @@ type GcpProject struct {
 	ProjectID string `json:"projectId"`
 }
 
+func (GcpProject) IsEntity() {}
+
 // NAIS namespace type.
 type NaisNamespace struct {
 	// The environment for the namespace.
 	Environment string `json:"environment"`
 	// The namespace.
-	Namespace *slug.Slug `json:"namespace"`
+	Namespace slug.Slug `json:"namespace"`
 }
 
 // Reconciler configuration input.
@@ -109,7 +111,7 @@ type TeamMember struct {
 // Team member input.
 type TeamMemberInput struct {
 	// The ID of user.
-	UserID *uuid.UUID `json:"userId"`
+	UserID uuid.UUID `json:"userId"`
 	// The role that the user will receive.
 	Role TeamRole `json:"role"`
 	// Reconcilers to opt the team member out of.
@@ -119,7 +121,7 @@ type TeamMemberInput struct {
 // Team sync type.
 type TeamSync struct {
 	// The correlation ID for the sync.
-	CorrelationID *uuid.UUID `json:"correlationID"`
+	CorrelationID uuid.UUID `json:"correlationID"`
 }
 
 // Input for updating an existing team.

@@ -243,34 +243,38 @@ func (r *mutationResolver) ResetReconciler(ctx context.Context, name sqlc.Reconc
 }
 
 // AddReconcilerOptOut is the resolver for the addReconcilerOptOut field.
-func (r *mutationResolver) AddReconcilerOptOut(ctx context.Context, teamSlug *slug.Slug, userID *uuid.UUID, reconciler sqlc.ReconcilerName) (*model.TeamMember, error) {
+func (r *mutationResolver) AddReconcilerOptOut(ctx context.Context, teamSlug slug.Slug, userID uuid.UUID, reconciler sqlc.ReconcilerName) (*model.TeamMember, error) {
 	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, *teamSlug)
+	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, teamSlug)
 	if err != nil {
 		return nil, err
 	}
 
-	team, err := r.database.GetTeamBySlug(ctx, *teamSlug)
+	team, err := r.database.GetTeamBySlug(ctx, teamSlug)
 	if err != nil {
 		return nil, apierror.ErrTeamNotExist
 	}
 
-	user, err := r.database.GetTeamMember(ctx, *teamSlug, *userID)
+	user, err := r.database.GetTeamMember(ctx, teamSlug, userID)
 	if err != nil {
 		return nil, apierror.ErrUserIsNotTeamMember
 	}
 
-	isOwner, err := r.database.UserIsTeamOwner(ctx, user.ID, *teamSlug)
+	isOwner, err := r.database.UserIsTeamOwner(ctx, user.ID, teamSlug)
 	if err != nil {
 		return nil, err
 	}
 
-	err = r.database.AddReconcilerOptOut(ctx, userID, teamSlug, reconciler)
+	var ts *slug.Slug
+	if teamSlug != "" {
+		ts = &teamSlug
+	}
+	err = r.database.AddReconcilerOptOut(ctx, &userID, ts, reconciler)
 	if err != nil {
 		return nil, err
 	}
 
-	reconcilerOptOuts, err := r.database.GetTeamMemberOptOuts(ctx, user.ID, *teamSlug)
+	reconcilerOptOuts, err := r.database.GetTeamMemberOptOuts(ctx, user.ID, teamSlug)
 	if err != nil {
 		return nil, err
 	}
@@ -289,34 +293,38 @@ func (r *mutationResolver) AddReconcilerOptOut(ctx context.Context, teamSlug *sl
 }
 
 // RemoveReconcilerOptOut is the resolver for the removeReconcilerOptOut field.
-func (r *mutationResolver) RemoveReconcilerOptOut(ctx context.Context, teamSlug *slug.Slug, userID *uuid.UUID, reconciler sqlc.ReconcilerName) (*model.TeamMember, error) {
+func (r *mutationResolver) RemoveReconcilerOptOut(ctx context.Context, teamSlug slug.Slug, userID uuid.UUID, reconciler sqlc.ReconcilerName) (*model.TeamMember, error) {
 	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, *teamSlug)
+	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, teamSlug)
 	if err != nil {
 		return nil, err
 	}
 
-	team, err := r.database.GetTeamBySlug(ctx, *teamSlug)
+	team, err := r.database.GetTeamBySlug(ctx, teamSlug)
 	if err != nil {
 		return nil, apierror.ErrTeamNotExist
 	}
 
-	user, err := r.database.GetTeamMember(ctx, *teamSlug, *userID)
+	user, err := r.database.GetTeamMember(ctx, teamSlug, userID)
 	if err != nil {
 		return nil, apierror.ErrUserIsNotTeamMember
 	}
 
-	isOwner, err := r.database.UserIsTeamOwner(ctx, user.ID, *teamSlug)
+	isOwner, err := r.database.UserIsTeamOwner(ctx, user.ID, teamSlug)
 	if err != nil {
 		return nil, err
 	}
 
-	err = r.database.RemoveReconcilerOptOut(ctx, userID, teamSlug, reconciler)
+	var ts *slug.Slug
+	if teamSlug != "" {
+		ts = &teamSlug
+	}
+	err = r.database.RemoveReconcilerOptOut(ctx, &userID, ts, reconciler)
 	if err != nil {
 		return nil, err
 	}
 
-	reconcilerOptOuts, err := r.database.GetTeamMemberOptOuts(ctx, user.ID, *teamSlug)
+	reconcilerOptOuts, err := r.database.GetTeamMemberOptOuts(ctx, user.ID, teamSlug)
 	if err != nil {
 		return nil, err
 	}

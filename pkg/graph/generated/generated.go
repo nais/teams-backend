@@ -14,6 +14,7 @@ import (
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
+	"github.com/99designs/gqlgen/plugin/federation/fedruntime"
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/db"
 	"github.com/nais/teams-backend/pkg/graph/model"
@@ -45,6 +46,7 @@ type Config struct {
 
 type ResolverRoot interface {
 	AuditLog() AuditLogResolver
+	Entity() EntityResolver
 	GitHubRepository() GitHubRepositoryResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
@@ -59,8 +61,10 @@ type ResolverRoot interface {
 }
 
 type DirectiveRoot struct {
-	Admin func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
-	Auth  func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
+	Admin            func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
+	Auth             func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
+	ComposeDirective func(ctx context.Context, obj interface{}, next graphql.Resolver, name string) (res interface{}, err error)
+	InterfaceObject  func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
 }
 
 type ComplexityRoot struct {
@@ -74,6 +78,12 @@ type ComplexityRoot struct {
 		Message          func(childComplexity int) int
 		TargetIdentifier func(childComplexity int) int
 		TargetType       func(childComplexity int) int
+	}
+
+	Entity struct {
+		FindGcpProjectByProjectID func(childComplexity int, projectID string) int
+		FindTeamBySlug            func(childComplexity int, slug slug.Slug) int
+		FindUserByID              func(childComplexity int, id uuid.UUID) int
 	}
 
 	GcpProject struct {
@@ -96,32 +106,32 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddReconcilerOptOut          func(childComplexity int, teamSlug *slug.Slug, userID *uuid.UUID, reconciler sqlc.ReconcilerName) int
-		AddTeamMember                func(childComplexity int, slug *slug.Slug, member model.TeamMemberInput) int
-		AddTeamMembers               func(childComplexity int, slug *slug.Slug, userIds []*uuid.UUID) int
-		AddTeamOwners                func(childComplexity int, slug *slug.Slug, userIds []*uuid.UUID) int
-		AuthorizeRepository          func(childComplexity int, authorization model.RepositoryAuthorization, teamSlug *slug.Slug, repoName string) int
+		AddReconcilerOptOut          func(childComplexity int, teamSlug slug.Slug, userID uuid.UUID, reconciler sqlc.ReconcilerName) int
+		AddTeamMember                func(childComplexity int, slug slug.Slug, member model.TeamMemberInput) int
+		AddTeamMembers               func(childComplexity int, slug slug.Slug, userIds []uuid.UUID) int
+		AddTeamOwners                func(childComplexity int, slug slug.Slug, userIds []uuid.UUID) int
+		AuthorizeRepository          func(childComplexity int, authorization model.RepositoryAuthorization, teamSlug slug.Slug, repoName string) int
 		ConfigureReconciler          func(childComplexity int, name sqlc.ReconcilerName, config []*model.ReconcilerConfigInput) int
-		ConfirmTeamDeletion          func(childComplexity int, key *uuid.UUID) int
+		ConfirmTeamDeletion          func(childComplexity int, key uuid.UUID) int
 		CreateTeam                   func(childComplexity int, input model.CreateTeamInput) int
-		DeauthorizeRepository        func(childComplexity int, authorization model.RepositoryAuthorization, teamSlug *slug.Slug, repoName string) int
+		DeauthorizeRepository        func(childComplexity int, authorization model.RepositoryAuthorization, teamSlug slug.Slug, repoName string) int
 		DisableReconciler            func(childComplexity int, name sqlc.ReconcilerName) int
 		EnableReconciler             func(childComplexity int, name sqlc.ReconcilerName) int
-		RemoveReconcilerOptOut       func(childComplexity int, teamSlug *slug.Slug, userID *uuid.UUID, reconciler sqlc.ReconcilerName) int
-		RemoveUserFromTeam           func(childComplexity int, slug *slug.Slug, userID *uuid.UUID) int
-		RemoveUsersFromTeam          func(childComplexity int, slug *slug.Slug, userIds []*uuid.UUID) int
-		RequestTeamDeletion          func(childComplexity int, slug *slug.Slug) int
+		RemoveReconcilerOptOut       func(childComplexity int, teamSlug slug.Slug, userID uuid.UUID, reconciler sqlc.ReconcilerName) int
+		RemoveUserFromTeam           func(childComplexity int, slug slug.Slug, userID uuid.UUID) int
+		RemoveUsersFromTeam          func(childComplexity int, slug slug.Slug, userIds []uuid.UUID) int
+		RequestTeamDeletion          func(childComplexity int, slug slug.Slug) int
 		ResetReconciler              func(childComplexity int, name sqlc.ReconcilerName) int
-		SetAzureADGroupID            func(childComplexity int, teamSlug *slug.Slug, azureADGroupID *uuid.UUID) int
-		SetGcpProjectID              func(childComplexity int, teamSlug *slug.Slug, gcpEnvironment string, gcpProjectID string) int
-		SetGitHubTeamSlug            func(childComplexity int, teamSlug *slug.Slug, gitHubTeamSlug *slug.Slug) int
-		SetGoogleWorkspaceGroupEmail func(childComplexity int, teamSlug *slug.Slug, googleWorkspaceGroupEmail string) int
-		SetNaisNamespace             func(childComplexity int, teamSlug *slug.Slug, gcpEnvironment string, naisNamespace *slug.Slug) int
-		SetTeamMemberRole            func(childComplexity int, slug *slug.Slug, userID *uuid.UUID, role model.TeamRole) int
+		SetAzureADGroupID            func(childComplexity int, teamSlug slug.Slug, azureADGroupID uuid.UUID) int
+		SetGcpProjectID              func(childComplexity int, teamSlug slug.Slug, gcpEnvironment string, gcpProjectID string) int
+		SetGitHubTeamSlug            func(childComplexity int, teamSlug slug.Slug, gitHubTeamSlug slug.Slug) int
+		SetGoogleWorkspaceGroupEmail func(childComplexity int, teamSlug slug.Slug, googleWorkspaceGroupEmail string) int
+		SetNaisNamespace             func(childComplexity int, teamSlug slug.Slug, gcpEnvironment string, naisNamespace slug.Slug) int
+		SetTeamMemberRole            func(childComplexity int, slug slug.Slug, userID uuid.UUID, role model.TeamRole) int
 		SynchronizeAllTeams          func(childComplexity int) int
-		SynchronizeTeam              func(childComplexity int, slug *slug.Slug) int
+		SynchronizeTeam              func(childComplexity int, slug slug.Slug) int
 		SynchronizeUsers             func(childComplexity int) int
-		UpdateTeam                   func(childComplexity int, slug *slug.Slug, input model.UpdateTeamInput) int
+		UpdateTeam                   func(childComplexity int, slug slug.Slug, input model.UpdateTeamInput) int
 	}
 
 	NaisNamespace struct {
@@ -130,18 +140,20 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		DeployKey                       func(childComplexity int, slug *slug.Slug) int
+		DeployKey                       func(childComplexity int, slug slug.Slug) int
 		Me                              func(childComplexity int) int
 		Reconcilers                     func(childComplexity int) int
 		Roles                           func(childComplexity int) int
-		Team                            func(childComplexity int, slug *slug.Slug) int
-		TeamDeleteKey                   func(childComplexity int, key *uuid.UUID) int
+		Team                            func(childComplexity int, slug slug.Slug) int
+		TeamDeleteKey                   func(childComplexity int, key uuid.UUID) int
 		Teams                           func(childComplexity int) int
 		TeamsWithPermissionInGitHubRepo func(childComplexity int, repoName *string, permissionName *string) int
-		User                            func(childComplexity int, id *uuid.UUID) int
+		User                            func(childComplexity int, id uuid.UUID) int
 		UserByEmail                     func(childComplexity int, email string) int
 		UserSync                        func(childComplexity int) int
 		Users                           func(childComplexity int) int
+		__resolve__service              func(childComplexity int) int
+		__resolve_entities              func(childComplexity int, representations []map[string]interface{}) int
 	}
 
 	Reconciler struct {
@@ -254,6 +266,10 @@ type ComplexityRoot struct {
 		StartedAt     func(childComplexity int) int
 		Status        func(childComplexity int) int
 	}
+
+	_Service struct {
+		SDL func(childComplexity int) int
+	}
 }
 
 type AuditLogResolver interface {
@@ -262,48 +278,53 @@ type AuditLogResolver interface {
 
 	TargetType(ctx context.Context, obj *db.AuditLog) (types.AuditLogsTargetType, error)
 }
+type EntityResolver interface {
+	FindGcpProjectByProjectID(ctx context.Context, projectID string) (*model.GcpProject, error)
+	FindTeamBySlug(ctx context.Context, slug slug.Slug) (*db.Team, error)
+	FindUserByID(ctx context.Context, id uuid.UUID) (*db.User, error)
+}
 type GitHubRepositoryResolver interface {
 	Authorizations(ctx context.Context, obj *reconcilers.GitHubRepository) ([]model.RepositoryAuthorization, error)
 }
 type MutationResolver interface {
-	SetGitHubTeamSlug(ctx context.Context, teamSlug *slug.Slug, gitHubTeamSlug *slug.Slug) (*db.Team, error)
-	SetGoogleWorkspaceGroupEmail(ctx context.Context, teamSlug *slug.Slug, googleWorkspaceGroupEmail string) (*db.Team, error)
-	SetAzureADGroupID(ctx context.Context, teamSlug *slug.Slug, azureADGroupID *uuid.UUID) (*db.Team, error)
-	SetGcpProjectID(ctx context.Context, teamSlug *slug.Slug, gcpEnvironment string, gcpProjectID string) (*db.Team, error)
-	SetNaisNamespace(ctx context.Context, teamSlug *slug.Slug, gcpEnvironment string, naisNamespace *slug.Slug) (*db.Team, error)
+	SetGitHubTeamSlug(ctx context.Context, teamSlug slug.Slug, gitHubTeamSlug slug.Slug) (*db.Team, error)
+	SetGoogleWorkspaceGroupEmail(ctx context.Context, teamSlug slug.Slug, googleWorkspaceGroupEmail string) (*db.Team, error)
+	SetAzureADGroupID(ctx context.Context, teamSlug slug.Slug, azureADGroupID uuid.UUID) (*db.Team, error)
+	SetGcpProjectID(ctx context.Context, teamSlug slug.Slug, gcpEnvironment string, gcpProjectID string) (*db.Team, error)
+	SetNaisNamespace(ctx context.Context, teamSlug slug.Slug, gcpEnvironment string, naisNamespace slug.Slug) (*db.Team, error)
 	EnableReconciler(ctx context.Context, name sqlc.ReconcilerName) (*db.Reconciler, error)
 	DisableReconciler(ctx context.Context, name sqlc.ReconcilerName) (*db.Reconciler, error)
 	ConfigureReconciler(ctx context.Context, name sqlc.ReconcilerName, config []*model.ReconcilerConfigInput) (*db.Reconciler, error)
 	ResetReconciler(ctx context.Context, name sqlc.ReconcilerName) (*db.Reconciler, error)
-	AddReconcilerOptOut(ctx context.Context, teamSlug *slug.Slug, userID *uuid.UUID, reconciler sqlc.ReconcilerName) (*model.TeamMember, error)
-	RemoveReconcilerOptOut(ctx context.Context, teamSlug *slug.Slug, userID *uuid.UUID, reconciler sqlc.ReconcilerName) (*model.TeamMember, error)
+	AddReconcilerOptOut(ctx context.Context, teamSlug slug.Slug, userID uuid.UUID, reconciler sqlc.ReconcilerName) (*model.TeamMember, error)
+	RemoveReconcilerOptOut(ctx context.Context, teamSlug slug.Slug, userID uuid.UUID, reconciler sqlc.ReconcilerName) (*model.TeamMember, error)
 	CreateTeam(ctx context.Context, input model.CreateTeamInput) (*db.Team, error)
-	UpdateTeam(ctx context.Context, slug *slug.Slug, input model.UpdateTeamInput) (*db.Team, error)
-	RemoveUsersFromTeam(ctx context.Context, slug *slug.Slug, userIds []*uuid.UUID) (*db.Team, error)
-	RemoveUserFromTeam(ctx context.Context, slug *slug.Slug, userID *uuid.UUID) (*db.Team, error)
-	SynchronizeTeam(ctx context.Context, slug *slug.Slug) (*model.TeamSync, error)
+	UpdateTeam(ctx context.Context, slug slug.Slug, input model.UpdateTeamInput) (*db.Team, error)
+	RemoveUsersFromTeam(ctx context.Context, slug slug.Slug, userIds []uuid.UUID) (*db.Team, error)
+	RemoveUserFromTeam(ctx context.Context, slug slug.Slug, userID uuid.UUID) (*db.Team, error)
+	SynchronizeTeam(ctx context.Context, slug slug.Slug) (*model.TeamSync, error)
 	SynchronizeAllTeams(ctx context.Context) (*model.TeamSync, error)
-	AddTeamMembers(ctx context.Context, slug *slug.Slug, userIds []*uuid.UUID) (*db.Team, error)
-	AddTeamOwners(ctx context.Context, slug *slug.Slug, userIds []*uuid.UUID) (*db.Team, error)
-	AddTeamMember(ctx context.Context, slug *slug.Slug, member model.TeamMemberInput) (*db.Team, error)
-	SetTeamMemberRole(ctx context.Context, slug *slug.Slug, userID *uuid.UUID, role model.TeamRole) (*db.Team, error)
-	RequestTeamDeletion(ctx context.Context, slug *slug.Slug) (*db.TeamDeleteKey, error)
-	ConfirmTeamDeletion(ctx context.Context, key *uuid.UUID) (*uuid.UUID, error)
-	AuthorizeRepository(ctx context.Context, authorization model.RepositoryAuthorization, teamSlug *slug.Slug, repoName string) (*db.Team, error)
-	DeauthorizeRepository(ctx context.Context, authorization model.RepositoryAuthorization, teamSlug *slug.Slug, repoName string) (*db.Team, error)
-	SynchronizeUsers(ctx context.Context) (*uuid.UUID, error)
+	AddTeamMembers(ctx context.Context, slug slug.Slug, userIds []uuid.UUID) (*db.Team, error)
+	AddTeamOwners(ctx context.Context, slug slug.Slug, userIds []uuid.UUID) (*db.Team, error)
+	AddTeamMember(ctx context.Context, slug slug.Slug, member model.TeamMemberInput) (*db.Team, error)
+	SetTeamMemberRole(ctx context.Context, slug slug.Slug, userID uuid.UUID, role model.TeamRole) (*db.Team, error)
+	RequestTeamDeletion(ctx context.Context, slug slug.Slug) (*db.TeamDeleteKey, error)
+	ConfirmTeamDeletion(ctx context.Context, key uuid.UUID) (uuid.UUID, error)
+	AuthorizeRepository(ctx context.Context, authorization model.RepositoryAuthorization, teamSlug slug.Slug, repoName string) (*db.Team, error)
+	DeauthorizeRepository(ctx context.Context, authorization model.RepositoryAuthorization, teamSlug slug.Slug, repoName string) (*db.Team, error)
+	SynchronizeUsers(ctx context.Context) (uuid.UUID, error)
 }
 type QueryResolver interface {
 	Me(ctx context.Context) (db.AuthenticatedUser, error)
 	Reconcilers(ctx context.Context) ([]*db.Reconciler, error)
 	Roles(ctx context.Context) ([]sqlc.RoleName, error)
 	Teams(ctx context.Context) ([]*db.Team, error)
-	Team(ctx context.Context, slug *slug.Slug) (*db.Team, error)
-	DeployKey(ctx context.Context, slug *slug.Slug) (string, error)
-	TeamDeleteKey(ctx context.Context, key *uuid.UUID) (*db.TeamDeleteKey, error)
+	Team(ctx context.Context, slug slug.Slug) (*db.Team, error)
+	DeployKey(ctx context.Context, slug slug.Slug) (string, error)
+	TeamDeleteKey(ctx context.Context, key uuid.UUID) (*db.TeamDeleteKey, error)
 	TeamsWithPermissionInGitHubRepo(ctx context.Context, repoName *string, permissionName *string) ([]*db.Team, error)
 	Users(ctx context.Context) ([]*db.User, error)
-	User(ctx context.Context, id *uuid.UUID) (*db.User, error)
+	User(ctx context.Context, id uuid.UUID) (*db.User, error)
 	UserByEmail(ctx context.Context, email string) (*db.User, error)
 	UserSync(ctx context.Context) ([]*usersync.Run, error)
 }
@@ -426,6 +447,42 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.AuditLog.TargetType(childComplexity), true
 
+	case "Entity.findGcpProjectByProjectID":
+		if e.complexity.Entity.FindGcpProjectByProjectID == nil {
+			break
+		}
+
+		args, err := ec.field_Entity_findGcpProjectByProjectID_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Entity.FindGcpProjectByProjectID(childComplexity, args["projectID"].(string)), true
+
+	case "Entity.findTeamBySlug":
+		if e.complexity.Entity.FindTeamBySlug == nil {
+			break
+		}
+
+		args, err := ec.field_Entity_findTeamBySlug_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Entity.FindTeamBySlug(childComplexity, args["slug"].(slug.Slug)), true
+
+	case "Entity.findUserByID":
+		if e.complexity.Entity.FindUserByID == nil {
+			break
+		}
+
+		args, err := ec.field_Entity_findUserByID_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Entity.FindUserByID(childComplexity, args["id"].(uuid.UUID)), true
+
 	case "GcpProject.environment":
 		if e.complexity.GcpProject.Environment == nil {
 			break
@@ -506,7 +563,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.AddReconcilerOptOut(childComplexity, args["teamSlug"].(*slug.Slug), args["userId"].(*uuid.UUID), args["reconciler"].(sqlc.ReconcilerName)), true
+		return e.complexity.Mutation.AddReconcilerOptOut(childComplexity, args["teamSlug"].(slug.Slug), args["userId"].(uuid.UUID), args["reconciler"].(sqlc.ReconcilerName)), true
 
 	case "Mutation.addTeamMember":
 		if e.complexity.Mutation.AddTeamMember == nil {
@@ -518,7 +575,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.AddTeamMember(childComplexity, args["slug"].(*slug.Slug), args["member"].(model.TeamMemberInput)), true
+		return e.complexity.Mutation.AddTeamMember(childComplexity, args["slug"].(slug.Slug), args["member"].(model.TeamMemberInput)), true
 
 	case "Mutation.addTeamMembers":
 		if e.complexity.Mutation.AddTeamMembers == nil {
@@ -530,7 +587,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.AddTeamMembers(childComplexity, args["slug"].(*slug.Slug), args["userIds"].([]*uuid.UUID)), true
+		return e.complexity.Mutation.AddTeamMembers(childComplexity, args["slug"].(slug.Slug), args["userIds"].([]uuid.UUID)), true
 
 	case "Mutation.addTeamOwners":
 		if e.complexity.Mutation.AddTeamOwners == nil {
@@ -542,7 +599,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.AddTeamOwners(childComplexity, args["slug"].(*slug.Slug), args["userIds"].([]*uuid.UUID)), true
+		return e.complexity.Mutation.AddTeamOwners(childComplexity, args["slug"].(slug.Slug), args["userIds"].([]uuid.UUID)), true
 
 	case "Mutation.authorizeRepository":
 		if e.complexity.Mutation.AuthorizeRepository == nil {
@@ -554,7 +611,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.AuthorizeRepository(childComplexity, args["authorization"].(model.RepositoryAuthorization), args["teamSlug"].(*slug.Slug), args["repoName"].(string)), true
+		return e.complexity.Mutation.AuthorizeRepository(childComplexity, args["authorization"].(model.RepositoryAuthorization), args["teamSlug"].(slug.Slug), args["repoName"].(string)), true
 
 	case "Mutation.configureReconciler":
 		if e.complexity.Mutation.ConfigureReconciler == nil {
@@ -578,7 +635,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.ConfirmTeamDeletion(childComplexity, args["key"].(*uuid.UUID)), true
+		return e.complexity.Mutation.ConfirmTeamDeletion(childComplexity, args["key"].(uuid.UUID)), true
 
 	case "Mutation.createTeam":
 		if e.complexity.Mutation.CreateTeam == nil {
@@ -602,7 +659,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.DeauthorizeRepository(childComplexity, args["authorization"].(model.RepositoryAuthorization), args["teamSlug"].(*slug.Slug), args["repoName"].(string)), true
+		return e.complexity.Mutation.DeauthorizeRepository(childComplexity, args["authorization"].(model.RepositoryAuthorization), args["teamSlug"].(slug.Slug), args["repoName"].(string)), true
 
 	case "Mutation.disableReconciler":
 		if e.complexity.Mutation.DisableReconciler == nil {
@@ -638,7 +695,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.RemoveReconcilerOptOut(childComplexity, args["teamSlug"].(*slug.Slug), args["userId"].(*uuid.UUID), args["reconciler"].(sqlc.ReconcilerName)), true
+		return e.complexity.Mutation.RemoveReconcilerOptOut(childComplexity, args["teamSlug"].(slug.Slug), args["userId"].(uuid.UUID), args["reconciler"].(sqlc.ReconcilerName)), true
 
 	case "Mutation.removeUserFromTeam":
 		if e.complexity.Mutation.RemoveUserFromTeam == nil {
@@ -650,7 +707,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.RemoveUserFromTeam(childComplexity, args["slug"].(*slug.Slug), args["userId"].(*uuid.UUID)), true
+		return e.complexity.Mutation.RemoveUserFromTeam(childComplexity, args["slug"].(slug.Slug), args["userId"].(uuid.UUID)), true
 
 	case "Mutation.removeUsersFromTeam":
 		if e.complexity.Mutation.RemoveUsersFromTeam == nil {
@@ -662,7 +719,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.RemoveUsersFromTeam(childComplexity, args["slug"].(*slug.Slug), args["userIds"].([]*uuid.UUID)), true
+		return e.complexity.Mutation.RemoveUsersFromTeam(childComplexity, args["slug"].(slug.Slug), args["userIds"].([]uuid.UUID)), true
 
 	case "Mutation.requestTeamDeletion":
 		if e.complexity.Mutation.RequestTeamDeletion == nil {
@@ -674,7 +731,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.RequestTeamDeletion(childComplexity, args["slug"].(*slug.Slug)), true
+		return e.complexity.Mutation.RequestTeamDeletion(childComplexity, args["slug"].(slug.Slug)), true
 
 	case "Mutation.resetReconciler":
 		if e.complexity.Mutation.ResetReconciler == nil {
@@ -698,7 +755,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.SetAzureADGroupID(childComplexity, args["teamSlug"].(*slug.Slug), args["azureADGroupId"].(*uuid.UUID)), true
+		return e.complexity.Mutation.SetAzureADGroupID(childComplexity, args["teamSlug"].(slug.Slug), args["azureADGroupId"].(uuid.UUID)), true
 
 	case "Mutation.setGcpProjectId":
 		if e.complexity.Mutation.SetGcpProjectID == nil {
@@ -710,7 +767,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.SetGcpProjectID(childComplexity, args["teamSlug"].(*slug.Slug), args["gcpEnvironment"].(string), args["gcpProjectId"].(string)), true
+		return e.complexity.Mutation.SetGcpProjectID(childComplexity, args["teamSlug"].(slug.Slug), args["gcpEnvironment"].(string), args["gcpProjectId"].(string)), true
 
 	case "Mutation.setGitHubTeamSlug":
 		if e.complexity.Mutation.SetGitHubTeamSlug == nil {
@@ -722,7 +779,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.SetGitHubTeamSlug(childComplexity, args["teamSlug"].(*slug.Slug), args["gitHubTeamSlug"].(*slug.Slug)), true
+		return e.complexity.Mutation.SetGitHubTeamSlug(childComplexity, args["teamSlug"].(slug.Slug), args["gitHubTeamSlug"].(slug.Slug)), true
 
 	case "Mutation.setGoogleWorkspaceGroupEmail":
 		if e.complexity.Mutation.SetGoogleWorkspaceGroupEmail == nil {
@@ -734,7 +791,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.SetGoogleWorkspaceGroupEmail(childComplexity, args["teamSlug"].(*slug.Slug), args["googleWorkspaceGroupEmail"].(string)), true
+		return e.complexity.Mutation.SetGoogleWorkspaceGroupEmail(childComplexity, args["teamSlug"].(slug.Slug), args["googleWorkspaceGroupEmail"].(string)), true
 
 	case "Mutation.setNaisNamespace":
 		if e.complexity.Mutation.SetNaisNamespace == nil {
@@ -746,7 +803,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.SetNaisNamespace(childComplexity, args["teamSlug"].(*slug.Slug), args["gcpEnvironment"].(string), args["naisNamespace"].(*slug.Slug)), true
+		return e.complexity.Mutation.SetNaisNamespace(childComplexity, args["teamSlug"].(slug.Slug), args["gcpEnvironment"].(string), args["naisNamespace"].(slug.Slug)), true
 
 	case "Mutation.setTeamMemberRole":
 		if e.complexity.Mutation.SetTeamMemberRole == nil {
@@ -758,7 +815,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.SetTeamMemberRole(childComplexity, args["slug"].(*slug.Slug), args["userId"].(*uuid.UUID), args["role"].(model.TeamRole)), true
+		return e.complexity.Mutation.SetTeamMemberRole(childComplexity, args["slug"].(slug.Slug), args["userId"].(uuid.UUID), args["role"].(model.TeamRole)), true
 
 	case "Mutation.synchronizeAllTeams":
 		if e.complexity.Mutation.SynchronizeAllTeams == nil {
@@ -777,7 +834,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.SynchronizeTeam(childComplexity, args["slug"].(*slug.Slug)), true
+		return e.complexity.Mutation.SynchronizeTeam(childComplexity, args["slug"].(slug.Slug)), true
 
 	case "Mutation.synchronizeUsers":
 		if e.complexity.Mutation.SynchronizeUsers == nil {
@@ -796,7 +853,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UpdateTeam(childComplexity, args["slug"].(*slug.Slug), args["input"].(model.UpdateTeamInput)), true
+		return e.complexity.Mutation.UpdateTeam(childComplexity, args["slug"].(slug.Slug), args["input"].(model.UpdateTeamInput)), true
 
 	case "NaisNamespace.environment":
 		if e.complexity.NaisNamespace.Environment == nil {
@@ -822,7 +879,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.DeployKey(childComplexity, args["slug"].(*slug.Slug)), true
+		return e.complexity.Query.DeployKey(childComplexity, args["slug"].(slug.Slug)), true
 
 	case "Query.me":
 		if e.complexity.Query.Me == nil {
@@ -855,7 +912,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Team(childComplexity, args["slug"].(*slug.Slug)), true
+		return e.complexity.Query.Team(childComplexity, args["slug"].(slug.Slug)), true
 
 	case "Query.teamDeleteKey":
 		if e.complexity.Query.TeamDeleteKey == nil {
@@ -867,7 +924,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.TeamDeleteKey(childComplexity, args["key"].(*uuid.UUID)), true
+		return e.complexity.Query.TeamDeleteKey(childComplexity, args["key"].(uuid.UUID)), true
 
 	case "Query.teams":
 		if e.complexity.Query.Teams == nil {
@@ -898,7 +955,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.User(childComplexity, args["id"].(*uuid.UUID)), true
+		return e.complexity.Query.User(childComplexity, args["id"].(uuid.UUID)), true
 
 	case "Query.userByEmail":
 		if e.complexity.Query.UserByEmail == nil {
@@ -925,6 +982,25 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.Users(childComplexity), true
+
+	case "Query._service":
+		if e.complexity.Query.__resolve__service == nil {
+			break
+		}
+
+		return e.complexity.Query.__resolve__service(childComplexity), true
+
+	case "Query._entities":
+		if e.complexity.Query.__resolve_entities == nil {
+			break
+		}
+
+		args, err := ec.field_Query__entities_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.__resolve_entities(childComplexity, args["representations"].([]map[string]interface{})), true
 
 	case "Reconciler.auditLogs":
 		if e.complexity.Reconciler.AuditLogs == nil {
@@ -1409,6 +1485,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.UserSyncRun.Status(childComplexity), true
 
+	case "_Service.sdl":
+		if e.complexity._Service.SDL == nil {
+			break
+		}
+
+		return e.complexity._Service.SDL(childComplexity), true
+
 	}
 	return 0, false
 }
@@ -1800,11 +1883,7 @@ scalar ReconcilerName
 
 "String value representing a system name."
 scalar ComponentName`, BuiltIn: false},
-	{Name: "../../../graphql/schema.graphqls", Input: `"The query root for the teams-backend GraphQL API."
-type Query
-
-"The root query for implementing GraphQL mutations."
-type Mutation`, BuiltIn: false},
+	{Name: "../../../graphql/schema.graphqls", Input: ``, BuiltIn: false},
 	{Name: "../../../graphql/serviceAccounts.graphqls", Input: `"Service account type."
 type ServiceAccount {
     "Unique ID of the service account."
@@ -2067,7 +2146,7 @@ type TeamSync {
 }
 
 "Team type."
-type Team {
+type Team @key(fields: "slug") {
     "Unique slug of the team."
     slug: Slug!
 
@@ -2163,7 +2242,7 @@ type ReconcilerState {
 }
 
 "GCP project type."
-type GcpProject {
+type GcpProject  @key(fields: "projectId") {
     "The environment for the project."
     environment: String!
 
@@ -2279,89 +2358,140 @@ enum RepositoryAuthorization {
     DEPLOY
 }`, BuiltIn: false},
 	{Name: "../../../graphql/users.graphqls", Input: `extend type Query {
-    "Get a collection of users, sorted by name."
-    users: [User!]! @auth
+  "Get a collection of users, sorted by name."
+  users: [User!]! @auth
 
-    "Get a specific user."
-    user(
-        "ID of the user."
-        id: UUID!
-    ): User! @auth
+  "Get a specific user."
+  user("ID of the user." id: UUID!): User! @auth
 
-    "Get a specific user by email."
-    userByEmail(
-        "ID of the user."
-        email: String!
-    ): User! @auth
+  "Get a specific user by email."
+  userByEmail("ID of the user." email: String!): User! @auth
 
-    "Get user sync status and logs."
-    userSync: [UserSyncRun!]! @auth
+  "Get user sync status and logs."
+  userSync: [UserSyncRun!]! @auth
 }
 
 extend type Mutation {
-    """
-    Trigger a user synchronization
+  """
+  Trigger a user synchronization
 
-    This mutation will trigger a full user synchronization with the connected Google Workspace, and return a correlation
-    ID that can later be matched to the log entries. The user synchronization itself is asynchronous.
-    """
-    synchronizeUsers: UUID! @auth
+  This mutation will trigger a full user synchronization with the connected Google Workspace, and return a correlation
+  ID that can later be matched to the log entries. The user synchronization itself is asynchronous.
+  """
+  synchronizeUsers: UUID! @auth
 }
 
 "User sync run type."
 type UserSyncRun {
-    "The correlation ID of the sync run."
-    correlationID: UUID!
+  "The correlation ID of the sync run."
+  correlationID: UUID!
 
-    "Timestamp of when the run started."
-    startedAt: Time!
+  "Timestamp of when the run started."
+  startedAt: Time!
 
-    "Timestamp of when the run finished."
-    finishedAt: Time
+  "Timestamp of when the run finished."
+  finishedAt: Time
 
-    "Log entries for the sync run."
-    logEntries: [AuditLog!]!
+  "Log entries for the sync run."
+  logEntries: [AuditLog!]!
 
-    "The status of the sync run."
-    status: UserSyncRunStatus!
+  "The status of the sync run."
+  status: UserSyncRunStatus!
 
-    "Optional error."
-    error: String
+  "Optional error."
+  error: String
 }
 
 "User sync run status."
 enum UserSyncRunStatus {
-    "User sync run in progress."
-    IN_PROGRESS
+  "User sync run in progress."
+  IN_PROGRESS
 
-    "Successful user sync run."
-    SUCCESS
+  "Successful user sync run."
+  SUCCESS
 
-    "Failed user sync run."
-    FAILURE
+  "Failed user sync run."
+  FAILURE
 }
 
 "User type."
-type User {
-    "Unique ID of the user."
-    id: UUID!
+type User @key(fields: "id") {
+  "Unique ID of the user."
+  id: ID!
 
-    "The email address of the user."
-    email: String!
+  "The email address of the user."
+  email: String!
 
-    "The name of the user."
-    name: String!
+  "The name of the user."
+  name: String!
 
-    "List of team memberships."
-    teams: [TeamMember!]!
+  "List of team memberships."
+  teams: [TeamMember!]!
 
-    "Roles attached to the user."
-    roles: [Role!]!
+  "Roles attached to the user."
+  roles: [Role!]!
 
-    "The external ID of the user."
-    externalId: String!
+  "The external ID of the user."
+  externalId: String!
 }
 `, BuiltIn: false},
+	{Name: "../../../federation/directives.graphql", Input: `
+	directive @composeDirective(name: String!) repeatable on SCHEMA
+	directive @extends on OBJECT | INTERFACE
+	directive @external on OBJECT | FIELD_DEFINITION
+	directive @key(fields: FieldSet!, resolvable: Boolean = true) repeatable on OBJECT | INTERFACE
+	directive @inaccessible on
+	  | ARGUMENT_DEFINITION
+	  | ENUM
+	  | ENUM_VALUE
+	  | FIELD_DEFINITION
+	  | INPUT_FIELD_DEFINITION
+	  | INPUT_OBJECT
+	  | INTERFACE
+	  | OBJECT
+	  | SCALAR
+	  | UNION
+	directive @interfaceObject on OBJECT
+	directive @link(import: [String!], url: String!) repeatable on SCHEMA
+	directive @override(from: String!) on FIELD_DEFINITION
+	directive @provides(fields: FieldSet!) on FIELD_DEFINITION
+	directive @requires(fields: FieldSet!) on FIELD_DEFINITION
+	directive @shareable repeatable on FIELD_DEFINITION | OBJECT
+	directive @tag(name: String!) repeatable on
+	  | ARGUMENT_DEFINITION
+	  | ENUM
+	  | ENUM_VALUE
+	  | FIELD_DEFINITION
+	  | INPUT_FIELD_DEFINITION
+	  | INPUT_OBJECT
+	  | INTERFACE
+	  | OBJECT
+	  | SCALAR
+	  | UNION
+	scalar _Any
+	scalar FieldSet
+`, BuiltIn: true},
+	{Name: "../../../federation/entity.graphql", Input: `
+# a union of all types that use the @key directive
+union _Entity = GcpProject | Team | User
+
+# fake type to build resolver interfaces for users to implement
+type Entity {
+		findGcpProjectByProjectID(projectID: String!,): GcpProject!
+	findTeamBySlug(slug: Slug!,): Team!
+	findUserByID(id: ID!,): User!
+
+}
+
+type _Service {
+  sdl: String
+}
+
+extend type Query {
+  _entities(representations: [_Any!]!): [_Entity]!
+  _service: _Service!
+}
+`, BuiltIn: true},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
 
@@ -2369,22 +2499,82 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 
 // region    ***************************** args.gotpl *****************************
 
+func (ec *executionContext) dir_composeDirective_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Entity_findGcpProjectByProjectID_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["projectID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("projectID"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["projectID"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Entity_findTeamBySlug_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 slug.Slug
+	if tmp, ok := rawArgs["slug"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
+		arg0, err = ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["slug"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Entity_findUserByID_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 uuid.UUID
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_addReconcilerOptOut_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *slug.Slug
+	var arg0 slug.Slug
 	if tmp, ok := rawArgs["teamSlug"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamSlug"))
-		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
+		arg0, err = ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
 	args["teamSlug"] = arg0
-	var arg1 *uuid.UUID
+	var arg1 uuid.UUID
 	if tmp, ok := rawArgs["userId"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
-		arg1, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
+		arg1, err = ec.unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2405,10 +2595,10 @@ func (ec *executionContext) field_Mutation_addReconcilerOptOut_args(ctx context.
 func (ec *executionContext) field_Mutation_addTeamMember_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *slug.Slug
+	var arg0 slug.Slug
 	if tmp, ok := rawArgs["slug"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
+		arg0, err = ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2429,19 +2619,19 @@ func (ec *executionContext) field_Mutation_addTeamMember_args(ctx context.Contex
 func (ec *executionContext) field_Mutation_addTeamMembers_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *slug.Slug
+	var arg0 slug.Slug
 	if tmp, ok := rawArgs["slug"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
+		arg0, err = ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
 	args["slug"] = arg0
-	var arg1 []*uuid.UUID
+	var arg1 []uuid.UUID
 	if tmp, ok := rawArgs["userIds"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userIds"))
-		arg1, err = ec.unmarshalNUUID2ᚕᚖgithubᚗcomᚋgoogleᚋuuidᚐUUIDᚄ(ctx, tmp)
+		arg1, err = ec.unmarshalNUUID2ᚕgithubᚗcomᚋgoogleᚋuuidᚐUUIDᚄ(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2453,19 +2643,19 @@ func (ec *executionContext) field_Mutation_addTeamMembers_args(ctx context.Conte
 func (ec *executionContext) field_Mutation_addTeamOwners_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *slug.Slug
+	var arg0 slug.Slug
 	if tmp, ok := rawArgs["slug"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
+		arg0, err = ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
 	args["slug"] = arg0
-	var arg1 []*uuid.UUID
+	var arg1 []uuid.UUID
 	if tmp, ok := rawArgs["userIds"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userIds"))
-		arg1, err = ec.unmarshalNUUID2ᚕᚖgithubᚗcomᚋgoogleᚋuuidᚐUUIDᚄ(ctx, tmp)
+		arg1, err = ec.unmarshalNUUID2ᚕgithubᚗcomᚋgoogleᚋuuidᚐUUIDᚄ(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2486,10 +2676,10 @@ func (ec *executionContext) field_Mutation_authorizeRepository_args(ctx context.
 		}
 	}
 	args["authorization"] = arg0
-	var arg1 *slug.Slug
+	var arg1 slug.Slug
 	if tmp, ok := rawArgs["teamSlug"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamSlug"))
-		arg1, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
+		arg1, err = ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2534,10 +2724,10 @@ func (ec *executionContext) field_Mutation_configureReconciler_args(ctx context.
 func (ec *executionContext) field_Mutation_confirmTeamDeletion_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *uuid.UUID
+	var arg0 uuid.UUID
 	if tmp, ok := rawArgs["key"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("key"))
-		arg0, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
+		arg0, err = ec.unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2573,10 +2763,10 @@ func (ec *executionContext) field_Mutation_deauthorizeRepository_args(ctx contex
 		}
 	}
 	args["authorization"] = arg0
-	var arg1 *slug.Slug
+	var arg1 slug.Slug
 	if tmp, ok := rawArgs["teamSlug"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamSlug"))
-		arg1, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
+		arg1, err = ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2627,19 +2817,19 @@ func (ec *executionContext) field_Mutation_enableReconciler_args(ctx context.Con
 func (ec *executionContext) field_Mutation_removeReconcilerOptOut_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *slug.Slug
+	var arg0 slug.Slug
 	if tmp, ok := rawArgs["teamSlug"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamSlug"))
-		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
+		arg0, err = ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
 	args["teamSlug"] = arg0
-	var arg1 *uuid.UUID
+	var arg1 uuid.UUID
 	if tmp, ok := rawArgs["userId"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
-		arg1, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
+		arg1, err = ec.unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2660,19 +2850,19 @@ func (ec *executionContext) field_Mutation_removeReconcilerOptOut_args(ctx conte
 func (ec *executionContext) field_Mutation_removeUserFromTeam_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *slug.Slug
+	var arg0 slug.Slug
 	if tmp, ok := rawArgs["slug"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
+		arg0, err = ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
 	args["slug"] = arg0
-	var arg1 *uuid.UUID
+	var arg1 uuid.UUID
 	if tmp, ok := rawArgs["userId"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
-		arg1, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
+		arg1, err = ec.unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2684,19 +2874,19 @@ func (ec *executionContext) field_Mutation_removeUserFromTeam_args(ctx context.C
 func (ec *executionContext) field_Mutation_removeUsersFromTeam_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *slug.Slug
+	var arg0 slug.Slug
 	if tmp, ok := rawArgs["slug"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
+		arg0, err = ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
 	args["slug"] = arg0
-	var arg1 []*uuid.UUID
+	var arg1 []uuid.UUID
 	if tmp, ok := rawArgs["userIds"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userIds"))
-		arg1, err = ec.unmarshalNUUID2ᚕᚖgithubᚗcomᚋgoogleᚋuuidᚐUUIDᚄ(ctx, tmp)
+		arg1, err = ec.unmarshalNUUID2ᚕgithubᚗcomᚋgoogleᚋuuidᚐUUIDᚄ(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2708,10 +2898,10 @@ func (ec *executionContext) field_Mutation_removeUsersFromTeam_args(ctx context.
 func (ec *executionContext) field_Mutation_requestTeamDeletion_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *slug.Slug
+	var arg0 slug.Slug
 	if tmp, ok := rawArgs["slug"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
+		arg0, err = ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2738,19 +2928,19 @@ func (ec *executionContext) field_Mutation_resetReconciler_args(ctx context.Cont
 func (ec *executionContext) field_Mutation_setAzureADGroupId_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *slug.Slug
+	var arg0 slug.Slug
 	if tmp, ok := rawArgs["teamSlug"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamSlug"))
-		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
+		arg0, err = ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
 	args["teamSlug"] = arg0
-	var arg1 *uuid.UUID
+	var arg1 uuid.UUID
 	if tmp, ok := rawArgs["azureADGroupId"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("azureADGroupId"))
-		arg1, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
+		arg1, err = ec.unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2762,10 +2952,10 @@ func (ec *executionContext) field_Mutation_setAzureADGroupId_args(ctx context.Co
 func (ec *executionContext) field_Mutation_setGcpProjectId_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *slug.Slug
+	var arg0 slug.Slug
 	if tmp, ok := rawArgs["teamSlug"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamSlug"))
-		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
+		arg0, err = ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2795,19 +2985,19 @@ func (ec *executionContext) field_Mutation_setGcpProjectId_args(ctx context.Cont
 func (ec *executionContext) field_Mutation_setGitHubTeamSlug_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *slug.Slug
+	var arg0 slug.Slug
 	if tmp, ok := rawArgs["teamSlug"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamSlug"))
-		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
+		arg0, err = ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
 	args["teamSlug"] = arg0
-	var arg1 *slug.Slug
+	var arg1 slug.Slug
 	if tmp, ok := rawArgs["gitHubTeamSlug"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("gitHubTeamSlug"))
-		arg1, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
+		arg1, err = ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2819,10 +3009,10 @@ func (ec *executionContext) field_Mutation_setGitHubTeamSlug_args(ctx context.Co
 func (ec *executionContext) field_Mutation_setGoogleWorkspaceGroupEmail_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *slug.Slug
+	var arg0 slug.Slug
 	if tmp, ok := rawArgs["teamSlug"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamSlug"))
-		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
+		arg0, err = ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2843,10 +3033,10 @@ func (ec *executionContext) field_Mutation_setGoogleWorkspaceGroupEmail_args(ctx
 func (ec *executionContext) field_Mutation_setNaisNamespace_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *slug.Slug
+	var arg0 slug.Slug
 	if tmp, ok := rawArgs["teamSlug"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamSlug"))
-		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
+		arg0, err = ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2861,10 +3051,10 @@ func (ec *executionContext) field_Mutation_setNaisNamespace_args(ctx context.Con
 		}
 	}
 	args["gcpEnvironment"] = arg1
-	var arg2 *slug.Slug
+	var arg2 slug.Slug
 	if tmp, ok := rawArgs["naisNamespace"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("naisNamespace"))
-		arg2, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
+		arg2, err = ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2876,19 +3066,19 @@ func (ec *executionContext) field_Mutation_setNaisNamespace_args(ctx context.Con
 func (ec *executionContext) field_Mutation_setTeamMemberRole_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *slug.Slug
+	var arg0 slug.Slug
 	if tmp, ok := rawArgs["slug"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
+		arg0, err = ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
 	args["slug"] = arg0
-	var arg1 *uuid.UUID
+	var arg1 uuid.UUID
 	if tmp, ok := rawArgs["userId"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
-		arg1, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
+		arg1, err = ec.unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2909,10 +3099,10 @@ func (ec *executionContext) field_Mutation_setTeamMemberRole_args(ctx context.Co
 func (ec *executionContext) field_Mutation_synchronizeTeam_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *slug.Slug
+	var arg0 slug.Slug
 	if tmp, ok := rawArgs["slug"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
+		arg0, err = ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2924,10 +3114,10 @@ func (ec *executionContext) field_Mutation_synchronizeTeam_args(ctx context.Cont
 func (ec *executionContext) field_Mutation_updateTeam_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *slug.Slug
+	var arg0 slug.Slug
 	if tmp, ok := rawArgs["slug"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
+		arg0, err = ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2960,13 +3150,28 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 	return args, nil
 }
 
+func (ec *executionContext) field_Query__entities_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 []map[string]interface{}
+	if tmp, ok := rawArgs["representations"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("representations"))
+		arg0, err = ec.unmarshalN_Any2ᚕmapᚄ(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["representations"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_deployKey_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *slug.Slug
+	var arg0 slug.Slug
 	if tmp, ok := rawArgs["slug"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
+		arg0, err = ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2978,10 +3183,10 @@ func (ec *executionContext) field_Query_deployKey_args(ctx context.Context, rawA
 func (ec *executionContext) field_Query_teamDeleteKey_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *uuid.UUID
+	var arg0 uuid.UUID
 	if tmp, ok := rawArgs["key"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("key"))
-		arg0, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
+		arg0, err = ec.unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2993,10 +3198,10 @@ func (ec *executionContext) field_Query_teamDeleteKey_args(ctx context.Context, 
 func (ec *executionContext) field_Query_team_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *slug.Slug
+	var arg0 slug.Slug
 	if tmp, ok := rawArgs["slug"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-		arg0, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
+		arg0, err = ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -3047,10 +3252,10 @@ func (ec *executionContext) field_Query_userByEmail_args(ctx context.Context, ra
 func (ec *executionContext) field_Query_user_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *uuid.UUID
+	var arg0 uuid.UUID
 	if tmp, ok := rawArgs["id"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
+		arg0, err = ec.unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -3486,6 +3691,217 @@ func (ec *executionContext) fieldContext_AuditLog_createdAt(ctx context.Context,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Time does not have child fields")
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Entity_findGcpProjectByProjectID(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Entity_findGcpProjectByProjectID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Entity().FindGcpProjectByProjectID(rctx, fc.Args["projectID"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.GcpProject)
+	fc.Result = res
+	return ec.marshalNGcpProject2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐGcpProject(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Entity_findGcpProjectByProjectID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Entity",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "environment":
+				return ec.fieldContext_GcpProject_environment(ctx, field)
+			case "projectName":
+				return ec.fieldContext_GcpProject_projectName(ctx, field)
+			case "projectId":
+				return ec.fieldContext_GcpProject_projectId(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type GcpProject", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Entity_findGcpProjectByProjectID_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Entity_findTeamBySlug(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Entity_findTeamBySlug(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Entity().FindTeamBySlug(rctx, fc.Args["slug"].(slug.Slug))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*db.Team)
+	fc.Result = res
+	return ec.marshalNTeam2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋdbᚐTeam(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Entity_findTeamBySlug(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Entity",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "slug":
+				return ec.fieldContext_Team_slug(ctx, field)
+			case "purpose":
+				return ec.fieldContext_Team_purpose(ctx, field)
+			case "auditLogs":
+				return ec.fieldContext_Team_auditLogs(ctx, field)
+			case "members":
+				return ec.fieldContext_Team_members(ctx, field)
+			case "syncErrors":
+				return ec.fieldContext_Team_syncErrors(ctx, field)
+			case "lastSuccessfulSync":
+				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
+			case "reconcilerState":
+				return ec.fieldContext_Team_reconcilerState(ctx, field)
+			case "slackChannel":
+				return ec.fieldContext_Team_slackChannel(ctx, field)
+			case "slackAlertsChannels":
+				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
+			case "gitHubRepositories":
+				return ec.fieldContext_Team_gitHubRepositories(ctx, field)
+			case "deletionInProgress":
+				return ec.fieldContext_Team_deletionInProgress(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Entity_findTeamBySlug_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Entity_findUserByID(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Entity_findUserByID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Entity().FindUserByID(rctx, fc.Args["id"].(uuid.UUID))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*db.User)
+	fc.Result = res
+	return ec.marshalNUser2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋdbᚐUser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Entity_findUserByID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Entity",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "name":
+				return ec.fieldContext_User_name(ctx, field)
+			case "teams":
+				return ec.fieldContext_User_teams(ctx, field)
+			case "roles":
+				return ec.fieldContext_User_roles(ctx, field)
+			case "externalId":
+				return ec.fieldContext_User_externalId(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Entity_findUserByID_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -3951,7 +4367,7 @@ func (ec *executionContext) _Mutation_setGitHubTeamSlug(ctx context.Context, fie
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().SetGitHubTeamSlug(rctx, fc.Args["teamSlug"].(*slug.Slug), fc.Args["gitHubTeamSlug"].(*slug.Slug))
+			return ec.resolvers.Mutation().SetGitHubTeamSlug(rctx, fc.Args["teamSlug"].(slug.Slug), fc.Args["gitHubTeamSlug"].(slug.Slug))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Admin == nil {
@@ -4050,7 +4466,7 @@ func (ec *executionContext) _Mutation_setGoogleWorkspaceGroupEmail(ctx context.C
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().SetGoogleWorkspaceGroupEmail(rctx, fc.Args["teamSlug"].(*slug.Slug), fc.Args["googleWorkspaceGroupEmail"].(string))
+			return ec.resolvers.Mutation().SetGoogleWorkspaceGroupEmail(rctx, fc.Args["teamSlug"].(slug.Slug), fc.Args["googleWorkspaceGroupEmail"].(string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Admin == nil {
@@ -4149,7 +4565,7 @@ func (ec *executionContext) _Mutation_setAzureADGroupId(ctx context.Context, fie
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().SetAzureADGroupID(rctx, fc.Args["teamSlug"].(*slug.Slug), fc.Args["azureADGroupId"].(*uuid.UUID))
+			return ec.resolvers.Mutation().SetAzureADGroupID(rctx, fc.Args["teamSlug"].(slug.Slug), fc.Args["azureADGroupId"].(uuid.UUID))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Admin == nil {
@@ -4248,7 +4664,7 @@ func (ec *executionContext) _Mutation_setGcpProjectId(ctx context.Context, field
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().SetGcpProjectID(rctx, fc.Args["teamSlug"].(*slug.Slug), fc.Args["gcpEnvironment"].(string), fc.Args["gcpProjectId"].(string))
+			return ec.resolvers.Mutation().SetGcpProjectID(rctx, fc.Args["teamSlug"].(slug.Slug), fc.Args["gcpEnvironment"].(string), fc.Args["gcpProjectId"].(string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Admin == nil {
@@ -4347,7 +4763,7 @@ func (ec *executionContext) _Mutation_setNaisNamespace(ctx context.Context, fiel
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().SetNaisNamespace(rctx, fc.Args["teamSlug"].(*slug.Slug), fc.Args["gcpEnvironment"].(string), fc.Args["naisNamespace"].(*slug.Slug))
+			return ec.resolvers.Mutation().SetNaisNamespace(rctx, fc.Args["teamSlug"].(slug.Slug), fc.Args["gcpEnvironment"].(string), fc.Args["naisNamespace"].(slug.Slug))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Admin == nil {
@@ -4825,7 +5241,7 @@ func (ec *executionContext) _Mutation_addReconcilerOptOut(ctx context.Context, f
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().AddReconcilerOptOut(rctx, fc.Args["teamSlug"].(*slug.Slug), fc.Args["userId"].(*uuid.UUID), fc.Args["reconciler"].(sqlc.ReconcilerName))
+		return ec.resolvers.Mutation().AddReconcilerOptOut(rctx, fc.Args["teamSlug"].(slug.Slug), fc.Args["userId"].(uuid.UUID), fc.Args["reconciler"].(sqlc.ReconcilerName))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4890,7 +5306,7 @@ func (ec *executionContext) _Mutation_removeReconcilerOptOut(ctx context.Context
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().RemoveReconcilerOptOut(rctx, fc.Args["teamSlug"].(*slug.Slug), fc.Args["userId"].(*uuid.UUID), fc.Args["reconciler"].(sqlc.ReconcilerName))
+		return ec.resolvers.Mutation().RemoveReconcilerOptOut(rctx, fc.Args["teamSlug"].(slug.Slug), fc.Args["userId"].(uuid.UUID), fc.Args["reconciler"].(sqlc.ReconcilerName))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5055,7 +5471,7 @@ func (ec *executionContext) _Mutation_updateTeam(ctx context.Context, field grap
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().UpdateTeam(rctx, fc.Args["slug"].(*slug.Slug), fc.Args["input"].(model.UpdateTeamInput))
+			return ec.resolvers.Mutation().UpdateTeam(rctx, fc.Args["slug"].(slug.Slug), fc.Args["input"].(model.UpdateTeamInput))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -5154,7 +5570,7 @@ func (ec *executionContext) _Mutation_removeUsersFromTeam(ctx context.Context, f
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().RemoveUsersFromTeam(rctx, fc.Args["slug"].(*slug.Slug), fc.Args["userIds"].([]*uuid.UUID))
+			return ec.resolvers.Mutation().RemoveUsersFromTeam(rctx, fc.Args["slug"].(slug.Slug), fc.Args["userIds"].([]uuid.UUID))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -5253,7 +5669,7 @@ func (ec *executionContext) _Mutation_removeUserFromTeam(ctx context.Context, fi
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().RemoveUserFromTeam(rctx, fc.Args["slug"].(*slug.Slug), fc.Args["userId"].(*uuid.UUID))
+			return ec.resolvers.Mutation().RemoveUserFromTeam(rctx, fc.Args["slug"].(slug.Slug), fc.Args["userId"].(uuid.UUID))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -5352,7 +5768,7 @@ func (ec *executionContext) _Mutation_synchronizeTeam(ctx context.Context, field
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().SynchronizeTeam(rctx, fc.Args["slug"].(*slug.Slug))
+			return ec.resolvers.Mutation().SynchronizeTeam(rctx, fc.Args["slug"].(slug.Slug))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -5499,7 +5915,7 @@ func (ec *executionContext) _Mutation_addTeamMembers(ctx context.Context, field 
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().AddTeamMembers(rctx, fc.Args["slug"].(*slug.Slug), fc.Args["userIds"].([]*uuid.UUID))
+			return ec.resolvers.Mutation().AddTeamMembers(rctx, fc.Args["slug"].(slug.Slug), fc.Args["userIds"].([]uuid.UUID))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -5598,7 +6014,7 @@ func (ec *executionContext) _Mutation_addTeamOwners(ctx context.Context, field g
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().AddTeamOwners(rctx, fc.Args["slug"].(*slug.Slug), fc.Args["userIds"].([]*uuid.UUID))
+			return ec.resolvers.Mutation().AddTeamOwners(rctx, fc.Args["slug"].(slug.Slug), fc.Args["userIds"].([]uuid.UUID))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -5697,7 +6113,7 @@ func (ec *executionContext) _Mutation_addTeamMember(ctx context.Context, field g
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().AddTeamMember(rctx, fc.Args["slug"].(*slug.Slug), fc.Args["member"].(model.TeamMemberInput))
+			return ec.resolvers.Mutation().AddTeamMember(rctx, fc.Args["slug"].(slug.Slug), fc.Args["member"].(model.TeamMemberInput))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -5796,7 +6212,7 @@ func (ec *executionContext) _Mutation_setTeamMemberRole(ctx context.Context, fie
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().SetTeamMemberRole(rctx, fc.Args["slug"].(*slug.Slug), fc.Args["userId"].(*uuid.UUID), fc.Args["role"].(model.TeamRole))
+			return ec.resolvers.Mutation().SetTeamMemberRole(rctx, fc.Args["slug"].(slug.Slug), fc.Args["userId"].(uuid.UUID), fc.Args["role"].(model.TeamRole))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -5895,7 +6311,7 @@ func (ec *executionContext) _Mutation_requestTeamDeletion(ctx context.Context, f
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().RequestTeamDeletion(rctx, fc.Args["slug"].(*slug.Slug))
+			return ec.resolvers.Mutation().RequestTeamDeletion(rctx, fc.Args["slug"].(slug.Slug))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -5982,7 +6398,7 @@ func (ec *executionContext) _Mutation_confirmTeamDeletion(ctx context.Context, f
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().ConfirmTeamDeletion(rctx, fc.Args["key"].(*uuid.UUID))
+			return ec.resolvers.Mutation().ConfirmTeamDeletion(rctx, fc.Args["key"].(uuid.UUID))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -5998,10 +6414,10 @@ func (ec *executionContext) _Mutation_confirmTeamDeletion(ctx context.Context, f
 		if tmp == nil {
 			return nil, nil
 		}
-		if data, ok := tmp.(*uuid.UUID); ok {
+		if data, ok := tmp.(uuid.UUID); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/google/uuid.UUID`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be github.com/google/uuid.UUID`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -6013,9 +6429,9 @@ func (ec *executionContext) _Mutation_confirmTeamDeletion(ctx context.Context, f
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*uuid.UUID)
+	res := resTmp.(uuid.UUID)
 	fc.Result = res
-	return ec.marshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
+	return ec.marshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_confirmTeamDeletion(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -6057,7 +6473,7 @@ func (ec *executionContext) _Mutation_authorizeRepository(ctx context.Context, f
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().AuthorizeRepository(rctx, fc.Args["authorization"].(model.RepositoryAuthorization), fc.Args["teamSlug"].(*slug.Slug), fc.Args["repoName"].(string))
+			return ec.resolvers.Mutation().AuthorizeRepository(rctx, fc.Args["authorization"].(model.RepositoryAuthorization), fc.Args["teamSlug"].(slug.Slug), fc.Args["repoName"].(string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -6156,7 +6572,7 @@ func (ec *executionContext) _Mutation_deauthorizeRepository(ctx context.Context,
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().DeauthorizeRepository(rctx, fc.Args["authorization"].(model.RepositoryAuthorization), fc.Args["teamSlug"].(*slug.Slug), fc.Args["repoName"].(string))
+			return ec.resolvers.Mutation().DeauthorizeRepository(rctx, fc.Args["authorization"].(model.RepositoryAuthorization), fc.Args["teamSlug"].(slug.Slug), fc.Args["repoName"].(string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -6271,10 +6687,10 @@ func (ec *executionContext) _Mutation_synchronizeUsers(ctx context.Context, fiel
 		if tmp == nil {
 			return nil, nil
 		}
-		if data, ok := tmp.(*uuid.UUID); ok {
+		if data, ok := tmp.(uuid.UUID); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/google/uuid.UUID`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be github.com/google/uuid.UUID`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -6286,9 +6702,9 @@ func (ec *executionContext) _Mutation_synchronizeUsers(ctx context.Context, fiel
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*uuid.UUID)
+	res := resTmp.(uuid.UUID)
 	fc.Result = res
-	return ec.marshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
+	return ec.marshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_synchronizeUsers(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -6374,9 +6790,9 @@ func (ec *executionContext) _NaisNamespace_namespace(ctx context.Context, field 
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*slug.Slug)
+	res := resTmp.(slug.Slug)
 	fc.Result = res
-	return ec.marshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, field.Selections, res)
+	return ec.marshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_NaisNamespace_namespace(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -6687,7 +7103,7 @@ func (ec *executionContext) _Query_team(ctx context.Context, field graphql.Colle
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Team(rctx, fc.Args["slug"].(*slug.Slug))
+			return ec.resolvers.Query().Team(rctx, fc.Args["slug"].(slug.Slug))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -6786,7 +7202,7 @@ func (ec *executionContext) _Query_deployKey(ctx context.Context, field graphql.
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().DeployKey(rctx, fc.Args["slug"].(*slug.Slug))
+			return ec.resolvers.Query().DeployKey(rctx, fc.Args["slug"].(slug.Slug))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -6861,7 +7277,7 @@ func (ec *executionContext) _Query_teamDeleteKey(ctx context.Context, field grap
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().TeamDeleteKey(rctx, fc.Args["key"].(*uuid.UUID))
+			return ec.resolvers.Query().TeamDeleteKey(rctx, fc.Args["key"].(uuid.UUID))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -7125,7 +7541,7 @@ func (ec *executionContext) _Query_user(ctx context.Context, field graphql.Colle
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().User(rctx, fc.Args["id"].(*uuid.UUID))
+			return ec.resolvers.Query().User(rctx, fc.Args["id"].(uuid.UUID))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -7361,6 +7777,109 @@ func (ec *executionContext) fieldContext_Query_userSync(ctx context.Context, fie
 				return ec.fieldContext_UserSyncRun_error(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UserSyncRun", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query__entities(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query__entities(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.__resolve_entities(ctx, fc.Args["representations"].([]map[string]interface{})), nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]fedruntime.Entity)
+	fc.Result = res
+	return ec.marshalN_Entity2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋpluginᚋfederationᚋfedruntimeᚐEntity(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query__entities(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type _Entity does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query__entities_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query__service(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query__service(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.__resolve__service(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(fedruntime.Service)
+	fc.Result = res
+	return ec.marshalN_Service2githubᚗcomᚋ99designsᚋgqlgenᚋpluginᚋfederationᚋfedruntimeᚐService(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query__service(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "sdl":
+				return ec.fieldContext__Service_sdl(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type _Service", field.Name)
 		},
 	}
 	return fc, nil
@@ -10250,9 +10769,9 @@ func (ec *executionContext) _TeamSync_correlationID(ctx context.Context, field g
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*uuid.UUID)
+	res := resTmp.(uuid.UUID)
 	fc.Result = res
-	return ec.marshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
+	return ec.marshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_TeamSync_correlationID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -10296,7 +10815,7 @@ func (ec *executionContext) _User_id(ctx context.Context, field graphql.Collecte
 	}
 	res := resTmp.(uuid.UUID)
 	fc.Result = res
-	return ec.marshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
+	return ec.marshalNID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_User_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -10306,7 +10825,7 @@ func (ec *executionContext) fieldContext_User_id(ctx context.Context, field grap
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type UUID does not have child fields")
+			return nil, errors.New("field of type ID does not have child fields")
 		},
 	}
 	return fc, nil
@@ -10823,6 +11342,47 @@ func (ec *executionContext) fieldContext_UserSyncRun_error(ctx context.Context, 
 		Field:      field,
 		IsMethod:   true,
 		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) __Service_sdl(ctx context.Context, field graphql.CollectedField, obj *fedruntime.Service) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext__Service_sdl(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SDL, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext__Service_sdl(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "_Service",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
 		},
@@ -12621,7 +13181,7 @@ func (ec *executionContext) unmarshalInputCreateTeamInput(ctx context.Context, o
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-			data, err := ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, v)
+			data, err := ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -12744,7 +13304,7 @@ func (ec *executionContext) unmarshalInputTeamMemberInput(ctx context.Context, o
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
-			data, err := ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
+			data, err := ec.unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -12842,6 +13402,32 @@ func (ec *executionContext) _AuthenticatedUser(ctx context.Context, sel ast.Sele
 			return graphql.Null
 		}
 		return ec._ServiceAccount(ctx, sel, obj)
+	default:
+		panic(fmt.Errorf("unexpected type %T", obj))
+	}
+}
+
+func (ec *executionContext) __Entity(ctx context.Context, sel ast.SelectionSet, obj fedruntime.Entity) graphql.Marshaler {
+	switch obj := (obj).(type) {
+	case nil:
+		return graphql.Null
+	case model.GcpProject:
+		return ec._GcpProject(ctx, sel, &obj)
+	case *model.GcpProject:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._GcpProject(ctx, sel, obj)
+	case *db.Team:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._Team(ctx, sel, obj)
+	case *db.User:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._User(ctx, sel, obj)
 	default:
 		panic(fmt.Errorf("unexpected type %T", obj))
 	}
@@ -13020,7 +13606,115 @@ func (ec *executionContext) _AuditLog(ctx context.Context, sel ast.SelectionSet,
 	return out
 }
 
-var gcpProjectImplementors = []string{"GcpProject"}
+var entityImplementors = []string{"Entity"}
+
+func (ec *executionContext) _Entity(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, entityImplementors)
+	ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{
+		Object: "Entity",
+	})
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		innerCtx := graphql.WithRootFieldContext(ctx, &graphql.RootFieldContext{
+			Object: field.Name,
+			Field:  field,
+		})
+
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Entity")
+		case "findGcpProjectByProjectID":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Entity_findGcpProjectByProjectID(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "findTeamBySlug":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Entity_findTeamBySlug(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "findUserByID":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Entity_findUserByID(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var gcpProjectImplementors = []string{"GcpProject", "_Entity"}
 
 func (ec *executionContext) _GcpProject(ctx context.Context, sel ast.SelectionSet, obj *model.GcpProject) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, gcpProjectImplementors)
@@ -13754,6 +14448,50 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "_entities":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query__entities(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "_service":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query__service(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "__type":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Query___type(ctx, field)
@@ -14355,7 +15093,7 @@ func (ec *executionContext) _SyncError(ctx context.Context, sel ast.SelectionSet
 	return out
 }
 
-var teamImplementors = []string{"Team"}
+var teamImplementors = []string{"Team", "_Entity"}
 
 func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj *db.Team) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, teamImplementors)
@@ -14947,7 +15685,7 @@ func (ec *executionContext) _TeamSync(ctx context.Context, sel ast.SelectionSet,
 	return out
 }
 
-var userImplementors = []string{"User", "AuthenticatedUser"}
+var userImplementors = []string{"User", "AuthenticatedUser", "_Entity"}
 
 func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj *db.User) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, userImplementors)
@@ -15201,6 +15939,42 @@ func (ec *executionContext) _UserSyncRun(ctx context.Context, sel ast.SelectionS
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var _ServiceImplementors = []string{"_Service"}
+
+func (ec *executionContext) __Service(ctx context.Context, sel ast.SelectionSet, obj *fedruntime.Service) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, _ServiceImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("_Service")
+		case "sdl":
+			out.Values[i] = ec.__Service_sdl(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -15697,6 +16471,25 @@ func (ec *executionContext) marshalNDeployKey2string(ctx context.Context, sel as
 	return res
 }
 
+func (ec *executionContext) unmarshalNFieldSet2string(ctx context.Context, v interface{}) (string, error) {
+	res, err := graphql.UnmarshalString(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNFieldSet2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
+	res := graphql.MarshalString(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) marshalNGcpProject2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐGcpProject(ctx context.Context, sel ast.SelectionSet, v model.GcpProject) graphql.Marshaler {
+	return ec._GcpProject(ctx, sel, &v)
+}
+
 func (ec *executionContext) marshalNGcpProject2ᚕᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐGcpProjectᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.GcpProject) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -15857,6 +16650,21 @@ func (ec *executionContext) marshalNGitHubRepositoryPermission2ᚖgithubᚗcom�
 		return graphql.Null
 	}
 	return ec._GitHubRepositoryPermission(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx context.Context, v interface{}) (uuid.UUID, error) {
+	res, err := db.UnmarshalUUID(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx context.Context, sel ast.SelectionSet, v uuid.UUID) graphql.Marshaler {
+	res := db.MarshalUUID(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
 }
 
 func (ec *executionContext) unmarshalNInt2int32(ctx context.Context, v interface{}) (int32, error) {
@@ -16341,39 +17149,13 @@ func (ec *executionContext) unmarshalNSlackAlertsChannelInput2ᚖgithubᚗcomᚋ
 }
 
 func (ec *executionContext) unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx context.Context, v interface{}) (slug.Slug, error) {
-	res, err := slug.UnmarshalSlug(v)
-	return *res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx context.Context, sel ast.SelectionSet, v slug.Slug) graphql.Marshaler {
-	res := slug.MarshalSlug(&v)
-	if res == graphql.Null {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-	}
-	return res
-}
-
-func (ec *executionContext) unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx context.Context, v interface{}) (*slug.Slug, error) {
-	res, err := slug.UnmarshalSlug(v)
+	var res slug.Slug
+	err := res.UnmarshalGQLContext(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx context.Context, sel ast.SelectionSet, v *slug.Slug) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	res := slug.MarshalSlug(v)
-	if res == graphql.Null {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-	}
-	return res
+func (ec *executionContext) marshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx context.Context, sel ast.SelectionSet, v slug.Slug) graphql.Marshaler {
+	return graphql.WrapContextMarshaler(ctx, v)
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
@@ -16713,11 +17495,11 @@ func (ec *executionContext) marshalNTime2timeᚐTime(ctx context.Context, sel as
 
 func (ec *executionContext) unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx context.Context, v interface{}) (uuid.UUID, error) {
 	res, err := db.UnmarshalUUID(v)
-	return *res, graphql.ErrorOnPath(ctx, err)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx context.Context, sel ast.SelectionSet, v uuid.UUID) graphql.Marshaler {
-	res := db.MarshalUUID(&v)
+	res := db.MarshalUUID(v)
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -16726,16 +17508,16 @@ func (ec *executionContext) marshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx
 	return res
 }
 
-func (ec *executionContext) unmarshalNUUID2ᚕᚖgithubᚗcomᚋgoogleᚋuuidᚐUUIDᚄ(ctx context.Context, v interface{}) ([]*uuid.UUID, error) {
+func (ec *executionContext) unmarshalNUUID2ᚕgithubᚗcomᚋgoogleᚋuuidᚐUUIDᚄ(ctx context.Context, v interface{}) ([]uuid.UUID, error) {
 	var vSlice []interface{}
 	if v != nil {
 		vSlice = graphql.CoerceList(v)
 	}
 	var err error
-	res := make([]*uuid.UUID, len(vSlice))
+	res := make([]uuid.UUID, len(vSlice))
 	for i := range vSlice {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, vSlice[i])
+		res[i], err = ec.unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -16743,10 +17525,10 @@ func (ec *executionContext) unmarshalNUUID2ᚕᚖgithubᚗcomᚋgoogleᚋuuidᚐ
 	return res, nil
 }
 
-func (ec *executionContext) marshalNUUID2ᚕᚖgithubᚗcomᚋgoogleᚋuuidᚐUUIDᚄ(ctx context.Context, sel ast.SelectionSet, v []*uuid.UUID) graphql.Marshaler {
+func (ec *executionContext) marshalNUUID2ᚕgithubᚗcomᚋgoogleᚋuuidᚐUUIDᚄ(ctx context.Context, sel ast.SelectionSet, v []uuid.UUID) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	for i := range v {
-		ret[i] = ec.marshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, sel, v[i])
+		ret[i] = ec.marshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, sel, v[i])
 	}
 
 	for _, e := range ret {
@@ -16756,27 +17538,6 @@ func (ec *executionContext) marshalNUUID2ᚕᚖgithubᚗcomᚋgoogleᚋuuidᚐUU
 	}
 
 	return ret
-}
-
-func (ec *executionContext) unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx context.Context, v interface{}) (*uuid.UUID, error) {
-	res, err := db.UnmarshalUUID(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx context.Context, sel ast.SelectionSet, v *uuid.UUID) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	res := db.MarshalUUID(v)
-	if res == graphql.Null {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-	}
-	return res
 }
 
 func (ec *executionContext) unmarshalNUpdateTeamInput2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐUpdateTeamInput(ctx context.Context, v interface{}) (model.UpdateTeamInput, error) {
@@ -16904,6 +17665,101 @@ func (ec *executionContext) unmarshalNUserSyncRunStatus2githubᚗcomᚋnaisᚋte
 
 func (ec *executionContext) marshalNUserSyncRunStatus2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐUserSyncRunStatus(ctx context.Context, sel ast.SelectionSet, v model.UserSyncRunStatus) graphql.Marshaler {
 	return v
+}
+
+func (ec *executionContext) unmarshalN_Any2map(ctx context.Context, v interface{}) (map[string]interface{}, error) {
+	res, err := graphql.UnmarshalMap(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalN_Any2map(ctx context.Context, sel ast.SelectionSet, v map[string]interface{}) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	res := graphql.MarshalMap(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) unmarshalN_Any2ᚕmapᚄ(ctx context.Context, v interface{}) ([]map[string]interface{}, error) {
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]map[string]interface{}, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalN_Any2map(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalN_Any2ᚕmapᚄ(ctx context.Context, sel ast.SelectionSet, v []map[string]interface{}) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalN_Any2map(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalN_Entity2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋpluginᚋfederationᚋfedruntimeᚐEntity(ctx context.Context, sel ast.SelectionSet, v []fedruntime.Entity) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalO_Entity2githubᚗcomᚋ99designsᚋgqlgenᚋpluginᚋfederationᚋfedruntimeᚐEntity(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	return ret
+}
+
+func (ec *executionContext) marshalN_Service2githubᚗcomᚋ99designsᚋgqlgenᚋpluginᚋfederationᚋfedruntimeᚐService(ctx context.Context, sel ast.SelectionSet, v fedruntime.Service) graphql.Marshaler {
+	return ec.__Service(ctx, sel, &v)
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {
@@ -17247,7 +18103,8 @@ func (ec *executionContext) unmarshalOSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑback
 	if v == nil {
 		return nil, nil
 	}
-	res, err := slug.UnmarshalSlug(v)
+	var res = new(slug.Slug)
+	err := res.UnmarshalGQLContext(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
@@ -17255,8 +18112,55 @@ func (ec *executionContext) marshalOSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbacken
 	if v == nil {
 		return graphql.Null
 	}
-	res := slug.MarshalSlug(v)
+	return graphql.WrapContextMarshaler(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {
+	res, err := graphql.UnmarshalString(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOString2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
+	res := graphql.MarshalString(v)
 	return res
+}
+
+func (ec *executionContext) unmarshalOString2ᚕstringᚄ(ctx context.Context, v interface{}) ([]string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalOString2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
@@ -17303,15 +18207,22 @@ func (ec *executionContext) unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUI
 		return nil, nil
 	}
 	res, err := db.UnmarshalUUID(v)
-	return res, graphql.ErrorOnPath(ctx, err)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx context.Context, sel ast.SelectionSet, v *uuid.UUID) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
-	res := db.MarshalUUID(v)
+	res := db.MarshalUUID(*v)
 	return res
+}
+
+func (ec *executionContext) marshalO_Entity2githubᚗcomᚋ99designsᚋgqlgenᚋpluginᚋfederationᚋfedruntimeᚐEntity(ctx context.Context, sel ast.SelectionSet, v fedruntime.Entity) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec.__Entity(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {

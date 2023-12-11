@@ -9,9 +9,15 @@ import (
 
 	"github.com/nais/teams-backend/pkg/authz"
 	"github.com/nais/teams-backend/pkg/db"
+	"github.com/nais/teams-backend/pkg/graph/generated"
 )
 
 // Me is the resolver for the me field.
 func (r *queryResolver) Me(ctx context.Context) (db.AuthenticatedUser, error) {
 	return authz.ActorFromContext(ctx).User, nil
 }
+
+// Query returns generated.QueryResolver implementation.
+func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
+
+type queryResolver struct{ *Resolver }

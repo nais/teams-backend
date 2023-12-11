@@ -1,30 +1,28 @@
 package slug
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strconv"
-
-	"github.com/99designs/gqlgen/graphql"
 )
 
 type Slug string
 
-func MarshalSlug(slug *Slug) graphql.Marshaler {
-	return graphql.WriterFunc(func(w io.Writer) {
-		txt := strconv.Quote(slug.String())
-		io.WriteString(w, txt)
-	})
+func (s Slug) MarshalGQLContext(_ context.Context, w io.Writer) error {
+	txt := strconv.Quote(s.String())
+	_, err := io.WriteString(w, txt)
+	return err
 }
 
-func UnmarshalSlug(v interface{}) (*Slug, error) {
+func (s *Slug) UnmarshalGQLContext(_ context.Context, v interface{}) error {
 	input, ok := v.(string)
 	if !ok {
-		return nil, fmt.Errorf("slug must be a string")
+		return fmt.Errorf("slug must be a string")
 	}
 
-	slug := Slug(input)
-	return &slug, nil
+	*s = Slug(input)
+	return nil
 }
 
 func (s Slug) String() string {

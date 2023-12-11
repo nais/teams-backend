@@ -249,7 +249,7 @@ type TeamSync {
 }
 
 "Team type."
-type Team {
+type Team @key(fields: "slug") {
     "Unique slug of the team."
     slug: Slug!
 
@@ -345,7 +345,7 @@ type ReconcilerState {
 }
 
 "GCP project type."
-type GcpProject {
+type GcpProject  @key(fields: "projectId") {
     "The environment for the project."
     environment: String!
 

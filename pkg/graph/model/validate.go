@@ -31,7 +31,7 @@ func ptr[T any](value T) *T {
 }
 
 func (input CreateTeamInput) Validate() error {
-	if input.Slug == nil || !teamSlugRegex.MatchString(string(*input.Slug)) || len(*input.Slug) < 3 || len(*input.Slug) > 30 {
+	if !teamSlugRegex.MatchString(string(input.Slug)) || len(input.Slug) < 3 || len(input.Slug) > 30 {
 		return apierror.ErrTeamSlug
 	}
 

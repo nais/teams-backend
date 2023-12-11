@@ -38,6 +38,13 @@ resolver:
 autobind:
   - github.com/nais/teams-backend/pkg/db
 
+skip_validation: true
+skip_mod_tidy: true
+federation:
+  filename: pkg/graph/generated/federation.go
+  package: generated
+  version: 2
+
 # This section declares type mapping between the GraphQL and go type systems
 #
 # The first line in each type will be used as defaults for resolver arguments and
@@ -89,6 +96,9 @@ models:
       - github.com/nais/teams-backend/pkg/sqlc.ReconcilerConfigKey
 
   UUID:
+    model:
+      - github.com/nais/teams-backend/pkg/db.UUID
+  ID:
     model:
       - github.com/nais/teams-backend/pkg/db.UUID
 
