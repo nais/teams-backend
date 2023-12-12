@@ -5,13 +5,8 @@ extend type Query {
     "Get a specific user."
     user(
         "ID of the user."
-        id: UUID!
-    ): User! @auth
-
-    "Get a specific user by email."
-    userByEmail(
-        "ID of the user."
-        email: String!
+        id: UUID
+        email: String
     ): User! @auth
 
     "Get user sync status and logs."

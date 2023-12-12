@@ -12,6 +12,7 @@ import (
 	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/authz"
 	"github.com/nais/teams-backend/pkg/db"
+	"github.com/nais/teams-backend/pkg/graph/apierror"
 	"github.com/nais/teams-backend/pkg/graph/dataloader"
 	"github.com/nais/teams-backend/pkg/graph/generated"
 	"github.com/nais/teams-backend/pkg/graph/model"
@@ -60,25 +61,20 @@ func (r *queryResolver) Users(ctx context.Context, offset *int, limit *int) ([]*
 }
 
 // User is the resolver for the user field.
-func (r *queryResolver) User(ctx context.Context, id *uuid.UUID) (*db.User, error) {
+func (r *queryResolver) User(ctx context.Context, id *uuid.UUID, email *string) (*db.User, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
 	if err != nil {
 		return nil, err
 	}
 
-	return dataloader.GetUser(ctx, id)
-}
-
-// UserByEmail is the resolver for the userByEmail field.
-func (r *queryResolver) UserByEmail(ctx context.Context, email string) (*db.User, error) {
-	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
-	if err != nil {
-		return nil, err
+	if id != nil {
+		return dataloader.GetUser(ctx, id)
 	}
-
-	return r.database.GetUserByEmail(ctx, email)
+	if email != nil {
+		return r.database.GetUserByEmail(ctx, *email)
+	}
+	return nil, apierror.Errorf("Either id or email must be specified")
 }
 
 // UserSync is the resolver for the userSync field.
@@ -207,5 +203,7 @@ func (r *Resolver) User() generated.UserResolver { return &userResolver{r} }
 // UserSyncRun returns generated.UserSyncRunResolver implementation.
 func (r *Resolver) UserSyncRun() generated.UserSyncRunResolver { return &userSyncRunResolver{r} }
 
-type userResolver struct{ *Resolver }
-type userSyncRunResolver struct{ *Resolver }
+type (
+	userResolver        struct{ *Resolver }
+	userSyncRunResolver struct{ *Resolver }
+)

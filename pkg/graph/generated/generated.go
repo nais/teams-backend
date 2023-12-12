@@ -145,8 +145,7 @@ type ComplexityRoot struct {
 		TeamDeleteKey                   func(childComplexity int, key *uuid.UUID) int
 		Teams                           func(childComplexity int, offset *int, limit *int) int
 		TeamsWithPermissionInGitHubRepo func(childComplexity int, repoName *string, permissionName *string) int
-		User                            func(childComplexity int, id *uuid.UUID) int
-		UserByEmail                     func(childComplexity int, email string) int
+		User                            func(childComplexity int, id *uuid.UUID, email *string) int
 		UserSync                        func(childComplexity int) int
 		Users                           func(childComplexity int, offset *int, limit *int) int
 		__resolve__service              func(childComplexity int) int
@@ -320,8 +319,7 @@ type QueryResolver interface {
 	TeamDeleteKey(ctx context.Context, key *uuid.UUID) (*db.TeamDeleteKey, error)
 	TeamsWithPermissionInGitHubRepo(ctx context.Context, repoName *string, permissionName *string) ([]*db.Team, error)
 	Users(ctx context.Context, offset *int, limit *int) ([]*db.User, error)
-	User(ctx context.Context, id *uuid.UUID) (*db.User, error)
-	UserByEmail(ctx context.Context, email string) (*db.User, error)
+	User(ctx context.Context, id *uuid.UUID, email *string) (*db.User, error)
 	UserSync(ctx context.Context) ([]*usersync.Run, error)
 }
 type ReconcilerResolver interface {
@@ -923,19 +921,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.User(childComplexity, args["id"].(*uuid.UUID)), true
-
-	case "Query.userByEmail":
-		if e.complexity.Query.UserByEmail == nil {
-			break
-		}
-
-		args, err := ec.field_Query_userByEmail_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Query.UserByEmail(childComplexity, args["email"].(string)), true
+		return e.complexity.Query.User(childComplexity, args["id"].(*uuid.UUID), args["email"].(*string)), true
 
 	case "Query.userSync":
 		if e.complexity.Query.UserSync == nil {
@@ -2351,13 +2337,8 @@ enum RepositoryAuthorization {
     "Get a specific user."
     user(
         "ID of the user."
-        id: UUID!
-    ): User! @auth
-
-    "Get a specific user by email."
-    userByEmail(
-        "ID of the user."
-        email: String!
+        id: UUID
+        email: String
     ): User! @auth
 
     "Get user sync status and logs."
@@ -3204,33 +3185,27 @@ func (ec *executionContext) field_Query_teams_args(ctx context.Context, rawArgs 
 	return args, nil
 }
 
-func (ec *executionContext) field_Query_userByEmail_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 string
-	if tmp, ok := rawArgs["email"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("email"))
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["email"] = arg0
-	return args, nil
-}
-
 func (ec *executionContext) field_Query_user_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 *uuid.UUID
 	if tmp, ok := rawArgs["id"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalNUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
+		arg0, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
 	args["id"] = arg0
+	var arg1 *string
+	if tmp, ok := rawArgs["email"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("email"))
+		arg1, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["email"] = arg1
 	return args, nil
 }
 
@@ -7450,7 +7425,7 @@ func (ec *executionContext) _Query_user(ctx context.Context, field graphql.Colle
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().User(rctx, fc.Args["id"].(*uuid.UUID))
+			return ec.resolvers.Query().User(rctx, fc.Args["id"].(*uuid.UUID), fc.Args["email"].(*string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -7518,95 +7493,6 @@ func (ec *executionContext) fieldContext_Query_user(ctx context.Context, field g
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_user_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_userByEmail(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_userByEmail(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		directive0 := func(rctx context.Context) (interface{}, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().UserByEmail(rctx, fc.Args["email"].(string))
-		}
-		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Auth == nil {
-				return nil, errors.New("directive auth is not implemented")
-			}
-			return ec.directives.Auth(ctx, nil, directive0)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*db.User); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/teams-backend/pkg/db.User`, tmp)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*db.User)
-	fc.Result = res
-	return ec.marshalNUser2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋdbᚐUser(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_userByEmail(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_User_id(ctx, field)
-			case "email":
-				return ec.fieldContext_User_email(ctx, field)
-			case "name":
-				return ec.fieldContext_User_name(ctx, field)
-			case "teams":
-				return ec.fieldContext_User_teams(ctx, field)
-			case "roles":
-				return ec.fieldContext_User_roles(ctx, field)
-			case "externalId":
-				return ec.fieldContext_User_externalId(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_userByEmail_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -14327,28 +14213,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_user(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "userByEmail":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_userByEmail(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
