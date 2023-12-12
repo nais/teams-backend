@@ -28,6 +28,18 @@ extend type Query {
         "Name of the permission, for instance 'push'."
         permissionName: String
     ): [Team]! @auth
+
+	"Check if a team is authorized to perform an action from a GitHub repository."
+	isRepositoryAuthorized(
+		"Name of the repository, with the org prefix, for instance 'org/repo'."
+		repoName: String!
+
+        "Which authorization to check."
+        authorization: RepositoryAuthorization!
+
+		"Slug of the team."
+		teamSlug: Slug!
+	): Boolean! @auth
 }
 
 extend type Mutation {

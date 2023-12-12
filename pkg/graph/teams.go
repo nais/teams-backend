@@ -902,6 +902,28 @@ func (r *queryResolver) TeamsWithPermissionInGitHubRepo(ctx context.Context, rep
 	return teams, nil
 }
 
+// IsRepositoryAuthorized is the resolver for the isRepositoryAuthorized field.
+func (r *queryResolver) IsRepositoryAuthorized(ctx context.Context, repoName string, authorization model.RepositoryAuthorization, teamSlug *slug.Slug) (bool, error) {
+	actor := authz.ActorFromContext(ctx)
+	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationTeamsRead)
+	if err != nil {
+		return false, err
+	}
+
+	auths, err := r.database.GetRepositoryAuthorizations(ctx, *teamSlug, repoName)
+	if err != nil {
+		return false, err
+	}
+
+	for _, auth := range auths {
+		if strings.ToLower(string(authorization)) == strings.ToLower(string(auth)) {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 // AuditLogs is the resolver for the auditLogs field.
 func (r *teamResolver) AuditLogs(ctx context.Context, obj *db.Team) ([]*db.AuditLog, error) {
 	actor := authz.ActorFromContext(ctx)

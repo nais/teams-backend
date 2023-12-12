@@ -131,6 +131,7 @@ type ComplexityRoot struct {
 
 	Query struct {
 		DeployKey                       func(childComplexity int, slug *slug.Slug) int
+		IsRepositoryAuthorized          func(childComplexity int, repoName string, authorization model.RepositoryAuthorization, teamSlug *slug.Slug) int
 		Me                              func(childComplexity int) int
 		Reconcilers                     func(childComplexity int) int
 		Roles                           func(childComplexity int) int
@@ -302,6 +303,7 @@ type QueryResolver interface {
 	DeployKey(ctx context.Context, slug *slug.Slug) (string, error)
 	TeamDeleteKey(ctx context.Context, key *uuid.UUID) (*db.TeamDeleteKey, error)
 	TeamsWithPermissionInGitHubRepo(ctx context.Context, repoName *string, permissionName *string) ([]*db.Team, error)
+	IsRepositoryAuthorized(ctx context.Context, repoName string, authorization model.RepositoryAuthorization, teamSlug *slug.Slug) (bool, error)
 	Users(ctx context.Context) ([]*db.User, error)
 	User(ctx context.Context, id *uuid.UUID) (*db.User, error)
 	UserByEmail(ctx context.Context, email string) (*db.User, error)
@@ -823,6 +825,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.DeployKey(childComplexity, args["slug"].(*slug.Slug)), true
+
+	case "Query.isRepositoryAuthorized":
+		if e.complexity.Query.IsRepositoryAuthorized == nil {
+			break
+		}
+
+		args, err := ec.field_Query_isRepositoryAuthorized_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.IsRepositoryAuthorized(childComplexity, args["repoName"].(string), args["authorization"].(model.RepositoryAuthorization), args["teamSlug"].(*slug.Slug)), true
 
 	case "Query.me":
 		if e.complexity.Query.Me == nil {
@@ -1846,6 +1860,18 @@ type ServiceAccount {
         "Name of the permission, for instance 'push'."
         permissionName: String
     ): [Team]! @auth
+
+	"Check if a team is authorized to perform an action from a GitHub repository."
+	isRepositoryAuthorized(
+		"Name of the repository, with the org prefix, for instance 'org/repo'."
+		repoName: String!
+
+        "Which authorization to check."
+        authorization: RepositoryAuthorization!
+
+		"Slug of the team."
+		teamSlug: Slug!
+	): Boolean! @auth
 }
 
 extend type Mutation {
@@ -2277,7 +2303,8 @@ enum TeamRole {
 enum RepositoryAuthorization {
     "Authorize for NAIS deployment."
     DEPLOY
-}`, BuiltIn: false},
+}
+`, BuiltIn: false},
 	{Name: "../../../graphql/users.graphqls", Input: `extend type Query {
     "Get a collection of users, sorted by name."
     users: [User!]! @auth
@@ -2972,6 +2999,39 @@ func (ec *executionContext) field_Query_deployKey_args(ctx context.Context, rawA
 		}
 	}
 	args["slug"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_isRepositoryAuthorized_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["repoName"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("repoName"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["repoName"] = arg0
+	var arg1 model.RepositoryAuthorization
+	if tmp, ok := rawArgs["authorization"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("authorization"))
+		arg1, err = ec.unmarshalNRepositoryAuthorization2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐRepositoryAuthorization(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["authorization"] = arg1
+	var arg2 *slug.Slug
+	if tmp, ok := rawArgs["teamSlug"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamSlug"))
+		arg2, err = ec.unmarshalNSlug2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["teamSlug"] = arg2
 	return args, nil
 }
 
@@ -7026,6 +7086,81 @@ func (ec *executionContext) fieldContext_Query_teamsWithPermissionInGitHubRepo(c
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_teamsWithPermissionInGitHubRepo_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_isRepositoryAuthorized(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_isRepositoryAuthorized(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().IsRepositoryAuthorized(rctx, fc.Args["repoName"].(string), fc.Args["authorization"].(model.RepositoryAuthorization), fc.Args["teamSlug"].(*slug.Slug))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Auth == nil {
+				return nil, errors.New("directive auth is not implemented")
+			}
+			return ec.directives.Auth(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(bool); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be bool`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_isRepositoryAuthorized(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_isRepositoryAuthorized_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -13654,6 +13789,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_teamsWithPermissionInGitHubRepo(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "isRepositoryAuthorized":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_isRepositoryAuthorized(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
