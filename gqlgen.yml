@@ -85,6 +85,10 @@ models:
     model:
       - github.com/nais/teams-backend/pkg/slug.Slug
 
+  TeamsInternal:
+    model:
+      - github.com/nais/teams-backend/pkg/graph/model.TeamsInternal
+
   ComponentName:
     model:
       - github.com/nais/teams-backend/pkg/types.ComponentName

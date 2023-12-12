@@ -821,11 +821,17 @@ func (r *mutationResolver) DeauthorizeRepository(ctx context.Context, authorizat
 }
 
 // Teams is the resolver for the teams field.
-func (r *queryResolver) Teams(ctx context.Context, offset *int, limit *int) ([]*db.Team, error) {
+func (r *queryResolver) Teams(ctx context.Context, offset *int, limit *int, filter *model.TeamsFilter) ([]*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationTeamsList)
 	if err != nil {
 		return nil, err
+	}
+
+	if filter != nil {
+		if filter.Github != nil {
+			return r.database.GetTeamsWithPermissionInGitHubRepo(ctx, filter.Github.RepoName, filter.Github.PermissionName)
+		}
 	}
 
 	return r.database.GetTeams(ctx, offset, limit)
@@ -864,22 +870,6 @@ func (r *queryResolver) TeamDeleteKey(ctx context.Context, key *uuid.UUID) (*db.
 	}
 
 	return deleteKey, nil
-}
-
-// TeamsWithPermissionInGitHubRepo is the resolver for the teamsWithPermissionInGitHubRepo field.
-func (r *queryResolver) TeamsWithPermissionInGitHubRepo(ctx context.Context, repoName *string, permissionName *string) ([]*db.Team, error) {
-	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationTeamsList)
-	if err != nil {
-		return nil, err
-	}
-
-	teams, err := r.database.GetTeamsWithPermissionInGitHubRepo(ctx, *repoName, *permissionName)
-	if err != nil {
-		return nil, err
-	}
-
-	return teams, nil
 }
 
 // ID is the resolver for the id field.

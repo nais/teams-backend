@@ -9,12 +9,13 @@ import (
 
 	"github.com/nais/teams-backend/pkg/db"
 	"github.com/nais/teams-backend/pkg/graph/generated"
+	"github.com/nais/teams-backend/pkg/graph/model"
 	"github.com/nais/teams-backend/pkg/sqlc"
 )
 
-// Roles is the resolver for the roles field.
-func (r *queryResolver) Roles(ctx context.Context) ([]sqlc.RoleName, error) {
-	return sqlc.AllRoleNameValues(), nil
+// TeamsInternal is the resolver for the teamsInternal field.
+func (r *queryResolver) TeamsInternal(ctx context.Context) (*model.TeamsInternal, error) {
+	return &model.TeamsInternal{}, nil
 }
 
 // Name is the resolver for the name field.
@@ -22,7 +23,18 @@ func (r *roleResolver) Name(ctx context.Context, obj *db.Role) (sqlc.RoleName, e
 	return obj.RoleName, nil
 }
 
+// Roles is the resolver for the roles field.
+func (r *teamsInternalResolver) Roles(ctx context.Context, obj *model.TeamsInternal) ([]sqlc.RoleName, error) {
+	return sqlc.AllRoleNameValues(), nil
+}
+
 // Role returns generated.RoleResolver implementation.
 func (r *Resolver) Role() generated.RoleResolver { return &roleResolver{r} }
 
-type roleResolver struct{ *Resolver }
+// TeamsInternal returns generated.TeamsInternalResolver implementation.
+func (r *Resolver) TeamsInternal() generated.TeamsInternalResolver { return &teamsInternalResolver{r} }
+
+type (
+	roleResolver          struct{ *Resolver }
+	teamsInternalResolver struct{ *Resolver }
+)

@@ -122,6 +122,17 @@ type TeamSync struct {
 	CorrelationID *uuid.UUID `json:"correlationID"`
 }
 
+type TeamsFilter struct {
+	Github *TeamsFilterGitHub `json:"github,omitempty"`
+}
+
+type TeamsFilterGitHub struct {
+	// Filter repostiories by repo name
+	RepoName string `json:"repoName"`
+	// Filter repostiories by permission name
+	PermissionName string `json:"permissionName"`
+}
+
 // Input for updating an existing team.
 type UpdateTeamInput struct {
 	// Specify team purpose to update the existing value.

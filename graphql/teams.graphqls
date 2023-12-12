@@ -1,21 +1,12 @@
 extend type Query {
   "Get a collection of teams."
-  teams(offset: Int, limit: Int): [Team!]! @auth
+  teams(offset: Int, limit: Int, filter: TeamsFilter): [Team!]! @auth
 
   "Get a specific team."
   team("Slug of the team." slug: Slug!): Team! @auth
 
   "Get a team delete key."
   teamDeleteKey("The key to get." key: UUID!): TeamDeleteKey! @auth
-
-  "Get a list of teams with a specific permission in a GitHub repository."
-  teamsWithPermissionInGitHubRepo(
-    "Name of the repository, with the org prefix, for instance 'org/repo'."
-    repoName: String
-
-    "Name of the permission, for instance 'push'."
-    permissionName: String
-  ): [Team]! @auth
 }
 
 extend type Mutation {
@@ -210,6 +201,17 @@ extend type Mutation {
     "Name of the repository, with the org prefix, for instance 'org/repo'."
     repoName: String!
   ): Team! @auth
+}
+
+input TeamsFilter {
+  github: TeamsFilterGitHub
+}
+
+input TeamsFilterGitHub {
+  "Filter repostiories by repo name"
+  repoName: String!
+  "Filter repostiories by permission name"
+  permissionName: String!
 }
 
 "Team deletion key type."
