@@ -112,7 +112,8 @@ type Database interface {
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
 	GetServiceAccountByApiKey(ctx context.Context, APIKey string) (*ServiceAccount, error)
 	DeleteUser(ctx context.Context, userID uuid.UUID) error
-	GetUsers(ctx context.Context, offset, limit *int) ([]*User, error)
+	GetUsers(ctx context.Context, offset, limit int) ([]*User, int, error)
+	GetAllUsers(ctx context.Context) ([]*User, error)
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error)
 	CreateTeam(ctx context.Context, slug slug.Slug, purpose, slackChannel string) (*Team, error)
 	UpdateTeam(ctx context.Context, teamSlug slug.Slug, purpose, slackChannel *string) (*Team, error)

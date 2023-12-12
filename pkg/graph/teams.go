@@ -1176,9 +1176,7 @@ func (r *Resolver) TeamMemberReconciler() generated.TeamMemberReconcilerResolver
 	return &teamMemberReconcilerResolver{r}
 }
 
-type (
-	gitHubRepositoryResolver     struct{ *Resolver }
-	teamResolver                 struct{ *Resolver }
-	teamDeleteKeyResolver        struct{ *Resolver }
-	teamMemberReconcilerResolver struct{ *Resolver }
-)
+type gitHubRepositoryResolver struct{ *Resolver }
+type teamResolver struct{ *Resolver }
+type teamDeleteKeyResolver struct{ *Resolver }
+type teamMemberReconcilerResolver struct{ *Resolver }

@@ -50,14 +50,23 @@ func (r *mutationResolver) SynchronizeUsers(ctx context.Context) (*uuid.UUID, er
 }
 
 // Users is the resolver for the users field.
-func (r *queryResolver) Users(ctx context.Context, offset *int, limit *int) ([]*db.User, error) {
+func (r *queryResolver) Users(ctx context.Context, offset *int, limit *int) (*model.UserList, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
 	if err != nil {
 		return nil, err
 	}
+	off, lim := defaultOffsetLimit(offset, limit)
+	users, total, err := r.database.GetUsers(ctx, off, lim)
 
-	return r.database.GetUsers(ctx, offset, limit)
+	return &model.UserList{
+		Nodes: users,
+		PageInfo: &model.PageInfo{
+			TotalCount:      total,
+			HasPreviousPage: off > 0,
+			HasNextPage:     off+lim < total,
+		},
+	}, nil
 }
 
 // User is the resolver for the user field.
@@ -203,5 +212,7 @@ func (r *Resolver) User() generated.UserResolver { return &userResolver{r} }
 // UserSyncRun returns generated.UserSyncRunResolver implementation.
 func (r *Resolver) UserSyncRun() generated.UserSyncRunResolver { return &userSyncRunResolver{r} }
 
-type userResolver struct{ *Resolver }
-type userSyncRunResolver struct{ *Resolver }
+type (
+	userResolver        struct{ *Resolver }
+	userSyncRunResolver struct{ *Resolver }
+)

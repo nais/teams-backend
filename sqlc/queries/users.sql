@@ -3,13 +3,16 @@ INSERT INTO users (name, email, external_id)
 VALUES ($1, LOWER(sqlc.arg(email)), sqlc.arg(external_id))
 RETURNING *;
 
+-- name: GetUsersCount :one
+SELECT count (*) FROM users;
+
 -- name: GetUsers :many
 SELECT * FROM users
-ORDER BY name ASC;
-
--- name: GetUsersPaginated :many
-SELECT * FROM users
 ORDER BY name ASC LIMIT $1 OFFSET $2;
+
+-- name: GetAllUsers :many
+SELECT * FROM users
+ORDER BY name ASC;
 
 -- name: GetUserByID :one
 SELECT * FROM users

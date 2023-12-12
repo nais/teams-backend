@@ -45,6 +45,36 @@ func (q *Queries) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const getAllUsers = `-- name: GetAllUsers :many
+SELECT id, email, name, external_id FROM users
+ORDER BY name ASC
+`
+
+func (q *Queries) GetAllUsers(ctx context.Context) ([]*User, error) {
+	rows, err := q.db.Query(ctx, getAllUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.Name,
+			&i.ExternalID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, email, name, external_id FROM users
 WHERE email = LOWER($1)
@@ -131,46 +161,16 @@ func (q *Queries) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, 
 
 const getUsers = `-- name: GetUsers :many
 SELECT id, email, name, external_id FROM users
-ORDER BY name ASC
-`
-
-func (q *Queries) GetUsers(ctx context.Context) ([]*User, error) {
-	rows, err := q.db.Query(ctx, getUsers)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []*User
-	for rows.Next() {
-		var i User
-		if err := rows.Scan(
-			&i.ID,
-			&i.Email,
-			&i.Name,
-			&i.ExternalID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, &i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getUsersPaginated = `-- name: GetUsersPaginated :many
-SELECT id, email, name, external_id FROM users
 ORDER BY name ASC LIMIT $1 OFFSET $2
 `
 
-type GetUsersPaginatedParams struct {
+type GetUsersParams struct {
 	Limit  int32
 	Offset int32
 }
 
-func (q *Queries) GetUsersPaginated(ctx context.Context, arg GetUsersPaginatedParams) ([]*User, error) {
-	rows, err := q.db.Query(ctx, getUsersPaginated, arg.Limit, arg.Offset)
+func (q *Queries) GetUsers(ctx context.Context, arg GetUsersParams) ([]*User, error) {
+	rows, err := q.db.Query(ctx, getUsers, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -192,6 +192,17 @@ func (q *Queries) GetUsersPaginated(ctx context.Context, arg GetUsersPaginatedPa
 		return nil, err
 	}
 	return items, nil
+}
+
+const getUsersCount = `-- name: GetUsersCount :one
+SELECT count (*) FROM users
+`
+
+func (q *Queries) GetUsersCount(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, getUsersCount)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const updateUser = `-- name: UpdateUser :one

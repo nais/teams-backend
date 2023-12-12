@@ -40,6 +40,7 @@ type Querier interface {
 	GetActiveTeamBySlug(ctx context.Context, argSlug slug.Slug) (*Team, error)
 	GetActiveTeams(ctx context.Context) ([]*Team, error)
 	GetAllUserRoles(ctx context.Context) ([]*UserRole, error)
+	GetAllUsers(ctx context.Context) ([]*User, error)
 	GetAuditLogsForCorrelationID(ctx context.Context, correlationID uuid.UUID) ([]*AuditLog, error)
 	GetAuditLogsForReconciler(ctx context.Context, targetIdentifier string) ([]*AuditLog, error)
 	GetAuditLogsForTeam(ctx context.Context, targetIdentifier string) ([]*AuditLog, error)
@@ -73,8 +74,8 @@ type Querier interface {
 	GetUserByID(ctx context.Context, id uuid.UUID) (*User, error)
 	GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*UserRole, error)
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error)
-	GetUsers(ctx context.Context) ([]*User, error)
-	GetUsersPaginated(ctx context.Context, arg GetUsersPaginatedParams) ([]*User, error)
+	GetUsers(ctx context.Context, arg GetUsersParams) ([]*User, error)
+	GetUsersCount(ctx context.Context) (int64, error)
 	GetUsersWithGloballyAssignedRole(ctx context.Context, roleName RoleName) ([]*User, error)
 	IsFirstRun(ctx context.Context) (bool, error)
 	RemoveAllServiceAccountRoles(ctx context.Context, serviceAccountID uuid.UUID) error

@@ -154,6 +154,11 @@ type UpdateTeamInput struct {
 	SlackAlertsChannels []*SlackAlertsChannelInput `json:"slackAlertsChannels,omitempty"`
 }
 
+type UserList struct {
+	Nodes    []*db.User `json:"nodes"`
+	PageInfo *PageInfo  `json:"pageInfo"`
+}
+
 // Repository authorizations.
 type RepositoryAuthorization string
 

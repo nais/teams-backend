@@ -271,6 +271,11 @@ type ComplexityRoot struct {
 		Teams      func(childComplexity int) int
 	}
 
+	UserList struct {
+		Nodes    func(childComplexity int) int
+		PageInfo func(childComplexity int) int
+	}
+
 	UserSyncRun struct {
 		CorrelationID func(childComplexity int) int
 		Error         func(childComplexity int) int
@@ -332,7 +337,7 @@ type QueryResolver interface {
 	Teams(ctx context.Context, offset *int, limit *int, filter *model.TeamsFilter) (*model.TeamsList, error)
 	Team(ctx context.Context, slug *slug.Slug) (*db.Team, error)
 	TeamDeleteKey(ctx context.Context, key *uuid.UUID) (*db.TeamDeleteKey, error)
-	Users(ctx context.Context, offset *int, limit *int) ([]*db.User, error)
+	Users(ctx context.Context, offset *int, limit *int) (*model.UserList, error)
 	User(ctx context.Context, id *uuid.UUID, email *string) (*db.User, error)
 	UserSync(ctx context.Context) ([]*usersync.Run, error)
 }
@@ -1468,6 +1473,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.User.Teams(childComplexity), true
 
+	case "UserList.nodes":
+		if e.complexity.UserList.Nodes == nil {
+			break
+		}
+
+		return e.complexity.UserList.Nodes(childComplexity), true
+
+	case "UserList.pageInfo":
+		if e.complexity.UserList.PageInfo == nil {
+			break
+		}
+
+		return e.complexity.UserList.PageInfo(childComplexity), true
+
 	case "UserSyncRun.correlationID":
 		if e.complexity.UserSyncRun.CorrelationID == nil {
 			break
@@ -1915,8 +1934,6 @@ scalar ReconcilerName
 
 "String value representing a system name."
 scalar ComponentName
-
-scalar Cursor
 `, BuiltIn: false},
 	{Name: "../../../graphql/schema.graphqls", Input: `type PageInfo {
   totalCount: Int!
@@ -2400,82 +2417,83 @@ enum RepositoryAuthorization {
 }
 `, BuiltIn: false},
 	{Name: "../../../graphql/users.graphqls", Input: `extend type Query {
-    "Get a collection of users, sorted by name."
-    users(offset: Int, limit: Int): [User!]! @auth
+  "Get a collection of users, sorted by name."
+  users(offset: Int, limit: Int): UserList! @auth
 
-    "Get a specific user."
-    user(
-        "ID of the user."
-        id: UUID
-        email: String
-    ): User! @auth
+  "Get a specific user."
+  user("ID of the user." id: UUID, email: String): User! @auth
 
-    "Get user sync status and logs."
-    userSync: [UserSyncRun!]! @auth
+  "Get user sync status and logs."
+  userSync: [UserSyncRun!]! @auth
 }
 
 extend type Mutation {
-    """
-    Trigger a user synchronization
+  """
+  Trigger a user synchronization
 
-    This mutation will trigger a full user synchronization with the connected Google Workspace, and return a correlation
-    ID that can later be matched to the log entries. The user synchronization itself is asynchronous.
-    """
-    synchronizeUsers: UUID! @auth
+  This mutation will trigger a full user synchronization with the connected Google Workspace, and return a correlation
+  ID that can later be matched to the log entries. The user synchronization itself is asynchronous.
+  """
+  synchronizeUsers: UUID! @auth
 }
 
 "User sync run type."
 type UserSyncRun {
-    "The correlation ID of the sync run."
-    correlationID: UUID!
+  "The correlation ID of the sync run."
+  correlationID: UUID!
 
-    "Timestamp of when the run started."
-    startedAt: Time!
+  "Timestamp of when the run started."
+  startedAt: Time!
 
-    "Timestamp of when the run finished."
-    finishedAt: Time
+  "Timestamp of when the run finished."
+  finishedAt: Time
 
-    "Log entries for the sync run."
-    logEntries: [AuditLog!]!
+  "Log entries for the sync run."
+  logEntries: [AuditLog!]!
 
-    "The status of the sync run."
-    status: UserSyncRunStatus!
+  "The status of the sync run."
+  status: UserSyncRunStatus!
 
-    "Optional error."
-    error: String
+  "Optional error."
+  error: String
 }
 
 "User sync run status."
 enum UserSyncRunStatus {
-    "User sync run in progress."
-    IN_PROGRESS
+  "User sync run in progress."
+  IN_PROGRESS
 
-    "Successful user sync run."
-    SUCCESS
+  "Successful user sync run."
+  SUCCESS
 
-    "Failed user sync run."
-    FAILURE
+  "Failed user sync run."
+  FAILURE
 }
 
 "User type."
 type User {
-    "Unique ID of the user."
-    id: UUID!
+  "Unique ID of the user."
+  id: UUID!
 
-    "The email address of the user."
-    email: String!
+  "The email address of the user."
+  email: String!
 
-    "The name of the user."
-    name: String!
+  "The name of the user."
+  name: String!
 
-    "List of team memberships."
-    teams: [TeamMember!]!
+  "List of team memberships."
+  teams: [TeamMember!]!
 
-    "Roles attached to the user."
-    roles: [Role!]!
+  "Roles attached to the user."
+  roles: [Role!]!
 
-    "The external ID of the user."
-    externalId: String!
+  "The external ID of the user."
+  externalId: String!
+}
+
+type UserList {
+  nodes: [User!]!
+  pageInfo: PageInfo!
 }
 `, BuiltIn: false},
 	{Name: "../../../federation/directives.graphql", Input: `
@@ -7417,10 +7435,10 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 		if tmp == nil {
 			return nil, nil
 		}
-		if data, ok := tmp.([]*db.User); ok {
+		if data, ok := tmp.(*model.UserList); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/nais/teams-backend/pkg/db.User`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/teams-backend/pkg/graph/model.UserList`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -7432,9 +7450,9 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*db.User)
+	res := resTmp.(*model.UserList)
 	fc.Result = res
-	return ec.marshalNUser2ᚕᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋdbᚐUserᚄ(ctx, field.Selections, res)
+	return ec.marshalNUserList2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐUserList(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_users(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -7445,20 +7463,12 @@ func (ec *executionContext) fieldContext_Query_users(ctx context.Context, field 
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_User_id(ctx, field)
-			case "email":
-				return ec.fieldContext_User_email(ctx, field)
-			case "name":
-				return ec.fieldContext_User_name(ctx, field)
-			case "teams":
-				return ec.fieldContext_User_teams(ctx, field)
-			case "roles":
-				return ec.fieldContext_User_roles(ctx, field)
-			case "externalId":
-				return ec.fieldContext_User_externalId(ctx, field)
+			case "nodes":
+				return ec.fieldContext_UserList_nodes(ctx, field)
+			case "pageInfo":
+				return ec.fieldContext_UserList_pageInfo(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type UserList", field.Name)
 		},
 	}
 	defer func() {
@@ -11198,6 +11208,116 @@ func (ec *executionContext) fieldContext_User_externalId(ctx context.Context, fi
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserList_nodes(ctx context.Context, field graphql.CollectedField, obj *model.UserList) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserList_nodes(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Nodes, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*db.User)
+	fc.Result = res
+	return ec.marshalNUser2ᚕᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋdbᚐUserᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_UserList_nodes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserList",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "name":
+				return ec.fieldContext_User_name(ctx, field)
+			case "teams":
+				return ec.fieldContext_User_teams(ctx, field)
+			case "roles":
+				return ec.fieldContext_User_roles(ctx, field)
+			case "externalId":
+				return ec.fieldContext_User_externalId(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserList_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.UserList) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserList_pageInfo(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PageInfo, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.PageInfo)
+	fc.Result = res
+	return ec.marshalNPageInfo2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐPageInfo(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_UserList_pageInfo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserList",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "totalCount":
+				return ec.fieldContext_PageInfo_totalCount(ctx, field)
+			case "hasNextPage":
+				return ec.fieldContext_PageInfo_hasNextPage(ctx, field)
+			case "hasPreviousPage":
+				return ec.fieldContext_PageInfo_hasPreviousPage(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
 		},
 	}
 	return fc, nil
@@ -16120,6 +16240,50 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 	return out
 }
 
+var userListImplementors = []string{"UserList"}
+
+func (ec *executionContext) _UserList(ctx context.Context, sel ast.SelectionSet, obj *model.UserList) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, userListImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("UserList")
+		case "nodes":
+			out.Values[i] = ec._UserList_nodes(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "pageInfo":
+			out.Values[i] = ec._UserList_pageInfo(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var userSyncRunImplementors = []string{"UserSyncRun"}
 
 func (ec *executionContext) _UserSyncRun(ctx context.Context, sel ast.SelectionSet, obj *usersync.Run) graphql.Marshaler {
@@ -17953,6 +18117,20 @@ func (ec *executionContext) marshalNUser2ᚖgithubᚗcomᚋnaisᚋteamsᚑbacken
 		return graphql.Null
 	}
 	return ec._User(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNUserList2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐUserList(ctx context.Context, sel ast.SelectionSet, v model.UserList) graphql.Marshaler {
+	return ec._UserList(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNUserList2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐUserList(ctx context.Context, sel ast.SelectionSet, v *model.UserList) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._UserList(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNUserSyncRun2ᚕᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋusersyncᚐRunᚄ(ctx context.Context, sel ast.SelectionSet, v []*usersync.Run) graphql.Marshaler {
