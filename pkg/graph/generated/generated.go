@@ -276,11 +276,16 @@ type ComplexityRoot struct {
 		PageInfo func(childComplexity int) int
 	}
 
+	UserSyncAuditLogList struct {
+		Nodes    func(childComplexity int) int
+		PageInfo func(childComplexity int) int
+	}
+
 	UserSyncRun struct {
+		AuditLogs     func(childComplexity int, limit *int, offset *int) int
 		CorrelationID func(childComplexity int) int
 		Error         func(childComplexity int) int
 		FinishedAt    func(childComplexity int) int
-		LogEntries    func(childComplexity int) int
 		StartedAt     func(childComplexity int) int
 		Status        func(childComplexity int) int
 	}
@@ -383,7 +388,7 @@ type UserResolver interface {
 	Roles(ctx context.Context, obj *db.User) ([]*db.Role, error)
 }
 type UserSyncRunResolver interface {
-	LogEntries(ctx context.Context, obj *usersync.Run) ([]*db.AuditLog, error)
+	AuditLogs(ctx context.Context, obj *usersync.Run, limit *int, offset *int) (*model.UserSyncAuditLogList, error)
 	Status(ctx context.Context, obj *usersync.Run) (model.UserSyncRunStatus, error)
 	Error(ctx context.Context, obj *usersync.Run) (*string, error)
 }
@@ -1487,6 +1492,32 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.UserList.PageInfo(childComplexity), true
 
+	case "UserSyncAuditLogList.nodes":
+		if e.complexity.UserSyncAuditLogList.Nodes == nil {
+			break
+		}
+
+		return e.complexity.UserSyncAuditLogList.Nodes(childComplexity), true
+
+	case "UserSyncAuditLogList.pageInfo":
+		if e.complexity.UserSyncAuditLogList.PageInfo == nil {
+			break
+		}
+
+		return e.complexity.UserSyncAuditLogList.PageInfo(childComplexity), true
+
+	case "UserSyncRun.auditLogs":
+		if e.complexity.UserSyncRun.AuditLogs == nil {
+			break
+		}
+
+		args, err := ec.field_UserSyncRun_auditLogs_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.UserSyncRun.AuditLogs(childComplexity, args["limit"].(*int), args["offset"].(*int)), true
+
 	case "UserSyncRun.correlationID":
 		if e.complexity.UserSyncRun.CorrelationID == nil {
 			break
@@ -1507,13 +1538,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.UserSyncRun.FinishedAt(childComplexity), true
-
-	case "UserSyncRun.logEntries":
-		if e.complexity.UserSyncRun.LogEntries == nil {
-			break
-		}
-
-		return e.complexity.UserSyncRun.LogEntries(childComplexity), true
 
 	case "UserSyncRun.startedAt":
 		if e.complexity.UserSyncRun.StartedAt == nil {
@@ -2449,7 +2473,7 @@ type UserSyncRun {
   finishedAt: Time
 
   "Log entries for the sync run."
-  logEntries: [AuditLog!]!
+  auditLogs(limit: Int, offset: Int): UserSyncAuditLogList!
 
   "The status of the sync run."
   status: UserSyncRunStatus!
@@ -2493,6 +2517,11 @@ type User {
 
 type UserList {
   nodes: [User!]!
+  pageInfo: PageInfo!
+}
+
+type UserSyncAuditLogList {
+  nodes: [AuditLog!]!
   pageInfo: PageInfo!
 }
 `, BuiltIn: false},
@@ -3326,6 +3355,30 @@ func (ec *executionContext) field_Team_members_args(ctx context.Context, rawArgs
 		}
 	}
 	args["limit"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_UserSyncRun_auditLogs_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *int
+	if tmp, ok := rawArgs["limit"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
+		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["limit"] = arg0
+	var arg1 *int
+	if tmp, ok := rawArgs["offset"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("offset"))
+		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["offset"] = arg1
 	return args, nil
 }
 
@@ -7639,8 +7692,8 @@ func (ec *executionContext) fieldContext_Query_userSync(ctx context.Context, fie
 				return ec.fieldContext_UserSyncRun_startedAt(ctx, field)
 			case "finishedAt":
 				return ec.fieldContext_UserSyncRun_finishedAt(ctx, field)
-			case "logEntries":
-				return ec.fieldContext_UserSyncRun_logEntries(ctx, field)
+			case "auditLogs":
+				return ec.fieldContext_UserSyncRun_auditLogs(ctx, field)
 			case "status":
 				return ec.fieldContext_UserSyncRun_status(ctx, field)
 			case "error":
@@ -11323,6 +11376,122 @@ func (ec *executionContext) fieldContext_UserList_pageInfo(ctx context.Context, 
 	return fc, nil
 }
 
+func (ec *executionContext) _UserSyncAuditLogList_nodes(ctx context.Context, field graphql.CollectedField, obj *model.UserSyncAuditLogList) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserSyncAuditLogList_nodes(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Nodes, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*db.AuditLog)
+	fc.Result = res
+	return ec.marshalNAuditLog2ᚕᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋdbᚐAuditLogᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_UserSyncAuditLogList_nodes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserSyncAuditLogList",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_AuditLog_id(ctx, field)
+			case "action":
+				return ec.fieldContext_AuditLog_action(ctx, field)
+			case "componentName":
+				return ec.fieldContext_AuditLog_componentName(ctx, field)
+			case "correlationID":
+				return ec.fieldContext_AuditLog_correlationID(ctx, field)
+			case "actor":
+				return ec.fieldContext_AuditLog_actor(ctx, field)
+			case "targetType":
+				return ec.fieldContext_AuditLog_targetType(ctx, field)
+			case "targetIdentifier":
+				return ec.fieldContext_AuditLog_targetIdentifier(ctx, field)
+			case "message":
+				return ec.fieldContext_AuditLog_message(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_AuditLog_createdAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type AuditLog", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserSyncAuditLogList_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.UserSyncAuditLogList) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserSyncAuditLogList_pageInfo(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PageInfo, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.PageInfo)
+	fc.Result = res
+	return ec.marshalNPageInfo2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐPageInfo(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_UserSyncAuditLogList_pageInfo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserSyncAuditLogList",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "totalCount":
+				return ec.fieldContext_PageInfo_totalCount(ctx, field)
+			case "hasNextPage":
+				return ec.fieldContext_PageInfo_hasNextPage(ctx, field)
+			case "hasPreviousPage":
+				return ec.fieldContext_PageInfo_hasPreviousPage(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _UserSyncRun_correlationID(ctx context.Context, field graphql.CollectedField, obj *usersync.Run) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_UserSyncRun_correlationID(ctx, field)
 	if err != nil {
@@ -11452,8 +11621,8 @@ func (ec *executionContext) fieldContext_UserSyncRun_finishedAt(ctx context.Cont
 	return fc, nil
 }
 
-func (ec *executionContext) _UserSyncRun_logEntries(ctx context.Context, field graphql.CollectedField, obj *usersync.Run) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_UserSyncRun_logEntries(ctx, field)
+func (ec *executionContext) _UserSyncRun_auditLogs(ctx context.Context, field graphql.CollectedField, obj *usersync.Run) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserSyncRun_auditLogs(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -11466,7 +11635,7 @@ func (ec *executionContext) _UserSyncRun_logEntries(ctx context.Context, field g
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.UserSyncRun().LogEntries(rctx, obj)
+		return ec.resolvers.UserSyncRun().AuditLogs(rctx, obj, fc.Args["limit"].(*int), fc.Args["offset"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -11478,12 +11647,12 @@ func (ec *executionContext) _UserSyncRun_logEntries(ctx context.Context, field g
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*db.AuditLog)
+	res := resTmp.(*model.UserSyncAuditLogList)
 	fc.Result = res
-	return ec.marshalNAuditLog2ᚕᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋdbᚐAuditLogᚄ(ctx, field.Selections, res)
+	return ec.marshalNUserSyncAuditLogList2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐUserSyncAuditLogList(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_UserSyncRun_logEntries(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_UserSyncRun_auditLogs(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "UserSyncRun",
 		Field:      field,
@@ -11491,27 +11660,24 @@ func (ec *executionContext) fieldContext_UserSyncRun_logEntries(ctx context.Cont
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_AuditLog_id(ctx, field)
-			case "action":
-				return ec.fieldContext_AuditLog_action(ctx, field)
-			case "componentName":
-				return ec.fieldContext_AuditLog_componentName(ctx, field)
-			case "correlationID":
-				return ec.fieldContext_AuditLog_correlationID(ctx, field)
-			case "actor":
-				return ec.fieldContext_AuditLog_actor(ctx, field)
-			case "targetType":
-				return ec.fieldContext_AuditLog_targetType(ctx, field)
-			case "targetIdentifier":
-				return ec.fieldContext_AuditLog_targetIdentifier(ctx, field)
-			case "message":
-				return ec.fieldContext_AuditLog_message(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_AuditLog_createdAt(ctx, field)
+			case "nodes":
+				return ec.fieldContext_UserSyncAuditLogList_nodes(ctx, field)
+			case "pageInfo":
+				return ec.fieldContext_UserSyncAuditLogList_pageInfo(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type AuditLog", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type UserSyncAuditLogList", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_UserSyncRun_auditLogs_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -16284,6 +16450,50 @@ func (ec *executionContext) _UserList(ctx context.Context, sel ast.SelectionSet,
 	return out
 }
 
+var userSyncAuditLogListImplementors = []string{"UserSyncAuditLogList"}
+
+func (ec *executionContext) _UserSyncAuditLogList(ctx context.Context, sel ast.SelectionSet, obj *model.UserSyncAuditLogList) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, userSyncAuditLogListImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("UserSyncAuditLogList")
+		case "nodes":
+			out.Values[i] = ec._UserSyncAuditLogList_nodes(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "pageInfo":
+			out.Values[i] = ec._UserSyncAuditLogList_pageInfo(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var userSyncRunImplementors = []string{"UserSyncRun"}
 
 func (ec *executionContext) _UserSyncRun(ctx context.Context, sel ast.SelectionSet, obj *usersync.Run) graphql.Marshaler {
@@ -16307,7 +16517,7 @@ func (ec *executionContext) _UserSyncRun(ctx context.Context, sel ast.SelectionS
 			}
 		case "finishedAt":
 			out.Values[i] = ec._UserSyncRun_finishedAt(ctx, field, obj)
-		case "logEntries":
+		case "auditLogs":
 			field := field
 
 			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
@@ -16316,7 +16526,7 @@ func (ec *executionContext) _UserSyncRun(ctx context.Context, sel ast.SelectionS
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._UserSyncRun_logEntries(ctx, field, obj)
+				res = ec._UserSyncRun_auditLogs(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -18131,6 +18341,20 @@ func (ec *executionContext) marshalNUserList2ᚖgithubᚗcomᚋnaisᚋteamsᚑba
 		return graphql.Null
 	}
 	return ec._UserList(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNUserSyncAuditLogList2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐUserSyncAuditLogList(ctx context.Context, sel ast.SelectionSet, v model.UserSyncAuditLogList) graphql.Marshaler {
+	return ec._UserSyncAuditLogList(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNUserSyncAuditLogList2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐUserSyncAuditLogList(ctx context.Context, sel ast.SelectionSet, v *model.UserSyncAuditLogList) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._UserSyncAuditLogList(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNUserSyncRun2ᚕᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋusersyncᚐRunᚄ(ctx context.Context, sel ast.SelectionSet, v []*usersync.Run) graphql.Marshaler {

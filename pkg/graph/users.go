@@ -178,9 +178,21 @@ func (r *userResolver) Roles(ctx context.Context, obj *db.User) ([]*db.Role, err
 	return ret, nil
 }
 
-// LogEntries is the resolver for the logEntries field.
-func (r *userSyncRunResolver) LogEntries(ctx context.Context, obj *usersync.Run) ([]*db.AuditLog, error) {
-	return r.database.GetAuditLogsForCorrelationID(ctx, obj.CorrelationID())
+// AuditLogs is the resolver for the auditLogs field.
+func (r *userSyncRunResolver) AuditLogs(ctx context.Context, obj *usersync.Run, limit *int, offset *int) (*model.UserSyncAuditLogList, error) {
+	off, lim := defaultOffsetLimit(offset, limit)
+	entries, total, err := r.database.GetAuditLogsForCorrelationID(ctx, obj.CorrelationID(), off, lim)
+	if err != nil {
+		return nil, err
+	}
+	return &model.UserSyncAuditLogList{
+		Nodes: entries,
+		PageInfo: &model.PageInfo{
+			TotalCount:      total,
+			HasPreviousPage: off > 0,
+			HasNextPage:     off+lim < len(entries),
+		},
+	}, nil
 }
 
 // Status is the resolver for the status field.

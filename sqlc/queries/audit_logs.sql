@@ -11,7 +11,11 @@ LIMIT 100;
 -- name: GetAuditLogsForCorrelationID :many
 SELECT * FROM audit_logs
 WHERE correlation_id = $1
-ORDER BY created_at DESC;
+ORDER BY created_at DESC LIMIT $2 OFFSET $3;
+
+-- name: GetAuditLogsForCorrelationIDCount :one
+select count(*) from audit_logs
+where correlation_id = $1;
 
 -- name: GetAuditLogsForReconciler :many
 SELECT * FROM audit_logs

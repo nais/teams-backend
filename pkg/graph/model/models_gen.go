@@ -159,6 +159,11 @@ type UserList struct {
 	PageInfo *PageInfo  `json:"pageInfo"`
 }
 
+type UserSyncAuditLogList struct {
+	Nodes    []*db.AuditLog `json:"nodes"`
+	PageInfo *PageInfo      `json:"pageInfo"`
+}
+
 // Repository authorizations.
 type RepositoryAuthorization string
 

@@ -48,16 +48,21 @@ func (d *database) CreateAuditLogEntry(ctx context.Context, correlationID uuid.U
 	})
 }
 
-func (d *database) GetAuditLogsForCorrelationID(ctx context.Context, correlationID uuid.UUID) ([]*AuditLog, error) {
-	rows, err := d.querier.GetAuditLogsForCorrelationID(ctx, correlationID)
+func (d *database) GetAuditLogsForCorrelationID(ctx context.Context, correlationID uuid.UUID, offset, limit int) ([]*AuditLog, int, error) {
+	rows, err := d.querier.GetAuditLogsForCorrelationID(ctx, sqlc.GetAuditLogsForCorrelationIDParams{
+		CorrelationID: correlationID,
+		Offset: int32(offset),
+		Limit:  int32(limit),
+	})
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	entries := make([]*AuditLog, len(rows))
 	for i, row := range rows {
 		entries[i] = &AuditLog{AuditLog: row}
 	}
+	total, err := d.querier.GetAuditLogsForCorrelationIDCount(ctx, correlationID)
 
-	return entries, nil
+	return entries, int(total), nil
 }

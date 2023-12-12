@@ -42,11 +42,17 @@ func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) 
 const getAuditLogsForCorrelationID = `-- name: GetAuditLogsForCorrelationID :many
 SELECT id, created_at, correlation_id, component_name, actor, action, message, target_type, target_identifier FROM audit_logs
 WHERE correlation_id = $1
-ORDER BY created_at DESC
+ORDER BY created_at DESC LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) GetAuditLogsForCorrelationID(ctx context.Context, correlationID uuid.UUID) ([]*AuditLog, error) {
-	rows, err := q.db.Query(ctx, getAuditLogsForCorrelationID, correlationID)
+type GetAuditLogsForCorrelationIDParams struct {
+	CorrelationID uuid.UUID
+	Limit         int32
+	Offset        int32
+}
+
+func (q *Queries) GetAuditLogsForCorrelationID(ctx context.Context, arg GetAuditLogsForCorrelationIDParams) ([]*AuditLog, error) {
+	rows, err := q.db.Query(ctx, getAuditLogsForCorrelationID, arg.CorrelationID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -73,6 +79,18 @@ func (q *Queries) GetAuditLogsForCorrelationID(ctx context.Context, correlationI
 		return nil, err
 	}
 	return items, nil
+}
+
+const getAuditLogsForCorrelationIDCount = `-- name: GetAuditLogsForCorrelationIDCount :one
+select count(*) from audit_logs
+where correlation_id = $1
+`
+
+func (q *Queries) GetAuditLogsForCorrelationIDCount(ctx context.Context, correlationID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, getAuditLogsForCorrelationIDCount, correlationID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const getAuditLogsForReconciler = `-- name: GetAuditLogsForReconciler :many
