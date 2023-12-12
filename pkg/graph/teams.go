@@ -916,7 +916,7 @@ func (r *queryResolver) IsRepositoryAuthorized(ctx context.Context, repoName str
 	}
 
 	for _, auth := range auths {
-		if strings.ToLower(string(authorization)) == strings.ToLower(string(auth)) {
+		if strings.EqualFold(string(authorization), string(auth)) {
 			return true, nil
 		}
 	}
