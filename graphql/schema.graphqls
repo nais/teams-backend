@@ -1,5 +1,0 @@
-"The query root for the teams-backend GraphQL API."
-type Query
-
-"The root query for implementing GraphQL mutations."
-type Mutation

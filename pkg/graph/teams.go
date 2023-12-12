@@ -847,26 +847,6 @@ func (r *queryResolver) Team(ctx context.Context, slug *slug.Slug) (*db.Team, er
 	return team, nil
 }
 
-// DeployKey is the resolver for the deployKey field.
-func (r *queryResolver) DeployKey(ctx context.Context, slug *slug.Slug) (string, error) {
-	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationDeployKeyView, *slug)
-	if err != nil {
-		return "", err
-	}
-
-	if r.deployProxy == nil {
-		return "", fmt.Errorf("deploy proxy is not configured")
-	}
-
-	deployKey, err := r.deployProxy.GetApiKey(ctx, *slug)
-	if err != nil {
-		return "", err
-	}
-
-	return deployKey, nil
-}
-
 // TeamDeleteKey is the resolver for the teamDeleteKey field.
 func (r *queryResolver) TeamDeleteKey(ctx context.Context, key *uuid.UUID) (*db.TeamDeleteKey, error) {
 	deleteKey, err := r.database.GetTeamDeleteKey(ctx, *key)
@@ -900,6 +880,11 @@ func (r *queryResolver) TeamsWithPermissionInGitHubRepo(ctx context.Context, rep
 	}
 
 	return teams, nil
+}
+
+// ID is the resolver for the id field.
+func (r *teamResolver) ID(ctx context.Context, obj *db.Team) (string, error) {
+	return obj.Slug.String(), nil
 }
 
 // AuditLogs is the resolver for the auditLogs field.
@@ -1126,6 +1111,26 @@ func (r *teamResolver) DeletionInProgress(ctx context.Context, obj *db.Team) (bo
 	}
 
 	return false, err
+}
+
+// DeployKey is the resolver for the deployKey field.
+func (r *teamResolver) DeployKey(ctx context.Context, obj *db.Team) (*string, error) {
+	actor := authz.ActorFromContext(ctx)
+	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationDeployKeyView, obj.Slug)
+	if err != nil {
+		return nil, nil
+	}
+
+	if r.deployProxy == nil {
+		return nil, fmt.Errorf("deploy proxy is not configured")
+	}
+
+	deployKey, err := r.deployProxy.GetApiKey(ctx, obj.Slug)
+	if err != nil {
+		return nil, err
+	}
+
+	return &deployKey, nil
 }
 
 // CreatedBy is the resolver for the createdBy field.

@@ -14,6 +14,7 @@ import (
 	"github.com/nais/teams-backend/pkg/authz"
 	"github.com/nais/teams-backend/pkg/db"
 	"github.com/nais/teams-backend/pkg/graph/apierror"
+	"github.com/nais/teams-backend/pkg/graph/generated"
 	"github.com/nais/teams-backend/pkg/helpers"
 	"github.com/nais/teams-backend/pkg/reconcilers"
 	"github.com/nais/teams-backend/pkg/slug"
@@ -230,3 +231,8 @@ func (r *mutationResolver) SetNaisNamespace(ctx context.Context, teamSlug *slug.
 
 	return team, nil
 }
+
+// Mutation returns generated.MutationResolver implementation.
+func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
+
+type mutationResolver struct{ *Resolver }

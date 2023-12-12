@@ -8,12 +8,6 @@ extend type Query {
         slug: Slug!
     ): Team! @auth
 
-    "Get deploy key for specific team."
-    deployKey(
-        "Slug of the team."
-        slug: Slug!
-    ): DeployKey! @auth
-
     "Get a team delete key."
     teamDeleteKey(
         "The key to get."
@@ -249,7 +243,10 @@ type TeamSync {
 }
 
 "Team type."
-type Team {
+type Team @key(fields: "id") {
+    "Unique ID of the team."
+    id: ID!
+
     "Unique slug of the team."
     slug: Slug!
 
@@ -282,6 +279,9 @@ type Team {
 
     "Whether or not the team is currently being deleted."
     deletionInProgress: Boolean!
+
+    "Get deploy key for the team."
+    deployKey: DeployKey
 }
 
 "GitHub repository type."

@@ -38,6 +38,11 @@ resolver:
 autobind:
   - github.com/nais/teams-backend/pkg/db
 
+federation:
+  filename: pkg/graph/generated/federation.go
+  package: generated
+  version: 2
+
 # This section declares type mapping between the GraphQL and go type systems
 #
 # The first line in each type will be used as defaults for resolver arguments and

@@ -81,6 +81,8 @@ type Team struct {
 	*sqlc.Team
 }
 
+func (t *Team) IsEntity() {}
+
 type User struct {
 	*sqlc.User
 }
