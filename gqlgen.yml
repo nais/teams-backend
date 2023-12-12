@@ -89,6 +89,10 @@ models:
     model:
       - github.com/nais/teams-backend/pkg/graph/model.TeamsInternal
 
+  TeamMember:
+    model:
+      - github.com/nais/teams-backend/pkg/graph/model.TeamMember
+
   ComponentName:
     model:
       - github.com/nais/teams-backend/pkg/types.ComponentName

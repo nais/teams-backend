@@ -41,19 +41,23 @@ WHERE
 SELECT teams.* FROM teams
 WHERE teams.slug = $1;
 
--- name: GetTeamMembers :many
+-- name: GetAllTeamMembers :many
 SELECT users.* FROM user_roles
 JOIN teams ON teams.slug = user_roles.target_team_slug
 JOIN users ON users.id = user_roles.user_id
 WHERE user_roles.target_team_slug = $1
 ORDER BY users.name ASC;
 
--- name: GetTeamMembersPaginated :many
+-- name: GetTeamMembers :many
 SELECT users.* FROM user_roles
 JOIN teams ON teams.slug = user_roles.target_team_slug
 JOIN users ON users.id = user_roles.user_id
 WHERE user_roles.target_team_slug = $1
 ORDER BY users.name ASC LIMIT $2 OFFSET $3;
+
+-- name: GetTeamMembersCount :one
+SELECT COUNT (*) FROM user_roles
+WHERE user_roles.target_team_slug = $1;
 
 -- name: GetTeamMember :one
 SELECT users.* FROM user_roles

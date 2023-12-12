@@ -98,7 +98,7 @@ func (r *queryResolver) UserSync(ctx context.Context) ([]*usersync.Run, error) {
 }
 
 // Teams is the resolver for the teams field.
-func (r *userResolver) Teams(ctx context.Context, obj *db.User) ([]*model.TeamMember, error) {
+func (r *userResolver) Teams(ctx context.Context, obj *db.User, limit *int, offset *int) (*model.TeamMemberList, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationTeamsList)
 	if err != nil {
@@ -125,27 +125,19 @@ func (r *userResolver) Teams(ctx context.Context, obj *db.User) ([]*model.TeamMe
 		default:
 			continue
 		}
-
-		team, err := dataloader.GetTeam(ctx, role.TargetTeamSlug)
-		if err != nil {
-			return nil, err
-		}
-
-		reconcilerOptOuts, err := r.database.GetTeamMemberOptOuts(ctx, obj.ID, team.Slug)
-		if err != nil {
-			return nil, err
-		}
-
 		teams = append(teams, &model.TeamMember{
-			Team:        team,
-			Role:        teamRole,
-			User:        obj,
-			Reconcilers: reconcilerOptOuts,
+			TeamRole: teamRole,
+			TeamSlug: *role.TargetTeamSlug,
+			UserID:   obj.ID,
 		})
-
 	}
 
-	return teams, nil
+	return &model.TeamMemberList{
+		PageInfo: &model.PageInfo{
+			TotalCount: len(teams),
+		},
+		Nodes: teams,
+	}, nil
 }
 
 // Roles is the resolver for the roles field.
@@ -224,7 +216,5 @@ func (r *Resolver) User() generated.UserResolver { return &userResolver{r} }
 // UserSyncRun returns generated.UserSyncRunResolver implementation.
 func (r *Resolver) UserSyncRun() generated.UserSyncRunResolver { return &userSyncRunResolver{r} }
 
-type (
-	userResolver        struct{ *Resolver }
-	userSyncRunResolver struct{ *Resolver }
-)
+type userResolver struct{ *Resolver }
+type userSyncRunResolver struct{ *Resolver }

@@ -16,6 +16,7 @@ import (
 	"github.com/nais/teams-backend/pkg/authz"
 	"github.com/nais/teams-backend/pkg/db"
 	"github.com/nais/teams-backend/pkg/graph/apierror"
+	"github.com/nais/teams-backend/pkg/graph/dataloader"
 	"github.com/nais/teams-backend/pkg/graph/generated"
 	"github.com/nais/teams-backend/pkg/graph/model"
 	"github.com/nais/teams-backend/pkg/reconcilers"
@@ -192,7 +193,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, slug *slug.S
 
 	auditLogEntries := make([]auditlogger.Entry, 0)
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
-		members, err := dbtx.GetTeamMembers(ctx, team.Slug, nil, nil)
+		members, err := dbtx.GetAllTeamMembers(ctx, team.Slug)
 		if err != nil {
 			return fmt.Errorf("get team members of %q: %w", *slug, err)
 		}
@@ -267,7 +268,7 @@ func (r *mutationResolver) RemoveUserFromTeam(ctx context.Context, slug *slug.Sl
 
 	auditLogEntries := make([]auditlogger.Entry, 0)
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
-		members, err := dbtx.GetTeamMembers(ctx, team.Slug, nil, nil)
+		members, err := dbtx.GetAllTeamMembers(ctx, team.Slug)
 		if err != nil {
 			return fmt.Errorf("get team members of %q: %w", *slug, err)
 		}
@@ -619,7 +620,7 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, slug *slug.Slu
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	members, err := r.database.GetTeamMembers(ctx, team.Slug, nil, nil)
+	members, err := r.database.GetAllTeamMembers(ctx, team.Slug)
 	if err != nil {
 		return nil, fmt.Errorf("get team members: %w", err)
 	}
@@ -906,43 +907,36 @@ func (r *teamResolver) AuditLogs(ctx context.Context, obj *db.Team) ([]*db.Audit
 }
 
 // Members is the resolver for the members field.
-func (r *teamResolver) Members(ctx context.Context, obj *db.Team, offset *int, limit *int) ([]*model.TeamMember, error) {
+func (r *teamResolver) Members(ctx context.Context, obj *db.Team, offset *int, limit *int) (*model.TeamMemberList, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
 	if err != nil {
 		return nil, err
 	}
 
-	users, err := r.database.GetTeamMembers(ctx, obj.Slug, offset, limit)
+	off, lim := defaultOffsetLimit(offset, limit)
+
+	users, total, err := r.database.GetTeamMembers(ctx, obj.Slug, off, lim)
 	if err != nil {
 		return nil, err
 	}
 
 	members := make([]*model.TeamMember, len(users))
 	for idx, user := range users {
-		isOwner, err := r.database.UserIsTeamOwner(ctx, user.ID, obj.Slug)
-		if err != nil {
-			return nil, err
-		}
-
-		role := model.TeamRoleMember
-		if isOwner {
-			role = model.TeamRoleOwner
-		}
-
-		reconcilerOptOuts, err := r.database.GetTeamMemberOptOuts(ctx, user.ID, obj.Slug)
-		if err != nil {
-			return nil, err
-		}
-
 		members[idx] = &model.TeamMember{
-			User:        user,
-			Role:        role,
-			Reconcilers: reconcilerOptOuts,
-			Team:        obj,
+			UserID:   user.ID,
+			TeamSlug: obj.Slug,
 		}
 	}
-	return members, nil
+
+	return &model.TeamMemberList{
+		Nodes: members,
+		PageInfo: &model.PageInfo{
+			HasNextPage: total > off+lim,
+			HasPreviousPage: off > 0,
+			TotalCount: total,
+		},
+	}, nil
 }
 
 // SyncErrors is the resolver for the syncErrors field.
@@ -1150,6 +1144,39 @@ func (r *teamDeleteKeyResolver) Team(ctx context.Context, obj *db.TeamDeleteKey)
 	return r.database.GetTeamBySlug(ctx, obj.TeamSlug)
 }
 
+// Team is the resolver for the team field.
+func (r *teamMemberResolver) Team(ctx context.Context, obj *model.TeamMember) (*db.Team, error) {
+	return dataloader.GetTeam(ctx, &obj.TeamSlug)
+}
+
+// User is the resolver for the user field.
+func (r *teamMemberResolver) User(ctx context.Context, obj *model.TeamMember) (*db.User, error) {
+	return dataloader.GetUser(ctx, &obj.UserID)
+}
+
+// Role is the resolver for the role field.
+func (r *teamMemberResolver) Role(ctx context.Context, obj *model.TeamMember) (model.TeamRole, error) {
+	if obj.TeamRole != "" {
+		return obj.TeamRole, nil
+	}
+	isOwner, err := r.database.UserIsTeamOwner(ctx, obj.UserID, obj.TeamSlug)
+	if err != nil {
+		return "", err
+	}
+
+	role := model.TeamRoleMember
+	if isOwner {
+		role = model.TeamRoleOwner
+	}
+
+	return role, nil
+}
+
+// Reconcilers is the resolver for the reconcilers field.
+func (r *teamMemberResolver) Reconcilers(ctx context.Context, obj *model.TeamMember) ([]*sqlc.GetTeamMemberOptOutsRow, error) {
+	return r.database.GetTeamMemberOptOuts(ctx, obj.UserID, obj.TeamSlug)
+}
+
 // Reconciler is the resolver for the reconciler field.
 func (r *teamMemberReconcilerResolver) Reconciler(ctx context.Context, obj *sqlc.GetTeamMemberOptOutsRow) (*db.Reconciler, error) {
 	reconciler, err := r.database.GetReconciler(ctx, obj.Name)
@@ -1171,14 +1198,16 @@ func (r *Resolver) Team() generated.TeamResolver { return &teamResolver{r} }
 // TeamDeleteKey returns generated.TeamDeleteKeyResolver implementation.
 func (r *Resolver) TeamDeleteKey() generated.TeamDeleteKeyResolver { return &teamDeleteKeyResolver{r} }
 
+// TeamMember returns generated.TeamMemberResolver implementation.
+func (r *Resolver) TeamMember() generated.TeamMemberResolver { return &teamMemberResolver{r} }
+
 // TeamMemberReconciler returns generated.TeamMemberReconcilerResolver implementation.
 func (r *Resolver) TeamMemberReconciler() generated.TeamMemberReconcilerResolver {
 	return &teamMemberReconcilerResolver{r}
 }
 
-type (
-	gitHubRepositoryResolver     struct{ *Resolver }
-	teamResolver                 struct{ *Resolver }
-	teamDeleteKeyResolver        struct{ *Resolver }
-	teamMemberReconcilerResolver struct{ *Resolver }
-)
+type gitHubRepositoryResolver struct{ *Resolver }
+type teamResolver struct{ *Resolver }
+type teamDeleteKeyResolver struct{ *Resolver }
+type teamMemberResolver struct{ *Resolver }
+type teamMemberReconcilerResolver struct{ *Resolver }

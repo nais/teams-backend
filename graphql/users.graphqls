@@ -64,7 +64,7 @@ type User {
   name: String!
 
   "List of team memberships."
-  teams: [TeamMember!]!
+  teams(limit: Int, offset: Int): TeamMemberList!
 
   "Roles attached to the user."
   roles: [Role!]!
@@ -80,5 +80,9 @@ type UserList {
 
 type UserSyncAuditLogList {
   nodes: [AuditLog!]!
+  pageInfo: PageInfo!
+}
+type TeamMemberList {
+  nodes: [TeamMember!]!
   pageInfo: PageInfo!
 }

@@ -100,18 +100,6 @@ type SyncError struct {
 	Error string `json:"error"`
 }
 
-// Team member.
-type TeamMember struct {
-	// Team instance.
-	Team *db.Team `json:"team"`
-	// User instance.
-	User *db.User `json:"user"`
-	// The role that the user has in the team.
-	Role TeamRole `json:"role"`
-	// Reconcilers for this member in this team.
-	Reconcilers []*sqlc.GetTeamMemberOptOutsRow `json:"reconcilers"`
-}
-
 // Team member input.
 type TeamMemberInput struct {
 	// The ID of user.
@@ -120,6 +108,11 @@ type TeamMemberInput struct {
 	Role TeamRole `json:"role"`
 	// Reconcilers to opt the team member out of.
 	ReconcilerOptOuts []sqlc.ReconcilerName `json:"reconcilerOptOuts,omitempty"`
+}
+
+type TeamMemberList struct {
+	Nodes    []*TeamMember `json:"nodes"`
+	PageInfo *PageInfo     `json:"pageInfo"`
 }
 
 // Team sync type.

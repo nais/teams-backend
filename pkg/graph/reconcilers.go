@@ -260,31 +260,14 @@ func (r *mutationResolver) AddReconcilerOptOut(ctx context.Context, teamSlug *sl
 		return nil, apierror.ErrUserIsNotTeamMember
 	}
 
-	isOwner, err := r.database.UserIsTeamOwner(ctx, user.ID, *teamSlug)
-	if err != nil {
-		return nil, err
-	}
-
 	err = r.database.AddReconcilerOptOut(ctx, userID, teamSlug, reconciler)
 	if err != nil {
 		return nil, err
 	}
 
-	reconcilerOptOuts, err := r.database.GetTeamMemberOptOuts(ctx, user.ID, *teamSlug)
-	if err != nil {
-		return nil, err
-	}
-
-	role := model.TeamRoleMember
-	if isOwner {
-		role = model.TeamRoleOwner
-	}
-
 	return &model.TeamMember{
-		Team:        team,
-		User:        user,
-		Role:        role,
-		Reconcilers: reconcilerOptOuts,
+		TeamSlug: team.Slug,
+		UserID:   user.ID,
 	}, nil
 }
 
@@ -306,31 +289,14 @@ func (r *mutationResolver) RemoveReconcilerOptOut(ctx context.Context, teamSlug 
 		return nil, apierror.ErrUserIsNotTeamMember
 	}
 
-	isOwner, err := r.database.UserIsTeamOwner(ctx, user.ID, *teamSlug)
-	if err != nil {
-		return nil, err
-	}
-
 	err = r.database.RemoveReconcilerOptOut(ctx, userID, teamSlug, reconciler)
 	if err != nil {
 		return nil, err
 	}
 
-	reconcilerOptOuts, err := r.database.GetTeamMemberOptOuts(ctx, user.ID, *teamSlug)
-	if err != nil {
-		return nil, err
-	}
-
-	role := model.TeamRoleMember
-	if isOwner {
-		role = model.TeamRoleOwner
-	}
-
 	return &model.TeamMember{
-		Team:        team,
-		User:        user,
-		Role:        role,
-		Reconcilers: reconcilerOptOuts,
+		TeamSlug: team.Slug,
+		UserID:   user.ID,
 	}, nil
 }
 

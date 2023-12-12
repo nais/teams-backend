@@ -258,7 +258,7 @@ type Team @key(fields: "id") {
   auditLogs: [AuditLog!]!
 
   "Team members."
-  members(offset: Int, limit: Int): [TeamMember!]!
+  members(offset: Int, limit: Int): TeamMemberList!
 
   "Possible issues related to synchronization of the team to configured external systems. If there are no entries the team can be considered fully synchronized."
   syncErrors: [SyncError!]!

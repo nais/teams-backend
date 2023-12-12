@@ -143,6 +143,39 @@ func (q *Queries) GetActiveTeams(ctx context.Context) ([]*Team, error) {
 	return items, nil
 }
 
+const getAllTeamMembers = `-- name: GetAllTeamMembers :many
+SELECT users.id, users.email, users.name, users.external_id FROM user_roles
+JOIN teams ON teams.slug = user_roles.target_team_slug
+JOIN users ON users.id = user_roles.user_id
+WHERE user_roles.target_team_slug = $1
+ORDER BY users.name ASC
+`
+
+func (q *Queries) GetAllTeamMembers(ctx context.Context, targetTeamSlug *slug.Slug) ([]*User, error) {
+	rows, err := q.db.Query(ctx, getAllTeamMembers, targetTeamSlug)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.Name,
+			&i.ExternalID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getSlackAlertsChannels = `-- name: GetSlackAlertsChannels :many
 SELECT team_slug, environment, channel_name FROM slack_alerts_channels
 WHERE team_slug = $1
@@ -276,11 +309,17 @@ SELECT users.id, users.email, users.name, users.external_id FROM user_roles
 JOIN teams ON teams.slug = user_roles.target_team_slug
 JOIN users ON users.id = user_roles.user_id
 WHERE user_roles.target_team_slug = $1
-ORDER BY users.name ASC
+ORDER BY users.name ASC LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) GetTeamMembers(ctx context.Context, targetTeamSlug *slug.Slug) ([]*User, error) {
-	rows, err := q.db.Query(ctx, getTeamMembers, targetTeamSlug)
+type GetTeamMembersParams struct {
+	TargetTeamSlug *slug.Slug
+	Limit          int32
+	Offset         int32
+}
+
+func (q *Queries) GetTeamMembers(ctx context.Context, arg GetTeamMembersParams) ([]*User, error) {
+	rows, err := q.db.Query(ctx, getTeamMembers, arg.TargetTeamSlug, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -302,6 +341,18 @@ func (q *Queries) GetTeamMembers(ctx context.Context, targetTeamSlug *slug.Slug)
 		return nil, err
 	}
 	return items, nil
+}
+
+const getTeamMembersCount = `-- name: GetTeamMembersCount :one
+SELECT COUNT (*) FROM user_roles
+WHERE user_roles.target_team_slug = $1
+`
+
+func (q *Queries) GetTeamMembersCount(ctx context.Context, targetTeamSlug *slug.Slug) (int64, error) {
+	row := q.db.QueryRow(ctx, getTeamMembersCount, targetTeamSlug)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const getTeamMembersForReconciler = `-- name: GetTeamMembersForReconciler :many
@@ -328,45 +379,6 @@ type GetTeamMembersForReconcilerParams struct {
 
 func (q *Queries) GetTeamMembersForReconciler(ctx context.Context, arg GetTeamMembersForReconcilerParams) ([]*User, error) {
 	rows, err := q.db.Query(ctx, getTeamMembersForReconciler, arg.TargetTeamSlug, arg.ReconcilerName)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []*User
-	for rows.Next() {
-		var i User
-		if err := rows.Scan(
-			&i.ID,
-			&i.Email,
-			&i.Name,
-			&i.ExternalID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, &i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getTeamMembersPaginated = `-- name: GetTeamMembersPaginated :many
-SELECT users.id, users.email, users.name, users.external_id FROM user_roles
-JOIN teams ON teams.slug = user_roles.target_team_slug
-JOIN users ON users.id = user_roles.user_id
-WHERE user_roles.target_team_slug = $1
-ORDER BY users.name ASC LIMIT $2 OFFSET $3
-`
-
-type GetTeamMembersPaginatedParams struct {
-	TargetTeamSlug *slug.Slug
-	Limit          int32
-	Offset         int32
-}
-
-func (q *Queries) GetTeamMembersPaginated(ctx context.Context, arg GetTeamMembersPaginatedParams) ([]*User, error) {
-	rows, err := q.db.Query(ctx, getTeamMembersPaginated, arg.TargetTeamSlug, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

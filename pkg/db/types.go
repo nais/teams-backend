@@ -122,7 +122,8 @@ type Database interface {
 	GetActiveTeams(ctx context.Context) ([]*Team, error)
 	GetTeams(ctx context.Context, offset int, limit int) ([]*Team, int, error)
 	GetAllTeams(ctx context.Context) ([]*Team, error)
-	GetTeamMembers(ctx context.Context, teamSlug slug.Slug, offset, limit *int) ([]*User, error)
+	GetTeamMembers(ctx context.Context, teamSlug slug.Slug, offset, limit int) ([]*User, int, error)
+	GetAllTeamMembers(ctx context.Context, teamSlug slug.Slug) ([]*User, error)
 	GetTeamMember(ctx context.Context, teamSlug slug.Slug, userID uuid.UUID) (*User, error)
 	UserIsTeamOwner(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug) (bool, error)
 	SetTeamMemberRole(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug, role sqlc.RoleName) error
