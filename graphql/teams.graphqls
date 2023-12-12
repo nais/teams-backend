@@ -1,6 +1,6 @@
 extend type Query {
-  "Get a collection of teams."
-  teams(offset: Int, limit: Int, filter: TeamsFilter): [Team!]! @auth
+  "Get a collection of teams. Default limit is 20"
+  teams(offset: Int, limit: Int, filter: TeamsFilter): TeamsList! @auth
 
   "Get a specific team."
   team("Slug of the team." slug: Slug!): Team! @auth
@@ -236,6 +236,11 @@ type TeamDeleteKey {
 type TeamSync {
   "The correlation ID for the sync."
   correlationID: UUID!
+}
+
+type TeamsList {
+  nodes: [Team!]!
+  pageInfo: PageInfo!
 }
 
 "Team type."

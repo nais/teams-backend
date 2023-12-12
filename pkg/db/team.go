@@ -60,21 +60,32 @@ func (d *database) GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, er
 	return &Team{Team: team}, nil
 }
 
-func (d *database) GetTeams(ctx context.Context, offset, limit *int) ([]*Team, error) {
+func (d *database) GetTeams(ctx context.Context, offset, limit int) ([]*Team, int, error) {
 	var teams []*sqlc.Team
 	var err error
-	if limit != nil {
-		if offset == nil {
-			o := 0
-			offset = &o
-		}
-		teams, err = d.querier.GetTeamsPaginated(ctx, sqlc.GetTeamsPaginatedParams{
-			Limit:  int32(*limit),
-			Offset: int32(*offset),
-		})
-	} else {
-		teams, err = d.querier.GetTeams(ctx)
+	teams, err = d.querier.GetTeamsPaginated(ctx, sqlc.GetTeamsPaginatedParams{
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	})
+	if err != nil {
+		return nil, 0, err
 	}
+
+	collection := make([]*Team, 0)
+	for _, team := range teams {
+		collection = append(collection, &Team{Team: team})
+	}
+
+	total, err := d.querier.GetTeamsCount(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return collection, int(total), nil
+}
+
+func (d *database) GetAllTeams(ctx context.Context) ([]*Team, error) {
+	teams, err := d.querier.GetTeams(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +250,7 @@ func (d *database) GetTeamMemberOptOuts(ctx context.Context, userID uuid.UUID, t
 	})
 }
 
-func (d *database) GetTeamsWithPermissionInGitHubRepo(ctx context.Context, repoName, permission string) ([]*Team, error) {
+func (d *database) GetTeamsWithPermissionInGitHubRepo(ctx context.Context, repoName, permission string, offset, limit int) ([]*Team, int, error) {
 	var state pgtype.JSONB
 	err := state.Set(map[string]interface{}{
 		"repositories": []map[string]interface{}{
@@ -255,12 +266,16 @@ func (d *database) GetTeamsWithPermissionInGitHubRepo(ctx context.Context, repoN
 		},
 	})
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	rows, err := d.querier.GetTeamsWithPermissionInGitHubRepo(ctx, state)
+	rows, err := d.querier.GetTeamsWithPermissionInGitHubRepo(ctx, sqlc.GetTeamsWithPermissionInGitHubRepoParams{
+		State:  state,
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	})
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	teams := make([]*Team, 0)
@@ -268,5 +283,10 @@ func (d *database) GetTeamsWithPermissionInGitHubRepo(ctx context.Context, repoN
 		teams = append(teams, &Team{row})
 	}
 
-	return teams, nil
+	total, err := d.querier.GetTeamsWithPermissionInGitHubRepoCount(ctx, state)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return teams, int(total), nil
 }

@@ -8,7 +8,16 @@ JOIN reconciler_states rs ON rs.team_slug = t.slug
 WHERE
     rs.reconciler = 'github:team'
     AND rs.state @> $1
-ORDER BY t.slug ASC;
+ORDER BY t.slug ASC LIMIT $2 OFFSET $3;
+
+
+-- name: GetTeamsWithPermissionInGitHubRepoCount :one
+SELECT count(1) FROM teams t
+JOIN reconciler_states rs ON rs.team_slug = t.slug
+WHERE
+    rs.reconciler = 'github:team'
+    AND rs.state @> $1
+;
 
 -- name: SetReconcilerStateForTeam :exec
 INSERT INTO reconciler_states (reconciler, team_slug, state)

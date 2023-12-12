@@ -23,7 +23,6 @@ import (
 //
 // It serves as dependency injection for your app, add any dependencies you require here.
 
-
 type Resolver struct {
 	teamSyncHandler teamsync.Handler
 	database        db.Database
@@ -99,4 +98,17 @@ func sqlcRoleFromTeamRole(teamRole model.TeamRole) (sqlc.RoleName, error) {
 	}
 
 	return "", fmt.Errorf("invalid team role: %v", teamRole)
+}
+
+func defaultOffsetLimit(offset, limit *int) (off, lim int) {
+	o, l := 0, 20
+	if offset != nil {
+		o = *offset
+	}
+
+	if limit != nil {
+		l = *limit
+	}
+
+	return o, l
 }

@@ -420,8 +420,19 @@ func (q *Queries) GetTeams(ctx context.Context) ([]*Team, error) {
 	return items, nil
 }
 
+const getTeamsCount = `-- name: GetTeamsCount :one
+SELECT COUNT(*) as total FROM teams
+`
+
+func (q *Queries) GetTeamsCount(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, getTeamsCount)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
 const getTeamsPaginated = `-- name: GetTeamsPaginated :many
-SELECT teams.slug, teams.purpose, teams.last_successful_sync, teams.slack_channel FROM teams 
+SELECT teams.slug, teams.purpose, teams.last_successful_sync, teams.slack_channel FROM teams
 ORDER BY teams.slug ASC LIMIT $1 OFFSET $2
 `
 

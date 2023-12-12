@@ -42,6 +42,12 @@ type NaisNamespace struct {
 	Namespace *slug.Slug `json:"namespace"`
 }
 
+type PageInfo struct {
+	TotalCount      int  `json:"totalCount"`
+	HasNextPage     bool `json:"hasNextPage"`
+	HasPreviousPage bool `json:"hasPreviousPage"`
+}
+
 // Reconciler configuration input.
 type ReconcilerConfigInput struct {
 	// Configuration key.
@@ -131,6 +137,11 @@ type TeamsFilterGitHub struct {
 	RepoName string `json:"repoName"`
 	// Filter repostiories by permission name
 	PermissionName string `json:"permissionName"`
+}
+
+type TeamsList struct {
+	Nodes    []*db.Team `json:"nodes"`
+	PageInfo *PageInfo  `json:"pageInfo"`
 }
 
 // Input for updating an existing team.

@@ -1299,6 +1299,60 @@ func (_c *MockDatabase_GetActiveTeams_Call) RunAndReturn(run func(context.Contex
 	return _c
 }
 
+// GetAllTeams provides a mock function with given fields: ctx
+func (_m *MockDatabase) GetAllTeams(ctx context.Context) ([]*Team, error) {
+	ret := _m.Called(ctx)
+
+	var r0 []*Team
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]*Team, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []*Team); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*Team)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockDatabase_GetAllTeams_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllTeams'
+type MockDatabase_GetAllTeams_Call struct {
+	*mock.Call
+}
+
+// GetAllTeams is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockDatabase_Expecter) GetAllTeams(ctx interface{}) *MockDatabase_GetAllTeams_Call {
+	return &MockDatabase_GetAllTeams_Call{Call: _e.mock.On("GetAllTeams", ctx)}
+}
+
+func (_c *MockDatabase_GetAllTeams_Call) Run(run func(ctx context.Context)) *MockDatabase_GetAllTeams_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockDatabase_GetAllTeams_Call) Return(_a0 []*Team, _a1 error) *MockDatabase_GetAllTeams_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockDatabase_GetAllTeams_Call) RunAndReturn(run func(context.Context) ([]*Team, error)) *MockDatabase_GetAllTeams_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAllUserRoles provides a mock function with given fields: ctx
 func (_m *MockDatabase) GetAllUserRoles(ctx context.Context) ([]*UserRole, error) {
 	ret := _m.Called(ctx)
@@ -2512,15 +2566,16 @@ func (_c *MockDatabase_GetTeamReconcilerErrors_Call) RunAndReturn(run func(conte
 }
 
 // GetTeams provides a mock function with given fields: ctx, offset, limit
-func (_m *MockDatabase) GetTeams(ctx context.Context, offset *int, limit *int) ([]*Team, error) {
+func (_m *MockDatabase) GetTeams(ctx context.Context, offset int, limit int) ([]*Team, int, error) {
 	ret := _m.Called(ctx, offset, limit)
 
 	var r0 []*Team
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *int, *int) ([]*Team, error)); ok {
+	var r1 int
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, int) ([]*Team, int, error)); ok {
 		return rf(ctx, offset, limit)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, *int, *int) []*Team); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int) []*Team); ok {
 		r0 = rf(ctx, offset, limit)
 	} else {
 		if ret.Get(0) != nil {
@@ -2528,13 +2583,19 @@ func (_m *MockDatabase) GetTeams(ctx context.Context, offset *int, limit *int) (
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *int, *int) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, int, int) int); ok {
 		r1 = rf(ctx, offset, limit)
 	} else {
-		r1 = ret.Error(1)
+		r1 = ret.Get(1).(int)
 	}
 
-	return r0, r1
+	if rf, ok := ret.Get(2).(func(context.Context, int, int) error); ok {
+		r2 = rf(ctx, offset, limit)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // MockDatabase_GetTeams_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetTeams'
@@ -2544,53 +2605,60 @@ type MockDatabase_GetTeams_Call struct {
 
 // GetTeams is a helper method to define mock.On call
 //   - ctx context.Context
-//   - offset *int
-//   - limit *int
+//   - offset int
+//   - limit int
 func (_e *MockDatabase_Expecter) GetTeams(ctx interface{}, offset interface{}, limit interface{}) *MockDatabase_GetTeams_Call {
 	return &MockDatabase_GetTeams_Call{Call: _e.mock.On("GetTeams", ctx, offset, limit)}
 }
 
-func (_c *MockDatabase_GetTeams_Call) Run(run func(ctx context.Context, offset *int, limit *int)) *MockDatabase_GetTeams_Call {
+func (_c *MockDatabase_GetTeams_Call) Run(run func(ctx context.Context, offset int, limit int)) *MockDatabase_GetTeams_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(*int), args[2].(*int))
+		run(args[0].(context.Context), args[1].(int), args[2].(int))
 	})
 	return _c
 }
 
-func (_c *MockDatabase_GetTeams_Call) Return(_a0 []*Team, _a1 error) *MockDatabase_GetTeams_Call {
-	_c.Call.Return(_a0, _a1)
+func (_c *MockDatabase_GetTeams_Call) Return(_a0 []*Team, _a1 int, _a2 error) *MockDatabase_GetTeams_Call {
+	_c.Call.Return(_a0, _a1, _a2)
 	return _c
 }
 
-func (_c *MockDatabase_GetTeams_Call) RunAndReturn(run func(context.Context, *int, *int) ([]*Team, error)) *MockDatabase_GetTeams_Call {
+func (_c *MockDatabase_GetTeams_Call) RunAndReturn(run func(context.Context, int, int) ([]*Team, int, error)) *MockDatabase_GetTeams_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// GetTeamsWithPermissionInGitHubRepo provides a mock function with given fields: ctx, repoName, permission
-func (_m *MockDatabase) GetTeamsWithPermissionInGitHubRepo(ctx context.Context, repoName string, permission string) ([]*Team, error) {
-	ret := _m.Called(ctx, repoName, permission)
+// GetTeamsWithPermissionInGitHubRepo provides a mock function with given fields: ctx, repoName, permission, offset, limit
+func (_m *MockDatabase) GetTeamsWithPermissionInGitHubRepo(ctx context.Context, repoName string, permission string, offset int, limit int) ([]*Team, int, error) {
+	ret := _m.Called(ctx, repoName, permission, offset, limit)
 
 	var r0 []*Team
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) ([]*Team, error)); ok {
-		return rf(ctx, repoName, permission)
+	var r1 int
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, int, int) ([]*Team, int, error)); ok {
+		return rf(ctx, repoName, permission, offset, limit)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) []*Team); ok {
-		r0 = rf(ctx, repoName, permission)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, int, int) []*Team); ok {
+		r0 = rf(ctx, repoName, permission, offset, limit)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*Team)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
-		r1 = rf(ctx, repoName, permission)
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, int, int) int); ok {
+		r1 = rf(ctx, repoName, permission, offset, limit)
 	} else {
-		r1 = ret.Error(1)
+		r1 = ret.Get(1).(int)
 	}
 
-	return r0, r1
+	if rf, ok := ret.Get(2).(func(context.Context, string, string, int, int) error); ok {
+		r2 = rf(ctx, repoName, permission, offset, limit)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // MockDatabase_GetTeamsWithPermissionInGitHubRepo_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetTeamsWithPermissionInGitHubRepo'
@@ -2602,23 +2670,25 @@ type MockDatabase_GetTeamsWithPermissionInGitHubRepo_Call struct {
 //   - ctx context.Context
 //   - repoName string
 //   - permission string
-func (_e *MockDatabase_Expecter) GetTeamsWithPermissionInGitHubRepo(ctx interface{}, repoName interface{}, permission interface{}) *MockDatabase_GetTeamsWithPermissionInGitHubRepo_Call {
-	return &MockDatabase_GetTeamsWithPermissionInGitHubRepo_Call{Call: _e.mock.On("GetTeamsWithPermissionInGitHubRepo", ctx, repoName, permission)}
+//   - offset int
+//   - limit int
+func (_e *MockDatabase_Expecter) GetTeamsWithPermissionInGitHubRepo(ctx interface{}, repoName interface{}, permission interface{}, offset interface{}, limit interface{}) *MockDatabase_GetTeamsWithPermissionInGitHubRepo_Call {
+	return &MockDatabase_GetTeamsWithPermissionInGitHubRepo_Call{Call: _e.mock.On("GetTeamsWithPermissionInGitHubRepo", ctx, repoName, permission, offset, limit)}
 }
 
-func (_c *MockDatabase_GetTeamsWithPermissionInGitHubRepo_Call) Run(run func(ctx context.Context, repoName string, permission string)) *MockDatabase_GetTeamsWithPermissionInGitHubRepo_Call {
+func (_c *MockDatabase_GetTeamsWithPermissionInGitHubRepo_Call) Run(run func(ctx context.Context, repoName string, permission string, offset int, limit int)) *MockDatabase_GetTeamsWithPermissionInGitHubRepo_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string))
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(int), args[4].(int))
 	})
 	return _c
 }
 
-func (_c *MockDatabase_GetTeamsWithPermissionInGitHubRepo_Call) Return(_a0 []*Team, _a1 error) *MockDatabase_GetTeamsWithPermissionInGitHubRepo_Call {
-	_c.Call.Return(_a0, _a1)
+func (_c *MockDatabase_GetTeamsWithPermissionInGitHubRepo_Call) Return(_a0 []*Team, _a1 int, _a2 error) *MockDatabase_GetTeamsWithPermissionInGitHubRepo_Call {
+	_c.Call.Return(_a0, _a1, _a2)
 	return _c
 }
 
-func (_c *MockDatabase_GetTeamsWithPermissionInGitHubRepo_Call) RunAndReturn(run func(context.Context, string, string) ([]*Team, error)) *MockDatabase_GetTeamsWithPermissionInGitHubRepo_Call {
+func (_c *MockDatabase_GetTeamsWithPermissionInGitHubRepo_Call) RunAndReturn(run func(context.Context, string, string, int, int) ([]*Team, int, error)) *MockDatabase_GetTeamsWithPermissionInGitHubRepo_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -98,7 +98,7 @@ func run(cfg *seedConfig, log logger.Logger) error {
 			return fmt.Errorf("database already has users, abort")
 		}
 
-		if existingTeams, err := database.GetTeams(ctx, nil, nil); len(existingTeams) != 0 || err != nil {
+		if existingTeams, err := database.GetAllTeams(ctx); len(existingTeams) != 0 || err != nil {
 			return fmt.Errorf("database already has teams, abort")
 		}
 	} else {
@@ -110,7 +110,7 @@ func run(cfg *seedConfig, log logger.Logger) error {
 			emails[user.Email] = struct{}{}
 		}
 
-		teams, err := database.GetTeams(ctx, nil, nil)
+		teams, err := database.GetAllTeams(ctx)
 		if err != nil {
 			return err
 		}

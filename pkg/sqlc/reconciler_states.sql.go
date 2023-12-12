@@ -35,11 +35,17 @@ JOIN reconciler_states rs ON rs.team_slug = t.slug
 WHERE
     rs.reconciler = 'github:team'
     AND rs.state @> $1
-ORDER BY t.slug ASC
+ORDER BY t.slug ASC LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) GetTeamsWithPermissionInGitHubRepo(ctx context.Context, state pgtype.JSONB) ([]*Team, error) {
-	rows, err := q.db.Query(ctx, getTeamsWithPermissionInGitHubRepo, state)
+type GetTeamsWithPermissionInGitHubRepoParams struct {
+	State  pgtype.JSONB
+	Limit  int32
+	Offset int32
+}
+
+func (q *Queries) GetTeamsWithPermissionInGitHubRepo(ctx context.Context, arg GetTeamsWithPermissionInGitHubRepoParams) ([]*Team, error) {
+	rows, err := q.db.Query(ctx, getTeamsWithPermissionInGitHubRepo, arg.State, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -61,6 +67,21 @@ func (q *Queries) GetTeamsWithPermissionInGitHubRepo(ctx context.Context, state 
 		return nil, err
 	}
 	return items, nil
+}
+
+const getTeamsWithPermissionInGitHubRepoCount = `-- name: GetTeamsWithPermissionInGitHubRepoCount :one
+SELECT count(1) FROM teams t
+JOIN reconciler_states rs ON rs.team_slug = t.slug
+WHERE
+    rs.reconciler = 'github:team'
+    AND rs.state @> $1
+`
+
+func (q *Queries) GetTeamsWithPermissionInGitHubRepoCount(ctx context.Context, state pgtype.JSONB) (int64, error) {
+	row := q.db.QueryRow(ctx, getTeamsWithPermissionInGitHubRepoCount, state)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const removeReconcilerStateForTeam = `-- name: RemoveReconcilerStateForTeam :exec
