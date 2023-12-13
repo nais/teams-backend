@@ -85,7 +85,7 @@ func TestSync(t *testing.T) {
 		user2 := &db.User{User: &sqlc.User{ID: serialUuid(2), Email: "user2@example.com", ExternalID: "456", Name: "User 2"}}
 
 		dbtx.
-			On("GetUsers", txCtx, mock.Anything, mock.Anything).
+			On("GetAllUsers", txCtx, mock.Anything, mock.Anything).
 			Return([]*db.User{user1, user2}, nil).
 			Once()
 		dbtx.
@@ -205,7 +205,7 @@ func TestSync(t *testing.T) {
 			Once()
 
 		dbtx.
-			On("GetUsers", txCtx, mock.Anything, mock.Anything).
+			On("GetAllUsers", txCtx, mock.Anything, mock.Anything).
 			Return([]*db.User{
 				localUserWithIncorrectName,
 				localUserWithIncorrectEmail,

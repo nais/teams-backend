@@ -3038,25 +3038,25 @@ func (_c *MockDatabase_GetUserRoles_Call) RunAndReturn(run func(context.Context,
 	return _c
 }
 
-// GetUserTeams provides a mock function with given fields: ctx, userID
-func (_m *MockDatabase) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error) {
-	ret := _m.Called(ctx, userID)
+// GetUserTeams provides a mock function with given fields: ctx, userID, offset, limit
+func (_m *MockDatabase) GetUserTeams(ctx context.Context, userID uuid.UUID, offset int, limit int) ([]*UserTeam, error) {
+	ret := _m.Called(ctx, userID, offset, limit)
 
-	var r0 []*Team
+	var r0 []*UserTeam
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) ([]*Team, error)); ok {
-		return rf(ctx, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int, int) ([]*UserTeam, error)); ok {
+		return rf(ctx, userID, offset, limit)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) []*Team); ok {
-		r0 = rf(ctx, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int, int) []*UserTeam); ok {
+		r0 = rf(ctx, userID, offset, limit)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*Team)
+			r0 = ret.Get(0).([]*UserTeam)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
-		r1 = rf(ctx, userID)
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, int, int) error); ok {
+		r1 = rf(ctx, userID, offset, limit)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -3072,23 +3072,25 @@ type MockDatabase_GetUserTeams_Call struct {
 // GetUserTeams is a helper method to define mock.On call
 //   - ctx context.Context
 //   - userID uuid.UUID
-func (_e *MockDatabase_Expecter) GetUserTeams(ctx interface{}, userID interface{}) *MockDatabase_GetUserTeams_Call {
-	return &MockDatabase_GetUserTeams_Call{Call: _e.mock.On("GetUserTeams", ctx, userID)}
+//   - offset int
+//   - limit int
+func (_e *MockDatabase_Expecter) GetUserTeams(ctx interface{}, userID interface{}, offset interface{}, limit interface{}) *MockDatabase_GetUserTeams_Call {
+	return &MockDatabase_GetUserTeams_Call{Call: _e.mock.On("GetUserTeams", ctx, userID, offset, limit)}
 }
 
-func (_c *MockDatabase_GetUserTeams_Call) Run(run func(ctx context.Context, userID uuid.UUID)) *MockDatabase_GetUserTeams_Call {
+func (_c *MockDatabase_GetUserTeams_Call) Run(run func(ctx context.Context, userID uuid.UUID, offset int, limit int)) *MockDatabase_GetUserTeams_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(uuid.UUID))
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(int), args[3].(int))
 	})
 	return _c
 }
 
-func (_c *MockDatabase_GetUserTeams_Call) Return(_a0 []*Team, _a1 error) *MockDatabase_GetUserTeams_Call {
+func (_c *MockDatabase_GetUserTeams_Call) Return(_a0 []*UserTeam, _a1 error) *MockDatabase_GetUserTeams_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockDatabase_GetUserTeams_Call) RunAndReturn(run func(context.Context, uuid.UUID) ([]*Team, error)) *MockDatabase_GetUserTeams_Call {
+func (_c *MockDatabase_GetUserTeams_Call) RunAndReturn(run func(context.Context, uuid.UUID, int, int) ([]*UserTeam, error)) *MockDatabase_GetUserTeams_Call {
 	_c.Call.Return(run)
 	return _c
 }

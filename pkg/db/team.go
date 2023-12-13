@@ -112,15 +112,19 @@ func (d *database) GetActiveTeams(ctx context.Context) ([]*Team, error) {
 	return collection, nil
 }
 
-func (d *database) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error) {
-	rows, err := d.querier.GetUserTeams(ctx, userID)
+func (d *database) GetUserTeams(ctx context.Context, userID uuid.UUID, offset, limit int) ([]*UserTeam, error) {
+	rows, err := d.querier.GetUserTeams(ctx, sqlc.GetUserTeamsParams{
+		UserID: userID,
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	teams := make([]*Team, 0)
-	for _, team := range rows {
-		teams = append(teams, &Team{Team: team})
+	teams := make([]*UserTeam, 0)
+	for _, row := range rows {
+		teams = append(teams, &UserTeam{Team: &row.Team, RoleName: row.RoleName})
 	}
 
 	return teams, nil

@@ -27,11 +27,11 @@ SELECT * FROM users
 WHERE email = LOWER(sqlc.arg(email));
 
 -- name: GetUserTeams :many
-SELECT teams.* FROM user_roles
+SELECT sqlc.embed(teams), user_roles.role_name FROM user_roles
 JOIN teams ON teams.slug = user_roles.target_team_slug
-JOIN users ON users.id = user_roles.user_id
 WHERE user_roles.user_id = $1
-ORDER BY teams.slug ASC;
+ORDER BY teams.slug ASC
+LIMIT $2 OFFSET $3;
 
 -- name: UpdateUser :one
 UPDATE users

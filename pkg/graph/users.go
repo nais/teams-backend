@@ -105,19 +105,17 @@ func (r *userResolver) Teams(ctx context.Context, obj *db.User, limit *int, offs
 		return nil, err
 	}
 
-	userRoles, err := dataloader.GetUserRoles(ctx, obj.ID)
+	off, lim := defaultOffsetLimit(offset, limit)
+
+	userTeams, err := r.database.GetUserTeams(ctx, obj.ID, off, lim)
 	if err != nil {
 		return nil, err
 	}
 
 	teams := make([]*model.TeamMember, 0)
-	for _, role := range userRoles {
-		if role.TargetTeamSlug == nil {
-			continue
-		}
-
+	for _, userTeam := range userTeams {
 		var teamRole model.TeamRole
-		switch role.RoleName {
+		switch userTeam.RoleName {
 		case sqlc.RoleNameTeammember:
 			teamRole = model.TeamRoleMember
 		case sqlc.RoleNameTeamowner:
@@ -127,7 +125,7 @@ func (r *userResolver) Teams(ctx context.Context, obj *db.User, limit *int, offs
 		}
 		teams = append(teams, &model.TeamMember{
 			TeamRole: teamRole,
-			TeamSlug: *role.TargetTeamSlug,
+			TeamSlug: userTeam.Team.Slug,
 			UserID:   obj.ID,
 		})
 	}

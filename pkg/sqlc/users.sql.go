@@ -127,27 +127,39 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) 
 }
 
 const getUserTeams = `-- name: GetUserTeams :many
-SELECT teams.slug, teams.purpose, teams.last_successful_sync, teams.slack_channel FROM user_roles
+SELECT teams.slug, teams.purpose, teams.last_successful_sync, teams.slack_channel, user_roles.role_name FROM user_roles
 JOIN teams ON teams.slug = user_roles.target_team_slug
-JOIN users ON users.id = user_roles.user_id
 WHERE user_roles.user_id = $1
 ORDER BY teams.slug ASC
+LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error) {
-	rows, err := q.db.Query(ctx, getUserTeams, userID)
+type GetUserTeamsParams struct {
+	UserID uuid.UUID
+	Limit  int32
+	Offset int32
+}
+
+type GetUserTeamsRow struct {
+	Team     Team
+	RoleName RoleName
+}
+
+func (q *Queries) GetUserTeams(ctx context.Context, arg GetUserTeamsParams) ([]*GetUserTeamsRow, error) {
+	rows, err := q.db.Query(ctx, getUserTeams, arg.UserID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []*Team
+	var items []*GetUserTeamsRow
 	for rows.Next() {
-		var i Team
+		var i GetUserTeamsRow
 		if err := rows.Scan(
-			&i.Slug,
-			&i.Purpose,
-			&i.LastSuccessfulSync,
-			&i.SlackChannel,
+			&i.Team.Slug,
+			&i.Team.Purpose,
+			&i.Team.LastSuccessfulSync,
+			&i.Team.SlackChannel,
+			&i.RoleName,
 		); err != nil {
 			return nil, err
 		}

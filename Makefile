@@ -15,7 +15,7 @@ teams-backend:
 local:
 	TEAMS_BACKEND_IAP_INSECURE=true \
 	TEAMS_BACKEND_ONPREM_CLUSTERS=ci,dev,prod \
-	 go run ./cmd/teams-backend/main.go
+	go run ./cmd/teams-backend/main.go
 
 test:
 	go test ./...

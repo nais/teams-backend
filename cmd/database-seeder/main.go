@@ -120,11 +120,25 @@ func run(cfg *seedConfig, log logger.Logger) error {
 	}
 
 	err = database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
-		devUser, err := dbtx.CreateUser(ctx, "dev usersen", "dev.usersen@nais.io", uuid.New().String())
+		var err error
+		var devUser, adminUser *db.User
+
+		devUser, err = dbtx.GetUserByEmail(ctx, nameToEmail("dev usersen", cfg.Domain))
 		if err != nil {
-			return err
+			devUser, err = dbtx.CreateUser(ctx, "dev usersen", nameToEmail("dev usersen", cfg.Domain), uuid.New().String())
+			if err != nil {
+				return err
+			}
 		}
-		adminUser, err := dbtx.CreateUser(ctx, "admin usersen", "admin.usersen@nais.io", uuid.New().String())
+
+		adminUser, err = dbtx.GetUserByEmail(ctx, nameToEmail("admin usersen", cfg.Domain))
+		if err != nil {
+			adminUser, err = dbtx.CreateUser(ctx, "admin usersen", nameToEmail("admin usersen", cfg.Domain), uuid.New().String())
+			if err != nil {
+				return err
+			}
+		}
+
 		if err != nil {
 			return err
 		}
@@ -158,10 +172,15 @@ func run(cfg *seedConfig, log logger.Logger) error {
 		}
 		usersCreated := len(users)
 
-		devteam, err := dbtx.CreateTeam(ctx, slug.Slug("devteam"), "dev-purpose", "#devteam")
+		var devteam *db.Team
+		devteam, err = dbtx.GetTeamBySlug(ctx, "devteam")
 		if err != nil {
-			return err
+			devteam, err = dbtx.CreateTeam(ctx, "devteam", "dev-purpose", "#devteam")
+			if err != nil {
+				return err
+			}
 		}
+
 		err = dbtx.SetTeamMemberRole(ctx, devUser.ID, devteam.Slug, sqlc.RoleNameTeamowner)
 		if err != nil {
 			return err

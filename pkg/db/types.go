@@ -81,6 +81,11 @@ type Team struct {
 	*sqlc.Team
 }
 
+type UserTeam struct {
+	*sqlc.Team
+	RoleName sqlc.RoleName
+}
+
 func (t *Team) IsEntity() {}
 
 type User struct {
@@ -114,13 +119,13 @@ type Database interface {
 	DeleteUser(ctx context.Context, userID uuid.UUID) error
 	GetUsers(ctx context.Context, offset, limit int) ([]*User, int, error)
 	GetAllUsers(ctx context.Context) ([]*User, error)
-	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]*Team, error)
+	GetUserTeams(ctx context.Context, userID uuid.UUID, offset, limit int) ([]*UserTeam, error)
 	CreateTeam(ctx context.Context, slug slug.Slug, purpose, slackChannel string) (*Team, error)
 	UpdateTeam(ctx context.Context, teamSlug slug.Slug, purpose, slackChannel *string) (*Team, error)
 	GetActiveTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)
 	GetTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)
 	GetActiveTeams(ctx context.Context) ([]*Team, error)
-	GetTeams(ctx context.Context, offset int, limit int) ([]*Team, int, error)
+	GetTeams(ctx context.Context, offset, limit int) ([]*Team, int, error)
 	GetAllTeams(ctx context.Context) ([]*Team, error)
 	GetTeamMembers(ctx context.Context, teamSlug slug.Slug, offset, limit int) ([]*User, int, error)
 	GetAllTeamMembers(ctx context.Context, teamSlug slug.Slug) ([]*User, error)
