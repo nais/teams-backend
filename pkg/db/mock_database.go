@@ -1580,30 +1580,37 @@ func (_c *MockDatabase_GetAuditLogsForCorrelationID_Call) RunAndReturn(run func(
 	return _c
 }
 
-// GetAuditLogsForReconciler provides a mock function with given fields: ctx, reconcilerName
-func (_m *MockDatabase) GetAuditLogsForReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) ([]*AuditLog, error) {
-	ret := _m.Called(ctx, reconcilerName)
+// GetAuditLogsForReconciler provides a mock function with given fields: ctx, reconcilerName, offset, limit
+func (_m *MockDatabase) GetAuditLogsForReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName, offset int, limit int) ([]*AuditLog, int, error) {
+	ret := _m.Called(ctx, reconcilerName, offset, limit)
 
 	var r0 []*AuditLog
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName) ([]*AuditLog, error)); ok {
-		return rf(ctx, reconcilerName)
+	var r1 int
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName, int, int) ([]*AuditLog, int, error)); ok {
+		return rf(ctx, reconcilerName, offset, limit)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName) []*AuditLog); ok {
-		r0 = rf(ctx, reconcilerName)
+	if rf, ok := ret.Get(0).(func(context.Context, sqlc.ReconcilerName, int, int) []*AuditLog); ok {
+		r0 = rf(ctx, reconcilerName, offset, limit)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*AuditLog)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, sqlc.ReconcilerName) error); ok {
-		r1 = rf(ctx, reconcilerName)
+	if rf, ok := ret.Get(1).(func(context.Context, sqlc.ReconcilerName, int, int) int); ok {
+		r1 = rf(ctx, reconcilerName, offset, limit)
 	} else {
-		r1 = ret.Error(1)
+		r1 = ret.Get(1).(int)
 	}
 
-	return r0, r1
+	if rf, ok := ret.Get(2).(func(context.Context, sqlc.ReconcilerName, int, int) error); ok {
+		r2 = rf(ctx, reconcilerName, offset, limit)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // MockDatabase_GetAuditLogsForReconciler_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAuditLogsForReconciler'
@@ -1614,23 +1621,25 @@ type MockDatabase_GetAuditLogsForReconciler_Call struct {
 // GetAuditLogsForReconciler is a helper method to define mock.On call
 //   - ctx context.Context
 //   - reconcilerName sqlc.ReconcilerName
-func (_e *MockDatabase_Expecter) GetAuditLogsForReconciler(ctx interface{}, reconcilerName interface{}) *MockDatabase_GetAuditLogsForReconciler_Call {
-	return &MockDatabase_GetAuditLogsForReconciler_Call{Call: _e.mock.On("GetAuditLogsForReconciler", ctx, reconcilerName)}
+//   - offset int
+//   - limit int
+func (_e *MockDatabase_Expecter) GetAuditLogsForReconciler(ctx interface{}, reconcilerName interface{}, offset interface{}, limit interface{}) *MockDatabase_GetAuditLogsForReconciler_Call {
+	return &MockDatabase_GetAuditLogsForReconciler_Call{Call: _e.mock.On("GetAuditLogsForReconciler", ctx, reconcilerName, offset, limit)}
 }
 
-func (_c *MockDatabase_GetAuditLogsForReconciler_Call) Run(run func(ctx context.Context, reconcilerName sqlc.ReconcilerName)) *MockDatabase_GetAuditLogsForReconciler_Call {
+func (_c *MockDatabase_GetAuditLogsForReconciler_Call) Run(run func(ctx context.Context, reconcilerName sqlc.ReconcilerName, offset int, limit int)) *MockDatabase_GetAuditLogsForReconciler_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(sqlc.ReconcilerName))
+		run(args[0].(context.Context), args[1].(sqlc.ReconcilerName), args[2].(int), args[3].(int))
 	})
 	return _c
 }
 
-func (_c *MockDatabase_GetAuditLogsForReconciler_Call) Return(_a0 []*AuditLog, _a1 error) *MockDatabase_GetAuditLogsForReconciler_Call {
-	_c.Call.Return(_a0, _a1)
+func (_c *MockDatabase_GetAuditLogsForReconciler_Call) Return(_a0 []*AuditLog, _a1 int, _a2 error) *MockDatabase_GetAuditLogsForReconciler_Call {
+	_c.Call.Return(_a0, _a1, _a2)
 	return _c
 }
 
-func (_c *MockDatabase_GetAuditLogsForReconciler_Call) RunAndReturn(run func(context.Context, sqlc.ReconcilerName) ([]*AuditLog, error)) *MockDatabase_GetAuditLogsForReconciler_Call {
+func (_c *MockDatabase_GetAuditLogsForReconciler_Call) RunAndReturn(run func(context.Context, sqlc.ReconcilerName, int, int) ([]*AuditLog, int, error)) *MockDatabase_GetAuditLogsForReconciler_Call {
 	_c.Call.Return(run)
 	return _c
 }

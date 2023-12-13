@@ -27,3 +27,8 @@ type AuditLog {
     "Creation time of the log entry."
     createdAt: Time!
 }
+
+type AuditLogList {
+    nodes: [AuditLog!]!
+    pageInfo: PageInfo!
+}

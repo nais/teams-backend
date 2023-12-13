@@ -31,7 +31,7 @@ type UserSyncRun {
   finishedAt: Time
 
   "Log entries for the sync run."
-  auditLogs(limit: Int, offset: Int): UserSyncAuditLogList!
+  auditLogs(limit: Int, offset: Int): AuditLogList!
 
   "The status of the sync run."
   status: UserSyncRunStatus!
@@ -75,11 +75,6 @@ type User {
 
 type UserList {
   nodes: [User!]!
-  pageInfo: PageInfo!
-}
-
-type UserSyncAuditLogList {
-  nodes: [AuditLog!]!
   pageInfo: PageInfo!
 }
 

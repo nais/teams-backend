@@ -82,6 +82,11 @@ type ComplexityRoot struct {
 		TargetType       func(childComplexity int) int
 	}
 
+	AuditLogList struct {
+		Nodes    func(childComplexity int) int
+		PageInfo func(childComplexity int) int
+	}
+
 	Entity struct {
 		FindTeamByID func(childComplexity int, id string) int
 	}
@@ -160,7 +165,7 @@ type ComplexityRoot struct {
 	}
 
 	Reconciler struct {
-		AuditLogs           func(childComplexity int) int
+		AuditLogs           func(childComplexity int, offset *int, limit *int) int
 		Config              func(childComplexity int) int
 		Configured          func(childComplexity int) int
 		Description         func(childComplexity int) int
@@ -230,11 +235,6 @@ type ComplexityRoot struct {
 		SyncErrors          func(childComplexity int) int
 	}
 
-	TeamAuditLogList struct {
-		Nodes    func(childComplexity int) int
-		PageInfo func(childComplexity int) int
-	}
-
 	TeamDeleteKey struct {
 		CreatedAt func(childComplexity int) int
 		CreatedBy func(childComplexity int) int
@@ -283,11 +283,6 @@ type ComplexityRoot struct {
 	}
 
 	UserList struct {
-		Nodes    func(childComplexity int) int
-		PageInfo func(childComplexity int) int
-	}
-
-	UserSyncAuditLogList struct {
 		Nodes    func(childComplexity int) int
 		PageInfo func(childComplexity int) int
 	}
@@ -362,7 +357,7 @@ type ReconcilerResolver interface {
 	Config(ctx context.Context, obj *db.Reconciler) ([]*db.ReconcilerConfig, error)
 	Configured(ctx context.Context, obj *db.Reconciler) (bool, error)
 
-	AuditLogs(ctx context.Context, obj *db.Reconciler) ([]*db.AuditLog, error)
+	AuditLogs(ctx context.Context, obj *db.Reconciler, offset *int, limit *int) (*model.AuditLogList, error)
 }
 type RoleResolver interface {
 	Name(ctx context.Context, obj *db.Role) (sqlc.RoleName, error)
@@ -373,7 +368,7 @@ type ServiceAccountResolver interface {
 type TeamResolver interface {
 	ID(ctx context.Context, obj *db.Team) (string, error)
 
-	AuditLogs(ctx context.Context, obj *db.Team, limit *int, offset *int) (*model.TeamAuditLogList, error)
+	AuditLogs(ctx context.Context, obj *db.Team, limit *int, offset *int) (*model.AuditLogList, error)
 	Members(ctx context.Context, obj *db.Team, offset *int, limit *int) (*model.TeamMemberList, error)
 	SyncErrors(ctx context.Context, obj *db.Team) ([]*model.SyncError, error)
 
@@ -405,7 +400,7 @@ type UserResolver interface {
 	Roles(ctx context.Context, obj *db.User) ([]*db.Role, error)
 }
 type UserSyncRunResolver interface {
-	AuditLogs(ctx context.Context, obj *usersync.Run, limit *int, offset *int) (*model.UserSyncAuditLogList, error)
+	AuditLogs(ctx context.Context, obj *usersync.Run, limit *int, offset *int) (*model.AuditLogList, error)
 	Status(ctx context.Context, obj *usersync.Run) (model.UserSyncRunStatus, error)
 	Error(ctx context.Context, obj *usersync.Run) (*string, error)
 }
@@ -487,6 +482,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.AuditLog.TargetType(childComplexity), true
+
+	case "AuditLogList.nodes":
+		if e.complexity.AuditLogList.Nodes == nil {
+			break
+		}
+
+		return e.complexity.AuditLogList.Nodes(childComplexity), true
+
+	case "AuditLogList.pageInfo":
+		if e.complexity.AuditLogList.PageInfo == nil {
+			break
+		}
+
+		return e.complexity.AuditLogList.PageInfo(childComplexity), true
 
 	case "Entity.findTeamByID":
 		if e.complexity.Entity.FindTeamByID == nil {
@@ -1019,7 +1028,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.Reconciler.AuditLogs(childComplexity), true
+		args, err := ec.field_Reconciler_auditLogs_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Reconciler.AuditLogs(childComplexity, args["offset"].(*int), args["limit"].(*int)), true
 
 	case "Reconciler.config":
 		if e.complexity.Reconciler.Config == nil {
@@ -1353,20 +1367,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Team.SyncErrors(childComplexity), true
 
-	case "TeamAuditLogList.nodes":
-		if e.complexity.TeamAuditLogList.Nodes == nil {
-			break
-		}
-
-		return e.complexity.TeamAuditLogList.Nodes(childComplexity), true
-
-	case "TeamAuditLogList.pageInfo":
-		if e.complexity.TeamAuditLogList.PageInfo == nil {
-			break
-		}
-
-		return e.complexity.TeamAuditLogList.PageInfo(childComplexity), true
-
 	case "TeamDeleteKey.createdAt":
 		if e.complexity.TeamDeleteKey.CreatedAt == nil {
 			break
@@ -1546,20 +1546,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.UserList.PageInfo(childComplexity), true
-
-	case "UserSyncAuditLogList.nodes":
-		if e.complexity.UserSyncAuditLogList.Nodes == nil {
-			break
-		}
-
-		return e.complexity.UserSyncAuditLogList.Nodes(childComplexity), true
-
-	case "UserSyncAuditLogList.pageInfo":
-		if e.complexity.UserSyncAuditLogList.PageInfo == nil {
-			break
-		}
-
-		return e.complexity.UserSyncAuditLogList.PageInfo(childComplexity), true
 
 	case "UserSyncRun.auditLogs":
 		if e.complexity.UserSyncRun.AuditLogs == nil {
@@ -1755,6 +1741,11 @@ type AuditLog {
 
     "Creation time of the log entry."
     createdAt: Time!
+}
+
+type AuditLogList {
+    nodes: [AuditLog!]!
+    pageInfo: PageInfo!
 }`, BuiltIn: false},
 	{Name: "../../../graphql/authentication.graphqls", Input: `extend type Query {
     "The currently authenticated user."
@@ -1938,7 +1929,7 @@ type Reconciler {
     runOrder: Int!
 
     "Audit logs for this reconciler."
-    auditLogs: [AuditLog!]! @admin
+    auditLogs(offset: Int, limit: Int): AuditLogList! @admin
 }
 
 "Reconciler configuration type."
@@ -2288,7 +2279,7 @@ type Team @key(fields: "id") {
   purpose: String!
 
   "Audit logs for this team."
-  auditLogs(limit: Int, offset: Int): TeamAuditLogList!
+  auditLogs(limit: Int, offset: Int): AuditLogList!
 
   "Team members."
   members(offset: Int, limit: Int): TeamMemberList!
@@ -2435,11 +2426,6 @@ type TeamMemberReconciler {
   enabled: Boolean!
 }
 
-type TeamAuditLogList {
-  nodes: [AuditLog!]!
-  pageInfo: PageInfo!
-}
-
 "Input for creating a new team."
 input CreateTeamInput {
   "Team slug. After creation, this value can not be changed."
@@ -2533,7 +2519,7 @@ type UserSyncRun {
   finishedAt: Time
 
   "Log entries for the sync run."
-  auditLogs(limit: Int, offset: Int): UserSyncAuditLogList!
+  auditLogs(limit: Int, offset: Int): AuditLogList!
 
   "The status of the sync run."
   status: UserSyncRunStatus!
@@ -2577,11 +2563,6 @@ type User {
 
 type UserList {
   nodes: [User!]!
-  pageInfo: PageInfo!
-}
-
-type UserSyncAuditLogList {
-  nodes: [AuditLog!]!
   pageInfo: PageInfo!
 }
 
@@ -3398,6 +3379,30 @@ func (ec *executionContext) field_Query_users_args(ctx context.Context, rawArgs 
 	return args, nil
 }
 
+func (ec *executionContext) field_Reconciler_auditLogs_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *int
+	if tmp, ok := rawArgs["offset"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("offset"))
+		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["offset"] = arg0
+	var arg1 *int
+	if tmp, ok := rawArgs["limit"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
+		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["limit"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Team_auditLogs_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -3920,6 +3925,122 @@ func (ec *executionContext) fieldContext_AuditLog_createdAt(ctx context.Context,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _AuditLogList_nodes(ctx context.Context, field graphql.CollectedField, obj *model.AuditLogList) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_AuditLogList_nodes(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Nodes, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*db.AuditLog)
+	fc.Result = res
+	return ec.marshalNAuditLog2ᚕᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋdbᚐAuditLogᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_AuditLogList_nodes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AuditLogList",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_AuditLog_id(ctx, field)
+			case "action":
+				return ec.fieldContext_AuditLog_action(ctx, field)
+			case "componentName":
+				return ec.fieldContext_AuditLog_componentName(ctx, field)
+			case "correlationID":
+				return ec.fieldContext_AuditLog_correlationID(ctx, field)
+			case "actor":
+				return ec.fieldContext_AuditLog_actor(ctx, field)
+			case "targetType":
+				return ec.fieldContext_AuditLog_targetType(ctx, field)
+			case "targetIdentifier":
+				return ec.fieldContext_AuditLog_targetIdentifier(ctx, field)
+			case "message":
+				return ec.fieldContext_AuditLog_message(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_AuditLog_createdAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type AuditLog", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _AuditLogList_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.AuditLogList) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_AuditLogList_pageInfo(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PageInfo, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.PageInfo)
+	fc.Result = res
+	return ec.marshalNPageInfo2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐPageInfo(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_AuditLogList_pageInfo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AuditLogList",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "totalCount":
+				return ec.fieldContext_PageInfo_totalCount(ctx, field)
+			case "hasNextPage":
+				return ec.fieldContext_PageInfo_hasNextPage(ctx, field)
+			case "hasPreviousPage":
+				return ec.fieldContext_PageInfo_hasPreviousPage(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
 		},
 	}
 	return fc, nil
@@ -8470,7 +8591,7 @@ func (ec *executionContext) _Reconciler_auditLogs(ctx context.Context, field gra
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Reconciler().AuditLogs(rctx, obj)
+			return ec.resolvers.Reconciler().AuditLogs(rctx, obj, fc.Args["offset"].(*int), fc.Args["limit"].(*int))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Admin == nil {
@@ -8486,10 +8607,10 @@ func (ec *executionContext) _Reconciler_auditLogs(ctx context.Context, field gra
 		if tmp == nil {
 			return nil, nil
 		}
-		if data, ok := tmp.([]*db.AuditLog); ok {
+		if data, ok := tmp.(*model.AuditLogList); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/nais/teams-backend/pkg/db.AuditLog`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/teams-backend/pkg/graph/model.AuditLogList`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -8501,9 +8622,9 @@ func (ec *executionContext) _Reconciler_auditLogs(ctx context.Context, field gra
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*db.AuditLog)
+	res := resTmp.(*model.AuditLogList)
 	fc.Result = res
-	return ec.marshalNAuditLog2ᚕᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋdbᚐAuditLogᚄ(ctx, field.Selections, res)
+	return ec.marshalNAuditLogList2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐAuditLogList(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Reconciler_auditLogs(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -8514,27 +8635,24 @@ func (ec *executionContext) fieldContext_Reconciler_auditLogs(ctx context.Contex
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_AuditLog_id(ctx, field)
-			case "action":
-				return ec.fieldContext_AuditLog_action(ctx, field)
-			case "componentName":
-				return ec.fieldContext_AuditLog_componentName(ctx, field)
-			case "correlationID":
-				return ec.fieldContext_AuditLog_correlationID(ctx, field)
-			case "actor":
-				return ec.fieldContext_AuditLog_actor(ctx, field)
-			case "targetType":
-				return ec.fieldContext_AuditLog_targetType(ctx, field)
-			case "targetIdentifier":
-				return ec.fieldContext_AuditLog_targetIdentifier(ctx, field)
-			case "message":
-				return ec.fieldContext_AuditLog_message(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_AuditLog_createdAt(ctx, field)
+			case "nodes":
+				return ec.fieldContext_AuditLogList_nodes(ctx, field)
+			case "pageInfo":
+				return ec.fieldContext_AuditLogList_pageInfo(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type AuditLog", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type AuditLogList", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Reconciler_auditLogs_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -9797,9 +9915,9 @@ func (ec *executionContext) _Team_auditLogs(ctx context.Context, field graphql.C
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.TeamAuditLogList)
+	res := resTmp.(*model.AuditLogList)
 	fc.Result = res
-	return ec.marshalNTeamAuditLogList2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐTeamAuditLogList(ctx, field.Selections, res)
+	return ec.marshalNAuditLogList2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐAuditLogList(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Team_auditLogs(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -9811,11 +9929,11 @@ func (ec *executionContext) fieldContext_Team_auditLogs(ctx context.Context, fie
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "nodes":
-				return ec.fieldContext_TeamAuditLogList_nodes(ctx, field)
+				return ec.fieldContext_AuditLogList_nodes(ctx, field)
 			case "pageInfo":
-				return ec.fieldContext_TeamAuditLogList_pageInfo(ctx, field)
+				return ec.fieldContext_AuditLogList_pageInfo(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type TeamAuditLogList", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type AuditLogList", field.Name)
 		},
 	}
 	defer func() {
@@ -10276,122 +10394,6 @@ func (ec *executionContext) fieldContext_Team_deployKey(ctx context.Context, fie
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type DeployKey does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _TeamAuditLogList_nodes(ctx context.Context, field graphql.CollectedField, obj *model.TeamAuditLogList) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_TeamAuditLogList_nodes(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Nodes, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*db.AuditLog)
-	fc.Result = res
-	return ec.marshalNAuditLog2ᚕᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋdbᚐAuditLogᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_TeamAuditLogList_nodes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TeamAuditLogList",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_AuditLog_id(ctx, field)
-			case "action":
-				return ec.fieldContext_AuditLog_action(ctx, field)
-			case "componentName":
-				return ec.fieldContext_AuditLog_componentName(ctx, field)
-			case "correlationID":
-				return ec.fieldContext_AuditLog_correlationID(ctx, field)
-			case "actor":
-				return ec.fieldContext_AuditLog_actor(ctx, field)
-			case "targetType":
-				return ec.fieldContext_AuditLog_targetType(ctx, field)
-			case "targetIdentifier":
-				return ec.fieldContext_AuditLog_targetIdentifier(ctx, field)
-			case "message":
-				return ec.fieldContext_AuditLog_message(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_AuditLog_createdAt(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type AuditLog", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _TeamAuditLogList_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.TeamAuditLogList) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_TeamAuditLogList_pageInfo(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.PageInfo, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.PageInfo)
-	fc.Result = res
-	return ec.marshalNPageInfo2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐPageInfo(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_TeamAuditLogList_pageInfo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TeamAuditLogList",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "totalCount":
-				return ec.fieldContext_PageInfo_totalCount(ctx, field)
-			case "hasNextPage":
-				return ec.fieldContext_PageInfo_hasNextPage(ctx, field)
-			case "hasPreviousPage":
-				return ec.fieldContext_PageInfo_hasPreviousPage(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
 		},
 	}
 	return fc, nil
@@ -11710,122 +11712,6 @@ func (ec *executionContext) fieldContext_UserList_pageInfo(ctx context.Context, 
 	return fc, nil
 }
 
-func (ec *executionContext) _UserSyncAuditLogList_nodes(ctx context.Context, field graphql.CollectedField, obj *model.UserSyncAuditLogList) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_UserSyncAuditLogList_nodes(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Nodes, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*db.AuditLog)
-	fc.Result = res
-	return ec.marshalNAuditLog2ᚕᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋdbᚐAuditLogᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_UserSyncAuditLogList_nodes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "UserSyncAuditLogList",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_AuditLog_id(ctx, field)
-			case "action":
-				return ec.fieldContext_AuditLog_action(ctx, field)
-			case "componentName":
-				return ec.fieldContext_AuditLog_componentName(ctx, field)
-			case "correlationID":
-				return ec.fieldContext_AuditLog_correlationID(ctx, field)
-			case "actor":
-				return ec.fieldContext_AuditLog_actor(ctx, field)
-			case "targetType":
-				return ec.fieldContext_AuditLog_targetType(ctx, field)
-			case "targetIdentifier":
-				return ec.fieldContext_AuditLog_targetIdentifier(ctx, field)
-			case "message":
-				return ec.fieldContext_AuditLog_message(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_AuditLog_createdAt(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type AuditLog", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _UserSyncAuditLogList_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.UserSyncAuditLogList) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_UserSyncAuditLogList_pageInfo(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.PageInfo, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.PageInfo)
-	fc.Result = res
-	return ec.marshalNPageInfo2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐPageInfo(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_UserSyncAuditLogList_pageInfo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "UserSyncAuditLogList",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "totalCount":
-				return ec.fieldContext_PageInfo_totalCount(ctx, field)
-			case "hasNextPage":
-				return ec.fieldContext_PageInfo_hasNextPage(ctx, field)
-			case "hasPreviousPage":
-				return ec.fieldContext_PageInfo_hasPreviousPage(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _UserSyncRun_correlationID(ctx context.Context, field graphql.CollectedField, obj *usersync.Run) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_UserSyncRun_correlationID(ctx, field)
 	if err != nil {
@@ -11981,9 +11867,9 @@ func (ec *executionContext) _UserSyncRun_auditLogs(ctx context.Context, field gr
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.UserSyncAuditLogList)
+	res := resTmp.(*model.AuditLogList)
 	fc.Result = res
-	return ec.marshalNUserSyncAuditLogList2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐUserSyncAuditLogList(ctx, field.Selections, res)
+	return ec.marshalNAuditLogList2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐAuditLogList(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_UserSyncRun_auditLogs(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -11995,11 +11881,11 @@ func (ec *executionContext) fieldContext_UserSyncRun_auditLogs(ctx context.Conte
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "nodes":
-				return ec.fieldContext_UserSyncAuditLogList_nodes(ctx, field)
+				return ec.fieldContext_AuditLogList_nodes(ctx, field)
 			case "pageInfo":
-				return ec.fieldContext_UserSyncAuditLogList_pageInfo(ctx, field)
+				return ec.fieldContext_AuditLogList_pageInfo(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type UserSyncAuditLogList", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type AuditLogList", field.Name)
 		},
 	}
 	defer func() {
@@ -14413,6 +14299,50 @@ func (ec *executionContext) _AuditLog(ctx context.Context, sel ast.SelectionSet,
 	return out
 }
 
+var auditLogListImplementors = []string{"AuditLogList"}
+
+func (ec *executionContext) _AuditLogList(ctx context.Context, sel ast.SelectionSet, obj *model.AuditLogList) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, auditLogListImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("AuditLogList")
+		case "nodes":
+			out.Values[i] = ec._AuditLogList_nodes(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "pageInfo":
+			out.Values[i] = ec._AuditLogList_pageInfo(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var entityImplementors = []string{"Entity"}
 
 func (ec *executionContext) _Entity(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -16211,50 +16141,6 @@ func (ec *executionContext) _Team(ctx context.Context, sel ast.SelectionSet, obj
 	return out
 }
 
-var teamAuditLogListImplementors = []string{"TeamAuditLogList"}
-
-func (ec *executionContext) _TeamAuditLogList(ctx context.Context, sel ast.SelectionSet, obj *model.TeamAuditLogList) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, teamAuditLogListImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("TeamAuditLogList")
-		case "nodes":
-			out.Values[i] = ec._TeamAuditLogList_nodes(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "pageInfo":
-			out.Values[i] = ec._TeamAuditLogList_pageInfo(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
 var teamDeleteKeyImplementors = []string{"TeamDeleteKey"}
 
 func (ec *executionContext) _TeamDeleteKey(ctx context.Context, sel ast.SelectionSet, obj *db.TeamDeleteKey) graphql.Marshaler {
@@ -16996,50 +16882,6 @@ func (ec *executionContext) _UserList(ctx context.Context, sel ast.SelectionSet,
 	return out
 }
 
-var userSyncAuditLogListImplementors = []string{"UserSyncAuditLogList"}
-
-func (ec *executionContext) _UserSyncAuditLogList(ctx context.Context, sel ast.SelectionSet, obj *model.UserSyncAuditLogList) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, userSyncAuditLogListImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("UserSyncAuditLogList")
-		case "nodes":
-			out.Values[i] = ec._UserSyncAuditLogList_nodes(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "pageInfo":
-			out.Values[i] = ec._UserSyncAuditLogList_pageInfo(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
 var userSyncRunImplementors = []string{"UserSyncRun"}
 
 func (ec *executionContext) _UserSyncRun(ctx context.Context, sel ast.SelectionSet, obj *usersync.Run) graphql.Marshaler {
@@ -17621,6 +17463,20 @@ func (ec *executionContext) marshalNAuditLog2ᚖgithubᚗcomᚋnaisᚋteamsᚑba
 		return graphql.Null
 	}
 	return ec._AuditLog(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNAuditLogList2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐAuditLogList(ctx context.Context, sel ast.SelectionSet, v model.AuditLogList) graphql.Marshaler {
+	return ec._AuditLogList(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNAuditLogList2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐAuditLogList(ctx context.Context, sel ast.SelectionSet, v *model.AuditLogList) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._AuditLogList(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNAuditLogsTargetType2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋtypesᚐAuditLogsTargetType(ctx context.Context, v interface{}) (types.AuditLogsTargetType, error) {
@@ -18546,20 +18402,6 @@ func (ec *executionContext) marshalNTeam2ᚖgithubᚗcomᚋnaisᚋteamsᚑbacken
 	return ec._Team(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNTeamAuditLogList2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐTeamAuditLogList(ctx context.Context, sel ast.SelectionSet, v model.TeamAuditLogList) graphql.Marshaler {
-	return ec._TeamAuditLogList(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNTeamAuditLogList2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐTeamAuditLogList(ctx context.Context, sel ast.SelectionSet, v *model.TeamAuditLogList) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._TeamAuditLogList(ctx, sel, v)
-}
-
 func (ec *executionContext) marshalNTeamDeleteKey2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋdbᚐTeamDeleteKey(ctx context.Context, sel ast.SelectionSet, v db.TeamDeleteKey) graphql.Marshaler {
 	return ec._TeamDeleteKey(ctx, sel, &v)
 }
@@ -18915,20 +18757,6 @@ func (ec *executionContext) marshalNUserList2ᚖgithubᚗcomᚋnaisᚋteamsᚑba
 		return graphql.Null
 	}
 	return ec._UserList(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalNUserSyncAuditLogList2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐUserSyncAuditLogList(ctx context.Context, sel ast.SelectionSet, v model.UserSyncAuditLogList) graphql.Marshaler {
-	return ec._UserSyncAuditLogList(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNUserSyncAuditLogList2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐUserSyncAuditLogList(ctx context.Context, sel ast.SelectionSet, v *model.UserSyncAuditLogList) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._UserSyncAuditLogList(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNUserSyncRun2ᚕᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋusersyncᚐRunᚄ(ctx context.Context, sel ast.SelectionSet, v []*usersync.Run) graphql.Marshaler {

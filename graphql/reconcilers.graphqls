@@ -91,7 +91,7 @@ type Reconciler {
     runOrder: Int!
 
     "Audit logs for this reconciler."
-    auditLogs: [AuditLog!]! @admin
+    auditLogs(offset: Int, limit: Int): AuditLogList! @admin
 }
 
 "Reconciler configuration type."

@@ -25,4 +25,8 @@ where correlation_id = $1;
 SELECT * FROM audit_logs
 WHERE target_type = 'reconciler' AND target_identifier = $1
 ORDER BY created_at DESC
-LIMIT 100;
+LIMIT $2 OFFSET $3;
+
+-- name: GetAuditLogsForReconcilerCount :one
+SELECT COUNT(*) FROM audit_logs
+WHERE target_type = 'reconciler' AND target_identifier = $1;

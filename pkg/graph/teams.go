@@ -896,7 +896,7 @@ func (r *teamResolver) ID(ctx context.Context, obj *db.Team) (string, error) {
 }
 
 // AuditLogs is the resolver for the auditLogs field.
-func (r *teamResolver) AuditLogs(ctx context.Context, obj *db.Team, limit *int, offset *int) (*model.TeamAuditLogList, error) {
+func (r *teamResolver) AuditLogs(ctx context.Context, obj *db.Team, limit *int, offset *int) (*model.AuditLogList, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationAuditLogsRead, obj.Slug)
 	if err != nil {
@@ -908,7 +908,7 @@ func (r *teamResolver) AuditLogs(ctx context.Context, obj *db.Team, limit *int, 
 	if err != nil {
 		return nil, err
 	}
-	return &model.TeamAuditLogList{
+	return &model.AuditLogList{
 		Nodes: entries,
 		PageInfo: &model.PageInfo{
 			TotalCount:      total,
@@ -1218,10 +1218,8 @@ func (r *Resolver) TeamMemberReconciler() generated.TeamMemberReconcilerResolver
 	return &teamMemberReconcilerResolver{r}
 }
 
-type (
-	gitHubRepositoryResolver     struct{ *Resolver }
-	teamResolver                 struct{ *Resolver }
-	teamDeleteKeyResolver        struct{ *Resolver }
-	teamMemberResolver           struct{ *Resolver }
-	teamMemberReconcilerResolver struct{ *Resolver }
-)
+type gitHubRepositoryResolver struct{ *Resolver }
+type teamResolver struct{ *Resolver }
+type teamDeleteKeyResolver struct{ *Resolver }
+type teamMemberResolver struct{ *Resolver }
+type teamMemberReconcilerResolver struct{ *Resolver }

@@ -14,6 +14,11 @@ import (
 	"github.com/nais/teams-backend/pkg/sqlc"
 )
 
+type AuditLogList struct {
+	Nodes    []*db.AuditLog `json:"nodes"`
+	PageInfo *PageInfo      `json:"pageInfo"`
+}
+
 // Input for creating a new team.
 type CreateTeamInput struct {
 	// Team slug. After creation, this value can not be changed.
@@ -100,11 +105,6 @@ type SyncError struct {
 	Error string `json:"error"`
 }
 
-type TeamAuditLogList struct {
-	Nodes    []*db.AuditLog `json:"nodes"`
-	PageInfo *PageInfo      `json:"pageInfo"`
-}
-
 // Team member input.
 type TeamMemberInput struct {
 	// The ID of user.
@@ -155,11 +155,6 @@ type UpdateTeamInput struct {
 type UserList struct {
 	Nodes    []*db.User `json:"nodes"`
 	PageInfo *PageInfo  `json:"pageInfo"`
-}
-
-type UserSyncAuditLogList struct {
-	Nodes    []*db.AuditLog `json:"nodes"`
-	PageInfo *PageInfo      `json:"pageInfo"`
 }
 
 // Repository authorizations.

@@ -169,13 +169,13 @@ func (r *userResolver) Roles(ctx context.Context, obj *db.User) ([]*db.Role, err
 }
 
 // AuditLogs is the resolver for the auditLogs field.
-func (r *userSyncRunResolver) AuditLogs(ctx context.Context, obj *usersync.Run, limit *int, offset *int) (*model.UserSyncAuditLogList, error) {
+func (r *userSyncRunResolver) AuditLogs(ctx context.Context, obj *usersync.Run, limit *int, offset *int) (*model.AuditLogList, error) {
 	off, lim := defaultOffsetLimit(offset, limit)
 	entries, total, err := r.database.GetAuditLogsForCorrelationID(ctx, obj.CorrelationID(), off, lim)
 	if err != nil {
 		return nil, err
 	}
-	return &model.UserSyncAuditLogList{
+	return &model.AuditLogList{
 		Nodes: entries,
 		PageInfo: &model.PageInfo{
 			TotalCount:      total,
@@ -214,7 +214,5 @@ func (r *Resolver) User() generated.UserResolver { return &userResolver{r} }
 // UserSyncRun returns generated.UserSyncRunResolver implementation.
 func (r *Resolver) UserSyncRun() generated.UserSyncRunResolver { return &userSyncRunResolver{r} }
 
-type (
-	userResolver        struct{ *Resolver }
-	userSyncRunResolver struct{ *Resolver }
-)
+type userResolver struct{ *Resolver }
+type userSyncRunResolver struct{ *Resolver }

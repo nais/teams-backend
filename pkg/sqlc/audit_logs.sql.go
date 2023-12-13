@@ -97,11 +97,17 @@ const getAuditLogsForReconciler = `-- name: GetAuditLogsForReconciler :many
 SELECT id, created_at, correlation_id, component_name, actor, action, message, target_type, target_identifier FROM audit_logs
 WHERE target_type = 'reconciler' AND target_identifier = $1
 ORDER BY created_at DESC
-LIMIT 100
+LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) GetAuditLogsForReconciler(ctx context.Context, targetIdentifier string) ([]*AuditLog, error) {
-	rows, err := q.db.Query(ctx, getAuditLogsForReconciler, targetIdentifier)
+type GetAuditLogsForReconcilerParams struct {
+	TargetIdentifier string
+	Limit            int32
+	Offset           int32
+}
+
+func (q *Queries) GetAuditLogsForReconciler(ctx context.Context, arg GetAuditLogsForReconcilerParams) ([]*AuditLog, error) {
+	rows, err := q.db.Query(ctx, getAuditLogsForReconciler, arg.TargetIdentifier, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -128,6 +134,18 @@ func (q *Queries) GetAuditLogsForReconciler(ctx context.Context, targetIdentifie
 		return nil, err
 	}
 	return items, nil
+}
+
+const getAuditLogsForReconcilerCount = `-- name: GetAuditLogsForReconcilerCount :one
+SELECT COUNT(*) FROM audit_logs
+WHERE target_type = 'reconciler' AND target_identifier = $1
+`
+
+func (q *Queries) GetAuditLogsForReconcilerCount(ctx context.Context, targetIdentifier string) (int64, error) {
+	row := q.db.QueryRow(ctx, getAuditLogsForReconcilerCount, targetIdentifier)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const getAuditLogsForTeam = `-- name: GetAuditLogsForTeam :many

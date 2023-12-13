@@ -33,17 +33,27 @@ func (d *database) GetAuditLogsForTeam(ctx context.Context, slug slug.Slug, offs
 	return entries, int(total), nil
 }
 
-func (d *database) GetAuditLogsForReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) ([]*AuditLog, error) {
-	rows, err := d.querier.GetAuditLogsForReconciler(ctx, string(reconcilerName))
+func (d *database) GetAuditLogsForReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName, offset, limit int) ([]*AuditLog, int, error) {
+	rows, err := d.querier.GetAuditLogsForReconciler(ctx, sqlc.GetAuditLogsForReconcilerParams{
+		TargetIdentifier: string(reconcilerName),
+		Offset:           int32(offset),
+		Limit:            int32(limit),
+	})
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	entries := make([]*AuditLog, 0, len(rows))
 	for _, row := range rows {
 		entries = append(entries, &AuditLog{AuditLog: row})
 	}
-	return entries, nil
+
+	total, err := d.querier.GetAuditLogsForReconcilerCount(ctx, string(reconcilerName))
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return entries, int(total), nil
 }
 
 func (d *database) CreateAuditLogEntry(ctx context.Context, correlationID uuid.UUID, componentName types.ComponentName, actor *string, targetType types.AuditLogsTargetType, targetIdentifier string, action types.AuditAction, message string) error {
