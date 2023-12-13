@@ -932,9 +932,9 @@ func (r *teamResolver) Members(ctx context.Context, obj *db.Team, offset *int, l
 	return &model.TeamMemberList{
 		Nodes: members,
 		PageInfo: &model.PageInfo{
-			HasNextPage: total > off+lim,
+			HasNextPage:     total > off+lim,
 			HasPreviousPage: off > 0,
-			TotalCount: total,
+			TotalCount:      total,
 		},
 	}, nil
 }
@@ -1206,8 +1206,10 @@ func (r *Resolver) TeamMemberReconciler() generated.TeamMemberReconcilerResolver
 	return &teamMemberReconcilerResolver{r}
 }
 
-type gitHubRepositoryResolver struct{ *Resolver }
-type teamResolver struct{ *Resolver }
-type teamDeleteKeyResolver struct{ *Resolver }
-type teamMemberResolver struct{ *Resolver }
-type teamMemberReconcilerResolver struct{ *Resolver }
+type (
+	gitHubRepositoryResolver     struct{ *Resolver }
+	teamResolver                 struct{ *Resolver }
+	teamDeleteKeyResolver        struct{ *Resolver }
+	teamMemberResolver           struct{ *Resolver }
+	teamMemberReconcilerResolver struct{ *Resolver }
+)

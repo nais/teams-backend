@@ -34,5 +34,7 @@ func (r *Resolver) Role() generated.RoleResolver { return &roleResolver{r} }
 // TeamsInternal returns generated.TeamsInternalResolver implementation.
 func (r *Resolver) TeamsInternal() generated.TeamsInternalResolver { return &teamsInternalResolver{r} }
 
-type roleResolver struct{ *Resolver }
-type teamsInternalResolver struct{ *Resolver }
+type (
+	roleResolver          struct{ *Resolver }
+	teamsInternalResolver struct{ *Resolver }
+)

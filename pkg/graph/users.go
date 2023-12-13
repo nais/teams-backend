@@ -216,5 +216,7 @@ func (r *Resolver) User() generated.UserResolver { return &userResolver{r} }
 // UserSyncRun returns generated.UserSyncRunResolver implementation.
 func (r *Resolver) UserSyncRun() generated.UserSyncRunResolver { return &userSyncRunResolver{r} }
 
-type userResolver struct{ *Resolver }
-type userSyncRunResolver struct{ *Resolver }
+type (
+	userResolver        struct{ *Resolver }
+	userSyncRunResolver struct{ *Resolver }
+)
