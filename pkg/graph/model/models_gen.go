@@ -100,6 +100,11 @@ type SyncError struct {
 	Error string `json:"error"`
 }
 
+type TeamAuditLogList struct {
+	Nodes    []*db.AuditLog `json:"nodes"`
+	PageInfo *PageInfo      `json:"pageInfo"`
+}
+
 // Team member input.
 type TeamMemberInput struct {
 	// The ID of user.

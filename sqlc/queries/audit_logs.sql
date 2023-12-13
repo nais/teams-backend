@@ -6,7 +6,11 @@ VALUES ($1, $2, $3, $4, $5, $6, $7);
 SELECT * FROM audit_logs
 WHERE target_type = 'team' AND target_identifier = $1
 ORDER BY created_at DESC
-LIMIT 100;
+LIMIT $2 OFFSET $3;
+
+-- name: GetAuditLogsForTeamCount :one
+SELECT COUNT(*) FROM audit_logs
+WHERE target_type = 'team' AND target_identifier = $1;
 
 -- name: GetAuditLogsForCorrelationID :many
 SELECT * FROM audit_logs
@@ -14,7 +18,7 @@ WHERE correlation_id = $1
 ORDER BY created_at DESC LIMIT $2 OFFSET $3;
 
 -- name: GetAuditLogsForCorrelationIDCount :one
-select count(*) from audit_logs
+select COUNT(*) from audit_logs
 where correlation_id = $1;
 
 -- name: GetAuditLogsForReconciler :many

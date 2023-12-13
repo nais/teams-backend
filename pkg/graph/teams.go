@@ -896,14 +896,26 @@ func (r *teamResolver) ID(ctx context.Context, obj *db.Team) (string, error) {
 }
 
 // AuditLogs is the resolver for the auditLogs field.
-func (r *teamResolver) AuditLogs(ctx context.Context, obj *db.Team) ([]*db.AuditLog, error) {
+func (r *teamResolver) AuditLogs(ctx context.Context, obj *db.Team, limit *int, offset *int) (*model.TeamAuditLogList, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationAuditLogsRead, obj.Slug)
 	if err != nil {
 		return nil, err
 	}
 
-	return r.database.GetAuditLogsForTeam(ctx, obj.Slug)
+	off, lim := defaultOffsetLimit(offset, limit)
+	entries, total, err := r.database.GetAuditLogsForTeam(ctx, obj.Slug, off, lim)
+	if err != nil {
+		return nil, err
+	}
+	return &model.TeamAuditLogList{
+		Nodes: entries,
+		PageInfo: &model.PageInfo{
+			TotalCount:      total,
+			HasPreviousPage: off > 0,
+			HasNextPage:     off+lim < len(entries),
+		},
+	}, nil
 }
 
 // Members is the resolver for the members field.

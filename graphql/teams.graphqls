@@ -255,7 +255,7 @@ type Team @key(fields: "id") {
   purpose: String!
 
   "Audit logs for this team."
-  auditLogs: [AuditLog!]!
+  auditLogs(limit: Int, offset: Int): TeamAuditLogList!
 
   "Team members."
   members(offset: Int, limit: Int): TeamMemberList!
@@ -400,6 +400,11 @@ type TeamMemberReconciler {
 
   "Whether or not the reconciler is enabled for the team member."
   enabled: Boolean!
+}
+
+type TeamAuditLogList {
+  nodes: [AuditLog!]!
+  pageInfo: PageInfo!
 }
 
 "Input for creating a new team."

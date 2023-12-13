@@ -82,7 +82,7 @@ func (q *Queries) GetAuditLogsForCorrelationID(ctx context.Context, arg GetAudit
 }
 
 const getAuditLogsForCorrelationIDCount = `-- name: GetAuditLogsForCorrelationIDCount :one
-select count(*) from audit_logs
+select COUNT(*) from audit_logs
 where correlation_id = $1
 `
 
@@ -134,11 +134,17 @@ const getAuditLogsForTeam = `-- name: GetAuditLogsForTeam :many
 SELECT id, created_at, correlation_id, component_name, actor, action, message, target_type, target_identifier FROM audit_logs
 WHERE target_type = 'team' AND target_identifier = $1
 ORDER BY created_at DESC
-LIMIT 100
+LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) GetAuditLogsForTeam(ctx context.Context, targetIdentifier string) ([]*AuditLog, error) {
-	rows, err := q.db.Query(ctx, getAuditLogsForTeam, targetIdentifier)
+type GetAuditLogsForTeamParams struct {
+	TargetIdentifier string
+	Limit            int32
+	Offset           int32
+}
+
+func (q *Queries) GetAuditLogsForTeam(ctx context.Context, arg GetAuditLogsForTeamParams) ([]*AuditLog, error) {
+	rows, err := q.db.Query(ctx, getAuditLogsForTeam, arg.TargetIdentifier, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -165,4 +171,16 @@ func (q *Queries) GetAuditLogsForTeam(ctx context.Context, targetIdentifier stri
 		return nil, err
 	}
 	return items, nil
+}
+
+const getAuditLogsForTeamCount = `-- name: GetAuditLogsForTeamCount :one
+SELECT COUNT(*) FROM audit_logs
+WHERE target_type = 'team' AND target_identifier = $1
+`
+
+func (q *Queries) GetAuditLogsForTeamCount(ctx context.Context, targetIdentifier string) (int64, error) {
+	row := q.db.QueryRow(ctx, getAuditLogsForTeamCount, targetIdentifier)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }

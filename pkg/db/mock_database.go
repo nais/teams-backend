@@ -1635,30 +1635,37 @@ func (_c *MockDatabase_GetAuditLogsForReconciler_Call) RunAndReturn(run func(con
 	return _c
 }
 
-// GetAuditLogsForTeam provides a mock function with given fields: ctx, _a1
-func (_m *MockDatabase) GetAuditLogsForTeam(ctx context.Context, _a1 slug.Slug) ([]*AuditLog, error) {
-	ret := _m.Called(ctx, _a1)
+// GetAuditLogsForTeam provides a mock function with given fields: ctx, _a1, offset, limit
+func (_m *MockDatabase) GetAuditLogsForTeam(ctx context.Context, _a1 slug.Slug, offset int, limit int) ([]*AuditLog, int, error) {
+	ret := _m.Called(ctx, _a1, offset, limit)
 
 	var r0 []*AuditLog
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug) ([]*AuditLog, error)); ok {
-		return rf(ctx, _a1)
+	var r1 int
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug, int, int) ([]*AuditLog, int, error)); ok {
+		return rf(ctx, _a1, offset, limit)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug) []*AuditLog); ok {
-		r0 = rf(ctx, _a1)
+	if rf, ok := ret.Get(0).(func(context.Context, slug.Slug, int, int) []*AuditLog); ok {
+		r0 = rf(ctx, _a1, offset, limit)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*AuditLog)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug) error); ok {
-		r1 = rf(ctx, _a1)
+	if rf, ok := ret.Get(1).(func(context.Context, slug.Slug, int, int) int); ok {
+		r1 = rf(ctx, _a1, offset, limit)
 	} else {
-		r1 = ret.Error(1)
+		r1 = ret.Get(1).(int)
 	}
 
-	return r0, r1
+	if rf, ok := ret.Get(2).(func(context.Context, slug.Slug, int, int) error); ok {
+		r2 = rf(ctx, _a1, offset, limit)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // MockDatabase_GetAuditLogsForTeam_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAuditLogsForTeam'
@@ -1669,23 +1676,25 @@ type MockDatabase_GetAuditLogsForTeam_Call struct {
 // GetAuditLogsForTeam is a helper method to define mock.On call
 //   - ctx context.Context
 //   - _a1 slug.Slug
-func (_e *MockDatabase_Expecter) GetAuditLogsForTeam(ctx interface{}, _a1 interface{}) *MockDatabase_GetAuditLogsForTeam_Call {
-	return &MockDatabase_GetAuditLogsForTeam_Call{Call: _e.mock.On("GetAuditLogsForTeam", ctx, _a1)}
+//   - offset int
+//   - limit int
+func (_e *MockDatabase_Expecter) GetAuditLogsForTeam(ctx interface{}, _a1 interface{}, offset interface{}, limit interface{}) *MockDatabase_GetAuditLogsForTeam_Call {
+	return &MockDatabase_GetAuditLogsForTeam_Call{Call: _e.mock.On("GetAuditLogsForTeam", ctx, _a1, offset, limit)}
 }
 
-func (_c *MockDatabase_GetAuditLogsForTeam_Call) Run(run func(ctx context.Context, _a1 slug.Slug)) *MockDatabase_GetAuditLogsForTeam_Call {
+func (_c *MockDatabase_GetAuditLogsForTeam_Call) Run(run func(ctx context.Context, _a1 slug.Slug, offset int, limit int)) *MockDatabase_GetAuditLogsForTeam_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(slug.Slug))
+		run(args[0].(context.Context), args[1].(slug.Slug), args[2].(int), args[3].(int))
 	})
 	return _c
 }
 
-func (_c *MockDatabase_GetAuditLogsForTeam_Call) Return(_a0 []*AuditLog, _a1 error) *MockDatabase_GetAuditLogsForTeam_Call {
-	_c.Call.Return(_a0, _a1)
+func (_c *MockDatabase_GetAuditLogsForTeam_Call) Return(_a0 []*AuditLog, _a1 int, _a2 error) *MockDatabase_GetAuditLogsForTeam_Call {
+	_c.Call.Return(_a0, _a1, _a2)
 	return _c
 }
 
-func (_c *MockDatabase_GetAuditLogsForTeam_Call) RunAndReturn(run func(context.Context, slug.Slug) ([]*AuditLog, error)) *MockDatabase_GetAuditLogsForTeam_Call {
+func (_c *MockDatabase_GetAuditLogsForTeam_Call) RunAndReturn(run func(context.Context, slug.Slug, int, int) ([]*AuditLog, int, error)) *MockDatabase_GetAuditLogsForTeam_Call {
 	_c.Call.Return(run)
 	return _c
 }

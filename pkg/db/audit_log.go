@@ -10,17 +10,27 @@ import (
 	"github.com/nais/teams-backend/pkg/sqlc"
 )
 
-func (d *database) GetAuditLogsForTeam(ctx context.Context, slug slug.Slug) ([]*AuditLog, error) {
-	rows, err := d.querier.GetAuditLogsForTeam(ctx, string(slug))
+func (d *database) GetAuditLogsForTeam(ctx context.Context, slug slug.Slug, offset, limit int) ([]*AuditLog, int, error) {
+	rows, err := d.querier.GetAuditLogsForTeam(ctx, sqlc.GetAuditLogsForTeamParams{
+		TargetIdentifier: string(slug),
+		Offset:           int32(offset),
+		Limit:            int32(limit),
+	})
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	entries := make([]*AuditLog, 0, len(rows))
 	for _, row := range rows {
 		entries = append(entries, &AuditLog{AuditLog: row})
 	}
-	return entries, nil
+
+	total, err := d.querier.GetAuditLogsForTeamCount(ctx, string(slug))
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return entries, int(total), nil
 }
 
 func (d *database) GetAuditLogsForReconciler(ctx context.Context, reconcilerName sqlc.ReconcilerName) ([]*AuditLog, error) {
@@ -51,8 +61,8 @@ func (d *database) CreateAuditLogEntry(ctx context.Context, correlationID uuid.U
 func (d *database) GetAuditLogsForCorrelationID(ctx context.Context, correlationID uuid.UUID, offset, limit int) ([]*AuditLog, int, error) {
 	rows, err := d.querier.GetAuditLogsForCorrelationID(ctx, sqlc.GetAuditLogsForCorrelationIDParams{
 		CorrelationID: correlationID,
-		Offset: int32(offset),
-		Limit:  int32(limit),
+		Offset:        int32(offset),
+		Limit:         int32(limit),
 	})
 	if err != nil {
 		return nil, 0, err
@@ -63,6 +73,9 @@ func (d *database) GetAuditLogsForCorrelationID(ctx context.Context, correlation
 		entries[i] = &AuditLog{AuditLog: row}
 	}
 	total, err := d.querier.GetAuditLogsForCorrelationIDCount(ctx, correlationID)
+	if err != nil {
+		return nil, 0, err
+	}
 
 	return entries, int(total), nil
 }

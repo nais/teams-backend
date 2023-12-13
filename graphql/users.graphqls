@@ -82,6 +82,7 @@ type UserSyncAuditLogList {
   nodes: [AuditLog!]!
   pageInfo: PageInfo!
 }
+
 type TeamMemberList {
   nodes: [TeamMember!]!
   pageInfo: PageInfo!
