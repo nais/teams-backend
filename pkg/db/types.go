@@ -183,8 +183,8 @@ type Database interface {
 	ConfirmTeamDeleteKey(ctx context.Context, key uuid.UUID) error
 	DeleteTeam(ctx context.Context, teamSlug slug.Slug) error
 	GetAuditLogsForCorrelationID(ctx context.Context, correlationID uuid.UUID, offset, limit int) ([]*AuditLog, int, error)
-	AddReconcilerOptOut(ctx context.Context, userID uuid.UUID, teamSlug *slug.Slug, reconcilerName sqlc.ReconcilerName) error
-	RemoveReconcilerOptOut(ctx context.Context, userID uuid.UUID, teamSlug *slug.Slug, reconcilerName sqlc.ReconcilerName) error
+	AddReconcilerOptOut(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug, reconcilerName sqlc.ReconcilerName) error
+	RemoveReconcilerOptOut(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug, reconcilerName sqlc.ReconcilerName) error
 	GetTeamMembersForReconciler(ctx context.Context, teamSlug slug.Slug, reconcilerName sqlc.ReconcilerName) ([]*User, error)
 	GetTeamMemberOptOuts(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug) ([]*sqlc.GetTeamMemberOptOutsRow, error)
 	GetTeamsWithPermissionInGitHubRepo(ctx context.Context, repoName, permission string, offset, limit int) ([]*Team, int, error)

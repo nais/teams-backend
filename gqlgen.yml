@@ -101,9 +101,10 @@ models:
     model:
       - github.com/nais/teams-backend/pkg/sqlc.ReconcilerConfigKey
 
-  UUID:
+  ID:
     model:
       - github.com/nais/teams-backend/pkg/db.UUID
+      - github.com/nais/teams-backend/pkg/slug.Slug
 
   Int:
     model:

@@ -16,7 +16,7 @@ type Role {
   isGlobal: Boolean!
 
   "Optional service account ID if the role binding targets a service account."
-  targetServiceAccountID: UUID
+  targetServiceAccountID: ID
 
   "Optional team slug if the role binding targets a team."
   targetTeamSlug: Slug

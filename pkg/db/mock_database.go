@@ -29,11 +29,11 @@ func (_m *MockDatabase) EXPECT() *MockDatabase_Expecter {
 }
 
 // AddReconcilerOptOut provides a mock function with given fields: ctx, userID, teamSlug, reconcilerName
-func (_m *MockDatabase) AddReconcilerOptOut(ctx context.Context, userID uuid.UUID, teamSlug *slug.Slug, reconcilerName sqlc.ReconcilerName) error {
+func (_m *MockDatabase) AddReconcilerOptOut(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug, reconcilerName sqlc.ReconcilerName) error {
 	ret := _m.Called(ctx, userID, teamSlug, reconcilerName)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, *slug.Slug, sqlc.ReconcilerName) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, slug.Slug, sqlc.ReconcilerName) error); ok {
 		r0 = rf(ctx, userID, teamSlug, reconcilerName)
 	} else {
 		r0 = ret.Error(0)
@@ -50,15 +50,15 @@ type MockDatabase_AddReconcilerOptOut_Call struct {
 // AddReconcilerOptOut is a helper method to define mock.On call
 //   - ctx context.Context
 //   - userID uuid.UUID
-//   - teamSlug *slug.Slug
+//   - teamSlug slug.Slug
 //   - reconcilerName sqlc.ReconcilerName
 func (_e *MockDatabase_Expecter) AddReconcilerOptOut(ctx interface{}, userID interface{}, teamSlug interface{}, reconcilerName interface{}) *MockDatabase_AddReconcilerOptOut_Call {
 	return &MockDatabase_AddReconcilerOptOut_Call{Call: _e.mock.On("AddReconcilerOptOut", ctx, userID, teamSlug, reconcilerName)}
 }
 
-func (_c *MockDatabase_AddReconcilerOptOut_Call) Run(run func(ctx context.Context, userID uuid.UUID, teamSlug *slug.Slug, reconcilerName sqlc.ReconcilerName)) *MockDatabase_AddReconcilerOptOut_Call {
+func (_c *MockDatabase_AddReconcilerOptOut_Call) Run(run func(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug, reconcilerName sqlc.ReconcilerName)) *MockDatabase_AddReconcilerOptOut_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(*slug.Slug), args[3].(sqlc.ReconcilerName))
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(slug.Slug), args[3].(sqlc.ReconcilerName))
 	})
 	return _c
 }
@@ -68,7 +68,7 @@ func (_c *MockDatabase_AddReconcilerOptOut_Call) Return(_a0 error) *MockDatabase
 	return _c
 }
 
-func (_c *MockDatabase_AddReconcilerOptOut_Call) RunAndReturn(run func(context.Context, uuid.UUID, *slug.Slug, sqlc.ReconcilerName) error) *MockDatabase_AddReconcilerOptOut_Call {
+func (_c *MockDatabase_AddReconcilerOptOut_Call) RunAndReturn(run func(context.Context, uuid.UUID, slug.Slug, sqlc.ReconcilerName) error) *MockDatabase_AddReconcilerOptOut_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -3415,11 +3415,11 @@ func (_c *MockDatabase_RemoveApiKeysFromServiceAccount_Call) RunAndReturn(run fu
 }
 
 // RemoveReconcilerOptOut provides a mock function with given fields: ctx, userID, teamSlug, reconcilerName
-func (_m *MockDatabase) RemoveReconcilerOptOut(ctx context.Context, userID uuid.UUID, teamSlug *slug.Slug, reconcilerName sqlc.ReconcilerName) error {
+func (_m *MockDatabase) RemoveReconcilerOptOut(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug, reconcilerName sqlc.ReconcilerName) error {
 	ret := _m.Called(ctx, userID, teamSlug, reconcilerName)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, *slug.Slug, sqlc.ReconcilerName) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, slug.Slug, sqlc.ReconcilerName) error); ok {
 		r0 = rf(ctx, userID, teamSlug, reconcilerName)
 	} else {
 		r0 = ret.Error(0)
@@ -3436,15 +3436,15 @@ type MockDatabase_RemoveReconcilerOptOut_Call struct {
 // RemoveReconcilerOptOut is a helper method to define mock.On call
 //   - ctx context.Context
 //   - userID uuid.UUID
-//   - teamSlug *slug.Slug
+//   - teamSlug slug.Slug
 //   - reconcilerName sqlc.ReconcilerName
 func (_e *MockDatabase_Expecter) RemoveReconcilerOptOut(ctx interface{}, userID interface{}, teamSlug interface{}, reconcilerName interface{}) *MockDatabase_RemoveReconcilerOptOut_Call {
 	return &MockDatabase_RemoveReconcilerOptOut_Call{Call: _e.mock.On("RemoveReconcilerOptOut", ctx, userID, teamSlug, reconcilerName)}
 }
 
-func (_c *MockDatabase_RemoveReconcilerOptOut_Call) Run(run func(ctx context.Context, userID uuid.UUID, teamSlug *slug.Slug, reconcilerName sqlc.ReconcilerName)) *MockDatabase_RemoveReconcilerOptOut_Call {
+func (_c *MockDatabase_RemoveReconcilerOptOut_Call) Run(run func(ctx context.Context, userID uuid.UUID, teamSlug slug.Slug, reconcilerName sqlc.ReconcilerName)) *MockDatabase_RemoveReconcilerOptOut_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(*slug.Slug), args[3].(sqlc.ReconcilerName))
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(slug.Slug), args[3].(sqlc.ReconcilerName))
 	})
 	return _c
 }
@@ -3454,7 +3454,7 @@ func (_c *MockDatabase_RemoveReconcilerOptOut_Call) Return(_a0 error) *MockDatab
 	return _c
 }
 
-func (_c *MockDatabase_RemoveReconcilerOptOut_Call) RunAndReturn(run func(context.Context, uuid.UUID, *slug.Slug, sqlc.ReconcilerName) error) *MockDatabase_RemoveReconcilerOptOut_Call {
+func (_c *MockDatabase_RemoveReconcilerOptOut_Call) RunAndReturn(run func(context.Context, uuid.UUID, slug.Slug, sqlc.ReconcilerName) error) *MockDatabase_RemoveReconcilerOptOut_Call {
 	_c.Call.Return(run)
 	return _c
 }

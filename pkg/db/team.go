@@ -296,7 +296,7 @@ func (d *database) GetTeamsWithPermissionInGitHubRepo(ctx context.Context, repoN
 
 	teams := make([]*Team, 0)
 	for _, row := range rows {
-		teams = append(teams, &Team{row})
+		teams = append(teams, &Team{Team: row})
 	}
 
 	total, err := d.querier.GetTeamsWithPermissionInGitHubRepoCount(ctx, state)

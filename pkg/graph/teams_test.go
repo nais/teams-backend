@@ -77,7 +77,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			NewResolver(teamSyncHandler, database, deployProxy, tenantDomain, userSync, auditlogger.NewAuditLoggerForTesting(), gcpEnvironments, log, userSyncRuns).
 			Mutation().
 			CreateTeam(ctx, model.CreateTeamInput{
-				Slug:         &teamSlug,
+				Slug:         teamSlug,
 				Purpose:      "  ",
 				SlackChannel: slackChannel,
 			})
@@ -121,7 +121,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 			NewResolver(teamSyncHandler, database, deployProxy, tenantDomain, userSync, auditLogger, gcpEnvironments, log, userSyncRuns).
 			Mutation().
 			CreateTeam(ctx, model.CreateTeamInput{
-				Slug:         &teamSlug,
+				Slug:         teamSlug,
 				Purpose:      " some purpose ",
 				SlackChannel: slackChannel,
 			})
@@ -172,7 +172,7 @@ func TestMutationResolver_CreateTeam(t *testing.T) {
 		returnedTeam, err := graph.
 			NewResolver(teamSyncHandler, database, deployProxy, tenantDomain, userSync, auditLogger, gcpEnvironments, log, userSyncRuns).
 			Mutation().CreateTeam(saCtx, model.CreateTeamInput{
-			Slug:         &teamSlug,
+			Slug:         teamSlug,
 			Purpose:      " some purpose ",
 			SlackChannel: slackChannel,
 		})
@@ -216,7 +216,7 @@ func TestMutationResolver_RequestTeamDeletion(t *testing.T) {
 		}
 
 		ctx := authz.ContextWithActor(ctx, serviceAccount, []*db.Role{})
-		key, err := resolver.RequestTeamDeletion(ctx, &teamSlug)
+		key, err := resolver.RequestTeamDeletion(ctx, teamSlug)
 		assert.Nil(t, key)
 		assert.ErrorContains(t, err, "Service accounts are not allowed")
 	})
@@ -235,7 +235,7 @@ func TestMutationResolver_RequestTeamDeletion(t *testing.T) {
 		}
 		ctx := authz.ContextWithActor(ctx, user, []*db.Role{})
 
-		key, err := resolver.RequestTeamDeletion(ctx, &teamSlug)
+		key, err := resolver.RequestTeamDeletion(ctx, teamSlug)
 		assert.Nil(t, key)
 		assert.ErrorContains(t, err, "required authorization")
 	})
@@ -267,7 +267,7 @@ func TestMutationResolver_RequestTeamDeletion(t *testing.T) {
 			NewResolver(teamSyncHandler, database, deployProxy, tenantDomain, userSync, auditlogger.NewAuditLoggerForTesting(), gcpEnvironments, log, userSyncRuns).
 			Mutation()
 
-		key, err := resolver.RequestTeamDeletion(ctx, &teamSlug)
+		key, err := resolver.RequestTeamDeletion(ctx, teamSlug)
 		assert.Nil(t, key)
 		assert.ErrorIs(t, err, apierror.ErrTeamNotExist)
 	})
@@ -321,7 +321,7 @@ func TestMutationResolver_RequestTeamDeletion(t *testing.T) {
 			NewResolver(teamSyncHandler, database, deployProxy, tenantDomain, userSync, auditLogger, gcpEnvironments, log, userSyncRuns).
 			Mutation()
 
-		returnedKey, err := resolver.RequestTeamDeletion(ctx, &teamSlug)
+		returnedKey, err := resolver.RequestTeamDeletion(ctx, teamSlug)
 		assert.Equal(t, key, returnedKey)
 		assert.NoError(t, err)
 

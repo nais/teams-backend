@@ -22,7 +22,7 @@ type AuditLogList struct {
 // Input for creating a new team.
 type CreateTeamInput struct {
 	// Team slug. After creation, this value can not be changed.
-	Slug *slug.Slug `json:"slug"`
+	Slug slug.Slug `json:"slug"`
 	// Team purpose.
 	Purpose string `json:"purpose"`
 	// Specify the Slack channel for the team.
@@ -44,7 +44,7 @@ type NaisNamespace struct {
 	// The environment for the namespace.
 	Environment string `json:"environment"`
 	// The namespace.
-	Namespace *slug.Slug `json:"namespace"`
+	Namespace slug.Slug `json:"namespace"`
 }
 
 type PageInfo struct {

@@ -87,12 +87,12 @@ func (ec *executionContext) __resolve_entities(ctx context.Context, representati
 			}
 			switch resolverName {
 
-			case "findTeamByID":
-				id0, err := ec.unmarshalNID2string(ctx, rep["id"])
+			case "findTeamBySlug":
+				id0, err := ec.unmarshalNSlug2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋslugᚐSlug(ctx, rep["slug"])
 				if err != nil {
-					return fmt.Errorf(`unmarshalling param 0 for findTeamByID(): %w`, err)
+					return fmt.Errorf(`unmarshalling param 0 for findTeamBySlug(): %w`, err)
 				}
-				entity, err := ec.resolvers.Entity().FindTeamByID(ctx, id0)
+				entity, err := ec.resolvers.Entity().FindTeamBySlug(ctx, id0)
 				if err != nil {
 					return fmt.Errorf(`resolving Entity "Team": %w`, err)
 				}
@@ -108,7 +108,7 @@ func (ec *executionContext) __resolve_entities(ctx context.Context, representati
 			switch resolverName {
 
 			case "findUserByID":
-				id0, err := ec.unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, rep["id"])
+				id0, err := ec.unmarshalNID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, rep["id"])
 				if err != nil {
 					return fmt.Errorf(`unmarshalling param 0 for findUserByID(): %w`, err)
 				}
@@ -198,10 +198,10 @@ func entityResolverNameForTeam(ctx context.Context, rep map[string]interface{}) 
 		)
 		_ = val
 		m = rep
-		if _, ok = m["id"]; !ok {
+		if _, ok = m["slug"]; !ok {
 			break
 		}
-		return "findTeamByID", nil
+		return "findTeamBySlug", nil
 	}
 	return "", fmt.Errorf("%w for Team", ErrTypeNotFound)
 }

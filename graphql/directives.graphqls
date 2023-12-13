@@ -3,3 +3,9 @@ directive @auth on FIELD_DEFINITION
 
 "Require an authenticated user with the admin role for all requests with this directive."
 directive @admin on FIELD_DEFINITION
+
+directive @goField(
+  forceResolver: Boolean
+  name: String
+  omittable: Boolean
+) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION

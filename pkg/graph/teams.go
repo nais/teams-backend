@@ -70,13 +70,13 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 
 	var team *db.Team
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
-		team, err = dbtx.CreateTeam(ctx, *input.Slug, input.Purpose, input.SlackChannel)
+		team, err = dbtx.CreateTeam(ctx, input.Slug, input.Purpose, input.SlackChannel)
 		if err != nil {
 			return err
 		}
 
 		if actor.User.IsServiceAccount() {
-			return dbtx.AssignTeamRoleToServiceAccount(ctx, actor.User.GetID(), sqlc.RoleNameTeamowner, *input.Slug)
+			return dbtx.AssignTeamRoleToServiceAccount(ctx, actor.User.GetID(), sqlc.RoleNameTeamowner, input.Slug)
 		}
 
 		return dbtx.SetTeamMemberRole(ctx, actor.User.GetID(), team.Slug, sqlc.RoleNameTeamowner)
@@ -101,14 +101,14 @@ func (r *mutationResolver) CreateTeam(ctx context.Context, input model.CreateTea
 }
 
 // UpdateTeam is the resolver for the updateTeam field.
-func (r *mutationResolver) UpdateTeam(ctx context.Context, slug *slug.Slug, input model.UpdateTeamInput) (*db.Team, error) {
+func (r *mutationResolver) UpdateTeam(ctx context.Context, slug slug.Slug, input model.UpdateTeamInput) (*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, *slug)
+	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, slug)
 	if err != nil {
 		return nil, err
 	}
 
-	team, err := r.getTeamBySlug(ctx, *slug)
+	team, err := r.getTeamBySlug(ctx, slug)
 	if err != nil {
 		return nil, apierror.ErrTeamNotExist
 	}
@@ -174,14 +174,14 @@ func (r *mutationResolver) UpdateTeam(ctx context.Context, slug *slug.Slug, inpu
 }
 
 // RemoveUsersFromTeam is the resolver for the removeUsersFromTeam field.
-func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, slug *slug.Slug, userIds []uuid.UUID) (*db.Team, error) {
+func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, slug slug.Slug, userIds []uuid.UUID) (*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, *slug)
+	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, slug)
 	if err != nil {
 		return nil, err
 	}
 
-	team, err := r.getTeamBySlug(ctx, *slug)
+	team, err := r.getTeamBySlug(ctx, slug)
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +195,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, slug *slug.S
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
 		members, err := dbtx.GetAllTeamMembers(ctx, team.Slug)
 		if err != nil {
-			return fmt.Errorf("get team members of %q: %w", *slug, err)
+			return fmt.Errorf("get team members of %q: %w", slug, err)
 		}
 
 		memberFromUserID := func(userId uuid.UUID) *db.User {
@@ -210,7 +210,7 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, slug *slug.S
 		for _, userID := range userIds {
 			member := memberFromUserID(userID)
 			if member == nil {
-				return apierror.Errorf("The user %q is not a member of team %q.", userID, *slug)
+				return apierror.Errorf("The user %q is not a member of team %q.", userID, slug)
 			}
 
 			err = dbtx.RemoveUserFromTeam(ctx, userID, team.Slug)
@@ -249,14 +249,14 @@ func (r *mutationResolver) RemoveUsersFromTeam(ctx context.Context, slug *slug.S
 }
 
 // RemoveUserFromTeam is the resolver for the removeUserFromTeam field.
-func (r *mutationResolver) RemoveUserFromTeam(ctx context.Context, slug *slug.Slug, userID uuid.UUID) (*db.Team, error) {
+func (r *mutationResolver) RemoveUserFromTeam(ctx context.Context, slug slug.Slug, userID uuid.UUID) (*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, *slug)
+	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, slug)
 	if err != nil {
 		return nil, err
 	}
 
-	team, err := r.getTeamBySlug(ctx, *slug)
+	team, err := r.getTeamBySlug(ctx, slug)
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +270,7 @@ func (r *mutationResolver) RemoveUserFromTeam(ctx context.Context, slug *slug.Sl
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
 		members, err := dbtx.GetAllTeamMembers(ctx, team.Slug)
 		if err != nil {
-			return fmt.Errorf("get team members of %q: %w", *slug, err)
+			return fmt.Errorf("get team members of %q: %w", slug, err)
 		}
 
 		memberFromUserID := func(userId uuid.UUID) *db.User {
@@ -284,7 +284,7 @@ func (r *mutationResolver) RemoveUserFromTeam(ctx context.Context, slug *slug.Sl
 
 		member := memberFromUserID(userID)
 		if member == nil {
-			return apierror.Errorf("The user %q is not a member of team %q.", userID, *slug)
+			return apierror.Errorf("The user %q is not a member of team %q.", userID, slug)
 		}
 
 		err = dbtx.RemoveUserFromTeam(ctx, userID, team.Slug)
@@ -322,14 +322,14 @@ func (r *mutationResolver) RemoveUserFromTeam(ctx context.Context, slug *slug.Sl
 }
 
 // SynchronizeTeam is the resolver for the synchronizeTeam field.
-func (r *mutationResolver) SynchronizeTeam(ctx context.Context, slug *slug.Slug) (*model.TeamSync, error) {
+func (r *mutationResolver) SynchronizeTeam(ctx context.Context, slug slug.Slug) (*model.TeamSync, error) {
 	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsSynchronize, *slug)
+	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsSynchronize, slug)
 	if err != nil {
 		return nil, err
 	}
 
-	team, err := r.getTeamBySlug(ctx, *slug)
+	team, err := r.getTeamBySlug(ctx, slug)
 	if err != nil {
 		return nil, err
 	}
@@ -391,14 +391,14 @@ func (r *mutationResolver) SynchronizeAllTeams(ctx context.Context) (*model.Team
 }
 
 // AddTeamMembers is the resolver for the addTeamMembers field.
-func (r *mutationResolver) AddTeamMembers(ctx context.Context, slug *slug.Slug, userIds []uuid.UUID) (*db.Team, error) {
+func (r *mutationResolver) AddTeamMembers(ctx context.Context, slug slug.Slug, userIds []uuid.UUID) (*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, *slug)
+	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, slug)
 	if err != nil {
 		return nil, err
 	}
 
-	team, err := r.getTeamBySlug(ctx, *slug)
+	team, err := r.getTeamBySlug(ctx, slug)
 	if err != nil {
 		return nil, err
 	}
@@ -452,14 +452,14 @@ func (r *mutationResolver) AddTeamMembers(ctx context.Context, slug *slug.Slug, 
 }
 
 // AddTeamOwners is the resolver for the addTeamOwners field.
-func (r *mutationResolver) AddTeamOwners(ctx context.Context, slug *slug.Slug, userIds []uuid.UUID) (*db.Team, error) {
+func (r *mutationResolver) AddTeamOwners(ctx context.Context, slug slug.Slug, userIds []uuid.UUID) (*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, *slug)
+	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, slug)
 	if err != nil {
 		return nil, err
 	}
 
-	team, err := r.getTeamBySlug(ctx, *slug)
+	team, err := r.getTeamBySlug(ctx, slug)
 	if err != nil {
 		return nil, err
 	}
@@ -513,14 +513,14 @@ func (r *mutationResolver) AddTeamOwners(ctx context.Context, slug *slug.Slug, u
 }
 
 // AddTeamMember is the resolver for the addTeamMember field.
-func (r *mutationResolver) AddTeamMember(ctx context.Context, slug *slug.Slug, member model.TeamMemberInput) (*db.Team, error) {
+func (r *mutationResolver) AddTeamMember(ctx context.Context, slug slug.Slug, member model.TeamMemberInput) (*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, *slug)
+	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, slug)
 	if err != nil {
 		return nil, err
 	}
 
-	team, err := r.getTeamBySlug(ctx, *slug)
+	team, err := r.getTeamBySlug(ctx, slug)
 	if err != nil {
 		return nil, err
 	}
@@ -537,7 +537,7 @@ func (r *mutationResolver) AddTeamMember(ctx context.Context, slug *slug.Slug, m
 
 	auditLogEntries := make([]auditlogger.Entry, 0)
 	err = r.database.Transaction(ctx, func(ctx context.Context, dbtx db.Database) error {
-		teamMember, _ := dbtx.GetTeamMember(ctx, *slug, member.UserID)
+		teamMember, _ := dbtx.GetTeamMember(ctx, slug, member.UserID)
 		if teamMember != nil {
 			return apierror.Errorf("User is already a member of the team.")
 		}
@@ -553,7 +553,7 @@ func (r *mutationResolver) AddTeamMember(ctx context.Context, slug *slug.Slug, m
 		}
 
 		for _, reconcilerName := range member.ReconcilerOptOuts {
-			err = dbtx.AddReconcilerOptOut(ctx, member.UserID, &team.Slug, reconcilerName)
+			err = dbtx.AddReconcilerOptOut(ctx, member.UserID, team.Slug, reconcilerName)
 			if err != nil {
 				return err
 			}
@@ -603,14 +603,14 @@ func (r *mutationResolver) AddTeamMember(ctx context.Context, slug *slug.Slug, m
 }
 
 // SetTeamMemberRole is the resolver for the setTeamMemberRole field.
-func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, slug *slug.Slug, userID uuid.UUID, role model.TeamRole) (*db.Team, error) {
+func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, slug slug.Slug, userID uuid.UUID, role model.TeamRole) (*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, *slug)
+	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, slug)
 	if err != nil {
 		return nil, err
 	}
 
-	team, err := r.getTeamBySlug(ctx, *slug)
+	team, err := r.getTeamBySlug(ctx, slug)
 	if err != nil {
 		return nil, err
 	}
@@ -633,7 +633,7 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, slug *slug.Slu
 		}
 	}
 	if member == nil {
-		return nil, fmt.Errorf("user %q not in team %q", userID, *slug)
+		return nil, fmt.Errorf("user %q not in team %q", userID, slug)
 	}
 
 	desiredRole, err := sqlcRoleFromTeamRole(role)
@@ -671,18 +671,18 @@ func (r *mutationResolver) SetTeamMemberRole(ctx context.Context, slug *slug.Slu
 }
 
 // RequestTeamDeletion is the resolver for the requestTeamDeletion field.
-func (r *mutationResolver) RequestTeamDeletion(ctx context.Context, slug *slug.Slug) (*db.TeamDeleteKey, error) {
+func (r *mutationResolver) RequestTeamDeletion(ctx context.Context, slug slug.Slug) (*db.TeamDeleteKey, error) {
 	actor := authz.ActorFromContext(ctx)
 	if actor.User.IsServiceAccount() {
 		return nil, apierror.Errorf("Service accounts are not allowed to request a team deletion.")
 	}
 
-	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, *slug)
+	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, slug)
 	if err != nil {
 		return nil, err
 	}
 
-	team, err := r.getTeamBySlug(ctx, *slug)
+	team, err := r.getTeamBySlug(ctx, slug)
 	if err != nil {
 		return nil, err
 	}
@@ -692,7 +692,7 @@ func (r *mutationResolver) RequestTeamDeletion(ctx context.Context, slug *slug.S
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	deleteKey, err := r.database.CreateTeamDeleteKey(ctx, *slug, actor.User.GetID())
+	deleteKey, err := r.database.CreateTeamDeleteKey(ctx, slug, actor.User.GetID())
 	if err != nil {
 		return nil, fmt.Errorf("create team delete key: %w", err)
 	}
@@ -764,14 +764,14 @@ func (r *mutationResolver) ConfirmTeamDeletion(ctx context.Context, key uuid.UUI
 }
 
 // AuthorizeRepository is the resolver for the authorizeRepository field.
-func (r *mutationResolver) AuthorizeRepository(ctx context.Context, authorization model.RepositoryAuthorization, teamSlug *slug.Slug, repoName string) (*db.Team, error) {
-	team, err := r.database.GetTeamBySlug(ctx, *teamSlug)
+func (r *mutationResolver) AuthorizeRepository(ctx context.Context, authorization model.RepositoryAuthorization, teamSlug slug.Slug, repoName string) (*db.Team, error) {
+	team, err := r.database.GetTeamBySlug(ctx, teamSlug)
 	if err != nil {
 		return nil, apierror.ErrTeamNotExist
 	}
 
 	actor := authz.ActorFromContext(ctx)
-	if _, err = r.database.GetTeamMember(ctx, *teamSlug, actor.User.GetID()); errors.Is(err, pgx.ErrNoRows) {
+	if _, err = r.database.GetTeamMember(ctx, teamSlug, actor.User.GetID()); errors.Is(err, pgx.ErrNoRows) {
 		return nil, apierror.ErrUserIsNotTeamMember
 	} else if err != nil {
 		return nil, err
@@ -785,7 +785,7 @@ func (r *mutationResolver) AuthorizeRepository(ctx context.Context, authorizatio
 		repoAuthorization = sqlc.RepositoryAuthorizationEnumDeploy
 	}
 
-	if err := r.database.CreateRepositoryAuthorization(ctx, *teamSlug, repoName, repoAuthorization); err != nil {
+	if err := r.database.CreateRepositoryAuthorization(ctx, teamSlug, repoName, repoAuthorization); err != nil {
 		return nil, err
 	}
 
@@ -793,14 +793,14 @@ func (r *mutationResolver) AuthorizeRepository(ctx context.Context, authorizatio
 }
 
 // DeauthorizeRepository is the resolver for the deauthorizeRepository field.
-func (r *mutationResolver) DeauthorizeRepository(ctx context.Context, authorization model.RepositoryAuthorization, teamSlug *slug.Slug, repoName string) (*db.Team, error) {
-	team, err := r.database.GetTeamBySlug(ctx, *teamSlug)
+func (r *mutationResolver) DeauthorizeRepository(ctx context.Context, authorization model.RepositoryAuthorization, teamSlug slug.Slug, repoName string) (*db.Team, error) {
+	team, err := r.database.GetTeamBySlug(ctx, teamSlug)
 	if err != nil {
 		return nil, apierror.ErrTeamNotExist
 	}
 
 	actor := authz.ActorFromContext(ctx)
-	if _, err = r.database.GetTeamMember(ctx, *teamSlug, actor.User.GetID()); errors.Is(err, pgx.ErrNoRows) {
+	if _, err = r.database.GetTeamMember(ctx, teamSlug, actor.User.GetID()); errors.Is(err, pgx.ErrNoRows) {
 		return nil, apierror.ErrUserIsNotTeamMember
 	} else if err != nil {
 		return nil, err
@@ -814,7 +814,7 @@ func (r *mutationResolver) DeauthorizeRepository(ctx context.Context, authorizat
 		repoAuthorization = sqlc.RepositoryAuthorizationEnumDeploy
 	}
 
-	if err := r.database.RemoveRepositoryAuthorization(ctx, *teamSlug, repoName, repoAuthorization); err != nil {
+	if err := r.database.RemoveRepositoryAuthorization(ctx, teamSlug, repoName, repoAuthorization); err != nil {
 		return nil, err
 	}
 
@@ -856,14 +856,14 @@ func (r *queryResolver) Teams(ctx context.Context, offset *int, limit *int, filt
 }
 
 // Team is the resolver for the team field.
-func (r *queryResolver) Team(ctx context.Context, slug *slug.Slug) (*db.Team, error) {
+func (r *queryResolver) Team(ctx context.Context, slug slug.Slug) (*db.Team, error) {
 	actor := authz.ActorFromContext(ctx)
-	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsRead, *slug)
+	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsRead, slug)
 	if err != nil {
 		return nil, err
 	}
 
-	team, err := r.getTeamBySlug(ctx, *slug)
+	team, err := r.getTeamBySlug(ctx, slug)
 	if err != nil {
 		return nil, err
 	}
@@ -888,11 +888,6 @@ func (r *queryResolver) TeamDeleteKey(ctx context.Context, key uuid.UUID) (*db.T
 	}
 
 	return deleteKey, nil
-}
-
-// ID is the resolver for the id field.
-func (r *teamResolver) ID(ctx context.Context, obj *db.Team) (string, error) {
-	return obj.Slug.String(), nil
 }
 
 // AuditLogs is the resolver for the auditLogs field.
@@ -1038,7 +1033,7 @@ func (r *teamResolver) ReconcilerState(ctx context.Context, obj *db.Team) (*mode
 		for environment, namespace := range naisNamespaceState.Namespaces {
 			naisNamespaces = append(naisNamespaces, &model.NaisNamespace{
 				Environment: environment,
-				Namespace:   &namespace,
+				Namespace:   namespace,
 			})
 		}
 	}
@@ -1218,8 +1213,10 @@ func (r *Resolver) TeamMemberReconciler() generated.TeamMemberReconcilerResolver
 	return &teamMemberReconcilerResolver{r}
 }
 
-type gitHubRepositoryResolver struct{ *Resolver }
-type teamResolver struct{ *Resolver }
-type teamDeleteKeyResolver struct{ *Resolver }
-type teamMemberResolver struct{ *Resolver }
-type teamMemberReconcilerResolver struct{ *Resolver }
+type (
+	gitHubRepositoryResolver     struct{ *Resolver }
+	teamResolver                 struct{ *Resolver }
+	teamDeleteKeyResolver        struct{ *Resolver }
+	teamMemberResolver           struct{ *Resolver }
+	teamMemberReconcilerResolver struct{ *Resolver }
+)

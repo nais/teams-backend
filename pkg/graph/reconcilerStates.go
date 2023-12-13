@@ -23,8 +23,8 @@ import (
 )
 
 // SetGitHubTeamSlug is the resolver for the setGitHubTeamSlug field.
-func (r *mutationResolver) SetGitHubTeamSlug(ctx context.Context, teamSlug *slug.Slug, gitHubTeamSlug *slug.Slug) (*db.Team, error) {
-	team, err := r.database.GetTeamBySlug(ctx, *teamSlug)
+func (r *mutationResolver) SetGitHubTeamSlug(ctx context.Context, teamSlug slug.Slug, gitHubTeamSlug slug.Slug) (*db.Team, error) {
+	team, err := r.database.GetTeamBySlug(ctx, teamSlug)
 	if err != nil {
 		return nil, apierror.ErrTeamNotExist
 	}
@@ -34,8 +34,8 @@ func (r *mutationResolver) SetGitHubTeamSlug(ctx context.Context, teamSlug *slug
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	err = r.database.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGithubTeam, *teamSlug, reconcilers.GitHubState{
-		Slug: gitHubTeamSlug,
+	err = r.database.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGithubTeam, teamSlug, reconcilers.GitHubState{
+		Slug: &gitHubTeamSlug,
 	})
 	if err != nil {
 		return nil, apierror.Errorf("Unable to save the GitHub state.")
@@ -57,8 +57,8 @@ func (r *mutationResolver) SetGitHubTeamSlug(ctx context.Context, teamSlug *slug
 }
 
 // SetGoogleWorkspaceGroupEmail is the resolver for the setGoogleWorkspaceGroupEmail field.
-func (r *mutationResolver) SetGoogleWorkspaceGroupEmail(ctx context.Context, teamSlug *slug.Slug, googleWorkspaceGroupEmail string) (*db.Team, error) {
-	team, err := r.database.GetTeamBySlug(ctx, *teamSlug)
+func (r *mutationResolver) SetGoogleWorkspaceGroupEmail(ctx context.Context, teamSlug slug.Slug, googleWorkspaceGroupEmail string) (*db.Team, error) {
+	team, err := r.database.GetTeamBySlug(ctx, teamSlug)
 	if err != nil {
 		return nil, apierror.ErrTeamNotExist
 	}
@@ -72,7 +72,7 @@ func (r *mutationResolver) SetGoogleWorkspaceGroupEmail(ctx context.Context, tea
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	err = r.database.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGoogleWorkspaceAdmin, *teamSlug, reconcilers.GoogleWorkspaceState{
+	err = r.database.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGoogleWorkspaceAdmin, teamSlug, reconcilers.GoogleWorkspaceState{
 		GroupEmail: &googleWorkspaceGroupEmail,
 	})
 	if err != nil {
@@ -95,8 +95,8 @@ func (r *mutationResolver) SetGoogleWorkspaceGroupEmail(ctx context.Context, tea
 }
 
 // SetAzureADGroupID is the resolver for the setAzureADGroupId field.
-func (r *mutationResolver) SetAzureADGroupID(ctx context.Context, teamSlug *slug.Slug, azureADGroupID uuid.UUID) (*db.Team, error) {
-	team, err := r.database.GetTeamBySlug(ctx, *teamSlug)
+func (r *mutationResolver) SetAzureADGroupID(ctx context.Context, teamSlug slug.Slug, azureADGroupID uuid.UUID) (*db.Team, error) {
+	team, err := r.database.GetTeamBySlug(ctx, teamSlug)
 	if err != nil {
 		return nil, apierror.ErrTeamNotExist
 	}
@@ -106,7 +106,7 @@ func (r *mutationResolver) SetAzureADGroupID(ctx context.Context, teamSlug *slug
 		return nil, fmt.Errorf("create log correlation ID: %w", err)
 	}
 
-	err = r.database.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameAzureGroup, *teamSlug, reconcilers.AzureState{
+	err = r.database.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameAzureGroup, teamSlug, reconcilers.AzureState{
 		GroupID: azureADGroupID,
 	})
 	if err != nil {
@@ -129,12 +129,12 @@ func (r *mutationResolver) SetAzureADGroupID(ctx context.Context, teamSlug *slug
 }
 
 // SetGcpProjectID is the resolver for the setGcpProjectId field.
-func (r *mutationResolver) SetGcpProjectID(ctx context.Context, teamSlug *slug.Slug, gcpEnvironment string, gcpProjectID string) (*db.Team, error) {
+func (r *mutationResolver) SetGcpProjectID(ctx context.Context, teamSlug slug.Slug, gcpEnvironment string, gcpProjectID string) (*db.Team, error) {
 	if len(r.gcpEnvironments) == 0 {
 		return nil, apierror.Errorf("GCP cluster info has not been configured.")
 	}
 
-	team, err := r.database.GetTeamBySlug(ctx, *teamSlug)
+	team, err := r.database.GetTeamBySlug(ctx, teamSlug)
 	if err != nil {
 		return nil, apierror.ErrTeamNotExist
 	}
@@ -151,7 +151,7 @@ func (r *mutationResolver) SetGcpProjectID(ctx context.Context, teamSlug *slug.S
 	state := &reconcilers.GoogleGcpProjectState{
 		Projects: make(map[string]reconcilers.GoogleGcpEnvironmentProject),
 	}
-	err = r.database.LoadReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGoogleGcpProject, *teamSlug, state)
+	err = r.database.LoadReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGoogleGcpProject, teamSlug, state)
 	if err != nil {
 		return nil, apierror.Errorf("Unable to load the existing GCP project state.")
 	}
@@ -160,7 +160,7 @@ func (r *mutationResolver) SetGcpProjectID(ctx context.Context, teamSlug *slug.S
 	}
 
 	state.Projects[gcpEnvironment] = reconcilers.GoogleGcpEnvironmentProject{ProjectID: gcpProjectID}
-	err = r.database.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGoogleGcpProject, *teamSlug, state)
+	err = r.database.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGoogleGcpProject, teamSlug, state)
 	if err != nil {
 		return nil, apierror.Errorf("Unable to save the GCP project state.")
 	}
@@ -181,12 +181,12 @@ func (r *mutationResolver) SetGcpProjectID(ctx context.Context, teamSlug *slug.S
 }
 
 // SetNaisNamespace is the resolver for the setNaisNamespace field.
-func (r *mutationResolver) SetNaisNamespace(ctx context.Context, teamSlug *slug.Slug, gcpEnvironment string, naisNamespace *slug.Slug) (*db.Team, error) {
+func (r *mutationResolver) SetNaisNamespace(ctx context.Context, teamSlug slug.Slug, gcpEnvironment string, naisNamespace slug.Slug) (*db.Team, error) {
 	if len(r.gcpEnvironments) == 0 {
 		return nil, apierror.Errorf("GCP cluster info has not been configured.")
 	}
 
-	team, err := r.database.GetTeamBySlug(ctx, *teamSlug)
+	team, err := r.database.GetTeamBySlug(ctx, teamSlug)
 	if err != nil {
 		return nil, apierror.ErrTeamNotExist
 	}
@@ -203,7 +203,7 @@ func (r *mutationResolver) SetNaisNamespace(ctx context.Context, teamSlug *slug.
 	state := &reconcilers.NaisNamespaceState{
 		Namespaces: make(map[string]slug.Slug),
 	}
-	err = r.database.LoadReconcilerStateForTeam(ctx, sqlc.ReconcilerNameNaisNamespace, *teamSlug, state)
+	err = r.database.LoadReconcilerStateForTeam(ctx, sqlc.ReconcilerNameNaisNamespace, teamSlug, state)
 	if err != nil {
 		return nil, apierror.Errorf("Unable to load the existing NAIS namespace state.")
 	}
@@ -211,8 +211,8 @@ func (r *mutationResolver) SetNaisNamespace(ctx context.Context, teamSlug *slug.
 		state.Namespaces = make(map[string]slug.Slug)
 	}
 
-	state.Namespaces[gcpEnvironment] = *naisNamespace
-	err = r.database.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameNaisNamespace, *teamSlug, state)
+	state.Namespaces[gcpEnvironment] = naisNamespace
+	err = r.database.SetReconcilerStateForTeam(ctx, sqlc.ReconcilerNameNaisNamespace, teamSlug, state)
 	if err != nil {
 		return nil, apierror.Errorf("Unable to save the NAIS namespace state.")
 	}

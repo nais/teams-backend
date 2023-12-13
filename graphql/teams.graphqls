@@ -6,7 +6,7 @@ extend type Query {
   team("Slug of the team." slug: Slug!): Team! @auth
 
   "Get a team delete key."
-  teamDeleteKey("The key to get." key: UUID!): TeamDeleteKey! @auth
+  teamDeleteKey("The key to get." key: ID!): TeamDeleteKey! @auth
 }
 
 extend type Mutation {
@@ -48,7 +48,7 @@ extend type Mutation {
     slug: Slug!
 
     "List of user IDs that should be removed from the team."
-    userIds: [UUID!]!
+    userIds: [ID!]!
   ): Team! @auth
 
   """
@@ -61,7 +61,7 @@ extend type Mutation {
     slug: Slug!
 
     "ID of the user that will be removed from the team."
-    userId: UUID!
+    userId: ID!
   ): Team! @auth
 
   """
@@ -98,7 +98,7 @@ extend type Mutation {
     slug: Slug!
 
     "List of user IDs that should be added to the team as members."
-    userIds: [UUID!]!
+    userIds: [ID!]!
   ): Team! @auth
 
   """
@@ -114,7 +114,7 @@ extend type Mutation {
     slug: Slug!
 
     "List of user IDs that should be added to the team as owners."
-    userIds: [UUID!]!
+    userIds: [ID!]!
   ): Team! @auth
 
   """
@@ -144,7 +144,7 @@ extend type Mutation {
     slug: Slug!
 
     "The ID of the user."
-    userId: UUID!
+    userId: ID!
 
     "The team role to set."
     role: TeamRole!
@@ -175,8 +175,8 @@ extend type Mutation {
   """
   confirmTeamDeletion(
     "Deletion key, acquired using the requestTeamDeletion mutation."
-    key: UUID!
-  ): UUID! @auth
+    key: ID!
+  ): ID! @auth
 
   "Authorize a team to perform an action from a GitHub repository."
   authorizeRepository(
@@ -217,7 +217,7 @@ input TeamsFilterGitHub {
 "Team deletion key type."
 type TeamDeleteKey {
   "The unique key used to confirm the deletion of a team."
-  key: UUID!
+  key: ID!
 
   "The creation timestamp of the key."
   createdAt: Time!
@@ -235,7 +235,7 @@ type TeamDeleteKey {
 "Team sync type."
 type TeamSync {
   "The correlation ID for the sync."
-  correlationID: UUID!
+  correlationID: ID!
 }
 
 type TeamsList {
@@ -244,9 +244,8 @@ type TeamsList {
 }
 
 "Team type."
-type Team @key(fields: "id") {
-  "Unique ID of the team."
-  id: ID!
+type Team @key(fields: "slug") {
+  id: ID! @goField(name: "slug")
 
   "Unique slug of the team."
   slug: Slug!
@@ -330,7 +329,7 @@ type ReconcilerState {
   googleWorkspaceGroupEmail: String
 
   "The Azure AD group ID."
-  azureADGroupId: UUID
+  azureADGroupId: ID
 
   "A list of GCP projects."
   gcpProjects: [GcpProject!]!
@@ -438,7 +437,7 @@ input SlackAlertsChannelInput {
 "Team member input."
 input TeamMemberInput {
   "The ID of user."
-  userId: UUID!
+  userId: ID!
 
   "The role that the user will receive."
   role: TeamRole!
