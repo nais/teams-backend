@@ -8,7 +8,7 @@ import (
 )
 
 type AzureState struct {
-	GroupID *uuid.UUID `json:"groupId"`
+	GroupID uuid.UUID `json:"groupId"`
 }
 
 type DependencyTrackState struct {

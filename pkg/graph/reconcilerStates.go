@@ -95,7 +95,7 @@ func (r *mutationResolver) SetGoogleWorkspaceGroupEmail(ctx context.Context, tea
 }
 
 // SetAzureADGroupID is the resolver for the setAzureADGroupId field.
-func (r *mutationResolver) SetAzureADGroupID(ctx context.Context, teamSlug *slug.Slug, azureADGroupID *uuid.UUID) (*db.Team, error) {
+func (r *mutationResolver) SetAzureADGroupID(ctx context.Context, teamSlug *slug.Slug, azureADGroupID uuid.UUID) (*db.Team, error) {
 	team, err := r.database.GetTeamBySlug(ctx, *teamSlug)
 	if err != nil {
 		return nil, apierror.ErrTeamNotExist

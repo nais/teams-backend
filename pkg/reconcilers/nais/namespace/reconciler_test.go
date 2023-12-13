@@ -244,7 +244,7 @@ func TestReconcile(t *testing.T) {
 			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.Slug, mock.Anything).
 			Run(func(args mock.Arguments) {
 				state := args.Get(3).(*reconcilers.AzureState)
-				state.GroupID = &azureGroupID
+				state.GroupID = azureGroupID
 			}).
 			Return(nil).
 			Once()
@@ -403,7 +403,7 @@ func TestReconcile(t *testing.T) {
 			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.Slug, mock.Anything).
 			Run(func(args mock.Arguments) {
 				state := args.Get(3).(*reconcilers.AzureState)
-				state.GroupID = &azureGroupID
+				state.GroupID = azureGroupID
 			}).
 			Return(nil).
 			Once()
@@ -492,7 +492,7 @@ func TestReconcile(t *testing.T) {
 			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.Slug, mock.Anything).
 			Run(func(args mock.Arguments) {
 				state := args.Get(3).(*reconcilers.AzureState)
-				state.GroupID = &azureGroupID
+				state.GroupID = azureGroupID
 			}).
 			Return(nil).
 			Once()
@@ -607,7 +607,7 @@ func TestReconcile(t *testing.T) {
 			On("LoadReconcilerStateForTeam", ctx, azure_group_reconciler.Name, team.Slug, mock.Anything).
 			Run(func(args mock.Arguments) {
 				state := args.Get(3).(*reconcilers.AzureState)
-				state.GroupID = &azureGroupID
+				state.GroupID = azureGroupID
 			}).
 			Return(nil).
 			Once()

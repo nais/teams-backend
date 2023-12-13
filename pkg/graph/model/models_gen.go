@@ -108,7 +108,7 @@ type SyncError struct {
 // Team member input.
 type TeamMemberInput struct {
 	// The ID of user.
-	UserID *uuid.UUID `json:"userId"`
+	UserID uuid.UUID `json:"userId"`
 	// The role that the user will receive.
 	Role TeamRole `json:"role"`
 	// Reconcilers to opt the team member out of.
@@ -123,7 +123,7 @@ type TeamMemberList struct {
 // Team sync type.
 type TeamSync struct {
 	// The correlation ID for the sync.
-	CorrelationID *uuid.UUID `json:"correlationID"`
+	CorrelationID uuid.UUID `json:"correlationID"`
 }
 
 type TeamsFilter struct {

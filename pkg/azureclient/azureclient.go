@@ -22,7 +22,7 @@ type Client interface {
 	AddMemberToGroup(ctx context.Context, grp *Group, member *Member) error
 	CreateGroup(ctx context.Context, grp *Group) (*Group, error)
 	GetGroupById(ctx context.Context, id uuid.UUID) (*Group, error)
-	GetOrCreateGroup(ctx context.Context, existingGroupID *uuid.UUID, name, description string) (*Group, bool, error)
+	GetOrCreateGroup(ctx context.Context, existingGroupID uuid.UUID, name, description string) (*Group, bool, error)
 	GetUser(ctx context.Context, email string) (*Member, error)
 	ListGroupMembers(ctx context.Context, grp *Group) ([]*Member, error)
 	ListGroupOwners(ctx context.Context, grp *Group) ([]*Member, error)
@@ -141,9 +141,9 @@ func (s *client) CreateGroup(ctx context.Context, grp *Group) (*Group, error) {
 
 // GetOrCreateGroup Get or create a group fom the Graph API. The second return value informs if the group was
 // created or not.
-func (s *client) GetOrCreateGroup(ctx context.Context, existingGroupID *uuid.UUID, name, description string) (*Group, bool, error) {
-	if existingGroupID != nil {
-		grp, err := s.GetGroupById(ctx, *existingGroupID)
+func (s *client) GetOrCreateGroup(ctx context.Context, existingGroupID uuid.UUID, name, description string) (*Group, bool, error) {
+	if existingGroupID != uuid.Nil {
+		grp, err := s.GetGroupById(ctx, existingGroupID)
 		return grp, false, err
 	}
 

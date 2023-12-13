@@ -210,7 +210,7 @@ func Test_GetOrCreateGroupWithEmptyState(t *testing.T) {
 	)
 
 	client := azureclient.New(httpClient)
-	group, created, err := client.GetOrCreateGroup(context.Background(), nil, "slug", "description")
+	group, created, err := client.GetOrCreateGroup(context.Background(), uuid.Nil, "slug", "description")
 
 	assert.NoError(t, err)
 	assert.Equal(t, "group-id", group.ID)
@@ -239,7 +239,7 @@ func Test_GetOrCreateGroupWhenGroupInStateDoesNotExist(t *testing.T) {
 	)
 
 	client := azureclient.New(httpClient)
-	group, created, err := client.GetOrCreateGroup(context.Background(), &groupId, "slug", "description")
+	group, created, err := client.GetOrCreateGroup(context.Background(), groupId, "slug", "description")
 
 	assert.Nil(t, group)
 	assert.False(t, created)
@@ -266,7 +266,7 @@ func Test_GetOrCreateGroupWhenGroupInStateExists(t *testing.T) {
 	)
 
 	client := azureclient.New(httpClient)
-	group, created, err := client.GetOrCreateGroup(context.Background(), &groupId, "slug", "description")
+	group, created, err := client.GetOrCreateGroup(context.Background(), groupId, "slug", "description")
 
 	assert.NoError(t, err)
 	assert.Equal(t, "some-id", group.ID)

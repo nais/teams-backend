@@ -345,7 +345,7 @@ func (r *naisNamespaceReconciler) getAzureGroupID(ctx context.Context, teamSlug 
 		return "", fmt.Errorf("no Azure state exists for team %q: %w", teamSlug, err)
 	}
 
-	if azureState.GroupID == nil {
+	if azureState.GroupID == uuid.Nil {
 		return "", fmt.Errorf("no Azure group ID set for team %q", teamSlug)
 	}
 

@@ -107,7 +107,7 @@ func (r *azureGroupReconciler) Reconcile(ctx context.Context, input reconcilers.
 		r.auditLogger.Logf(ctx, targets, fields, "Created Azure AD group %q with ID %q", grp.MailNickname, grp.ID)
 
 		id, _ := uuid.Parse(grp.ID)
-		err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, reconcilers.AzureState{GroupID: &id})
+		err = r.database.SetReconcilerStateForTeam(ctx, r.Name(), input.Team.Slug, reconcilers.AzureState{GroupID: id})
 		if err != nil {
 			r.log.WithError(err).Error("persiste system state")
 		}
@@ -128,12 +128,12 @@ func (r *azureGroupReconciler) Delete(ctx context.Context, teamSlug slug.Slug, c
 		return fmt.Errorf("load reconciler state for team %q in reconciler %q: %w", teamSlug, r.Name(), err)
 	}
 
-	if state.GroupID == nil {
+	if state.GroupID == uuid.Nil {
 		r.log.Warnf("missing group ID in reconciler state for team %q in reconciler %q, assume already deleted", teamSlug, r.Name())
 		return r.database.RemoveReconcilerStateForTeam(ctx, r.Name(), teamSlug)
 	}
 
-	grpID := *state.GroupID
+	grpID := state.GroupID
 
 	err = r.client.DeleteGroup(ctx, grpID)
 	if err != nil {

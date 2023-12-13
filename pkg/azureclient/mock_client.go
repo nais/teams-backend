@@ -220,16 +220,16 @@ func (_c *MockClient_GetGroupById_Call) RunAndReturn(run func(context.Context, u
 }
 
 // GetOrCreateGroup provides a mock function with given fields: ctx, existingGroupID, name, description
-func (_m *MockClient) GetOrCreateGroup(ctx context.Context, existingGroupID *uuid.UUID, name string, description string) (*Group, bool, error) {
+func (_m *MockClient) GetOrCreateGroup(ctx context.Context, existingGroupID uuid.UUID, name string, description string) (*Group, bool, error) {
 	ret := _m.Called(ctx, existingGroupID, name, description)
 
 	var r0 *Group
 	var r1 bool
 	var r2 error
-	if rf, ok := ret.Get(0).(func(context.Context, *uuid.UUID, string, string) (*Group, bool, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, string) (*Group, bool, error)); ok {
 		return rf(ctx, existingGroupID, name, description)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, *uuid.UUID, string, string) *Group); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, string) *Group); ok {
 		r0 = rf(ctx, existingGroupID, name, description)
 	} else {
 		if ret.Get(0) != nil {
@@ -237,13 +237,13 @@ func (_m *MockClient) GetOrCreateGroup(ctx context.Context, existingGroupID *uui
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *uuid.UUID, string, string) bool); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, string, string) bool); ok {
 		r1 = rf(ctx, existingGroupID, name, description)
 	} else {
 		r1 = ret.Get(1).(bool)
 	}
 
-	if rf, ok := ret.Get(2).(func(context.Context, *uuid.UUID, string, string) error); ok {
+	if rf, ok := ret.Get(2).(func(context.Context, uuid.UUID, string, string) error); ok {
 		r2 = rf(ctx, existingGroupID, name, description)
 	} else {
 		r2 = ret.Error(2)
@@ -259,16 +259,16 @@ type MockClient_GetOrCreateGroup_Call struct {
 
 // GetOrCreateGroup is a helper method to define mock.On call
 //   - ctx context.Context
-//   - existingGroupID *uuid.UUID
+//   - existingGroupID uuid.UUID
 //   - name string
 //   - description string
 func (_e *MockClient_Expecter) GetOrCreateGroup(ctx interface{}, existingGroupID interface{}, name interface{}, description interface{}) *MockClient_GetOrCreateGroup_Call {
 	return &MockClient_GetOrCreateGroup_Call{Call: _e.mock.On("GetOrCreateGroup", ctx, existingGroupID, name, description)}
 }
 
-func (_c *MockClient_GetOrCreateGroup_Call) Run(run func(ctx context.Context, existingGroupID *uuid.UUID, name string, description string)) *MockClient_GetOrCreateGroup_Call {
+func (_c *MockClient_GetOrCreateGroup_Call) Run(run func(ctx context.Context, existingGroupID uuid.UUID, name string, description string)) *MockClient_GetOrCreateGroup_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(*uuid.UUID), args[2].(string), args[3].(string))
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(string), args[3].(string))
 	})
 	return _c
 }
@@ -278,7 +278,7 @@ func (_c *MockClient_GetOrCreateGroup_Call) Return(_a0 *Group, _a1 bool, _a2 err
 	return _c
 }
 
-func (_c *MockClient_GetOrCreateGroup_Call) RunAndReturn(run func(context.Context, *uuid.UUID, string, string) (*Group, bool, error)) *MockClient_GetOrCreateGroup_Call {
+func (_c *MockClient_GetOrCreateGroup_Call) RunAndReturn(run func(context.Context, uuid.UUID, string, string) (*Group, bool, error)) *MockClient_GetOrCreateGroup_Call {
 	_c.Call.Return(run)
 	return _c
 }

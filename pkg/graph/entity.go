@@ -6,7 +6,9 @@ package graph
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/db"
 	"github.com/nais/teams-backend/pkg/graph/generated"
 	"github.com/nais/teams-backend/pkg/slug"
@@ -15,6 +17,11 @@ import (
 // FindTeamByID is the resolver for the findTeamByID field.
 func (r *entityResolver) FindTeamByID(ctx context.Context, id string) (*db.Team, error) {
 	return r.getTeamBySlug(ctx, slug.Slug(id))
+}
+
+// FindUserByID is the resolver for the findUserByID field.
+func (r *entityResolver) FindUserByID(ctx context.Context, id uuid.UUID) (*db.User, error) {
+	panic(fmt.Errorf("not implemented: FindUserByID - findUserByID"))
 }
 
 // Entity returns generated.EntityResolver implementation.
