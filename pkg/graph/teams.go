@@ -764,15 +764,9 @@ func (r *mutationResolver) ConfirmTeamDeletion(ctx context.Context, key *uuid.UU
 
 // AuthorizeRepository is the resolver for the authorizeRepository field.
 func (r *mutationResolver) AuthorizeRepository(ctx context.Context, authorization model.RepositoryAuthorization, teamSlug *slug.Slug, repoName string) (*db.Team, error) {
-	team, err := r.database.GetTeamBySlug(ctx, *teamSlug)
-	if err != nil {
-		return nil, apierror.ErrTeamNotExist
-	}
-
 	actor := authz.ActorFromContext(ctx)
-	if _, err = r.database.GetTeamMember(ctx, *teamSlug, actor.User.GetID()); errors.Is(err, pgx.ErrNoRows) {
-		return nil, apierror.ErrUserIsNotTeamMember
-	} else if err != nil {
+	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, *teamSlug)
+	if err != nil {
 		return nil, err
 	}
 
@@ -788,20 +782,19 @@ func (r *mutationResolver) AuthorizeRepository(ctx context.Context, authorizatio
 		return nil, err
 	}
 
+	team, err := r.getTeamBySlug(ctx, *teamSlug)
+	if err != nil {
+		return nil, err
+	}
+
 	return team, nil
 }
 
 // DeauthorizeRepository is the resolver for the deauthorizeRepository field.
 func (r *mutationResolver) DeauthorizeRepository(ctx context.Context, authorization model.RepositoryAuthorization, teamSlug *slug.Slug, repoName string) (*db.Team, error) {
-	team, err := r.database.GetTeamBySlug(ctx, *teamSlug)
-	if err != nil {
-		return nil, apierror.ErrTeamNotExist
-	}
-
 	actor := authz.ActorFromContext(ctx)
-	if _, err = r.database.GetTeamMember(ctx, *teamSlug, actor.User.GetID()); errors.Is(err, pgx.ErrNoRows) {
-		return nil, apierror.ErrUserIsNotTeamMember
-	} else if err != nil {
+	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationTeamsUpdate, *teamSlug)
+	if err != nil {
 		return nil, err
 	}
 
@@ -814,6 +807,11 @@ func (r *mutationResolver) DeauthorizeRepository(ctx context.Context, authorizat
 	}
 
 	if err := r.database.RemoveRepositoryAuthorization(ctx, *teamSlug, repoName, repoAuthorization); err != nil {
+		return nil, err
+	}
+
+	team, err := r.getTeamBySlug(ctx, *teamSlug)
+	if err != nil {
 		return nil, err
 	}
 
