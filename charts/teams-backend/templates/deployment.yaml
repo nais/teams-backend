@@ -109,8 +109,6 @@ spec:
               value: "{{ .Values.googleManagementProjectID }}"
             - name: TEAMS_BACKEND_NAIS_DEPLOY_ENDPOINT
               value: {{ .Values.naisDeploy.endpoint | quote }}
-            - name: TEAMS_BACKEND_NAIS_DEPLOY_DEPLOY_KEY_ENDPOINT
-              value: {{ .Values.naisDeploy.deployKeyEndpoint | quote }}
             - name: TEAMS_BACKEND_RECONCILE_RETRY_INTERVAL
               value: {{ .Values.reconcileRetryInterval | quote }}
             - name: TEAMS_BACKEND_FIRST_RUN_ENABLE_RECONCILERS

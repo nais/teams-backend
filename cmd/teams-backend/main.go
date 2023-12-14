@@ -21,7 +21,6 @@ import (
 	"github.com/nais/teams-backend/pkg/authn"
 	"github.com/nais/teams-backend/pkg/config"
 	"github.com/nais/teams-backend/pkg/db"
-	"github.com/nais/teams-backend/pkg/deployproxy"
 	"github.com/nais/teams-backend/pkg/directives"
 	"github.com/nais/teams-backend/pkg/fixtures"
 	"github.com/nais/teams-backend/pkg/graph"
@@ -138,12 +137,7 @@ func run(cfg *config.Config, log logger.Logger) error {
 		return err
 	}
 
-	deployProxy, err := deployproxy.NewProxy(cfg.NaisDeploy.DeployKeyEndpoint, cfg.NaisDeploy.ProvisionKey, log)
-	if err != nil {
-		log.Warnf("Deploy proxy is not configured: %v", err)
-	}
-
-	handler := setupGraphAPI(teamSync, database, deployProxy, cfg.TenantDomain, userSync, cfg.Environments, log, userSyncRuns)
+	handler := setupGraphAPI(teamSync, database, cfg.TenantDomain, userSync, cfg.Environments, log, userSyncRuns)
 	srv := setupHTTPServer(cfg, database, handler, authHandler, log)
 
 	log.Infof("ready to accept requests at %s.", cfg.ListenAddress)
@@ -237,8 +231,8 @@ func setupAuthHandler(cfg *config.Config, database db.Database, log logger.Logge
 	return handler, nil
 }
 
-func setupGraphAPI(teamSync teamsync.Handler, database db.Database, deployProxy deployproxy.Proxy, domain string, userSync chan<- uuid.UUID, gcpEnvironments []string, log logger.Logger, userSyncRuns *usersync.RunsHandler) *graphql_handler.Server {
-	resolver := graph.NewResolver(teamSync, database, deployProxy, domain, userSync, auditlogger.New(database, types.ComponentNameGraphqlApi, log), gcpEnvironments, log, userSyncRuns)
+func setupGraphAPI(teamSync teamsync.Handler, database db.Database, domain string, userSync chan<- uuid.UUID, gcpEnvironments []string, log logger.Logger, userSyncRuns *usersync.RunsHandler) *graphql_handler.Server {
+	resolver := graph.NewResolver(teamSync, database, domain, userSync, auditlogger.New(database, types.ComponentNameGraphqlApi, log), gcpEnvironments, log, userSyncRuns)
 	gc := generated.Config{}
 	gc.Resolvers = resolver
 	gc.Directives.Admin = directives.Admin()

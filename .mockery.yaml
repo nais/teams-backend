@@ -17,9 +17,6 @@ packages:
     interfaces:
       AuthenticatedUser:
       Database:
-  github.com/nais/teams-backend/pkg/deployproxy:
-    interfaces:
-      Proxy:
   github.com/nais/teams-backend/pkg/logger:
     interfaces:
       Logger:

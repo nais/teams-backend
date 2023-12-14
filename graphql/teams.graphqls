@@ -279,9 +279,6 @@ type Team @key(fields: "slug") {
 
   "Whether or not the team is currently being deleted."
   deletionInProgress: Boolean!
-
-  "Get deploy key for the team."
-  deployKey: DeployKey
 }
 
 "GitHub repository type."

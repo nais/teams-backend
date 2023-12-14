@@ -73,9 +73,6 @@ values:
   legacyNaisNamespaceMapping:
     config:
       type: string
-  naisDeploy.deployKeyEndpoint:
-    computed:
-      template: http://hookd/internal/api/v1/apikey
   naisDeploy.endpoint:
     computed:
       template: http://hookd/internal/api/v1/provision

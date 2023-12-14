@@ -81,7 +81,7 @@ type NaisDeploy struct {
 	ProvisionKey string `envconfig:"TEAMS_BACKEND_NAIS_DEPLOY_PROVISION_KEY"`
 
 	// DeployKeyEndpoint URL to the NAIS deploy key endpoint
-	DeployKeyEndpoint string `envconfig:"TEAMS_BACKEND_NAIS_DEPLOY_DEPLOY_KEY_ENDPOINT" default:"http://localhost:8080/internal/api/v1/apikey"`
+	// DeployKeyEndpoint string `envconfig:"TEAMS_BACKEND_NAIS_DEPLOY_DEPLOY_KEY_ENDPOINT" default:"http://localhost:8080/internal/api/v1/apikey"`
 }
 
 type IAP struct {

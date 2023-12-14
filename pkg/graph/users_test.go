@@ -8,7 +8,6 @@ import (
 	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/authz"
 	"github.com/nais/teams-backend/pkg/db"
-	"github.com/nais/teams-backend/pkg/deployproxy"
 	"github.com/nais/teams-backend/pkg/graph"
 	"github.com/nais/teams-backend/pkg/logger"
 	"github.com/nais/teams-backend/pkg/roles"
@@ -20,7 +19,6 @@ import (
 func TestQueryResolver_Users(t *testing.T) {
 	ctx := context.Background()
 	database := db.NewMockDatabase(t)
-	deployProxy := deployproxy.NewMockProxy(t)
 	auditLogger := auditlogger.NewMockAuditLogger(t)
 	gcpEnvironments := []string{"env"}
 	log, err := logger.GetLogger("text", "info")
@@ -28,7 +26,7 @@ func TestQueryResolver_Users(t *testing.T) {
 	userSync := make(chan<- uuid.UUID)
 	userSyncRuns := usersync.NewRunsHandler(5)
 	resolver := graph.
-		NewResolver(nil, database, deployProxy, "example.com", userSync, auditLogger, gcpEnvironments, log, userSyncRuns).
+		NewResolver(nil, database, "example.com", userSync, auditLogger, gcpEnvironments, log, userSyncRuns).
 		Query()
 
 	t.Run("unauthenticated user", func(t *testing.T) {

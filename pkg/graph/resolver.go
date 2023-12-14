@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/auditlogger"
 	"github.com/nais/teams-backend/pkg/db"
-	"github.com/nais/teams-backend/pkg/deployproxy"
 	"github.com/nais/teams-backend/pkg/graph/apierror"
 	"github.com/nais/teams-backend/pkg/graph/model"
 	"github.com/nais/teams-backend/pkg/logger"
@@ -26,7 +25,6 @@ import (
 type Resolver struct {
 	teamSyncHandler teamsync.Handler
 	database        db.Database
-	deployProxy     deployproxy.Proxy
 	tenantDomain    string
 	userSync        chan<- uuid.UUID
 	systemName      types.ComponentName
@@ -36,11 +34,10 @@ type Resolver struct {
 	userSyncRuns    *usersync.RunsHandler
 }
 
-func NewResolver(teamSyncHandler teamsync.Handler, database db.Database, deployProxy deployproxy.Proxy, tenantDomain string, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger, userSyncRuns *usersync.RunsHandler) *Resolver {
+func NewResolver(teamSyncHandler teamsync.Handler, database db.Database, tenantDomain string, userSync chan<- uuid.UUID, auditLogger auditlogger.AuditLogger, gcpEnvironments []string, log logger.Logger, userSyncRuns *usersync.RunsHandler) *Resolver {
 	return &Resolver{
 		teamSyncHandler: teamSyncHandler,
 		database:        database,
-		deployProxy:     deployProxy,
 		tenantDomain:    tenantDomain,
 		systemName:      types.ComponentNameGraphqlApi,
 		auditLogger:     auditLogger,
