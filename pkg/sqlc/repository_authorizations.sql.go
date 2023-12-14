@@ -12,6 +12,7 @@ import (
 const createRepositoryAuthorization = `-- name: CreateRepositoryAuthorization :exec
 INSERT INTO repository_authorizations (team_slug, github_repository, repository_authorization)
 VALUES ($1, $2, $3)
+ON CONFLICT DO NOTHING
 `
 
 type CreateRepositoryAuthorizationParams struct {

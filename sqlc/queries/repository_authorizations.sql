@@ -1,6 +1,7 @@
 -- name: CreateRepositoryAuthorization :exec
 INSERT INTO repository_authorizations (team_slug, github_repository, repository_authorization)
-VALUES ($1, $2, $3);
+VALUES ($1, $2, $3)
+ON CONFLICT DO NOTHING;
 
 -- name: RemoveRepositoryAuthorization :exec
 DELETE FROM repository_authorizations
