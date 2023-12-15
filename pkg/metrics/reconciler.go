@@ -51,13 +51,6 @@ var (
 		Help:      "How many teams currently pending reconciliation with external systems",
 	})
 
-	reconcilerMaxAttemptsExhaustion = promauto.NewCounter(prometheus.CounterOpts{
-		Namespace: namespace,
-		Subsystem: subsystem,
-		Name:      "reconcile_max_attempts_exhaustion",
-		Help:      "Number of times a team has exhausted all its sync attempts",
-	})
-
 	deleteErrorCounter = promauto.NewCounter(prometheus.CounterOpts{
 		Namespace: namespace,
 		Subsystem: subsystem,
@@ -92,10 +85,6 @@ func IncReconcilerCounter(name sqlc.ReconcilerName, state ReconcilerState) {
 
 func IncDeleteErrorCounter(numErrors int) {
 	deleteErrorCounter.Add(float64(numErrors))
-}
-
-func IncReconcilerMaxAttemptsExhaustion() {
-	reconcilerMaxAttemptsExhaustion.Inc()
 }
 
 func IncExternalHTTPCalls(systemName string, resp *http.Response, err error) {
