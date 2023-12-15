@@ -262,7 +262,7 @@ type TeamsList {
 
 "Team type."
 type Team @key(fields: "slug") {
-  id: ID! @goField(name: "slug")
+  id: ID!
 
   "Unique slug of the team."
   slug: Slug!

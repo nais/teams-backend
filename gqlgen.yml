@@ -116,3 +116,8 @@ models:
     fields:
       roles:
         resolver: true
+
+  Team:
+    fields:
+      id:
+        fieldName: slug

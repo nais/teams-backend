@@ -1780,12 +1780,6 @@ directive @auth on FIELD_DEFINITION
 
 "Require an authenticated user with the admin role for all requests with this directive."
 directive @admin on FIELD_DEFINITION
-
-directive @goField(
-  forceResolver: Boolean
-  name: String
-  omittable: Boolean
-) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
 `, BuiltIn: false},
 	{Name: "../../../graphql/internal.graphqls", Input: `extend type Query {
   teamsInternal: TeamsInternal!
@@ -2310,7 +2304,7 @@ type TeamsList {
 
 "Team type."
 type Team @key(fields: "slug") {
-  id: ID! @goField(name: "slug")
+  id: ID!
 
   "Unique slug of the team."
   slug: Slug!
