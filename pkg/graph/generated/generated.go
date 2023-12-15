@@ -106,6 +106,11 @@ type ComplexityRoot struct {
 		RoleName       func(childComplexity int) int
 	}
 
+	GitHubRepositoryList struct {
+		Nodes    func(childComplexity int) int
+		PageInfo func(childComplexity int) int
+	}
+
 	GitHubRepositoryPermission struct {
 		Granted func(childComplexity int) int
 		Name    func(childComplexity int) int
@@ -221,9 +226,9 @@ type ComplexityRoot struct {
 	}
 
 	Team struct {
-		AuditLogs           func(childComplexity int, limit *int, offset *int) int
+		AuditLogs           func(childComplexity int, offset *int, limit *int) int
 		DeletionInProgress  func(childComplexity int) int
-		GitHubRepositories  func(childComplexity int) int
+		GitHubRepositories  func(childComplexity int, offset *int, limit *int, filter *model.GitHubRepositoriesFilter) int
 		LastSuccessfulSync  func(childComplexity int) int
 		Members             func(childComplexity int, offset *int, limit *int) int
 		Purpose             func(childComplexity int) int
@@ -366,14 +371,14 @@ type ServiceAccountResolver interface {
 	Roles(ctx context.Context, obj *db.ServiceAccount) ([]*db.Role, error)
 }
 type TeamResolver interface {
-	AuditLogs(ctx context.Context, obj *db.Team, limit *int, offset *int) (*model.AuditLogList, error)
+	AuditLogs(ctx context.Context, obj *db.Team, offset *int, limit *int) (*model.AuditLogList, error)
 	Members(ctx context.Context, obj *db.Team, offset *int, limit *int) (*model.TeamMemberList, error)
 	SyncErrors(ctx context.Context, obj *db.Team) ([]*model.SyncError, error)
 
 	ReconcilerState(ctx context.Context, obj *db.Team) (*model.ReconcilerState, error)
 
 	SlackAlertsChannels(ctx context.Context, obj *db.Team) ([]*model.SlackAlertsChannel, error)
-	GitHubRepositories(ctx context.Context, obj *db.Team) ([]*reconcilers.GitHubRepository, error)
+	GitHubRepositories(ctx context.Context, obj *db.Team, offset *int, limit *int, filter *model.GitHubRepositoriesFilter) (*model.GitHubRepositoryList, error)
 	DeletionInProgress(ctx context.Context, obj *db.Team) (bool, error)
 }
 type TeamDeleteKeyResolver interface {
@@ -573,6 +578,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.GitHubRepository.RoleName(childComplexity), true
+
+	case "GitHubRepositoryList.nodes":
+		if e.complexity.GitHubRepositoryList.Nodes == nil {
+			break
+		}
+
+		return e.complexity.GitHubRepositoryList.Nodes(childComplexity), true
+
+	case "GitHubRepositoryList.pageInfo":
+		if e.complexity.GitHubRepositoryList.PageInfo == nil {
+			break
+		}
+
+		return e.complexity.GitHubRepositoryList.PageInfo(childComplexity), true
 
 	case "GitHubRepositoryPermission.granted":
 		if e.complexity.GitHubRepositoryPermission.Granted == nil {
@@ -1285,7 +1304,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Team.AuditLogs(childComplexity, args["limit"].(*int), args["offset"].(*int)), true
+		return e.complexity.Team.AuditLogs(childComplexity, args["offset"].(*int), args["limit"].(*int)), true
 
 	case "Team.deletionInProgress":
 		if e.complexity.Team.DeletionInProgress == nil {
@@ -1299,7 +1318,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.Team.GitHubRepositories(childComplexity), true
+		args, err := ec.field_Team_gitHubRepositories_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Team.GitHubRepositories(childComplexity, args["offset"].(*int), args["limit"].(*int), args["filter"].(*model.GitHubRepositoriesFilter)), true
 
 	case "Team.lastSuccessfulSync":
 		if e.complexity.Team.LastSuccessfulSync == nil {
@@ -1605,6 +1629,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	ec := executionContext{rc, e, 0, 0, make(chan graphql.DeferredResult)}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputCreateTeamInput,
+		ec.unmarshalInputGitHubRepositoriesFilter,
 		ec.unmarshalInputReconcilerConfigInput,
 		ec.unmarshalInputSlackAlertsChannelInput,
 		ec.unmarshalInputTeamMemberInput,
@@ -2023,13 +2048,28 @@ type ServiceAccount {
 `, BuiltIn: false},
 	{Name: "../../../graphql/teams.graphqls", Input: `extend type Query {
   "Get a collection of teams. Default limit is 20"
-  teams(offset: Int, limit: Int, filter: TeamsFilter): TeamsList! @auth
+  teams(
+    "Offset to start listing teams from. Default is 0."
+    offset: Int
+
+    "Limit the number of teams to return. Default is 20."
+    limit: Int
+
+    "Filter teams by GitHub repository permissions."
+    filter: TeamsFilter
+  ): TeamsList! @auth
 
   "Get a specific team."
-  team("Slug of the team." slug: Slug!): Team! @auth
+  team(
+    "Slug of the team."
+    slug: Slug!
+  ): Team! @auth
 
   "Get a team delete key."
-  teamDeleteKey("The key to get." key: ID!): TeamDeleteKey! @auth
+  teamDeleteKey(
+    "The key to get."
+    key: ID!
+  ): TeamDeleteKey! @auth
 }
 
 extend type Mutation {
@@ -2226,17 +2266,6 @@ extend type Mutation {
   ): Team! @auth
 }
 
-input TeamsFilter {
-  github: TeamsFilterGitHub
-}
-
-input TeamsFilterGitHub {
-  "Filter repostiories by repo name"
-  repoName: String!
-  "Filter repostiories by permission name"
-  permissionName: String!
-}
-
 "Team deletion key type."
 type TeamDeleteKey {
   "The unique key used to confirm the deletion of a team."
@@ -2261,8 +2290,21 @@ type TeamSync {
   correlationID: ID!
 }
 
+"Paginated GitHub repository type."
+type GitHubRepositoryList {
+  "The list of GitHub repositories."
+  nodes: [GitHubRepository!]!
+
+  "Pagination information."
+  pageInfo: PageInfo!
+}
+
+"Paginated teams type."
 type TeamsList {
+  "The list of teams."
   nodes: [Team!]!
+
+  "Pagination information."
   pageInfo: PageInfo!
 }
 
@@ -2277,10 +2319,22 @@ type Team @key(fields: "slug") {
   purpose: String!
 
   "Audit logs for this team."
-  auditLogs(limit: Int, offset: Int): AuditLogList!
+  auditLogs(
+    "Offset to start listing audit log entries from. Default is 0."
+    offset: Int
+
+    "Limit the number of audit log entries to return. Default is 20."
+    limit: Int
+  ): AuditLogList!
 
   "Team members."
-  members(offset: Int, limit: Int): TeamMemberList!
+  members(
+    "Offset to start listing team members from. Default is 0."
+    offset: Int
+
+    "Limit the number of team members to return. Default is 20."
+    limit: Int
+  ): TeamMemberList!
 
   "Possible issues related to synchronization of the team to configured external systems. If there are no entries the team can be considered fully synchronized."
   syncErrors: [SyncError!]!
@@ -2298,7 +2352,16 @@ type Team @key(fields: "slug") {
   slackAlertsChannels: [SlackAlertsChannel!]!
 
   "A list of GitHub repositories for the team."
-  gitHubRepositories: [GitHubRepository!]!
+  gitHubRepositories(
+    "Offset to start listing repositories from. Default is 0."
+    offset: Int
+
+    "Limit the number of repositories to return. Default is 20."
+    limit: Int
+
+    "Filter teams by GitHub repository permissions."
+    filter: GitHubRepositoriesFilter
+  ): GitHubRepositoryList!
 
   "Whether or not the team is currently being deleted."
   deletionInProgress: Boolean!
@@ -2421,6 +2484,19 @@ type TeamMemberReconciler {
   enabled: Boolean!
 }
 
+"Input for filtering teams."
+input TeamsFilter {
+  github: TeamsFilterGitHub
+}
+
+input TeamsFilterGitHub {
+  "Filter repostiories by repo name"
+  repoName: String!
+
+  "Filter repostiories by permission name"
+  permissionName: String!
+}
+
 "Input for creating a new team."
 input CreateTeamInput {
   "Team slug. After creation, this value can not be changed."
@@ -2464,6 +2540,12 @@ input TeamMemberInput {
 
   "Reconcilers to opt the team member out of."
   reconcilerOptOuts: [ReconcilerName!]
+}
+
+"Input for filtering GitHub repositories."
+input GitHubRepositoriesFilter {
+  "Include archived repositories or not. Default is false."
+  includeArchivedRepositories: Boolean!
 }
 
 "Available team roles."
@@ -3419,23 +3501,56 @@ func (ec *executionContext) field_Team_auditLogs_args(ctx context.Context, rawAr
 	var err error
 	args := map[string]interface{}{}
 	var arg0 *int
-	if tmp, ok := rawArgs["limit"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
+	if tmp, ok := rawArgs["offset"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("offset"))
 		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["limit"] = arg0
+	args["offset"] = arg0
 	var arg1 *int
-	if tmp, ok := rawArgs["offset"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("offset"))
+	if tmp, ok := rawArgs["limit"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
 		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["offset"] = arg1
+	args["limit"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Team_gitHubRepositories_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *int
+	if tmp, ok := rawArgs["offset"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("offset"))
+		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["offset"] = arg0
+	var arg1 *int
+	if tmp, ok := rawArgs["limit"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
+		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["limit"] = arg1
+	var arg2 *model.GitHubRepositoriesFilter
+	if tmp, ok := rawArgs["filter"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("filter"))
+		arg2, err = ec.unmarshalOGitHubRepositoriesFilter2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐGitHubRepositoriesFilter(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["filter"] = arg2
 	return args, nil
 }
 
@@ -4561,6 +4676,114 @@ func (ec *executionContext) fieldContext_GitHubRepository_authorizations(ctx con
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type RepositoryAuthorization does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GitHubRepositoryList_nodes(ctx context.Context, field graphql.CollectedField, obj *model.GitHubRepositoryList) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GitHubRepositoryList_nodes(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Nodes, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*reconcilers.GitHubRepository)
+	fc.Result = res
+	return ec.marshalNGitHubRepository2ᚕᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋreconcilersᚐGitHubRepositoryᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GitHubRepositoryList_nodes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GitHubRepositoryList",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "name":
+				return ec.fieldContext_GitHubRepository_name(ctx, field)
+			case "permissions":
+				return ec.fieldContext_GitHubRepository_permissions(ctx, field)
+			case "roleName":
+				return ec.fieldContext_GitHubRepository_roleName(ctx, field)
+			case "archived":
+				return ec.fieldContext_GitHubRepository_archived(ctx, field)
+			case "authorizations":
+				return ec.fieldContext_GitHubRepository_authorizations(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type GitHubRepository", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GitHubRepositoryList_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.GitHubRepositoryList) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GitHubRepositoryList_pageInfo(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PageInfo, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.PageInfo)
+	fc.Result = res
+	return ec.marshalNPageInfo2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐPageInfo(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GitHubRepositoryList_pageInfo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GitHubRepositoryList",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "totalCount":
+				return ec.fieldContext_PageInfo_totalCount(ctx, field)
+			case "hasNextPage":
+				return ec.fieldContext_PageInfo_hasNextPage(ctx, field)
+			case "hasPreviousPage":
+				return ec.fieldContext_PageInfo_hasPreviousPage(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
 		},
 	}
 	return fc, nil
@@ -9950,7 +10173,7 @@ func (ec *executionContext) _Team_auditLogs(ctx context.Context, field graphql.C
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Team().AuditLogs(rctx, obj, fc.Args["limit"].(*int), fc.Args["offset"].(*int))
+		return ec.resolvers.Team().AuditLogs(rctx, obj, fc.Args["offset"].(*int), fc.Args["limit"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -10319,7 +10542,7 @@ func (ec *executionContext) _Team_gitHubRepositories(ctx context.Context, field 
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Team().GitHubRepositories(rctx, obj)
+		return ec.resolvers.Team().GitHubRepositories(rctx, obj, fc.Args["offset"].(*int), fc.Args["limit"].(*int), fc.Args["filter"].(*model.GitHubRepositoriesFilter))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -10331,9 +10554,9 @@ func (ec *executionContext) _Team_gitHubRepositories(ctx context.Context, field 
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*reconcilers.GitHubRepository)
+	res := resTmp.(*model.GitHubRepositoryList)
 	fc.Result = res
-	return ec.marshalNGitHubRepository2ᚕᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋreconcilersᚐGitHubRepositoryᚄ(ctx, field.Selections, res)
+	return ec.marshalNGitHubRepositoryList2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐGitHubRepositoryList(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Team_gitHubRepositories(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -10344,19 +10567,24 @@ func (ec *executionContext) fieldContext_Team_gitHubRepositories(ctx context.Con
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "name":
-				return ec.fieldContext_GitHubRepository_name(ctx, field)
-			case "permissions":
-				return ec.fieldContext_GitHubRepository_permissions(ctx, field)
-			case "roleName":
-				return ec.fieldContext_GitHubRepository_roleName(ctx, field)
-			case "archived":
-				return ec.fieldContext_GitHubRepository_archived(ctx, field)
-			case "authorizations":
-				return ec.fieldContext_GitHubRepository_authorizations(ctx, field)
+			case "nodes":
+				return ec.fieldContext_GitHubRepositoryList_nodes(ctx, field)
+			case "pageInfo":
+				return ec.fieldContext_GitHubRepositoryList_pageInfo(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type GitHubRepository", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type GitHubRepositoryList", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Team_gitHubRepositories_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -13848,6 +14076,35 @@ func (ec *executionContext) unmarshalInputCreateTeamInput(ctx context.Context, o
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputGitHubRepositoriesFilter(ctx context.Context, obj interface{}) (model.GitHubRepositoriesFilter, error) {
+	var it model.GitHubRepositoriesFilter
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"includeArchivedRepositories"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "includeArchivedRepositories":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("includeArchivedRepositories"))
+			data, err := ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.IncludeArchivedRepositories = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputReconcilerConfigInput(ctx context.Context, obj interface{}) (model.ReconcilerConfigInput, error) {
 	var it model.ReconcilerConfigInput
 	asMap := map[string]interface{}{}
@@ -14550,6 +14807,50 @@ func (ec *executionContext) _GitHubRepository(ctx context.Context, sel ast.Selec
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var gitHubRepositoryListImplementors = []string{"GitHubRepositoryList"}
+
+func (ec *executionContext) _GitHubRepositoryList(ctx context.Context, sel ast.SelectionSet, obj *model.GitHubRepositoryList) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, gitHubRepositoryListImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("GitHubRepositoryList")
+		case "nodes":
+			out.Values[i] = ec._GitHubRepositoryList_nodes(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "pageInfo":
+			out.Values[i] = ec._GitHubRepositoryList_pageInfo(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -17627,6 +17928,20 @@ func (ec *executionContext) marshalNGitHubRepository2ᚖgithubᚗcomᚋnaisᚋte
 	return ec._GitHubRepository(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNGitHubRepositoryList2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐGitHubRepositoryList(ctx context.Context, sel ast.SelectionSet, v model.GitHubRepositoryList) graphql.Marshaler {
+	return ec._GitHubRepositoryList(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNGitHubRepositoryList2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐGitHubRepositoryList(ctx context.Context, sel ast.SelectionSet, v *model.GitHubRepositoryList) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._GitHubRepositoryList(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNGitHubRepositoryPermission2ᚕᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋreconcilersᚐGitHubRepositoryPermissionᚄ(ctx context.Context, sel ast.SelectionSet, v []*reconcilers.GitHubRepositoryPermission) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -19106,6 +19421,14 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	}
 	res := graphql.MarshalBoolean(*v)
 	return res
+}
+
+func (ec *executionContext) unmarshalOGitHubRepositoriesFilter2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐGitHubRepositoriesFilter(ctx context.Context, v interface{}) (*model.GitHubRepositoriesFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputGitHubRepositoriesFilter(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalOID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx context.Context, v interface{}) (*uuid.UUID, error) {

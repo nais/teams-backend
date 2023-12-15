@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/nais/teams-backend/pkg/db"
+	"github.com/nais/teams-backend/pkg/reconcilers"
 	"github.com/nais/teams-backend/pkg/slug"
 	"github.com/nais/teams-backend/pkg/sqlc"
 )
@@ -37,6 +38,20 @@ type GcpProject struct {
 	ProjectName string `json:"projectName"`
 	// The GCP project ID.
 	ProjectID string `json:"projectId"`
+}
+
+// Input for filtering GitHub repositories.
+type GitHubRepositoriesFilter struct {
+	// Include archived repositories or not. Default is false.
+	IncludeArchivedRepositories bool `json:"includeArchivedRepositories"`
+}
+
+// Paginated GitHub repository type.
+type GitHubRepositoryList struct {
+	// The list of GitHub repositories.
+	Nodes []*reconcilers.GitHubRepository `json:"nodes"`
+	// Pagination information.
+	PageInfo *PageInfo `json:"pageInfo"`
 }
 
 // NAIS namespace type.
@@ -126,6 +141,7 @@ type TeamSync struct {
 	CorrelationID uuid.UUID `json:"correlationID"`
 }
 
+// Input for filtering teams.
 type TeamsFilter struct {
 	Github *TeamsFilterGitHub `json:"github,omitempty"`
 }
@@ -137,9 +153,12 @@ type TeamsFilterGitHub struct {
 	PermissionName string `json:"permissionName"`
 }
 
+// Paginated teams type.
 type TeamsList struct {
-	Nodes    []*db.Team `json:"nodes"`
-	PageInfo *PageInfo  `json:"pageInfo"`
+	// The list of teams.
+	Nodes []*db.Team `json:"nodes"`
+	// Pagination information.
+	PageInfo *PageInfo `json:"pageInfo"`
 }
 
 // Input for updating an existing team.

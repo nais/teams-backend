@@ -891,7 +891,7 @@ func (r *queryResolver) TeamDeleteKey(ctx context.Context, key uuid.UUID) (*db.T
 }
 
 // AuditLogs is the resolver for the auditLogs field.
-func (r *teamResolver) AuditLogs(ctx context.Context, obj *db.Team, limit *int, offset *int) (*model.AuditLogList, error) {
+func (r *teamResolver) AuditLogs(ctx context.Context, obj *db.Team, offset *int, limit *int) (*model.AuditLogList, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireTeamAuthorization(actor, roles.AuthorizationAuditLogsRead, obj.Slug)
 	if err != nil {
@@ -1094,21 +1094,34 @@ func (r *teamResolver) SlackAlertsChannels(ctx context.Context, obj *db.Team) ([
 }
 
 // GitHubRepositories is the resolver for the gitHubRepositories field.
-func (r *teamResolver) GitHubRepositories(ctx context.Context, obj *db.Team) ([]*reconcilers.GitHubRepository, error) {
+func (r *teamResolver) GitHubRepositories(ctx context.Context, obj *db.Team, offset *int, limit *int, filter *model.GitHubRepositoriesFilter) (*model.GitHubRepositoryList, error) {
 	state := &reconcilers.GitHubState{}
-	repositories := make([]*reconcilers.GitHubRepository, 0)
 	err := r.database.LoadReconcilerStateForTeam(ctx, sqlc.ReconcilerNameGithubTeam, obj.Slug, state)
 	if err != nil {
 		return nil, apierror.Errorf("Unable to load the GitHub state for the team.")
 	}
+
+	if filter == nil {
+		filter = &model.GitHubRepositoriesFilter{
+			IncludeArchivedRepositories: false,
+		}
+	}
+
+	repositories := make([]*reconcilers.GitHubRepository, 0)
 	for _, repo := range state.Repositories {
-		if repo.Archived {
+		if repo.Archived && !filter.IncludeArchivedRepositories {
 			continue
 		}
+
 		repo.TeamSlug = &obj.Slug
 		repositories = append(repositories, repo)
 	}
-	return repositories, nil
+
+	paginatedRepositories, pageInfo := model.PaginatedSlice(repositories, model.NewPagination(offset, limit))
+	return &model.GitHubRepositoryList{
+		Nodes:    paginatedRepositories,
+		PageInfo: pageInfo,
+	}, nil
 }
 
 // DeletionInProgress is the resolver for the deletionInProgress field.

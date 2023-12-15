@@ -1,12 +1,27 @@
 extend type Query {
   "Get a collection of teams. Default limit is 20"
-  teams(offset: Int, limit: Int, filter: TeamsFilter): TeamsList! @auth
+  teams(
+    "Offset to start listing teams from. Default is 0."
+    offset: Int
+
+    "Limit the number of teams to return. Default is 20."
+    limit: Int
+
+    "Filter teams by GitHub repository permissions."
+    filter: TeamsFilter
+  ): TeamsList! @auth
 
   "Get a specific team."
-  team("Slug of the team." slug: Slug!): Team! @auth
+  team(
+    "Slug of the team."
+    slug: Slug!
+  ): Team! @auth
 
   "Get a team delete key."
-  teamDeleteKey("The key to get." key: ID!): TeamDeleteKey! @auth
+  teamDeleteKey(
+    "The key to get."
+    key: ID!
+  ): TeamDeleteKey! @auth
 }
 
 extend type Mutation {
@@ -203,17 +218,6 @@ extend type Mutation {
   ): Team! @auth
 }
 
-input TeamsFilter {
-  github: TeamsFilterGitHub
-}
-
-input TeamsFilterGitHub {
-  "Filter repostiories by repo name"
-  repoName: String!
-  "Filter repostiories by permission name"
-  permissionName: String!
-}
-
 "Team deletion key type."
 type TeamDeleteKey {
   "The unique key used to confirm the deletion of a team."
@@ -238,8 +242,21 @@ type TeamSync {
   correlationID: ID!
 }
 
+"Paginated GitHub repository type."
+type GitHubRepositoryList {
+  "The list of GitHub repositories."
+  nodes: [GitHubRepository!]!
+
+  "Pagination information."
+  pageInfo: PageInfo!
+}
+
+"Paginated teams type."
 type TeamsList {
+  "The list of teams."
   nodes: [Team!]!
+
+  "Pagination information."
   pageInfo: PageInfo!
 }
 
@@ -254,10 +271,22 @@ type Team @key(fields: "slug") {
   purpose: String!
 
   "Audit logs for this team."
-  auditLogs(limit: Int, offset: Int): AuditLogList!
+  auditLogs(
+    "Offset to start listing audit log entries from. Default is 0."
+    offset: Int
+
+    "Limit the number of audit log entries to return. Default is 20."
+    limit: Int
+  ): AuditLogList!
 
   "Team members."
-  members(offset: Int, limit: Int): TeamMemberList!
+  members(
+    "Offset to start listing team members from. Default is 0."
+    offset: Int
+
+    "Limit the number of team members to return. Default is 20."
+    limit: Int
+  ): TeamMemberList!
 
   "Possible issues related to synchronization of the team to configured external systems. If there are no entries the team can be considered fully synchronized."
   syncErrors: [SyncError!]!
@@ -275,7 +304,16 @@ type Team @key(fields: "slug") {
   slackAlertsChannels: [SlackAlertsChannel!]!
 
   "A list of GitHub repositories for the team."
-  gitHubRepositories: [GitHubRepository!]!
+  gitHubRepositories(
+    "Offset to start listing repositories from. Default is 0."
+    offset: Int
+
+    "Limit the number of repositories to return. Default is 20."
+    limit: Int
+
+    "Filter teams by GitHub repository permissions."
+    filter: GitHubRepositoriesFilter
+  ): GitHubRepositoryList!
 
   "Whether or not the team is currently being deleted."
   deletionInProgress: Boolean!
@@ -398,6 +436,19 @@ type TeamMemberReconciler {
   enabled: Boolean!
 }
 
+"Input for filtering teams."
+input TeamsFilter {
+  github: TeamsFilterGitHub
+}
+
+input TeamsFilterGitHub {
+  "Filter repostiories by repo name"
+  repoName: String!
+
+  "Filter repostiories by permission name"
+  permissionName: String!
+}
+
 "Input for creating a new team."
 input CreateTeamInput {
   "Team slug. After creation, this value can not be changed."
@@ -441,6 +492,12 @@ input TeamMemberInput {
 
   "Reconcilers to opt the team member out of."
   reconcilerOptOuts: [ReconcilerName!]
+}
+
+"Input for filtering GitHub repositories."
+input GitHubRepositoriesFilter {
+  "Include archived repositories or not. Default is false."
+  includeArchivedRepositories: Boolean!
 }
 
 "Available team roles."
