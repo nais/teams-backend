@@ -41,7 +41,7 @@ autobind:
 federation:
   filename: pkg/graph/generated/federation.go
   package: generated
-  version: 2
+  version: 1
 
 # This section declares type mapping between the GraphQL and go type systems
 #
