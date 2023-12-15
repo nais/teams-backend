@@ -9,7 +9,7 @@ extend type Query {
 
     "Filter teams by GitHub repository permissions."
     filter: TeamsFilter
-  ): TeamsList! @auth
+  ): TeamList! @auth
 
   "Get a specific team."
   team(
@@ -252,7 +252,7 @@ type GitHubRepositoryList {
 }
 
 "Paginated teams type."
-type TeamsList {
+type TeamList {
   "The list of teams."
   nodes: [Team!]!
 

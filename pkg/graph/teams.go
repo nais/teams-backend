@@ -822,7 +822,7 @@ func (r *mutationResolver) DeauthorizeRepository(ctx context.Context, authorizat
 }
 
 // Teams is the resolver for the teams field.
-func (r *queryResolver) Teams(ctx context.Context, offset *int, limit *int, filter *model.TeamsFilter) (*model.TeamsList, error) {
+func (r *queryResolver) Teams(ctx context.Context, offset *int, limit *int, filter *model.TeamsFilter) (*model.TeamList, error) {
 	actor := authz.ActorFromContext(ctx)
 	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationTeamsList)
 	if err != nil {
@@ -845,7 +845,7 @@ func (r *queryResolver) Teams(ctx context.Context, offset *int, limit *int, filt
 		return nil, err
 	}
 
-	return &model.TeamsList{
+	return &model.TeamList{
 		Nodes: teams,
 		PageInfo: &model.PageInfo{
 			TotalCount:      total,

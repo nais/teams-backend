@@ -245,6 +245,11 @@ type ComplexityRoot struct {
 		Team      func(childComplexity int) int
 	}
 
+	TeamList struct {
+		Nodes    func(childComplexity int) int
+		PageInfo func(childComplexity int) int
+	}
+
 	TeamMember struct {
 		Reconcilers func(childComplexity int) int
 		Role        func(childComplexity int) int
@@ -268,11 +273,6 @@ type ComplexityRoot struct {
 
 	TeamsInternal struct {
 		Roles func(childComplexity int) int
-	}
-
-	TeamsList struct {
-		Nodes    func(childComplexity int) int
-		PageInfo func(childComplexity int) int
 	}
 
 	User struct {
@@ -348,7 +348,7 @@ type QueryResolver interface {
 	Me(ctx context.Context) (db.AuthenticatedUser, error)
 	TeamsInternal(ctx context.Context) (*model.TeamsInternal, error)
 	Reconcilers(ctx context.Context) ([]*db.Reconciler, error)
-	Teams(ctx context.Context, offset *int, limit *int, filter *model.TeamsFilter) (*model.TeamsList, error)
+	Teams(ctx context.Context, offset *int, limit *int, filter *model.TeamsFilter) (*model.TeamList, error)
 	Team(ctx context.Context, slug slug.Slug) (*db.Team, error)
 	TeamDeleteKey(ctx context.Context, key uuid.UUID) (*db.TeamDeleteKey, error)
 	Users(ctx context.Context, offset *int, limit *int) (*model.UserList, error)
@@ -1419,6 +1419,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.TeamDeleteKey.Team(childComplexity), true
 
+	case "TeamList.nodes":
+		if e.complexity.TeamList.Nodes == nil {
+			break
+		}
+
+		return e.complexity.TeamList.Nodes(childComplexity), true
+
+	case "TeamList.pageInfo":
+		if e.complexity.TeamList.PageInfo == nil {
+			break
+		}
+
+		return e.complexity.TeamList.PageInfo(childComplexity), true
+
 	case "TeamMember.reconcilers":
 		if e.complexity.TeamMember.Reconcilers == nil {
 			break
@@ -1488,20 +1502,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.TeamsInternal.Roles(childComplexity), true
-
-	case "TeamsList.nodes":
-		if e.complexity.TeamsList.Nodes == nil {
-			break
-		}
-
-		return e.complexity.TeamsList.Nodes(childComplexity), true
-
-	case "TeamsList.pageInfo":
-		if e.complexity.TeamsList.PageInfo == nil {
-			break
-		}
-
-		return e.complexity.TeamsList.PageInfo(childComplexity), true
 
 	case "User.email":
 		if e.complexity.User.Email == nil {
@@ -2049,7 +2049,7 @@ type ServiceAccount {
 
     "Filter teams by GitHub repository permissions."
     filter: TeamsFilter
-  ): TeamsList! @auth
+  ): TeamList! @auth
 
   "Get a specific team."
   team(
@@ -2292,7 +2292,7 @@ type GitHubRepositoryList {
 }
 
 "Paginated teams type."
-type TeamsList {
+type TeamList {
   "The list of teams."
   nodes: [Team!]!
 
@@ -7672,10 +7672,10 @@ func (ec *executionContext) _Query_teams(ctx context.Context, field graphql.Coll
 		if tmp == nil {
 			return nil, nil
 		}
-		if data, ok := tmp.(*model.TeamsList); ok {
+		if data, ok := tmp.(*model.TeamList); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/teams-backend/pkg/graph/model.TeamsList`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/nais/teams-backend/pkg/graph/model.TeamList`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -7687,9 +7687,9 @@ func (ec *executionContext) _Query_teams(ctx context.Context, field graphql.Coll
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.TeamsList)
+	res := resTmp.(*model.TeamList)
 	fc.Result = res
-	return ec.marshalNTeamsList2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐTeamsList(ctx, field.Selections, res)
+	return ec.marshalNTeamList2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐTeamList(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_teams(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -7701,11 +7701,11 @@ func (ec *executionContext) fieldContext_Query_teams(ctx context.Context, field 
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "nodes":
-				return ec.fieldContext_TeamsList_nodes(ctx, field)
+				return ec.fieldContext_TeamList_nodes(ctx, field)
 			case "pageInfo":
-				return ec.fieldContext_TeamsList_pageInfo(ctx, field)
+				return ec.fieldContext_TeamList_pageInfo(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type TeamsList", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type TeamList", field.Name)
 		},
 	}
 	defer func() {
@@ -10843,6 +10843,128 @@ func (ec *executionContext) fieldContext_TeamDeleteKey_team(ctx context.Context,
 	return fc, nil
 }
 
+func (ec *executionContext) _TeamList_nodes(ctx context.Context, field graphql.CollectedField, obj *model.TeamList) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_TeamList_nodes(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Nodes, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*db.Team)
+	fc.Result = res
+	return ec.marshalNTeam2ᚕᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋdbᚐTeamᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_TeamList_nodes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TeamList",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Team_id(ctx, field)
+			case "slug":
+				return ec.fieldContext_Team_slug(ctx, field)
+			case "purpose":
+				return ec.fieldContext_Team_purpose(ctx, field)
+			case "auditLogs":
+				return ec.fieldContext_Team_auditLogs(ctx, field)
+			case "members":
+				return ec.fieldContext_Team_members(ctx, field)
+			case "syncErrors":
+				return ec.fieldContext_Team_syncErrors(ctx, field)
+			case "lastSuccessfulSync":
+				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
+			case "reconcilerState":
+				return ec.fieldContext_Team_reconcilerState(ctx, field)
+			case "slackChannel":
+				return ec.fieldContext_Team_slackChannel(ctx, field)
+			case "slackAlertsChannels":
+				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
+			case "gitHubRepositories":
+				return ec.fieldContext_Team_gitHubRepositories(ctx, field)
+			case "deletionInProgress":
+				return ec.fieldContext_Team_deletionInProgress(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _TeamList_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.TeamList) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_TeamList_pageInfo(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PageInfo, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.PageInfo)
+	fc.Result = res
+	return ec.marshalNPageInfo2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐPageInfo(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_TeamList_pageInfo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TeamList",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "totalCount":
+				return ec.fieldContext_PageInfo_totalCount(ctx, field)
+			case "hasNextPage":
+				return ec.fieldContext_PageInfo_hasNextPage(ctx, field)
+			case "hasPreviousPage":
+				return ec.fieldContext_PageInfo_hasPreviousPage(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _TeamMember_team(ctx context.Context, field graphql.CollectedField, obj *model.TeamMember) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_TeamMember_team(ctx, field)
 	if err != nil {
@@ -11362,128 +11484,6 @@ func (ec *executionContext) fieldContext_TeamsInternal_roles(ctx context.Context
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type RoleName does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _TeamsList_nodes(ctx context.Context, field graphql.CollectedField, obj *model.TeamsList) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_TeamsList_nodes(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Nodes, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*db.Team)
-	fc.Result = res
-	return ec.marshalNTeam2ᚕᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋdbᚐTeamᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_TeamsList_nodes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TeamsList",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Team_id(ctx, field)
-			case "slug":
-				return ec.fieldContext_Team_slug(ctx, field)
-			case "purpose":
-				return ec.fieldContext_Team_purpose(ctx, field)
-			case "auditLogs":
-				return ec.fieldContext_Team_auditLogs(ctx, field)
-			case "members":
-				return ec.fieldContext_Team_members(ctx, field)
-			case "syncErrors":
-				return ec.fieldContext_Team_syncErrors(ctx, field)
-			case "lastSuccessfulSync":
-				return ec.fieldContext_Team_lastSuccessfulSync(ctx, field)
-			case "reconcilerState":
-				return ec.fieldContext_Team_reconcilerState(ctx, field)
-			case "slackChannel":
-				return ec.fieldContext_Team_slackChannel(ctx, field)
-			case "slackAlertsChannels":
-				return ec.fieldContext_Team_slackAlertsChannels(ctx, field)
-			case "gitHubRepositories":
-				return ec.fieldContext_Team_gitHubRepositories(ctx, field)
-			case "deletionInProgress":
-				return ec.fieldContext_Team_deletionInProgress(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Team", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _TeamsList_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.TeamsList) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_TeamsList_pageInfo(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.PageInfo, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.PageInfo)
-	fc.Result = res
-	return ec.marshalNPageInfo2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐPageInfo(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_TeamsList_pageInfo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TeamsList",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "totalCount":
-				return ec.fieldContext_PageInfo_totalCount(ctx, field)
-			case "hasNextPage":
-				return ec.fieldContext_PageInfo_hasNextPage(ctx, field)
-			case "hasPreviousPage":
-				return ec.fieldContext_PageInfo_hasPreviousPage(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
 		},
 	}
 	return fc, nil
@@ -16476,6 +16476,50 @@ func (ec *executionContext) _TeamDeleteKey(ctx context.Context, sel ast.Selectio
 	return out
 }
 
+var teamListImplementors = []string{"TeamList"}
+
+func (ec *executionContext) _TeamList(ctx context.Context, sel ast.SelectionSet, obj *model.TeamList) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, teamListImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("TeamList")
+		case "nodes":
+			out.Values[i] = ec._TeamList_nodes(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "pageInfo":
+			out.Values[i] = ec._TeamList_pageInfo(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var teamMemberImplementors = []string{"TeamMember"}
 
 func (ec *executionContext) _TeamMember(ctx context.Context, sel ast.SelectionSet, obj *model.TeamMember) graphql.Marshaler {
@@ -16859,50 +16903,6 @@ func (ec *executionContext) _TeamsInternal(ctx context.Context, sel ast.Selectio
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
-var teamsListImplementors = []string{"TeamsList"}
-
-func (ec *executionContext) _TeamsList(ctx context.Context, sel ast.SelectionSet, obj *model.TeamsList) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, teamsListImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("TeamsList")
-		case "nodes":
-			out.Values[i] = ec._TeamsList_nodes(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "pageInfo":
-			out.Values[i] = ec._TeamsList_pageInfo(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -18645,6 +18645,20 @@ func (ec *executionContext) marshalNTeamDeleteKey2ᚖgithubᚗcomᚋnaisᚋteams
 	return ec._TeamDeleteKey(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNTeamList2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐTeamList(ctx context.Context, sel ast.SelectionSet, v model.TeamList) graphql.Marshaler {
+	return ec._TeamList(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNTeamList2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐTeamList(ctx context.Context, sel ast.SelectionSet, v *model.TeamList) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._TeamList(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNTeamMember2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐTeamMember(ctx context.Context, sel ast.SelectionSet, v model.TeamMember) graphql.Marshaler {
 	return ec._TeamMember(ctx, sel, &v)
 }
@@ -18812,20 +18826,6 @@ func (ec *executionContext) marshalNTeamsInternal2ᚖgithubᚗcomᚋnaisᚋteams
 		return graphql.Null
 	}
 	return ec._TeamsInternal(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalNTeamsList2githubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐTeamsList(ctx context.Context, sel ast.SelectionSet, v model.TeamsList) graphql.Marshaler {
-	return ec._TeamsList(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNTeamsList2ᚖgithubᚗcomᚋnaisᚋteamsᚑbackendᚋpkgᚋgraphᚋmodelᚐTeamsList(ctx context.Context, sel ast.SelectionSet, v *model.TeamsList) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._TeamsList(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNTime2timeᚐTime(ctx context.Context, v interface{}) (time.Time, error) {

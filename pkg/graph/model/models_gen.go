@@ -120,6 +120,14 @@ type SyncError struct {
 	Error string `json:"error"`
 }
 
+// Paginated teams type.
+type TeamList struct {
+	// The list of teams.
+	Nodes []*db.Team `json:"nodes"`
+	// Pagination information.
+	PageInfo *PageInfo `json:"pageInfo"`
+}
+
 // Team member input.
 type TeamMemberInput struct {
 	// The ID of user.
@@ -151,14 +159,6 @@ type TeamsFilterGitHub struct {
 	RepoName string `json:"repoName"`
 	// Filter repostiories by permission name
 	PermissionName string `json:"permissionName"`
-}
-
-// Paginated teams type.
-type TeamsList struct {
-	// The list of teams.
-	Nodes []*db.Team `json:"nodes"`
-	// Pagination information.
-	PageInfo *PageInfo `json:"pageInfo"`
 }
 
 // Input for updating an existing team.
