@@ -121,7 +121,7 @@ type Database interface {
 	DeleteUser(ctx context.Context, userID uuid.UUID) error
 	GetUsers(ctx context.Context, offset, limit int) ([]*User, int, error)
 	GetAllUsers(ctx context.Context) ([]*User, error)
-	GetUserTeams(ctx context.Context, userID uuid.UUID, offset, limit int) ([]*UserTeam, error)
+	GetUserTeams(ctx context.Context, userID uuid.UUID, offset, limit int) ([]*UserTeam, int, error)
 	CreateTeam(ctx context.Context, slug slug.Slug, purpose, slackChannel string) (*Team, error)
 	UpdateTeam(ctx context.Context, teamSlug slug.Slug, purpose, slackChannel *string) (*Team, error)
 	GetActiveTeamBySlug(ctx context.Context, slug slug.Slug) (*Team, error)

@@ -832,26 +832,22 @@ func (r *queryResolver) Teams(ctx context.Context, offset *int, limit *int, filt
 	var teams []*db.Team
 	var total int
 
-	off, lim := defaultOffsetLimit(offset, limit)
+	p := model.NewPagination(offset, limit)
 
 	if filter != nil {
 		if filter.Github != nil {
-			teams, total, err = r.database.GetTeamsWithPermissionInGitHubRepo(ctx, filter.Github.RepoName, filter.Github.PermissionName, off, lim)
+			teams, total, err = r.database.GetTeamsWithPermissionInGitHubRepo(ctx, filter.Github.RepoName, filter.Github.PermissionName, p.Offset, p.Limit)
 		}
 	} else {
-		teams, total, err = r.database.GetTeams(ctx, off, lim)
+		teams, total, err = r.database.GetTeams(ctx, p.Offset, p.Limit)
 	}
 	if err != nil {
 		return nil, err
 	}
 
 	return &model.TeamList{
-		Nodes: teams,
-		PageInfo: &model.PageInfo{
-			TotalCount:      total,
-			HasPreviousPage: off > 0,
-			HasNextPage:     off+lim < total,
-		},
+		Nodes:    teams,
+		PageInfo: model.NewPageInfo(p, total),
 	}, nil
 }
 
@@ -898,18 +894,14 @@ func (r *teamResolver) AuditLogs(ctx context.Context, obj *db.Team, offset *int,
 		return nil, err
 	}
 
-	off, lim := defaultOffsetLimit(offset, limit)
-	entries, total, err := r.database.GetAuditLogsForTeam(ctx, obj.Slug, off, lim)
+	p := model.NewPagination(offset, limit)
+	entries, total, err := r.database.GetAuditLogsForTeam(ctx, obj.Slug, p.Offset, p.Limit)
 	if err != nil {
 		return nil, err
 	}
 	return &model.AuditLogList{
-		Nodes: entries,
-		PageInfo: &model.PageInfo{
-			TotalCount:      total,
-			HasPreviousPage: off > 0,
-			HasNextPage:     off+lim < len(entries),
-		},
+		Nodes:    entries,
+		PageInfo: model.NewPageInfo(p, total),
 	}, nil
 }
 
@@ -921,9 +913,10 @@ func (r *teamResolver) Members(ctx context.Context, obj *db.Team, offset *int, l
 		return nil, err
 	}
 
-	off, lim := defaultOffsetLimit(offset, limit)
+	p := model.NewPagination(offset, limit)
 
-	users, total, err := r.database.GetTeamMembers(ctx, obj.Slug, off, lim)
+
+	users, total, err := r.database.GetTeamMembers(ctx, obj.Slug, p.Offset, p.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -938,11 +931,7 @@ func (r *teamResolver) Members(ctx context.Context, obj *db.Team, offset *int, l
 
 	return &model.TeamMemberList{
 		Nodes: members,
-		PageInfo: &model.PageInfo{
-			HasNextPage:     total > off+lim,
-			HasPreviousPage: off > 0,
-			TotalCount:      total,
-		},
+		PageInfo: model.NewPageInfo(p, total),
 	}, nil
 }
 

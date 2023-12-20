@@ -112,14 +112,19 @@ func (d *database) GetActiveTeams(ctx context.Context) ([]*Team, error) {
 	return collection, nil
 }
 
-func (d *database) GetUserTeams(ctx context.Context, userID uuid.UUID, offset, limit int) ([]*UserTeam, error) {
+func (d *database) GetUserTeams(ctx context.Context, userID uuid.UUID, offset, limit int) ([]*UserTeam, int, error) {
 	rows, err := d.querier.GetUserTeams(ctx, sqlc.GetUserTeamsParams{
 		UserID: userID,
 		Limit:  int32(limit),
 		Offset: int32(offset),
 	})
 	if err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+
+	totalCount, err := d.querier.GetUserTeamsCount(ctx, userID)
+	if err != nil {
+		return nil, 0, err
 	}
 
 	teams := make([]*UserTeam, 0)
@@ -127,7 +132,7 @@ func (d *database) GetUserTeams(ctx context.Context, userID uuid.UUID, offset, l
 		teams = append(teams, &UserTeam{Team: &row.Team, RoleName: row.RoleName})
 	}
 
-	return teams, nil
+	return teams, int(totalCount), nil
 }
 
 func (d *database) GetAllTeamMembers(ctx context.Context, teamSlug slug.Slug) ([]*User, error) {

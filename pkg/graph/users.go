@@ -56,20 +56,17 @@ func (r *queryResolver) Users(ctx context.Context, offset *int, limit *int) (*mo
 	if err != nil {
 		return nil, err
 	}
-	off, lim := defaultOffsetLimit(offset, limit)
-	users, total, err := r.database.GetUsers(ctx, off, lim)
+	p := model.NewPagination(offset, limit)
+	users, total, err := r.database.GetUsers(ctx, p.Offset, p.Limit)
 	if err != nil {
 		return nil, err
 	}
 
 	return &model.UserList{
-		Nodes: users,
-		PageInfo: &model.PageInfo{
-			TotalCount:      total,
-			HasPreviousPage: off > 0,
-			HasNextPage:     off+lim < total,
+			Nodes:    users,
+			PageInfo: model.NewPageInfo(p, total),
 		},
-	}, nil
+		nil
 }
 
 // User is the resolver for the user field.
@@ -107,10 +104,9 @@ func (r *userResolver) Teams(ctx context.Context, obj *db.User, limit *int, offs
 	if err != nil {
 		return nil, err
 	}
+	p := model.NewPagination(offset, limit)
 
-	off, lim := defaultOffsetLimit(offset, limit)
-
-	userTeams, err := r.database.GetUserTeams(ctx, obj.ID, off, lim)
+	userTeams, totalCount, err := r.database.GetUserTeams(ctx, obj.ID, p.Offset, p.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -134,10 +130,8 @@ func (r *userResolver) Teams(ctx context.Context, obj *db.User, limit *int, offs
 	}
 
 	return &model.TeamMemberList{
-		PageInfo: &model.PageInfo{
-			TotalCount: len(teams),
-		},
-		Nodes: teams,
+		PageInfo: model.NewPageInfo(p, totalCount),
+		Nodes:    teams,
 	}, nil
 }
 
@@ -173,18 +167,14 @@ func (r *userResolver) Roles(ctx context.Context, obj *db.User) ([]*db.Role, err
 
 // AuditLogs is the resolver for the auditLogs field.
 func (r *userSyncRunResolver) AuditLogs(ctx context.Context, obj *usersync.Run, limit *int, offset *int) (*model.AuditLogList, error) {
-	off, lim := defaultOffsetLimit(offset, limit)
-	entries, total, err := r.database.GetAuditLogsForCorrelationID(ctx, obj.CorrelationID(), off, lim)
+	p := model.NewPagination(offset, limit)
+	entries, total, err := r.database.GetAuditLogsForCorrelationID(ctx, obj.CorrelationID(), p.Offset, p.Limit)
 	if err != nil {
 		return nil, err
 	}
 	return &model.AuditLogList{
-		Nodes: entries,
-		PageInfo: &model.PageInfo{
-			TotalCount:      total,
-			HasPreviousPage: off > 0,
-			HasNextPage:     off+lim < len(entries),
-		},
+		Nodes:    entries,
+		PageInfo: model.NewPageInfo(p, total),
 	}, nil
 }
 
@@ -221,17 +211,3 @@ type (
 	userResolver        struct{ *Resolver }
 	userSyncRunResolver struct{ *Resolver }
 )
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//     it when you're done.
-//   - You have helper methods in this file. Move them out to keep these resolver files clean.
-func (r *userResolver) ID(ctx context.Context, obj *db.User) (string, error) {
-	panic(fmt.Errorf("not implemented: ID - id"))
-}
-
-func (r *userSyncRunResolver) CorrelationID(ctx context.Context, obj *usersync.Run) (string, error) {
-	panic(fmt.Errorf("not implemented: CorrelationID - correlationID"))
-}

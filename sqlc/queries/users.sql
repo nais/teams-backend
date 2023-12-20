@@ -33,6 +33,10 @@ WHERE user_roles.user_id = $1
 ORDER BY teams.slug ASC
 LIMIT $2 OFFSET $3;
 
+-- name: GetUserTeamsCount :one
+SELECT COUNT (*) FROM user_roles
+WHERE user_roles.user_id = $1;
+
 -- name: UpdateUser :one
 UPDATE users
 SET name = $1, email = LOWER(sqlc.arg(email)), external_id = $2

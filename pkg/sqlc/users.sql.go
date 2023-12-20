@@ -171,6 +171,18 @@ func (q *Queries) GetUserTeams(ctx context.Context, arg GetUserTeamsParams) ([]*
 	return items, nil
 }
 
+const getUserTeamsCount = `-- name: GetUserTeamsCount :one
+SELECT COUNT (*) FROM user_roles
+WHERE user_roles.user_id = $1
+`
+
+func (q *Queries) GetUserTeamsCount(ctx context.Context, userID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, getUserTeamsCount, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getUsers = `-- name: GetUsers :many
 SELECT id, email, name, external_id FROM users
 ORDER BY name ASC LIMIT $1 OFFSET $2

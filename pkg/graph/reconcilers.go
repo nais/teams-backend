@@ -350,18 +350,15 @@ func (r *reconcilerResolver) Configured(ctx context.Context, obj *db.Reconciler)
 
 // AuditLogs is the resolver for the auditLogs field.
 func (r *reconcilerResolver) AuditLogs(ctx context.Context, obj *db.Reconciler, offset *int, limit *int) (*model.AuditLogList, error) {
-	off, lim := defaultOffsetLimit(offset, limit)
-	entries, total, err := r.database.GetAuditLogsForReconciler(ctx, obj.Name, off, lim)
+	p := model.NewPagination(offset, limit)
+	entries, total, err := r.database.GetAuditLogsForReconciler(ctx, obj.Name, p.Offset, p.Limit)
 	if err != nil {
 		return nil, err
 	}
+
 	return &model.AuditLogList{
-		Nodes: entries,
-		PageInfo: &model.PageInfo{
-			TotalCount:      total,
-			HasPreviousPage: off > 0,
-			HasNextPage:     off+lim < len(entries),
-		},
+		Nodes:    entries,
+		PageInfo: model.NewPageInfo(p, total),
 	}, nil
 }
 
