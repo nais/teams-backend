@@ -35,7 +35,9 @@ LIMIT $2 OFFSET $3;
 
 -- name: GetUserTeamsCount :one
 SELECT COUNT (*) FROM user_roles
-WHERE user_roles.user_id = $1;
+WHERE user_roles.user_id = $1
+AND target_team_slug IS NOT NULL;
+;
 
 -- name: UpdateUser :one
 UPDATE users

@@ -174,6 +174,7 @@ func (q *Queries) GetUserTeams(ctx context.Context, arg GetUserTeamsParams) ([]*
 const getUserTeamsCount = `-- name: GetUserTeamsCount :one
 SELECT COUNT (*) FROM user_roles
 WHERE user_roles.user_id = $1
+AND target_team_slug IS NOT NULL
 `
 
 func (q *Queries) GetUserTeamsCount(ctx context.Context, userID uuid.UUID) (int64, error) {
