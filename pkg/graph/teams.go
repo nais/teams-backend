@@ -915,7 +915,6 @@ func (r *teamResolver) Members(ctx context.Context, obj *db.Team, offset *int, l
 
 	p := model.NewPagination(offset, limit)
 
-
 	users, total, err := r.database.GetTeamMembers(ctx, obj.Slug, p.Offset, p.Limit)
 	if err != nil {
 		return nil, err
@@ -930,7 +929,7 @@ func (r *teamResolver) Members(ctx context.Context, obj *db.Team, offset *int, l
 	}
 
 	return &model.TeamMemberList{
-		Nodes: members,
+		Nodes:    members,
 		PageInfo: model.NewPageInfo(p, total),
 	}, nil
 }
@@ -1121,6 +1120,25 @@ func (r *teamResolver) DeletionInProgress(ctx context.Context, obj *db.Team) (bo
 	}
 
 	return false, err
+}
+
+// ViewerIsOwner is the resolver for the viewerIsOwner field.
+func (r *teamResolver) ViewerIsOwner(ctx context.Context, obj *db.Team) (bool, error) {
+	actor := authz.ActorFromContext(ctx)
+	return r.database.UserIsTeamOwner(ctx, actor.User.GetID(), obj.Slug)
+}
+
+// ViewerIsMember is the resolver for the viewerIsMember field.
+func (r *teamResolver) ViewerIsMember(ctx context.Context, obj *db.Team) (bool, error) {
+	actor := authz.ActorFromContext(ctx)
+	u, err := r.database.GetTeamMember(ctx, obj.Slug, actor.User.GetID())
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+	return u != nil, nil
 }
 
 // CreatedBy is the resolver for the createdBy field.

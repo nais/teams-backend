@@ -12,16 +12,10 @@ extend type Query {
   ): TeamList! @auth
 
   "Get a specific team."
-  team(
-    "Slug of the team."
-    slug: Slug!
-  ): Team! @auth
+  team("Slug of the team." slug: Slug!): Team! @auth
 
   "Get a team delete key."
-  teamDeleteKey(
-    "The key to get."
-    key: ID!
-  ): TeamDeleteKey! @auth
+  teamDeleteKey("The key to get." key: ID!): TeamDeleteKey! @auth
 }
 
 extend type Mutation {
@@ -317,6 +311,12 @@ type Team @key(fields: "slug") {
 
   "Whether or not the team is currently being deleted."
   deletionInProgress: Boolean!
+
+  "Whether or not the viewer is an owner of the team."
+  viewerIsOwner: Boolean!
+
+  "Whether or not the viewer is a member of the team."
+  viewerIsMember: Boolean!
 }
 
 "GitHub repository type."
