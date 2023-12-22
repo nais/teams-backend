@@ -282,6 +282,9 @@ type Team @key(fields: "slug") {
     limit: Int
   ): TeamMemberList!
 
+  "Single team member"
+  member("The ID of the user." userId: ID!): TeamMember!
+
   "Possible issues related to synchronization of the team to configured external systems. If there are no entries the team can be considered fully synchronized."
   syncErrors: [SyncError!]!
 

@@ -934,6 +934,25 @@ func (r *teamResolver) Members(ctx context.Context, obj *db.Team, offset *int, l
 	}, nil
 }
 
+// Member is the resolver for the member field.
+func (r *teamResolver) Member(ctx context.Context, obj *db.Team, userID uuid.UUID) (*model.TeamMember, error) {
+	actor := authz.ActorFromContext(ctx)
+	err := authz.RequireGlobalAuthorization(actor, roles.AuthorizationUsersList)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := r.database.GetUserByID(ctx, userID)
+	if err != nil {
+		return nil, apierror.ErrUserNotExists
+	}
+
+	return &model.TeamMember{
+		UserID:   user.ID,
+		TeamSlug: obj.Slug,
+	}, nil
+}
+
 // SyncErrors is the resolver for the syncErrors field.
 func (r *teamResolver) SyncErrors(ctx context.Context, obj *db.Team) ([]*model.SyncError, error) {
 	actor := authz.ActorFromContext(ctx)
