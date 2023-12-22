@@ -71,6 +71,9 @@ type User @key(fields: "id") {
 
   "The external ID of the user."
   externalId: String!
+
+  "This field will only be populated via the me query"
+  isAdmin: Boolean
 }
 
 type UserList {

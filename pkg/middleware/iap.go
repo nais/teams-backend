@@ -3,11 +3,13 @@ package middleware
 import (
 	"context"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/nais/teams-backend/pkg/authz"
 	"github.com/nais/teams-backend/pkg/db"
+	"github.com/nais/teams-backend/pkg/sqlc"
 	"google.golang.org/api/idtoken"
 )
 
@@ -78,7 +80,10 @@ func iapAuthentication(database db.Database, aud string, validator valfunc) func
 				h.ServeHTTP(w, r)
 				return
 			}
-
+			isAdmin := slices.ContainsFunc(roles, func(role *db.Role) bool {
+				return role.RoleName == sqlc.RoleNameAdmin
+			})
+			user.IsAdmin = &isAdmin
 			ctx = authz.ContextWithActor(r.Context(), user, roles)
 			h.ServeHTTP(w, r.WithContext(ctx))
 		})

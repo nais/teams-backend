@@ -282,6 +282,7 @@ type ComplexityRoot struct {
 		Email      func(childComplexity int) int
 		ExternalID func(childComplexity int) int
 		ID         func(childComplexity int) int
+		IsAdmin    func(childComplexity int) int
 		Name       func(childComplexity int) int
 		Roles      func(childComplexity int) int
 		Teams      func(childComplexity int, limit *int, offset *int) int
@@ -1556,6 +1557,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.User.ID(childComplexity), true
 
+	case "User.isAdmin":
+		if e.complexity.User.IsAdmin == nil {
+			break
+		}
+
+		return e.complexity.User.IsAdmin(childComplexity), true
+
 	case "User.name":
 		if e.complexity.User.Name == nil {
 			break
@@ -2663,6 +2671,9 @@ type User @key(fields: "id") {
 
   "The external ID of the user."
   externalId: String!
+
+  "This field will only be populated via the me query"
+  isAdmin: Boolean
 }
 
 type UserList {
@@ -4311,6 +4322,8 @@ func (ec *executionContext) fieldContext_Entity_findUserByID(ctx context.Context
 				return ec.fieldContext_User_roles(ctx, field)
 			case "externalId":
 				return ec.fieldContext_User_externalId(ctx, field)
+			case "isAdmin":
+				return ec.fieldContext_User_isAdmin(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -8214,6 +8227,8 @@ func (ec *executionContext) fieldContext_Query_user(ctx context.Context, field g
 				return ec.fieldContext_User_roles(ctx, field)
 			case "externalId":
 				return ec.fieldContext_User_externalId(ctx, field)
+			case "isAdmin":
+				return ec.fieldContext_User_isAdmin(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -11071,6 +11086,8 @@ func (ec *executionContext) fieldContext_TeamDeleteKey_createdBy(ctx context.Con
 				return ec.fieldContext_User_roles(ctx, field)
 			case "externalId":
 				return ec.fieldContext_User_externalId(ctx, field)
+			case "isAdmin":
+				return ec.fieldContext_User_isAdmin(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -11409,6 +11426,8 @@ func (ec *executionContext) fieldContext_TeamMember_user(ctx context.Context, fi
 				return ec.fieldContext_User_roles(ctx, field)
 			case "externalId":
 				return ec.fieldContext_User_externalId(ctx, field)
+			case "isAdmin":
+				return ec.fieldContext_User_isAdmin(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -12103,6 +12122,47 @@ func (ec *executionContext) fieldContext_User_externalId(ctx context.Context, fi
 	return fc, nil
 }
 
+func (ec *executionContext) _User_isAdmin(ctx context.Context, field graphql.CollectedField, obj *db.User) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_User_isAdmin(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IsAdmin, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*bool)
+	fc.Result = res
+	return ec.marshalOBoolean2ᚖbool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_User_isAdmin(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "User",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _UserList_nodes(ctx context.Context, field graphql.CollectedField, obj *model.UserList) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_UserList_nodes(ctx, field)
 	if err != nil {
@@ -12154,6 +12214,8 @@ func (ec *executionContext) fieldContext_UserList_nodes(ctx context.Context, fie
 				return ec.fieldContext_User_roles(ctx, field)
 			case "externalId":
 				return ec.fieldContext_User_externalId(ctx, field)
+			case "isAdmin":
+				return ec.fieldContext_User_isAdmin(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -17460,6 +17522,8 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "isAdmin":
+			out.Values[i] = ec._User_isAdmin(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

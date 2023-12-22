@@ -90,6 +90,7 @@ func (t *Team) IsEntity() {}
 
 type User struct {
 	*sqlc.User
+	IsAdmin *bool
 }
 
 func (u *User) IsEntity() {}
