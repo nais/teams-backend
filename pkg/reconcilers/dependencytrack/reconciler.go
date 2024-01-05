@@ -50,7 +50,7 @@ func NewFromConfig(ctx context.Context, database db.Database, cfg *config.Config
 		log.Warnf("dependencytrack instance %q is not available, skipping", cfg.DependencyTrack.Endpoint)
 		return nil, nil
 	}
-	log.Infof("dependencytrack instance %q added to reconciler", dp.Client)
+	log.Infof("dependencytrack added to reconciler")
 	return New(database, auditlogger.New(database, types.ComponentNameNaisDependencytrack, log), dp, log)
 }
 
@@ -70,7 +70,7 @@ func (r *reconciler) Reconcile(ctx context.Context, input reconcilers.Input) err
 		stateMembers = append(stateMembers, member.Email)
 	}
 
-	r.log.Debugf("reconciling team %q in dependencytrack instance %q", input.Team.Slug, r.DpTrack.Client)
+	r.log.Debugf("reconciling team %q in dependencytrack", input.Team.Slug)
 	instance := state
 	teamId, err := r.syncTeamAndUsers(ctx, input, r.DpTrack.Client, instance)
 	if err != nil {
