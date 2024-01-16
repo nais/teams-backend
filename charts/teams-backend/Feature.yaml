@@ -30,6 +30,10 @@ values:
     description: Comma separated list of reconcilers to enable on first run (empty database). Changing this after teams-backend has been deployed does nothing.
     config:
       type: string
+  ignoredEnvironments:
+    displayName: Comma separated list of environments that won't be reconciled
+    config:
+      type: string
   gcp.billingAccount:
     displayName: Billing account
     computed:

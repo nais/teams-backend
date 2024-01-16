@@ -50,3 +50,5 @@ firstRunEnableReconcilers: "google:gcp:project,google:workspace-admin,nais:names
 ingress:
   className: nais-ingress
   host: # mapped in fasit
+
+ignoredEnvironments: # configured in fasit

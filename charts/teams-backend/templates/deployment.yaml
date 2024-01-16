@@ -115,6 +115,8 @@ spec:
               value: {{ .Values.reconcileRetryInterval | quote }}
             - name: TEAMS_BACKEND_FIRST_RUN_ENABLE_RECONCILERS
               value: {{ .Values.firstRunEnableReconcilers | quote }}
+            - name: TEAMS_BACKEND_IGNORED_ENVIRONMENTS
+              value: "{{ .Values.ignoredEnvironments }}"
             # Top level
             - name: CONSOLE_TENANT_NAME
               value: "{{ .Values.tenantName }}"

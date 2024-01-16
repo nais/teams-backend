@@ -1,6 +1,8 @@
 package config
 
 import (
+	"strings"
+
 	"github.com/kelseyhightower/envconfig"
 	"github.com/nais/teams-backend/pkg/fixtures"
 	"github.com/nais/teams-backend/pkg/gcp"
@@ -104,6 +106,9 @@ type Config struct {
 	// Environments A list of environment names used for instance in GCP
 	Environments []string
 
+	// IgnoredEnvironments list of environments that won't be reconciled
+	IgnoredEnvironments []string `envconfig:"TEAMS_BACKEND_IGNORED_ENVIRONMENTS"`
+
 	// DatabaseURL The URL for the database.
 	DatabaseURL string `envconfig:"TEAMS_BACKEND_DATABASE_URL" default:"postgres://console:console@localhost:3002/console?sslmode=disable"`
 
@@ -152,9 +157,22 @@ func New() (*Config, error) {
 	}
 
 	for environment := range cfg.GCP.Clusters {
+		if contains(cfg.IgnoredEnvironments, environment) {
+			continue
+		}
+
 		cfg.Environments = append(cfg.Environments, environment)
 	}
 	cfg.Environments = append(cfg.Environments, cfg.OnpremClusters...)
 
 	return cfg, nil
+}
+
+func contains(haystack []string, needle string) bool {
+	for _, element := range haystack {
+		if strings.EqualFold(strings.TrimSpace(element), strings.TrimSpace(needle)) {
+			return true
+		}
+	}
+	return false
 }
