@@ -156,16 +156,31 @@ func New() (*Config, error) {
 		return nil, err
 	}
 
-	for environment := range cfg.GCP.Clusters {
-		if contains(cfg.IgnoredEnvironments, environment) {
-			continue
-		}
-
-		cfg.Environments = append(cfg.Environments, environment)
-	}
-	cfg.Environments = append(cfg.Environments, cfg.OnpremClusters...)
+	cfg.ParseEnvironments()
 
 	return cfg, nil
+}
+
+func (cfg *Config) ParseEnvironments() {
+	var gcpEnvironments []string
+	gcpClusters := make(map[string]gcp.Cluster)
+	for environment, cluster := range cfg.GCP.Clusters {
+		if !contains(cfg.IgnoredEnvironments, environment) {
+			gcpClusters[environment] = cluster
+			gcpEnvironments = append(gcpEnvironments, environment)
+		}
+	}
+
+	var onpremEnvironments []string
+	for _, environment := range cfg.OnpremClusters {
+		if !contains(cfg.IgnoredEnvironments, environment) {
+			onpremEnvironments = append(onpremEnvironments, environment)
+		}
+	}
+
+	cfg.GCP.Clusters = gcpClusters
+	cfg.OnpremClusters = onpremEnvironments
+	cfg.Environments = append(gcpEnvironments, onpremEnvironments...)
 }
 
 func contains(haystack []string, needle string) bool {
